@@ -41,7 +41,9 @@ export function defineAvenGoal(contexts: Map<string, GoalContext>) {
     rounds: "continue",
     assess: (assessment) => {
       const context = contexts.get(assessment.agentId);
+
       if (!context) throw new Error("The goal's sandbox is gone, so it cannot be checked");
+
       return assessGoal(assessment, context.verify);
     },
   });
@@ -89,7 +91,9 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
     tracker,
     working,
   }).finally(finished);
+
   if (Object.keys(state.sessions).length > 0) await journal.revive([agentId]);
+
   return {
     done,
     cancel: () => handle.cancel().catch(() => undefined),
@@ -104,6 +108,7 @@ async function sessionRunning(journal: GoalJournal, agentId: string) {
   for (const status of ["running", "pending", "queued"] as const) {
     const { runs } = await journal.runtime.listRuns({ status, limit: 100 });
     const run = runs.find((summary) => summary.agentId === agentId);
+
     if (run) return run.id;
   }
   return undefined;
@@ -122,27 +127,35 @@ async function followGoal(
 
   const sessionStarted = (runId: string) => {
     if (seen.has(runId)) return;
+
     seen.add(runId);
     const known = state.sessions[runId];
+
     if (known?.filed) return;
+
     const number = known?.number ?? Object.keys(state.sessions).length + 1;
+
     if (!known) {
       state.sessions[runId] = { number, filed: false };
       tracker.saveState(state);
       onEvent({ type: "text", delta: goalSessionMarker(number) });
     }
+
     session.working.runId = runId;
     sessions.push(followSession(journal, runId, number, session));
   };
 
   for await (const event of handle.stream()) {
     if (event.type !== "status") continue;
+
     const data = asRecord(event.data);
     const wait = asRecord(data.wait);
+
     if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
       sessionStarted(wait.runId);
       continue;
     }
+
     if (event.taskId !== handle.id) continue;
 
     if (data.status === "completed") {
@@ -150,6 +163,7 @@ async function followGoal(
       const { handoff } = await handle.result();
       return { type: "complete", summary: handoff.summary, evidence: handoff.evidence };
     }
+
     if (data.status === "waiting" && wait.type === "signal") {
       await settled();
       const { task } = await handle.snapshot();
@@ -163,6 +177,7 @@ async function followGoal(
         next: String(handoff.next ?? ""),
       };
     }
+
     if (data.status === "failed" || data.status === "cancelled") {
       await settled();
       return { type: "error", error: String(data.error ?? `The goal ${data.status}`) };
@@ -184,6 +199,7 @@ async function followSession(
       after: tracker.cursorOf(runId),
     });
     const end = await followed.done;
+
     if (end.type === "response") {
       await onSession(number, end.messages);
       tracker.state.sessions[runId] = { number, filed: true };

@@ -5,7 +5,10 @@ export function messageBody(
   selection: RunSelection,
 ) {
   const body: Record<string, unknown> = { prompt, ...selection };
+
   if (attachments.length > 0) body.attachments = attachments;
+
   if (mentions.length > 0) body.mentions = mentions;
+
   return body;
 }

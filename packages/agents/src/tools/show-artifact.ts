@@ -20,6 +20,7 @@ const LIMITS = { images: MAX_IMAGE_BYTES, videos: MAX_VIDEO_BYTES, pages: MAX_HT
 
 function kindOf(mediaType: string) {
   if (mediaType === "text/html") return "pages";
+
   return mediaType.startsWith("video/") ? "videos" : "images";
 }
 
@@ -35,16 +36,20 @@ export function createShowArtifactTool(files: ArtifactFiles) {
   ): Promise<ToolArtifact> => {
     const bytes = await files.readFile({ path, abortSignal });
     const mediaType = artifactType(bytes);
+
     if (!mediaType) {
       throw new Error(`${path} is not a PNG, JPEG, GIF, WebP, MP4, WebM or HTML file`);
     }
+
     const kind = kindOf(mediaType);
     const limit = LIMITS[kind];
+
     if (bytes.length > limit) {
       throw new Error(
         `${path} is ${bytes.length} bytes; ${kind} up to ${limit / 1024 / 1024} MiB can be shown`,
       );
     }
+
     const name = await files.save(bytes, mediaType);
     return caption ? { name, mediaType, caption } : { name, mediaType };
   };
@@ -70,7 +75,9 @@ export function createShowArtifactTool(files: ArtifactFiles) {
           shown.failed.push({ path: item.path, error: errorMessage(error) });
         }
       }
+
       if (shown.artifacts.length === 0) throw new Error(shown.failed[0]!.error);
+
       return shown;
     },
   });

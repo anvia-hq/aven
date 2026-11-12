@@ -23,7 +23,9 @@ describe("workload identity router", () => {
   describe("POST /workload-identity/token", () => {
     const mint = (body: unknown, credential?: string) => {
       const headers = new Headers({ "content-type": "application/json" });
+
       if (credential) headers.set("authorization", `Bearer ${credential}`);
+
       return workloadIdentityRouter.handle(
         new Request("http://localhost/workload-identity/token", {
           method: "POST",

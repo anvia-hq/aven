@@ -188,9 +188,11 @@ export class BotReplies {
       const session = { sessionId: bot.id };
       await agent.generate({ prompt: asked, session, abortSignal: signal });
       const { from, note } = parseBotPrompt(prompt);
+
       if (!this.#live.get(replyId)?.spoke && !note && from === undefined) {
         await agent.generate({ prompt: botNote(UNSENT_NOTE), session, abortSignal: signal });
       }
+
       send({ type: "bot.end", replyId });
     } catch (error) {
       send({ type: "bot.end", replyId, error: errorMessage(signal.reason ?? error) });
@@ -203,8 +205,11 @@ export class BotReplies {
 
   #computer(botId: string) {
     if (!this.replyOnMachine(botId)) return this.#context.sandbox;
+
     const { machines } = this.#context;
+
     if (!machines) throw new Error("This runner cannot reach another computer");
+
     return machines;
   }
 
@@ -215,6 +220,7 @@ export class BotReplies {
     onMachine: boolean,
   ) {
     if (!servers?.length) return undefined;
+
     const connected = onMachine
       ? await connectMcpForMachine(servers, this.#context.machineCall?.(botId))
       : await connectMcpServers(servers);
@@ -232,6 +238,7 @@ export class BotReplies {
     attachments: BotReplyMessage["attachments"],
   ): Promise<AgentPrompt> {
     if (!attachments?.length) return prompt;
+
     const kept = await keepAttachments(this.#computer(botId), botId, attachments);
     const images = new Map(
       attachments.flatMap(({ image, data }) => (image ? [[image, data] as const] : [])),
@@ -245,13 +252,16 @@ export class BotReplies {
 
   async #installSkills(replyId: string, botId: string, skills: readonly RunSkill[]) {
     const store = this.#computer(botId).skills;
+
     if (!store) return [];
+
     const fetch = async (digest: string) =>
       Uint8Array.fromBase64((await this.#context.call("bot.skill", { replyId, digest })).data);
     try {
       return await store.install(botId, skills, fetch);
     } catch (error) {
       if (!this.replyOnMachine(botId)) throw error;
+
       console.warn(`No skills for ${botId}, its computer is unreachable:`, errorMessage(error));
       return [];
     }
@@ -289,6 +299,7 @@ export class BotReplies {
     const canAskPerson = !note && (bot.handle === MAIN_BOT_HANDLE || from === undefined);
     const spoke = () => {
       const reply = this.#live.get(replyId);
+
       if (reply) reply.spoke = true;
     };
     const send: SendMessage = async ({ to, text }, { abortSignal }) => {
@@ -297,11 +308,14 @@ export class BotReplies {
         spoke();
         return `Sent to ${sent.name} (${sent.handle}).`;
       }
+
       await this.#pause(typingDelay(text), abortSignal);
+
       if (post({ type: "bot.say", replyId, text })) {
         spoke();
         return "Sent to the person.";
       }
+
       const lost = new Error("The connection to the control plane dropped");
       abort.abort(lost);
       throw lost;
@@ -332,6 +346,7 @@ export class BotReplies {
           for (const check of checks) {
             signal?.throwIfAborted();
             const [result] = await verifyWith(exec, [check])();
+
             if (result && result.exitCode !== 0) {
               const how = result.exitCode === null ? "timed out" : `exited ${result.exitCode}`;
               failed.push(`$ ${result.command}\n(${how})\n${result.output}`.trimEnd());

@@ -8,6 +8,7 @@ export function withUserBus(
   exists: (path: string) => boolean = existsSync,
 ): Env {
   if (env.XDG_RUNTIME_DIR || uid === undefined) return env;
+
   const runtimeDir = `/run/user/${uid}`;
   return exists(runtimeDir) ? { ...env, XDG_RUNTIME_DIR: runtimeDir } : env;
 }

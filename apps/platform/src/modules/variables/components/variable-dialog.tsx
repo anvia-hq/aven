@@ -31,6 +31,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
   const bulk = form.rows !== null;
   const count = form.count;
   let submitLabel = "Add variable";
+
   if (editing) submitLabel = "Save changes";
   else if (count > 1) submitLabel = `Add ${count} variables`;
 
@@ -39,6 +40,7 @@ export function VariableDialog({ scope, variable, label }: Props) {
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
+
         if (!next) form.reset();
       }}
     >

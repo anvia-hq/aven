@@ -21,10 +21,13 @@ export async function doctor() {
   const checks = await diagnose();
   for (const { name, ok, detail, warn } of checks) {
     let label = "FAIL";
+
     if (ok) label = "ok  ";
     else if (warn) label = "warn";
+
     console.log(`${label} ${name.padEnd(14)} ${detail}`);
   }
+
   if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
 }
 
@@ -49,6 +52,7 @@ export async function diagnose(
 
   add("aven", true, `${binary} at ${execPath}`);
   const pending = await readPendingUpdate(pendingUpdateFile(home));
+
   if (pending) warnUnless("update", false, pendingUpdateDetail(pending));
 
   const git = await capture(["git", "--version"]);
@@ -56,6 +60,7 @@ export async function diagnose(
 
   const dir = serverDir(home);
   const serverEnv = await readEnv(join(dir, ".env"));
+
   if (serverEnv) {
     const docker = await dockerProblem();
     add("docker", docker === undefined, docker ?? (await capture(["docker", "--version"])) ?? "");
@@ -72,6 +77,7 @@ export async function diagnose(
     const exposure = describeExposure(serverEnv);
     warnUnless("exposure", exposure.ok, exposure.detail);
     const registrationEnabled = answers ? await registrationIsOpen(serverEnv) : undefined;
+
     if (registrationEnabled !== undefined) {
       const signups = describeSignups(exposure, serverEnv, registrationEnabled);
       warnUnless("sign-ups", signups.ok, signups.detail);
@@ -79,12 +85,16 @@ export async function diagnose(
   }
 
   const runnerEnv = await readEnv(runnerEnvFile(home));
+
   if (runnerEnv) {
     const status = await serviceManager(names).status();
     add("runner", status.startsWith("running"), `${status}, connects to ${runnerEnv.AVEN_URL}`);
     const unit = await runnerUnitCheck({ platform, execPath, unitHome: options.unitHome });
+
     if (unit) checks.push(unit);
+
     const dirs = (runnerEnv.AVEN_DIRS ?? "").split(delimiter).filter(Boolean);
+
     if (dirs.length === 0) {
       warnUnless("folders", false, "The runner serves no folder: set AVEN_DIRS in its settings");
     } else {
@@ -98,8 +108,10 @@ export async function diagnose(
       );
     }
   }
+
   if (!serverEnv && !runnerEnv)
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");
+
   return checks;
 }
 
@@ -110,6 +122,7 @@ async function releaseChecks(
 ): Promise<Check[]> {
   const checks: Check[] = [];
   const release = serverEnv.AVEN_VERSION;
+
   if (release !== undefined && binary !== "dev") {
     const ok = release === binary;
     checks.push({
@@ -121,7 +134,9 @@ async function releaseChecks(
         : `The server runs ${release} but this aven is ${binary}. Run: aven update`,
     });
   }
+
   const installed = await readFile(join(dir, "docker-compose.yml"), "utf8").catch(() => undefined);
+
   if (installed !== undefined) {
     const ok = installed === compose;
     checks.push({
@@ -133,6 +148,7 @@ async function releaseChecks(
         : `The compose file in ${dir} is not this aven's. Run: aven update`,
     });
   }
+
   return checks;
 }
 
@@ -147,9 +163,12 @@ async function runnerUnitCheck(options: {
     execPath: options.execPath,
     home: options.unitHome,
   });
+
   if (state === undefined) return undefined;
+
   if (state.problem === undefined)
     return { name: "runner unit", ok: true, detail: `${state.program} (${state.file})` };
+
   return {
     name: "runner unit",
     ok: false,

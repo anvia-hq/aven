@@ -7,6 +7,7 @@ type Props = { suggestions: string[]; onPick: (text: string) => void };
 
 export function FollowUpChips({ suggestions, onPick }: Props) {
   if (suggestions.length === 0) return null;
+
   return (
     <ul
       aria-label="Suggested replies"

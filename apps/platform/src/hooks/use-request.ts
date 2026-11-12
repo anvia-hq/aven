@@ -21,10 +21,12 @@ export function useRequest<T>(
 
   useEffect(() => {
     if (!path) return;
+
     let current = true;
     const look = async () => {
       try {
         const data = await api<T>(path);
+
         if (current) setAnswer({ key, loaded: { data, error: null } });
       } catch (failure) {
         if (current) setAnswer({ key, loaded: { data: null, error: errorMessage(failure) } });

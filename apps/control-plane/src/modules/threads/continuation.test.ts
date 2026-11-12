@@ -43,6 +43,7 @@ run("a thread continued on another runner (postgres, decision 0152)", async () =
         body: { prompt: string; attachments?: { name: string }[]; modelId?: string },
       ) => {
         if (failStart) throw new Error("no model");
+
         started.push({
           thread,
           prompt: body.prompt,

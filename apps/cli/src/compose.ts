@@ -45,7 +45,9 @@ const isComposeProject = (value: unknown): value is ComposeProject =>
 
 function composeProjects() {
   const listed = captured(["docker", "compose", "ls", "--all", "--format", "json"]);
+
   if (listed === undefined) return undefined;
+
   try {
     const parsed: unknown = JSON.parse(listed);
     return Array.isArray(parsed) ? parsed.filter(isComposeProject) : undefined;
@@ -98,7 +100,9 @@ export function recordProject(dir: string, projects?: ComposeProject[]) {
   } catch {
     return;
   }
+
   if (parseEnv(text).COMPOSE_PROJECT_NAME) return;
+
   writeFileSync(
     envFile(dir),
     setEnv(text, { COMPOSE_PROJECT_NAME: composeProject(dir, projects) }),
@@ -141,10 +145,13 @@ export async function capture(command: string[]) {
 export async function dockerProblem() {
   if ((await capture(["docker", "--version"])) === undefined)
     return "Docker is not installed. Install Docker Desktop, OrbStack or Docker Engine, then try again.";
+
   if ((await capture(["docker", "compose", "version"])) === undefined)
     return "Docker is installed without the compose plugin. Install Docker Compose v2.";
+
   if ((await capture(["docker", "info"])) === undefined)
     return "Docker is installed but not running. Start it, then try again.";
+
   return undefined;
 }
 

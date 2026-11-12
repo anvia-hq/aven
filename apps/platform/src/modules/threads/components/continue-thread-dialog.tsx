@@ -30,6 +30,7 @@ export function ContinueThreadDialog({ thread }: { thread: Thread }) {
     .filter((runtime) => runtime.online && runtime.id !== thread.runtimeId)
     .map((runtime) => ({ value: runtime.id, label: runtime.name }));
   const chosen = options.some((option) => option.value === target) ? target : null;
+
   if (options.length === 0 && !open) return null;
 
   async function handleContinue() {

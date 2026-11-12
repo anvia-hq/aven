@@ -10,8 +10,10 @@ type ServiceAccount = { client_email: string; private_key: string; private_key_i
 
 export function parseServiceAccount(credential: string): ServiceAccount | null {
   if (!credential.trimStart().startsWith("{")) return null;
+
   try {
     const json = JSON.parse(credential) as Record<string, unknown>;
+
     if (
       json.type === "service_account" &&
       typeof json.client_email === "string" &&
@@ -76,29 +78,39 @@ export function createGoogleTokens(fetchFn: typeof fetch = fetch, now: () => num
       });
     } catch (error) {
       if (error instanceof GoogleAuthError) throw error;
+
       throw new GoogleAuthError("Could not reach Google to sign the service account in");
     }
+
     if (!res.ok) {
       throw new GoogleAuthError(`Google refused the service account key (${res.status})`);
     }
+
     const body = (await res.json().catch(() => null)) as {
       access_token?: unknown;
       expires_in?: unknown;
     } | null;
+
     if (typeof body?.access_token !== "string") {
       throw new GoogleAuthError("Google answered with no access token");
     }
+
     const seconds = typeof body.expires_in === "number" ? body.expires_in : 3600;
     return { token: body.access_token, expiresAt: started + seconds * 1000 };
   }
 
   return async function accessToken(credential: string) {
     const account = parseServiceAccount(credential);
+
     if (!account) return credential.trim();
+
     const id = createHash("sha256").update(credential).digest("hex");
     const have = minted.get(id);
+
     if (have && have.expiresAt - RENEW_BEFORE_MS > now()) return have.token;
+
     let inFlight = pending.get(id);
+
     if (!inFlight) {
       inFlight = exchange(account)
         .then((next) => {
@@ -108,6 +120,7 @@ export function createGoogleTokens(fetchFn: typeof fetch = fetch, now: () => num
         .finally(() => pending.delete(id));
       pending.set(id, inFlight);
     }
+
     return (await inFlight).token;
   };
 }

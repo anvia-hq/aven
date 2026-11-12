@@ -10,6 +10,7 @@ function spendTokens(email: string, tokens: number, daysAgo: number[]) {
     ["e2e/seed-spending.ts", email, String(tokens), daysAgo.join(",")],
     { env: process.env, encoding: "utf8" },
   );
+
   if (seeded.status !== 0) throw new Error(seeded.stderr || "seeding failed");
 }
 

@@ -31,6 +31,7 @@ test.describe("forked threads in the sidebar", () => {
     }
     await page.route("**/api/threads", async (route) => {
       if (route.request().method() !== "GET") return route.fallback();
+
       const response = await route.fetch();
       const list = (await response.json()) as { id: string; parentThreadId?: string | null }[];
       for (const thread of list) {

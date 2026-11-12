@@ -1,5 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
+import type { ControlPlaneToRuntime } from "@aven/protocol/types";
+
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 run("a bot's computer (real postgres, real WebSockets)", async () => {
@@ -14,7 +16,6 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
   const { runtimesService } = await import("../runtimes/service");
   const { botComputerRouter } = await import("./computer-router");
   const { botsService } = await import("./service");
-  type ControlPlaneToRuntime = import("@aven/protocol/types").ControlPlaneToRuntime;
 
   const hub = new RuntimeHub(createMemoryStore(db));
   const owner = await signUp("bot-owner");
@@ -43,6 +44,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     const deadline = Date.now() + ms;
     while (!check()) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
   };
@@ -61,15 +63,19 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     };
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) return;
+
       const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
       seen.messages.push(message);
+
       if (message.type === "call") {
         let result: object = {};
+
         if (message.method === "artifacts.read") {
           result = { mediaType: "image/png", data: "iVBORw0KGgo=" };
         } else if (message.method === "computer.status" || message.method === "computer.wake") {
           result = { state: "awake" };
         }
+
         ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result }));
       }
     };

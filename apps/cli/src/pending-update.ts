@@ -23,11 +23,17 @@ export async function writePendingUpdate(
 
 export async function readPendingUpdate(file: string): Promise<PendingUpdate | undefined> {
   const text = await readFile(file, "utf8").catch(() => undefined);
+
   if (text === undefined) return undefined;
+
   const marker = parsed(text);
+
   if (typeof marker !== "object" || marker === null) return undefined;
+
   const fields = marker as Record<string, unknown>;
+
   if (typeof fields.to !== "string" || fields.to === "") return undefined;
+
   const word = (key: string) => {
     const value = fields[key];
     return typeof value === "string" ? value : "";

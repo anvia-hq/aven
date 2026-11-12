@@ -27,7 +27,9 @@ const STATE_TTL_MS = 60 * 60_000;
 
 function sign(payload: string) {
   const secret = process.env.BETTER_AUTH_SECRET;
+
   if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
+
   return createHmac("sha256", secret).update(`github-install:${payload}`).digest("base64url");
 }
 
@@ -41,9 +43,13 @@ export function createState(
 ) {
   const claims: unknown[] = [organizationId, userId, now];
   const forApp = appKey !== PLATFORM_APP;
+
   if (next !== undefined || installationId !== undefined || forApp) claims.push(next ?? null);
+
   if (installationId !== undefined || forApp) claims.push(installationId ?? null);
+
   if (forApp) claims.push(appKey);
+
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
@@ -55,17 +61,23 @@ export function readState(
   now = Date.now(),
 ): { next: string | null; installationId: number | null; appKey: string } | null {
   const [payload, signature] = state.split(".");
+
   if (!payload || !signature) return null;
+
   const expected = Buffer.from(sign(payload));
   const given = Buffer.from(signature);
+
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+
   try {
     const [org, user, issuedAt, next, installationId, appKey] = JSON.parse(
       Buffer.from(payload, "base64url").toString(),
     ) as unknown[];
     const fresh =
       typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
+
     if (org !== organizationId || user !== userId || !fresh) return null;
+
     return {
       next: typeof next === "string" && isLocalPath(next) ? next : null,
       installationId: typeof installationId === "number" ? installationId : null,
@@ -95,14 +107,18 @@ export function createGithubService(
       .select()
       .from(githubInstallations)
       .where(eq(githubInstallations.id, installationRowId));
+
     if (!row) throw new InstallationNotFoundError();
+
     const client = await clients.forKey(row.appId ?? PLATFORM_APP);
     return { client, installationId: row.installationId, accountLogin: row.accountLogin };
   };
 
   const require = async (organizationId: string, id: string) => {
     const installation = await get(organizationId, id);
+
     if (!installation) throw new InstallationNotFoundError();
+
     return installation;
   };
 
@@ -119,7 +135,9 @@ export function createGithubService(
         .select({ appId: githubInstallations.appId })
         .from(githubInstallations)
         .where(eq(githubInstallations.id, installationRowId));
+
       if (!row) throw new InstallationNotFoundError();
+
       return row.appId ?? PLATFORM_APP;
     },
 
@@ -148,7 +166,9 @@ export function createGithubService(
     async connectUrl(organizationId: string, userId: string, next?: string, appKey?: string) {
       const app = await clients.forOrganization(organizationId);
       const key = appKey ?? app.key;
+
       if (key !== app.key && key !== PLATFORM_APP) throw new InstallationNotFoundError();
+
       const client = key === app.key ? app.client : await clients.forKey(key);
       return client.authorizeUrl(
         createState(organizationId, userId, Date.now(), next, undefined, key),
@@ -161,23 +181,31 @@ export function createGithubService(
       input: { installationId?: number; state: string; code?: string },
     ) {
       const state = readState(input.state, organizationId, userId);
+
       if (!state) {
         throw new InstallationNotAllowedError("The GitHub connection link is invalid or expired");
       }
+
       const app = await clients.forOrganization(organizationId);
+
       if (state.appKey !== PLATFORM_APP && state.appKey !== app.key) {
         throw new InstallationNotAllowedError("The GitHub connection link is invalid or expired");
       }
+
       const client = state.appKey === app.key ? app.client : await clients.forKey(state.appKey);
       const grant = input.code ? await client.exchangeCode(input.code) : null;
+
       if (!grant) throw new InstallationNotAllowedError("GitHub did not confirm your account");
+
       const installationId = input.installationId ?? state.installationId ?? undefined;
+
       if (installationId !== undefined) {
         if (!(await client.userCanUse(grant.accessToken, installationId))) {
           throw new InstallationNotAllowedError(
             "GitHub did not confirm access to that installation",
           );
         }
+
         const found = await client.installation(installationId);
         await db
           .insert(githubInstallations)
@@ -193,6 +221,7 @@ export function createGithubService(
             set: { accountLogin: found.accountLogin },
           });
       }
+
       await userTokens.connect(userId, grant, state.appKey);
       return { next: state.next };
     },
@@ -274,6 +303,7 @@ export function createGithubService(
 
     async requireWritable(installationRowId: string) {
       const { client, installationId, accountLogin } = await acting(installationRowId);
+
       if (!(await client.canWrite(installationId))) {
         throw new GithubWriteNotGrantedError(accountLogin);
       }
@@ -281,6 +311,7 @@ export function createGithubService(
 
     async requirePush(installationRowId: string, userToken: string, fullName: string) {
       const { client } = await acting(installationRowId);
+
       if (!(await client.canPush(userToken, fullName))) throw new GithubNoPushAccessError(fullName);
     },
   };

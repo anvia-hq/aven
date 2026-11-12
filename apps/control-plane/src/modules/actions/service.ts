@@ -15,10 +15,13 @@ export function createActionsService(
 
   async function read(organizationId: string, threadId: string): Promise<ParsedActions> {
     const file = await readFile(organizationId, threadId, ACTIONS_FILE);
+
     if (!file.available || file.kind === "missing") return { actions: [], problem: null };
+
     if (file.kind !== "text" || file.truncated) {
       return { actions: [], problem: "The file is not readable text or is too long" };
     }
+
     return parseActions(file.text);
   }
 
@@ -36,11 +39,14 @@ export function createActionsService(
     ): Promise<ActionStarted> {
       const { actions } = await read(organizationId, threadId);
       const action = actions.find((candidate) => candidate.name === name);
+
       if (!action) throw new NotFoundError("This repository has no such action");
+
       if (action.kind === "prompt") {
         await send(organizationId, userId, threadId, { prompt: action.body, ...selection });
         return { kind: "prompt" };
       }
+
       const { process } = await runner.ask(
         organizationId,
         "actions.run",

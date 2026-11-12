@@ -15,9 +15,13 @@ export function useArchiveThread() {
     const archived = await attempt("Could not archive the thread", () =>
       postJson<Thread>(`/threads/${thread.id}`, { state: "archived" }, "PATCH"),
     );
+
     if (!archived) return;
+
     toast.add({ title: "Thread archived", description: thread.title, type: "success" });
+
     if (pathname === `/threads/${thread.id}`) void navigate({ to: "/threads" });
+
     await refresh();
   };
 }

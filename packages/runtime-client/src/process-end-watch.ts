@@ -46,7 +46,9 @@ export class ProcessWatchRecords implements WatchStore {
     const row = this.#db
       .query<{ state: string }, [string]>("select state from process_watch where thread_id = ?")
       .get(threadId);
+
     if (!row) return undefined;
+
     let state: Partial<KeptWatch>;
     try {
       state = JSON.parse(row.state) as Partial<KeptWatch>;
@@ -81,8 +83,11 @@ export class ProcessEndWatch {
 
   arm(threadId: string) {
     if (this.context.stopped()) return Promise.resolve();
+
     const kept = this.#threads.get(threadId);
+
     if (kept?.timer) return kept.ready;
+
     const saved = kept ? undefined : this.store?.load(threadId);
     const watch: Watch = kept ?? {
       baseline: new Set(saved?.baseline),
@@ -92,7 +97,9 @@ export class ProcessEndWatch {
       ready: Promise.resolve(),
       looking: false,
     };
+
     if (!kept) watch.ready = this.#prepare(threadId, watch, saved !== undefined);
+
     watch.timer = setInterval(() => void this.#look(threadId), this.context.pollMs ?? POLL_MS);
     this.#threads.set(threadId, watch);
     return watch.ready;
@@ -104,10 +111,15 @@ export class ProcessEndWatch {
 
   suspend(threadId: string) {
     const watch = this.#threads.get(threadId);
+
     if (!watch) return;
+
     if (watch.timer) clearInterval(watch.timer);
+
     watch.timer = null;
+
     if (watch.tracked.size > 0) return;
+
     this.#threads.delete(threadId);
     this.store?.clear(threadId);
   }
@@ -119,7 +131,9 @@ export class ProcessEndWatch {
 
   ignore(threadId: string, processId: string) {
     const watch = this.#threads.get(threadId);
+
     if (!watch) return;
+
     watch.told.add(processId);
     watch.tracked.delete(processId);
     this.#remember(threadId, watch);
@@ -131,33 +145,42 @@ export class ProcessEndWatch {
 
   #stop(threadId: string) {
     const watch = this.#threads.get(threadId);
+
     if (!watch) return;
+
     if (watch.timer) clearInterval(watch.timer);
+
     watch.timer = null;
     this.#threads.delete(threadId);
   }
 
   #prepare(threadId: string, watch: Watch, restored: boolean) {
     const box = this.context.box(threadId);
+
     if (!box) return Promise.resolve();
+
     return processesOf(box).then((list) => {
       if (!list) return;
+
       if (restored) {
         const there = new Set(list.map((process) => process.id));
         for (const id of watch.tracked) if (!there.has(id)) watch.tracked.delete(id);
       } else {
         for (const process of list) watch.baseline.add(process.id);
       }
+
       this.#remember(threadId, watch);
     });
   }
 
   #remember(threadId: string, watch: Watch) {
     if (!this.store) return;
+
     if (watch.baseline.size === 0 && watch.tracked.size === 0 && watch.told.size === 0) {
       this.store.clear(threadId);
       return;
     }
+
     this.store.save(threadId, {
       baseline: [...watch.baseline],
       tracked: [...watch.tracked],
@@ -167,37 +190,51 @@ export class ProcessEndWatch {
 
   async #look(threadId: string) {
     const watch = this.#threads.get(threadId);
+
     if (!watch?.timer || watch.looking) return;
+
     const box = this.context.box(threadId);
+
     if (this.context.stopped()) {
       this.#stop(threadId);
       return;
     }
+
     if (!box && !this.context.hasRun(threadId)) {
       this.disarm(threadId);
       return;
     }
+
     if (!box) return;
+
     watch.looking = true;
     let changed = false;
     try {
       await watch.ready;
       const list = await processesOf(box);
+
       if (!list || this.#threads.get(threadId) !== watch || !watch.timer) return;
+
       for (const process of list) {
         if (watch.told.has(process.id)) continue;
+
         if (watch.baseline.has(process.id) && !watch.tracked.has(process.id)) continue;
+
         if (process.status === "running") {
           if (!watch.tracked.has(process.id)) {
             watch.tracked.add(process.id);
             changed = true;
           }
+
           continue;
         }
+
         const logs = await Promise.resolve()
           .then(() => box.processes.logs(process.id))
           .catch(() => ({ stdout: "", stderr: "", truncated: false }));
+
         if (this.#threads.get(threadId) !== watch || !watch.timer) return;
+
         watch.told.add(process.id);
         watch.tracked.delete(process.id);
         changed = true;
@@ -215,7 +252,9 @@ export class ProcessEndWatch {
         };
         this.context.send({ type: "process.ended", ...message });
       }
+
       if (changed) this.#remember(threadId, watch);
+
       if (watch.tracked.size === 0 && !this.context.hasRun(threadId)) this.disarm(threadId);
     } finally {
       watch.looking = false;

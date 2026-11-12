@@ -115,6 +115,7 @@ function fakeRunner(
   const gateway = {
     check: (model: ModelConfig) => {
       if (options.keyless) throw new ModelUnavailableError("OPENAI_API_KEY is not set");
+
       grants.checked.push(model.provider);
     },
     issue: (replyId: string) => (grants.issued.push(replyId), runModel),
@@ -630,8 +631,10 @@ describe("RemoteBotReplier", () => {
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         const making = sink.create(wanted);
+
         if (prompt === "make a bot") await making;
         else await expect(making).rejects.toThrow("only when the person asks");
+
         sink.end();
         await answering;
       }
@@ -723,8 +726,10 @@ describe("RemoteBotReplier", () => {
         await Bun.sleep(0);
         const sink = [...run.sinks()].at(-1)!;
         const changing = sink.update({ replyId: "x", name: "New" });
+
         if (allowed) await changing;
         else await expect(changing).rejects.toThrow("Change yourself only when");
+
         sink.end();
         await answering;
       }
@@ -1536,11 +1541,13 @@ describe("RemoteBotReplier", () => {
         for (const action of ["pause", "resume", "clear"] as const) {
           await sink.goal({ replyId: "x", op: "update", action });
         }
+
         if (prompt === "do the port") {
           expect(await sink.goal({ ...start, maxRounds: 5 } as never)).toEqual(goal);
         } else {
           await expect(sink.goal(start as never)).rejects.toThrow("Start a goal only when");
         }
+
         sink.end();
         await answering;
       }
@@ -1575,6 +1582,7 @@ describe("RemoteBotReplier", () => {
         }
         for (const action of ["complete", "blocked"] as const) {
           const finish = () => sink.goal({ replyId: "x", op: "update", action, reason: "no key" });
+
           if (prompt.startsWith("[note] Goal round")) await finish();
           else await expect(finish()).rejects.toThrow("only on the person's word or in a round");
         }

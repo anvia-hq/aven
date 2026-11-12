@@ -33,10 +33,12 @@ export function UpdateRuntimeDialog({
   const finished = updateEnd(was, runtime, Date.now()) === "done";
   useEffect(() => {
     if (!was) return;
+
     if (finished) {
       finishUpdating(latest.current);
       return;
     }
+
     const timer = setTimeout(
       () => finishUpdating(latest.current),
       Math.max(0, was.at + updateWaitMs - Date.now()),
@@ -51,6 +53,7 @@ export function UpdateRuntimeDialog({
       <Badge variant="outline">Updating…</Badge>
     );
   }
+
   if (!canUpdate || !runtime.online || !runtime.updateTo || !runtime.canUpdate) return null;
 
   const withServer = runtime.isControlPlane;
@@ -58,7 +61,9 @@ export function UpdateRuntimeDialog({
 
   async function handleUpdate() {
     setWorking(true);
+
     if (await update(runtime)) setOpen(false);
+
     setWorking(false);
   }
 

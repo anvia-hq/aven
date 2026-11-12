@@ -36,6 +36,7 @@ export function SecretForm({ tool, threadId, onSubmit }: Props) {
 
   async function submit(skip: boolean) {
     if (sending) return;
+
     setSending(true);
     await onSubmit(
       prompts.map((prompt) => ({

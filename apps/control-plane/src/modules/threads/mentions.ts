@@ -11,9 +11,13 @@ export const threadMentionsService = {
     const wanted = personMentions(text)
       .map(({ id }) => id)
       .filter((id) => id !== authorId);
+
     if (wanted.length === 0) return;
+
     const real = await db.select({ id: users.id }).from(users).where(inArray(users.id, wanted));
+
     if (real.length === 0) return;
+
     await db
       .insert(threadMentions)
       .values(real.map(({ id }) => ({ threadId, userId: id })))

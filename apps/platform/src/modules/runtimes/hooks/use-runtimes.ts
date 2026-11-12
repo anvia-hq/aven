@@ -35,6 +35,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
 
   useEffect(() => {
     if (!poll) return;
+
     const timer = setInterval(() => void refresh(), POLL_MS);
     return () => clearInterval(timer);
   }, [poll, refresh]);
@@ -72,6 +73,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     const revoked = await change("Could not revoke runtime", () =>
       api<Runtime>(`/runtimes/${runtime.id}`, { method: "DELETE" }),
     );
+
     if (revoked !== null) toast.add({ title: "Runtime revoked", description: runtime.name });
   }
 
@@ -90,7 +92,9 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
         release: runtime.updateTo ?? undefined,
       }),
     );
+
     if (agreed === null) return false;
+
     setUpdating((current) => ({
       ...current,
       [runtime.id]: { from: runtime.build, at: Date.now() },
@@ -105,8 +109,11 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
   function finishUpdating(runtime: Runtime) {
     const was = updating[runtime.id];
     const ended = updateEnd(was, runtime, Date.now());
+
     if (!was || !ended) return;
+
     setUpdating(({ [runtime.id]: _dropped, ...rest }) => rest);
+
     if (ended === "failed") {
       toast.add({
         title: "The update did not finish",

@@ -37,7 +37,9 @@ async function runIdentity(
   driverId?: string,
 ): Promise<RunIdentity | undefined> {
   const person = await usersService.get(userId);
+
   if (!person) return undefined;
+
   const identity: RunIdentity = {
     organizationId: thread.organizationId,
     projectId: thread.projectId,
@@ -45,7 +47,9 @@ async function runIdentity(
     userId,
     email: person.email,
   };
+
   if (driverId !== undefined) identity.driverId = driverId;
+
   return identity;
 }
 
@@ -95,15 +99,19 @@ async function runMemory(
 
 async function requireLiveProject(organizationId: string, projectId: string) {
   const project = await projectsService.get(organizationId, projectId);
+
   if (!project) throw new ConflictError("This thread's project was deleted");
+
   return project;
 }
 
 export async function acting(organizationId: string, userId: string, threadId: string) {
   const thread = await threadsService.drivable({ organizationId, userId }, threadId);
+
   if (thread.createdBy === userId) {
     return { thread, ownerId: userId, driverId: undefined, said: ownPrompt };
   }
+
   const person = await usersService.get(userId);
   const said = (text: string) => driverPrompt(person?.name ?? "", text);
   return { thread, ownerId: thread.createdBy, driverId: userId, said };
@@ -117,9 +125,13 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     { prompt, attachments = [] }: SendMessageBody,
   ) {
     const { thread, said } = who;
+
     if (runs.isRunning(thread.id)) return false;
+
     if (attachments.length > 0) return false;
+
     if (!isDriving(thread.drivingUntil)) return false;
+
     const author = (await usersService.get(userId))?.name ?? "";
     const owner =
       thread.createdBy === userId
@@ -129,6 +141,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     const names = new Map<string, string>();
     for (const id of recentSenders(messages)) {
       const name = (await usersService.get(id))?.name;
+
       if (name) names.set(id, name);
     }
     const verdict = await gate({
@@ -138,7 +151,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       owner,
       recent: recentOf(messages, names),
     });
+
     if (verdict.agentAction) return false;
+
     await runs.note(thread, said(prompt), userId);
     return true;
   }
@@ -155,10 +170,14 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     const clock = timing(`message ${threadId}`);
     clock.mark("thread");
     const project = await requireLiveProject(organizationId, thread.projectId);
+
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+
     const attachments = prepareAttachments(files);
     const model = await resolveModel(driverId ?? ownerId, selection);
+
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
+
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
     clock.mark("sender");
@@ -185,11 +204,15 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
   ) {
     const { thread, said } = known ?? (await acting(organizationId, userId, threadId));
     await requireLiveProject(organizationId, thread.projectId);
+
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+
     if (attachments.length > 0) {
       throw new ConflictError("Files can be sent when the agent is not working");
     }
+
     if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
+
     const message = {
       id: steerId ?? crypto.randomUUID(),
       prompt: said(prompt),
@@ -197,7 +220,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       senderId: userId,
     };
     const queued = (await runs.steer(thread, message)) === "queued";
+
     if (queued) await threadsService.reopen(thread);
+
     return queued;
   }
 
@@ -216,12 +241,14 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         if (await keptFromAgent(organizationId, userId, known, body)) {
           return { steered: false, agentAction: false };
         }
+
         if (
           runs.isRunning(threadId) &&
           (await steer(organizationId, userId, threadId, body, known))
         ) {
           return { steered: true };
         }
+
         await start(organizationId, userId, threadId, body, { ...options, known });
         return { steered: false };
       };
@@ -240,7 +267,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     ) {
       const thread = await threadsService.owned({ organizationId, userId }, threadId);
       await requireLiveProject(organizationId, thread.projectId);
+
       if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
+
       const model = await resolveModel(userId, selection);
       await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
       await threadsService.reopen(thread);
@@ -255,10 +284,13 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       const { thread, ownerId, driverId } = await acting(organizationId, userId, threadId);
       const project = await requireLiveProject(organizationId, thread.projectId);
       const continuation = await threadsService.continuation(thread.id);
+
       if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
+
       if (driverId !== undefined && asksForSecret(continuation)) {
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
+
       const model = await resolveModel(driverId ?? ownerId, selection);
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({

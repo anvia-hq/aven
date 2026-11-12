@@ -30,7 +30,9 @@ export function jevModel({ kind, modelId, apiKey }: DecisionConfig): AddressingM
     logLevel: "off",
     fetch: bufferedFetch as typeof fetch,
   };
+
   if (kind === "jev-openrouter") options.baseURL = OPENROUTER_BASE;
+
   const sdk = new TypeSafeClient(options);
   return new JevClient({ client: sdk }).decisionModel({ modelId });
 }

@@ -14,6 +14,7 @@ import type { DecisionKind, DecisionModel } from "../types";
 
 function explanation(isSet: boolean, canChange: boolean) {
   if (isSet) return "Multiplayer threads use it.";
+
   const needed = "Needed before anyone can turn multiplayer on.";
   return canChange
     ? `${needed} Without it a message that mentions a teammate is judged by its words alone.`
@@ -39,6 +40,7 @@ function Form({
     setBusy(true);
     const done = await action();
     setBusy(false);
+
     if (done) setApiKey("");
   }
 
@@ -101,8 +103,11 @@ function Form({
 export function DecisionModelSection() {
   const { decisionModel, loaded, failed, save, remove } = useDecisionModel();
   const canChange = useCanChangeDecisionModel();
+
   if (failed) return <p className="py-6 text-sm text-muted-foreground">{failed}</p>;
+
   if (!loaded) return null;
+
   return (
     <SettingsSection
       title="Decision model"

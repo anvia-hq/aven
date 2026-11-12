@@ -13,7 +13,9 @@ export class IdleRelease {
 
   schedule(threadId: string) {
     clearTimeout(this.#timers.get(threadId));
+
     if (this.context.stopped()) return;
+
     this.#timers.set(
       threadId,
       setTimeout(() => void this.#releaseIfIdle(threadId), this.context.idleMs),
@@ -38,10 +40,13 @@ export class IdleRelease {
         this.schedule(threadId);
         return false;
       }
+
       await sleep(RELEASE_WAIT_STEP_MS);
       waitMs -= RELEASE_WAIT_STEP_MS;
     }
+
     if (this.context.stopped() || !this.context.boxes.has(threadId)) return false;
+
     let released = true;
     const release = this.#free(threadId)
       .catch((error: unknown) => {
@@ -61,18 +66,23 @@ export class IdleRelease {
   async #releaseIfIdle(threadId: string) {
     const { context } = this;
     this.#timers.delete(threadId);
+
     if (context.stopped() || context.hasRun(threadId)) return;
+
     const busy =
       context.isWatched(threadId) ||
       (await context.boxes
         .get(threadId)
         ?.hasRunningProcesses()
         .catch(() => false));
+
     if (context.stopped() || context.hasRun(threadId)) return;
+
     if (busy) {
       this.schedule(threadId);
       return;
     }
+
     const release = this.#free(threadId)
       .catch((error: unknown) => console.error(`Could not release thread ${threadId}:`, error))
       .finally(() => this.#releasing.delete(threadId));

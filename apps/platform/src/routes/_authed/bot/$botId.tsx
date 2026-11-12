@@ -11,6 +11,8 @@ function OtherBotPage() {
   const { botId } = Route.useParams();
   const { bots, loaded } = useBots();
   const bot = bots.find((each) => each.id === botId);
+
   if (bot) return <BotWorkspace key={bot.id} bot={bot} />;
+
   return loaded ? <Navigate to="/bot" replace /> : null;
 }

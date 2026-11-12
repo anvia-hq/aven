@@ -42,6 +42,7 @@ class GithubApiError extends UnavailableError {
 export function githubConfigFromEnv(env: Record<string, string | undefined> = process.env) {
   const { GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_SLUG } = env;
   const { GITHUB_APP_CLIENT_ID, GITHUB_APP_CLIENT_SECRET } = env;
+
   if (
     !GITHUB_APP_ID ||
     !GITHUB_APP_PRIVATE_KEY ||
@@ -51,6 +52,7 @@ export function githubConfigFromEnv(env: Record<string, string | undefined> = pr
   ) {
     return null;
   }
+
   return {
     appId: GITHUB_APP_ID,
     privateKey: GITHUB_APP_PRIVATE_KEY.replaceAll("\\n", "\n"),
@@ -77,6 +79,7 @@ type PullPayload = {
 
 function pullState(pull: PullPayload): GithubPullRequest["state"] {
   if (pull.merged_at) return "merged";
+
   return pull.state === "open" ? "open" : "closed";
 }
 
@@ -167,30 +170,44 @@ const SORTS = {
 export function trackedQualifiers(filters: GithubTrackedFilters, now = Date.now()) {
   const parts: string[] = [];
   const quoted = (value: string) => `"${value.replaceAll('"', "")}"`;
+
   if (filters.author) parts.push(`author:${filters.author}`);
+
   if (filters.reviewRequested) parts.push(`review-requested:${filters.reviewRequested}`);
+
   if (filters.review) parts.push(`review:${filters.review}`);
+
   if (filters.checks) parts.push(`status:${filters.checks}`);
+
   if (filters.label) parts.push(`label:${quoted(filters.label)}`);
+
   if (filters.draft !== undefined) parts.push(`draft:${filters.draft}`);
+
   if (filters.staleDays) {
     const before = new Date(now - filters.staleDays * 86_400_000).toISOString().slice(0, 10);
     parts.push(`updated:<${before}`);
   }
+
   const words = filters.text?.replace(/[:"\\]/g, " ").trim();
+
   if (words) parts.push(`${words} in:title`);
+
   return parts;
 }
 
 function trackedStatus(item: TrackedPayload): GithubTrackedItem["status"] {
   if (item.pull_request?.merged_at) return "merged";
+
   if (item.state !== "open") return "closed";
+
   return item.draft ? "draft" : "open";
 }
 
 function pullStatus(pull: { merged?: boolean; state: string; draft?: boolean }) {
   if (pull.merged) return "merged";
+
   if (pull.state !== "open") return "closed";
+
   return pull.draft ? "draft" : "open";
 }
 
@@ -217,6 +234,7 @@ const repoPath = (fullName: string) => {
 
 const nullWhenNotFound = (error: unknown) => {
   if (error instanceof GithubApiError && error.status === 404) return null;
+
   throw error;
 };
 
@@ -243,6 +261,7 @@ export class GithubClient {
 
   #config() {
     if (!this.config) throw new GithubNotConfiguredError();
+
     return this.config;
   }
 
@@ -266,14 +285,18 @@ export class GithubClient {
       "x-github-api-version": "2022-11-28",
       "user-agent": "aven",
     };
+
     if (init.body) headers["content-type"] = "application/json";
+
     const response = await this.fetchImpl(`${this.#config().apiUrl}${path}`, { ...init, headers });
+
     if (!response.ok) {
       throw new GithubApiError(
         `GitHub answered ${response.status} for ${init.method ?? "GET"} ${path}`,
         response.status,
       );
     }
+
     return response;
   }
 
@@ -283,6 +306,7 @@ export class GithubClient {
         await this.#api<P>(`${path}?per_page=${PAGE_SIZE}&page=${page}`, auth),
       );
       yield* entries;
+
       if (entries.length < PAGE_SIZE) return;
     }
   }
@@ -297,7 +321,9 @@ export class GithubClient {
 
   async installationToken(installationId: number) {
     const cached = this.#tokens.get(installationId);
+
     if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return cached;
+
     const issued = await this.#api<{ token: string; expires_at: string }>(
       `/app/installations/${installationId}/access_tokens`,
       this.#appJwt(),
@@ -332,6 +358,7 @@ export class GithubClient {
       return issued.token;
     } catch (error) {
       if (error instanceof GithubApiError && error.status === 422) return null;
+
       throw error;
     }
   }
@@ -339,7 +366,9 @@ export class GithubClient {
   async findPullRequests(installationId: number, fullName: string, branchPrefix: string) {
     const [, name] = fullName.split("/") as [string, string];
     const token = await this.#readToken(installationId, name);
+
     if (token === null) return [];
+
     const query = new URLSearchParams({
       state: "all",
       sort: "created",
@@ -359,7 +388,9 @@ export class GithubClient {
   async branchPullRequests(installationId: number, fullName: string, branch: string) {
     const [owner, name] = fullName.split("/") as [string, string];
     const token = await this.#readToken(installationId, name);
+
     if (token === null) return null;
+
     const query = new URLSearchParams({
       state: "all",
       head: `${owner}:${branch}`,
@@ -415,7 +446,9 @@ export class GithubClient {
       `${repoPath(fullName)}/contents${contentsPath(path)}`,
       token,
     ).catch(nullWhenNotFound);
+
     if (!Array.isArray(listed)) return null;
+
     const entries = listed.map(({ name, path: entryPath, type }): GithubTreeEntry => ({
       name,
       path: entryPath,
@@ -436,7 +469,9 @@ export class GithubClient {
       content?: string;
       encoding?: string;
     }>(`${repoPath(fullName)}/readme`, token).catch(nullWhenNotFound);
+
     if (!found?.content || found.encoding !== "base64") return null;
+
     const text = Buffer.from(found.content, "base64").toString("utf8");
     return {
       name: found.name,
@@ -455,11 +490,17 @@ export class GithubClient {
   ): Promise<GithubCommitPage | null> {
     const { token } = await this.installationToken(installationId);
     const query = new URLSearchParams({ per_page: String(COMMITS_PER_PAGE), page: String(page) });
+
     if (filters.author) query.set("author", filters.author);
+
     if (filters.since) query.set("since", filters.since);
+
     if (filters.until) query.set("until", filters.until);
+
     if (filters.path) query.set("path", filters.path);
+
     if (filters.branch) query.set("sha", filters.branch);
+
     const path = `${repoPath(fullName)}/commits?${query}`;
     const heads = this.#branchHeads(token, fullName, defaultBranch);
     const tags = this.#tagHeads(token, fullName);
@@ -470,6 +511,7 @@ export class GithubClient {
       if (error instanceof GithubApiError && error.status === 409) {
         return { commits: [], hasMore: false };
       }
+
       return nullWhenNotFound(error);
     }
     const listed = (await response.json()) as CommitPayload[];
@@ -498,9 +540,12 @@ export class GithubClient {
     filters: GithubTrackedFilters = {},
   ): Promise<GithubTrackedPage | null> {
     if (kind === "issue") await this.#requireIssues(installationId);
+
     const { token } = await this.installationToken(installationId);
     const qualifiers = [`repo:${fullName}`, `is:${kind === "pull" ? "pr" : "issue"}`];
+
     if (state !== "all") qualifiers.push(`is:${state}`);
+
     const applicable =
       kind === "pull"
         ? filters
@@ -519,6 +564,7 @@ export class GithubClient {
       if (error instanceof GithubApiError && error.status === 422) {
         return page > 1 ? { items: [], total: 0, hasMore: false } : null;
       }
+
       throw error;
     }
     return {
@@ -704,6 +750,7 @@ export class GithubClient {
       permissions?: Record<string, string>;
       account?: { login: string };
     }>(`/app/installations/${installationId}`, this.#appJwt());
+
     if (!found.permissions?.issues) {
       throw new GithubIssuesNotGrantedError(found.account?.login ?? "the account");
     }
@@ -717,6 +764,7 @@ export class GithubClient {
     const heads = new Map<string, string[]>();
     for (const { name, commit } of listed) {
       const same = heads.get(commit.sha);
+
       if (same) same.push(name);
       else heads.set(commit.sha, [name]);
     }
@@ -739,6 +787,7 @@ export class GithubClient {
     const heads = new Map<string, string[]>();
     for (const { name, commit } of branches) {
       const same = heads.get(commit.sha);
+
       if (same) same.push(name);
       else heads.set(commit.sha, [name]);
     }
@@ -780,19 +829,23 @@ export class GithubClient {
     }).catch(() => {
       throw new UnavailableError("Could not reach GitHub");
     });
+
     if (exchange.status >= 500) {
       throw new GithubApiError(
         `GitHub answered ${exchange.status} for POST /login/oauth/access_token`,
         exchange.status,
       );
     }
+
     const granted = (await exchange.json().catch(() => ({}))) as {
       access_token?: string;
       expires_in?: number;
       refresh_token?: string;
       refresh_token_expires_in?: number;
     };
+
     if (!exchange.ok || !granted.access_token) return null;
+
     const now = Date.now();
     const after = (seconds: number | undefined) => (seconds ? now + seconds * 1000 : null);
     return {

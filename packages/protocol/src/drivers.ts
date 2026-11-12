@@ -16,7 +16,9 @@ export const ownPrompt = (text: string) => (DRIVER.test(text) ? `${OWN_MARK}${te
 
 export function parseDriverPrompt(prompt: string): { driver?: string; text: string } {
   const match = DRIVER.exec(prompt);
+
   if (match) return { driver: match[1]!, text: match[2]! };
+
   return { text: prompt.startsWith(OWN_MARK) ? prompt.slice(OWN_MARK.length) : prompt };
 }
 

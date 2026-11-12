@@ -36,7 +36,9 @@ export function createLatestRelease({
   return {
     async get() {
       if (!known) return refresh();
+
       if (known.until <= now()) void refresh();
+
       return known.version;
     },
   };

@@ -17,9 +17,11 @@ function countOccurrences(text: string, search: string) {
 function workspacePath(workdir: string, input: string) {
   const normalized = posix.normalize(input.replaceAll("\\", "/"));
   const relative = posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) : normalized;
+
   if (relative === "" || relative === "." || relative === ".." || relative.startsWith("../")) {
     throw new Error(`Path is not a file inside the workspace: ${input}`);
   }
+
   return relative;
 }
 
@@ -38,6 +40,7 @@ export function createEditTool(files: EditableFiles) {
       if (oldString === "") {
         throw new Error("oldString must not be empty; use `write_file` to create files");
       }
+
       if (oldString === newString) throw new Error("oldString and newString are identical");
 
       const target = workspacePath(files.workdir, path);
@@ -46,7 +49,9 @@ export function createEditTool(files: EditableFiles) {
 
       const firstMatch = text.indexOf(oldString);
       const count = firstMatch === -1 ? 0 : countOccurrences(text, oldString);
+
       if (count === 0) throw new Error(`oldString was not found in ${target}`);
+
       if (count > 1 && !replaceAll) {
         throw new Error(
           `oldString matches ${count} places in ${target}; add surrounding context to make it unique, or set replaceAll`,

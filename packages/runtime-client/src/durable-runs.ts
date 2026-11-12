@@ -86,6 +86,7 @@ class TranscriptTurns {
 
 function releaseOwnLease(databasePath: string) {
   if (!existsSync(databasePath)) return;
+
   const database = new Database(databasePath);
   try {
     database
@@ -138,8 +139,10 @@ export class DurableRuns implements AgentBackend {
   ) {
     mkdirSync(dirname(databasePath), { recursive: true });
     const owner = held.get(databasePath);
+
     if (owner !== undefined && owner.#open)
       throw new Error(`The run journal ${databasePath} is already open`);
+
     held.delete(databasePath);
     releaseOwnLease(databasePath);
     const contexts = new Map<string, GoalContext>();
@@ -177,7 +180,9 @@ export class DurableRuns implements AgentBackend {
         for (const run of page.runs)
           if (!keepAgents.has(run.agentId))
             await this.#runtime.getRun(run.id).then((r) => r.cancel());
+
         if (page.nextCursor === undefined) break;
+
         after = page.nextCursor;
       }
     }
@@ -219,6 +224,7 @@ export class DurableRuns implements AgentBackend {
       return true;
     } catch (error) {
       if (error instanceof DurableConflictError) return false;
+
       throw error;
     }
   }
@@ -233,10 +239,12 @@ export class DurableRuns implements AgentBackend {
     const input = restore();
     this.#registerOrKeep(input);
     const run = await this.#runtime.getRun(asked.runId);
+
     if (response.type === "tool-question")
       onEvent(
         projectToolEnd(question.toolCallId, { type: "json", value: { answers: response.answers } }),
       );
+
     const followed = this.#follow(run, input, onEvent, {
       agentId: asked.agentId,
       after: await this.#cursor(run),
@@ -277,35 +285,47 @@ export class DurableRuns implements AgentBackend {
         const { runs } = await this.#runtime.listRuns({ status, limit: 100 });
         for (const summary of runs.filter((run) => agentIds.includes(run.agentId))) {
           waiting = true;
+
           if (status !== "needs_attention") continue;
+
           const run = await this.#runtime.getRun(summary.id);
+
           if (summary.blockedOperation) await this.#resolveUnknown(run, summary.blockedOperation);
           else await run.retry();
         }
       }
+
       if (!waiting) return;
+
       await Bun.sleep(50);
     }
   }
 
   transcriptTurn(durableId: string, end: Exclude<DurableEnd, { type: "error" }>) {
     const from = this.#turns.from(durableId);
+
     if (end.type === "interaction") this.#turns.to(durableId, from + end.messages.length);
     else this.#turns.forget(durableId);
+
     return from;
   }
 
   async unfinishedMessages(durableId: string): Promise<Message[]> {
     try {
       const { run } = await (await this.#runtime.getRun(durableId)).snapshot({ operations: false });
+
       if (run.status !== "failed" && run.status !== "cancelled") return [];
+
       if (run.exhaustion) return run.exhaustion.messages.slice(run.history.length);
+
       const { messages, prompt } = run.input;
       const asked: Message[] = [];
+
       if (messages) asked.push(...messages);
       else if (prompt !== undefined) {
         asked.push(typeof prompt === "string" ? { role: "user", content: prompt } : prompt);
       }
+
       const steered = Object.values(run.steering?.checkpoints ?? {}).flatMap((checkpoint) =>
         checkpoint.entries.flatMap((entry) => entry.messages),
       );
@@ -366,14 +386,19 @@ export class DurableRuns implements AgentBackend {
   ): FollowedRun {
     const { agentId = input.agent.id, after, keepAgent } = options;
     const mapper = createDurableEventMapper({ contextWindow: input.contextWindow });
+
     if (after) this.#replay(run.id, after, mapper);
+
     const done = (async (): Promise<DurableEnd> => {
       for await (const event of run.stream({ after })) {
         const { events, end } = mapper.map(await this.#withOutcome(run, event));
         for (const mapped of events) onEvent(mapped, { id: run.id, sequence: event.sequence });
+
         if (event.type === "status") await this.#resolveInterrupted(run, event);
+
         if (end) {
           if (!keepAgent) this.#release(agentId, end);
+
           return end;
         }
       }
@@ -388,8 +413,11 @@ export class DurableRuns implements AgentBackend {
 
   async #withOutcome(run: DurableRun, event: DurableEvent): Promise<DurableEvent> {
     const data = asRecord(event.data);
+
     if (event.type !== "status" || data.outcome !== undefined) return event;
+
     if (data.status !== "completed" && data.status !== "waiting") return event;
+
     const { run: record } = await run.snapshot({ operations: false });
     return { ...event, data: { ...data, outcome: record.outcome } } as DurableEvent;
   }
@@ -397,7 +425,9 @@ export class DurableRuns implements AgentBackend {
   #replay(runId: string, upTo: number, mapper: ReturnType<typeof createDurableEventMapper>) {
     for (let at = 0; at < upTo;) {
       const page = this.#runtime.events(runId, at);
+
       if (page.length === 0) return;
+
       for (const event of page) if (event.sequence <= upTo) mapper.map(event);
       at = page.at(-1)!.sequence;
     }
@@ -405,7 +435,9 @@ export class DurableRuns implements AgentBackend {
 
   async #resolveInterrupted(run: DurableRun, event: DurableEvent) {
     if (asRecord(event.data).status !== "needs_attention") return;
+
     const { blockedOperation } = await run.status();
+
     if (blockedOperation) await this.#resolveUnknown(run, blockedOperation);
   }
 
@@ -415,6 +447,7 @@ export class DurableRuns implements AgentBackend {
 
   #release(agentId: string, end: DurableEnd) {
     if (end.type === "interaction") return;
+
     try {
       this.#runtime.unregisterAgent(agentId);
     } catch {}

@@ -42,6 +42,7 @@ export function assertDurableToolConcurrency(register: ToolConcurrencyProbe) {
     register(probeRegistration());
   } catch (error) {
     if (error instanceof TypeError) return;
+
     throw error;
   }
   throw new Error(TOOL_CONCURRENCY_NOT_HONOURED);

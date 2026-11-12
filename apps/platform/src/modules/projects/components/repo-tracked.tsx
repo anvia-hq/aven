@@ -33,7 +33,9 @@ export const TRACKED_STATUS = {
 
 function StatusIcon({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
   if (item.status === "merged") return <GitMerge className="size-4 shrink-0" />;
+
   if (kind === "pull") return <GitPullRequest className="size-4 shrink-0" />;
+
   return <Circle className="size-4 shrink-0" />;
 }
 
@@ -65,6 +67,7 @@ export function TrackedRow({
             title={item.title}
             onClick={(event) => {
               if (!onOpen) return;
+
               event.preventDefault();
               onOpen();
             }}

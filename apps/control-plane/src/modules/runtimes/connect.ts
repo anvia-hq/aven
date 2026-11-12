@@ -12,7 +12,9 @@ export const connectRouter = (hub: RuntimeHub) => {
     .resolve(async ({ request, status }) => {
       const token = bearerToken(request.headers);
       const runtime = token ? await runtimesService.authenticate(token) : null;
+
       if (!runtime) return status(401, "Unauthorized");
+
       return { runtime };
     })
     .ws("/connect", {
@@ -36,17 +38,21 @@ export const connectRouter = (hub: RuntimeHub) => {
       },
       async message(ws, message) {
         const connection = connections.get(ws.raw);
+
         if (ArrayBuffer.isView(message)) {
           connection?.receiveBinary(bytesOf(message));
           return;
         }
+
         const text = typeof message === "string" ? message : JSON.stringify(message);
         await connection?.receive(text);
       },
       close(ws) {
         const connection = connections.get(ws.raw);
         connections.delete(ws.raw);
+
         if (!connection) return;
+
         connection.close();
         void runtimesService.touch(connection.runtimeId);
       },

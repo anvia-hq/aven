@@ -9,6 +9,7 @@ import type { ModelConfig } from "@aven/agents/types";
 import type { AskQuestion, SendMessage } from "@aven/agents/tools/types";
 import type {
   Bot,
+  BotApiResult,
   BotCreateParams,
   BotGoalView,
   BotQuestion,
@@ -33,7 +34,6 @@ export type BotLetter = {
 export type BotChats = ReturnType<typeof createBotChats>;
 
 import type { BotApiAsk } from "../bot-api/service";
-import type { BotApiResult } from "@aven/protocol/types";
 
 export type BotKeeper = {
   list(userId: string): Promise<Bot[]>;

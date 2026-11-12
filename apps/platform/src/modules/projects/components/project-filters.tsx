@@ -34,11 +34,13 @@ function SearchField({
 
   useEffect(() => {
     if (query === sent.current) return;
+
     sent.current = query;
     setText(query ?? "");
   }, [query]);
   useEffect(() => {
     if (text === (sent.current ?? "")) return;
+
     const timer = setTimeout(() => {
       sent.current = text || undefined;
       commit.current(text || undefined);

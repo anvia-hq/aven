@@ -29,8 +29,11 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 export function placesOf(owner: MemoryOwner): MemoryPlace[] {
   const { userId, projectId, botId } = owner;
   const places: MemoryPlace[] = [];
+
   if (projectId) places.push({ userId, scope: "project", projectId });
+
   if (botId) places.push({ userId, scope: "bot", botId });
+
   places.push({ userId, scope: "personal" });
   return places;
 }
@@ -52,6 +55,7 @@ const placeOf = (row: MemoryNoteRow): MemoryPlace => ({
 
 export function checkName(name: string) {
   if (!MEMORY_NOTE_NAME.test(name)) throw new UnprocessableError(MEMORY_NOTE_NAME_RULE);
+
   return name;
 }
 
@@ -61,6 +65,7 @@ export function checkBody(body: string) {
       `A note holds at most ${MEMORY_NOTE_MAX} characters; this one has ${body.length}. Keep one fact a note.`,
     );
   }
+
   return body;
 }
 
@@ -118,6 +123,7 @@ async function find(tx: Tx | typeof db, place: MemoryPlace, name: string) {
 
 async function roomFor(tx: Tx, place: MemoryPlace) {
   const [counted] = await tx.select({ n: count() }).from(memoryNotes).where(inPlace(place));
+
   if ((counted?.n ?? 0) >= MEMORY_NOTES_PER_SCOPE) {
     throw new UnprocessableError(
       `This folder holds ${MEMORY_NOTES_PER_SCOPE} notes already. Fold some together or delete ones that are no longer true.`,
@@ -136,11 +142,13 @@ async function lockFolder(tx: Tx, ...places: MemoryPlace[]) {
 
 async function requireLiveProject(tx: Tx, place: MemoryPlace) {
   if (place.scope !== "project" || !place.projectId) return;
+
   const [project] = await tx
     .select({ deletedAt: projects.deletedAt })
     .from(projects)
     .where(eq(projects.id, place.projectId))
     .for("share");
+
   if (!project || project.deletedAt) throw new UnprocessableError("This project was deleted.");
 }
 
@@ -157,12 +165,15 @@ function writeOnce(
   return db.transaction(async (tx) => {
     await lockFolder(tx, place);
     const existing = await find(tx, place, name);
+
     if (existing && onlyNew) throw nameTaken(name);
+
     if (existing) {
       await tx.update(memoryNotes).set({ body }).where(eq(memoryNotes.id, existing.id));
       await record(tx, place, actor, { name, action: "updated" });
       return { created: false };
     }
+
     await requireLiveProject(tx, place);
     await roomFor(tx, place);
     await tx.insert(memoryNotes).values({
@@ -232,7 +243,9 @@ export const memoryService = {
         .from(memoryNotes)
         .where(and(inPlace(place), eq(memoryNotes.name, name)))
         .for("update");
+
       if (!row) return false;
+
       const body = checkBody(edit(row.body));
       await tx.update(memoryNotes).set({ body }).where(eq(memoryNotes.id, row.id));
       await record(tx, place, actor, { name, action: "updated" });
@@ -246,7 +259,9 @@ export const memoryService = {
         .delete(memoryNotes)
         .where(and(inPlace(place), eq(memoryNotes.name, name)))
         .returning({ id: memoryNotes.id });
+
       if (gone) await record(tx, place, actor, { name, action: "removed" });
+
       return Boolean(gone);
     });
   },
@@ -260,13 +275,18 @@ export const memoryService = {
     return db.transaction(async (tx) => {
       await lockFolder(tx, from.place, to.place);
       const row = await find(tx, from.place, from.name);
+
       if (!row) return false;
+
       if (await find(tx, to.place, to.name)) throw nameTaken(to.name);
+
       const moved = from.place.scope !== to.place.scope;
+
       if (moved) {
         await requireLiveProject(tx, to.place);
         await roomFor(tx, to.place);
       }
+
       await tx
         .update(memoryNotes)
         .set({
@@ -276,6 +296,7 @@ export const memoryService = {
           name: to.name,
         })
         .where(eq(memoryNotes.id, row.id));
+
       if (moved) {
         await record(tx, from.place, actor, { name: from.name, action: "removed" });
         await record(tx, to.place, actor, { name: to.name, action: "created" });
@@ -286,6 +307,7 @@ export const memoryService = {
           from: from.name,
         });
       }
+
       return true;
     });
   },
@@ -304,15 +326,21 @@ export const memoryService = {
     input: { scope: MemoryScope; projectId?: string; botId?: string },
   ): Promise<MemoryPlace> {
     if (input.scope === "personal") return { userId, scope: "personal" };
+
     if (input.scope === "project") {
       const project = input.projectId
         ? (await projectsService.listForPerson(userId)).find((p) => p.id === input.projectId)
         : undefined;
+
       if (!project) throw new NotFoundError("Project not found");
+
       return { userId, scope: "project", projectId: project.id };
     }
+
     const bot = input.botId ? await botsService.get(userId, input.botId) : null;
+
     if (!bot) throw new NotFoundError("Bot not found");
+
     return { userId, scope: "bot", botId: bot.id };
   },
 
@@ -329,28 +357,39 @@ export const memoryService = {
 
   async update(userId: string, id: string, changes: { name?: string; body?: string }) {
     if (changes.name !== undefined) checkName(changes.name);
+
     if (changes.body !== undefined) checkBody(changes.body);
+
     const ofPerson = and(eq(memoryNotes.userId, userId), eq(memoryNotes.id, id));
     const updated = await db.transaction(async (tx) => {
       const [found] = await tx.select().from(memoryNotes).where(ofPerson);
+
       if (!found) throw new NotFoundError("Note not found");
+
       await lockFolder(tx, placeOf(found));
       const [row] = await tx.select().from(memoryNotes).where(ofPerson).for("update");
+
       if (!row) throw new NotFoundError("Note not found");
+
       const place = placeOf(row);
       const actor = { source: "person" } as const;
       const name = changes.name ?? row.name;
       const body = changes.body ?? row.body;
+
       if (name !== row.name && (await find(tx, place, name))) throw nameTaken(name);
+
       const [now] = await tx
         .update(memoryNotes)
         .set({ name, body })
         .where(eq(memoryNotes.id, row.id))
         .returning();
+
       if (body !== row.body) await record(tx, place, actor, { name: row.name, action: "updated" });
+
       if (name !== row.name) {
         await record(tx, place, actor, { name, action: "renamed", from: row.name });
       }
+
       return now!;
     });
     return noteView(updated);
@@ -361,7 +400,9 @@ export const memoryService = {
       .select()
       .from(memoryNotes)
       .where(and(eq(memoryNotes.userId, userId), eq(memoryNotes.id, id)));
+
     if (!row) throw new NotFoundError("Note not found");
+
     await memoryService.remove(placeOf(row), row.name, { source: "person" });
   },
 

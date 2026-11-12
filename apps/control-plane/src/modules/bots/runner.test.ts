@@ -79,6 +79,7 @@ const runnerWith = (options: {
 const until = async (condition: () => boolean) => {
   for (let tries = 0; !condition(); tries++) {
     if (tries > 2000) throw new Error("timed out");
+
     await Bun.sleep(1);
   }
 };
@@ -89,7 +90,9 @@ async function watch(runner: BotRunner, stop: (events: BotEvent[]) => boolean = 
   const done = (async () => {
     for await (const event of runner.events(bot.id, USER, controller.signal)) {
       if (!event) continue;
+
       events.push(event);
+
       if (stop(events)) controller.abort();
     }
   })();
@@ -100,7 +103,9 @@ async function watch(runner: BotRunner, stop: (events: BotEvent[]) => boolean = 
 const typed = (events: BotEvent[]) =>
   events.map((event) => {
     if (event.type === "message") return `${event.message.role}: ${event.message.text}`;
+
     if (event.type === "typing") return event.typing ? "typing" : "stopped";
+
     return event.type;
   });
 
@@ -423,6 +428,7 @@ describe("BotRunner", () => {
       const gate = Promise.withResolvers<void>();
       const { runner, settled } = settling(async (prompt) => {
         if (prompt === "first") await gate.promise;
+
         if (prompt === "second") throw new Error("the computer dropped");
       });
       await runner.send(bot, USER, "first", model);

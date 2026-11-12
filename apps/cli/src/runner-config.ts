@@ -27,7 +27,9 @@ export async function loadRunnerEnv(
   env: Record<string, string | undefined> = process.env,
 ) {
   const text = await readFile(file, "utf8").catch(() => undefined);
+
   if (text === undefined) return false;
+
   for (const [key, value] of Object.entries(parseEnv(text))) env[key] ??= value;
   return true;
 }

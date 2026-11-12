@@ -17,7 +17,9 @@ export function useRefetchModels() {
       api<ProviderModels>(`/providers/${provider.id}/models`),
     );
     setFetching(null);
+
     if (!result) return;
+
     setCache((all) => ({ ...all, [provider.id]: result }));
     const count = result.models.length;
     toast.add({

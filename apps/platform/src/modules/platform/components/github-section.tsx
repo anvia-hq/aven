@@ -16,7 +16,9 @@ export function GithubSection() {
   const [anyAccount, setAnyAccount] = useState(false);
 
   const github = status?.data;
+
   if (!github) return null;
+
   const { configured, canSetUp } = github;
 
   return (

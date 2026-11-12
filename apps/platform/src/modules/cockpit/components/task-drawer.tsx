@@ -51,6 +51,7 @@ function DueInput({
       onChange={(event) => {
         const next = event.target.value;
         setTyped(next);
+
         if (next === "" || /^[1-9]\d{3}-\d{2}-\d{2}$/.test(next)) onChange(next || null);
       }}
       className={`${QUIET} text-sm md:text-sm`}
@@ -153,6 +154,7 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
               onClick={async () => {
                 saveTitle.cancel();
                 saveBody.cancel();
+
                 if (await remove(task)) onClose();
               }}
             >
@@ -171,6 +173,7 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
         }}
         onCommit={() => {
           saveTitle.flush();
+
           if (!title.trim()) setTitle(task.title);
         }}
       />
@@ -213,6 +216,7 @@ function NewTaskPage({
 
   async function save() {
     if (!ready) return;
+
     setBusy(true);
     try {
       if (await create({ title: title.trim(), description, ...fields })) onDone();
@@ -287,7 +291,9 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
     written.current = value;
   }, []);
   const last = useRef(open);
+
   if (open) last.current = open;
+
   const shown = open ?? last.current;
   const task = shown?.kind === "task" ? tasks.find((each) => each.id === shown.id) : undefined;
   const isOpen = open !== null && (open.kind === "new" || task !== undefined);
@@ -297,10 +303,13 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
       open={isOpen}
       onOpenChange={(next, details) => {
         if (next) return;
+
         const draft = shown?.kind === "new" && written.current;
+
         if (draft && STRAY.has(details.reason) && !window.confirm("Discard this new task?")) {
           return details.cancel();
         }
+
         written.current = false;
         onClose();
       }}

@@ -3,7 +3,9 @@ import type { Git } from "./types";
 
 export async function remoteBase(root: string, run: Git = git) {
   const head = await run(["rev-parse", "--verify", "--quiet", "origin/HEAD"], { cwd: root });
+
   if (head.code === 0) return "origin/HEAD";
+
   const listed = await run(["for-each-ref", "--format=%(refname:short)", "refs/remotes/origin"], {
     cwd: root,
   });

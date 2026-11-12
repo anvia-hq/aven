@@ -27,6 +27,7 @@ export function mentionOf(triggerId: string, id: string): Mentionable | undefine
   if (id === COMPACT_COMMAND || id === AGENT_ENTITY || personIdOf(id) !== undefined) {
     return undefined;
   }
+
   return triggerId === "file" || triggerId === "skill" ? { type: triggerId, name: id } : undefined;
 }
 
@@ -39,7 +40,9 @@ export function markMentions(text: string, mentions: MessageMention[] = []) {
     if (mention.from < at || text.slice(mention.from, mention.to) !== mentionToken(mention)) {
       continue;
     }
+
     if (mention.name.includes("`")) continue;
+
     result += `${text.slice(at, mention.from)}\`${MENTION_MARK}${mention.type}:${mention.name}\``;
     at = mention.to;
   }

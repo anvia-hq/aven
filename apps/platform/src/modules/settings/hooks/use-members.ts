@@ -34,10 +34,12 @@ export function useMembers() {
 
   async function invite(email: string, role: InvitableRole) {
     const { data, error } = await authClient.organization.inviteMember({ email, role });
+
     if (error) {
       toast.add({ title: "Could not create invite", description: error.message, type: "error" });
       return false;
     }
+
     const copied = await copyInviteLink(data.id);
     toast.add({
       title: "Invitation created",
@@ -61,19 +63,23 @@ export function useMembers() {
   async function remove(member: Member) {
     if (member.status === "pending") {
       const { error } = await authClient.organization.cancelInvitation({ invitationId: member.id });
+
       if (error) {
         toast.add({ title: "Could not cancel invite", description: error.message, type: "error" });
         return;
       }
+
       toast.add({ title: "Invitation canceled", description: member.email });
       return;
     }
 
     const { error } = await authClient.organization.removeMember({ memberIdOrEmail: member.id });
+
     if (error) {
       toast.add({ title: "Could not remove member", description: error.message, type: "error" });
       return;
     }
+
     toast.add({ title: "Member removed", description: member.name });
   }
 

@@ -181,8 +181,11 @@ test.describe("settings", () => {
         gemini: ["gemini-2.5-flash"],
       };
       let models = byKind[sent.kind] ?? ["model-a"];
+
       if (sent.baseUrl?.includes("groq")) models = ["llama-3.3-70b-versatile"];
+
       if (sent.baseUrl?.includes("11434")) models = ["llama3.1"];
+
       return route.fulfill({ json: { models } });
     });
     await page.goto("/settings/providers");

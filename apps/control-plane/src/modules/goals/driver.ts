@@ -8,6 +8,7 @@ export function roundNote(goal: BotGoalRow, round: number) {
   if (round > 1) {
     return `${GOAL_ROUND_NOTE_PREFIX}${round} of ${goal.maxRounds}. Nobody is watching this round, so do not call ask_question. Carry on with your goal from where earlier rounds left off: get_goal gives the objective and the checks. When the whole objective is achieved, call update_goal with complete (its checks run first); if you cannot go on without the person, call it with blocked and the reason.`;
   }
+
   return [
     `${GOAL_ROUND_NOTE_PREFIX}${round} of ${goal.maxRounds}. Nobody is watching this round, so do not call ask_question: work on your own computer and keep going.`,
     `Objective: ${goal.objective}`,
@@ -37,22 +38,29 @@ export function createGoalDriver(options: {
 
   async function advance(userId: string, botId: string) {
     const goal = await goalsService.claimRound(botId);
+
     if (!goal) {
       const current = await goalsService.current(botId);
+
       if (current?.phase === "active" && current.roundsStarted >= current.maxRounds) {
         const reason = `It reached its ${current.maxRounds}-round limit.`;
+
         if (await goalsService.block(botId, reason)) await tell(userId, botId, reason);
       }
+
       return;
     }
+
     try {
       await wake(userId, botId, roundNote(goal, goal.roundsStarted));
       failing.delete(botId);
     } catch (error) {
       await goalsService.releaseRound(botId);
+
       if (!failing.has(botId)) {
         console.warn(`A round of the goal of bot ${botId} could not start:`, describeError(error));
       }
+
       failing.add(botId);
     }
   }
@@ -60,6 +68,7 @@ export function createGoalDriver(options: {
   async function tick() {
     for (const { userId, botId } of await goalsService.activeBots()) {
       if (!isIdle(botId)) continue;
+
       await advance(userId, botId).catch((error: unknown) => {
         console.warn(`The goal of bot ${botId} could not go on:`, describeError(error));
       });
@@ -78,13 +87,18 @@ export function createGoalDriver(options: {
     tick,
     async settled(reply: { userId: string; botId: string; prompt: string; ok: boolean }) {
       const { userId, botId, prompt, ok } = reply;
+
       if (ok) return advance(userId, botId);
+
       if (!isGoalRoundNote(prompt)) return;
+
       const reason = "A round failed.";
+
       if (await goalsService.block(botId, reason)) await tell(userId, botId, reason);
     },
     start() {
       if (timer) return;
+
       void guarded();
       timer = setInterval(() => void guarded(), intervalMs);
       timer.unref();

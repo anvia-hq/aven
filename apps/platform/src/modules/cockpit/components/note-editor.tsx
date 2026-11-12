@@ -70,6 +70,7 @@ export function NoteEditor({
               onClick={async () => {
                 saveTitle.cancel();
                 saveBody.cancel();
+
                 if (await remove(note)) onClose();
               }}
             >
@@ -88,6 +89,7 @@ export function NoteEditor({
         }}
         onCommit={() => {
           saveTitle.flush();
+
           if (!title.trim()) setTitle(note.title);
         }}
       />

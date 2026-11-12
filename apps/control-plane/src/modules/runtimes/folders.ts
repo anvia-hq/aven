@@ -61,12 +61,16 @@ async function ask<T>(
   shape: z.ZodType<T>,
 ): Promise<T> {
   const runner = hub.get(runtimeId);
+
   if (!runner) throw new UnavailableError("The computer is offline");
+
   const reply = await runner.call(method, params, CALL_MS).catch((error: unknown) => {
     const reason = describeError(error);
+
     if (/unknown call/i.test(reason)) {
       throw new ConflictError("Update this computer's runner to browse its folders");
     }
+
     if (
       /does not serve|not on this machine|already exists|slash|empty|serves no|outside the folder|not in the folder/i.test(
         reason,
@@ -74,6 +78,7 @@ async function ask<T>(
     ) {
       throw new UnprocessableError(reason);
     }
+
     console.warn(`Runner ${runtimeId} did not take ${method}:`, reason);
     throw new UnavailableError("The computer did not answer");
   });

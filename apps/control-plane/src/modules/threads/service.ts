@@ -80,6 +80,7 @@ async function requireLiveProject(organizationId: string, threadId: string) {
     .select({ projectId: threads.projectId })
     .from(threads)
     .where(and(eq(threads.organizationId, organizationId), eq(threads.id, threadId)));
+
   if (thread && !(await projectsService.get(organizationId, thread.projectId))) {
     throw new ConflictError("This thread's project was deleted, so it stays archived");
   }
@@ -87,6 +88,7 @@ async function requireLiveProject(organizationId: string, threadId: string) {
 
 function archivedFilter(archived: boolean | undefined) {
   if (archived === undefined) return undefined;
+
   return archived ? eq(threads.state, "archived") : ne(threads.state, "archived");
 }
 
@@ -99,7 +101,9 @@ export const threadsService = {
       .select(columns)
       .from(threads)
       .where(and(seenBy(viewer), eq(threads.id, id)));
+
     if (!thread) throw new ThreadNotFoundError();
+
     return thread;
   },
 
@@ -114,7 +118,9 @@ export const threadsService = {
           eq(threads.id, id),
         ),
       );
+
     if (!thread) throw new ThreadNotFoundError();
+
     return thread;
   },
 
@@ -148,7 +154,9 @@ export const threadsService = {
           or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
         ),
       );
+
     if (!thread) throw new ThreadNotFoundError();
+
     return thread;
   },
 
@@ -157,7 +165,9 @@ export const threadsService = {
       .select(columns)
       .from(threads)
       .where(and(eq(threads.id, id), eq(threads.createdBy, userId), inPersonsWorkspaces(userId)));
+
     if (!thread) throw new ThreadNotFoundError();
+
     return thread;
   },
 
@@ -195,7 +205,9 @@ export const threadsService = {
 
   async require(organizationId: string, id: string) {
     const thread = await this.get(organizationId, id);
+
     if (!thread) throw new ThreadNotFoundError();
+
     return thread;
   },
 
@@ -206,11 +218,15 @@ export const threadsService = {
     placement?: { parentThreadId?: string; runtimeId: string },
   ) {
     const project = await projectsService.get(organizationId, body.projectId);
+
     if (!project) throw new ProjectNotFoundError("Project not found");
+
     const runtimeId = placement?.runtimeId ?? project.runtimeId;
+
     if (!(await runtimesService.get(organizationId, runtimeId, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
+
     const [thread] = await db
       .insert(threads)
       .values({
@@ -230,40 +246,53 @@ export const threadsService = {
       .select(columns)
       .from(threads)
       .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
+
     if (!thread) throw new ThreadNotFoundError();
+
     if (thread.createdBy === userId) return thread;
+
     const driven =
       thread.visibility === "workspace" &&
       isDriving(thread.drivingUntil) &&
       (await isMember(organizationId, thread.createdBy));
+
     if (!driven) throw new ThreadNotFoundError();
+
     return thread;
   },
 
   async update({ organizationId, userId }: Viewer, id: string, body: UpdateThreadBody) {
     if (body.state && body.state !== "archived") await requireLiveProject(organizationId, id);
+
     const { driving, ...rest } = body;
     const changes: Partial<typeof threads.$inferInsert> = { ...rest };
+
     if (driving !== undefined) {
       const [current] = await db
         .select({ visibility: threads.visibility })
         .from(threads)
         .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
       const shared = (body.visibility ?? current?.visibility) === "workspace";
+
       if (driving !== null && !shared) {
         throw new ConflictError(
           "Share the thread with the workspace before turning on multiplayer",
         );
       }
+
       if (driving !== null && !(await decisionModelService.get(organizationId))) {
         throw new ConflictError(
           "Set the workspace's decision model in settings before turning on multiplayer",
         );
       }
+
       changes.drivingUntil = driving === null ? null : new Date(Date.now() + driving * DAY_MS);
     }
+
     if (body.visibility === "private" || body.state === "archived") changes.drivingUntil = null;
+
     if (Object.keys(changes).length === 0) return this.owned({ organizationId, userId }, id);
+
     const [thread] = await db
       .update(threads)
       .set(changes)
@@ -280,6 +309,7 @@ export const threadsService = {
 
   async reopen(thread: { id: string; state: string }) {
     if (thread.state === "open") return;
+
     await db.update(threads).set({ state: "open" }).where(eq(threads.id, thread.id));
   },
 
@@ -352,6 +382,7 @@ export const threadsService = {
 
   async savePullRequests(id: string, pullRequests: ThreadPullRequest[]) {
     if (pullRequests.length === 0) return;
+
     await db
       .insert(threadPullRequests)
       .values(pullRequests.map((pullRequest) => ({ threadId: id, ...pullRequest })))

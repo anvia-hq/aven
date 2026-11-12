@@ -22,7 +22,9 @@ export function useTimezone() {
     const done = await attempt("Could not save the timezone", () =>
       postJson<{ timezone: string }>("/preferences/timezone", { timezone }, "PUT"),
     );
+
     if (!done) return false;
+
     setSaved(done.timezone);
     toast.add({ title: "Timezone saved", description: done.timezone, type: "success" });
     return true;

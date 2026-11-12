@@ -80,17 +80,21 @@ export function createBotThreads({
 
   const followingUp = async <T>(actor: BotActor, id: string, act: () => Promise<T>) => {
     if (actor.via === "person") return act();
+
     const allowed = await watch.followUp(id, actor.botId);
+
     if (allowed === "unwatched") {
       throw new UnprocessableError(
         "You did not send this thread its run, so continue or stop it only when the person's own message asks you to.",
       );
     }
+
     if (allowed === "spent") {
       throw new UnprocessableError(
         "You have followed this thread up as often as you may without the person. Tell the person what it needs instead.",
       );
     }
+
     try {
       return await act();
     } catch (error) {
@@ -101,9 +105,11 @@ export function createBotThreads({
 
   const owned = async (actor: BotActor, id: string) => {
     const thread = await threadsService.ownedForPerson(actor.userId, id);
+
     if (actor.via === "note" && thread.state === "archived") {
       throw new UnprocessableError("This thread is archived. Leave it, or tell the person.");
     }
+
     return thread;
   };
 
@@ -147,7 +153,9 @@ export function createBotThreads({
       const project = (await projectsService.listForPerson(userId)).find(
         (found) => found.id === projectId,
       );
+
       if (!project) throw new UnprocessableError(NO_PROJECT);
+
       const thread = await threadsService.create(project.organizationId, userId, {
         projectId,
         title: title ?? threadTitleFrom(prompt),
@@ -168,11 +176,13 @@ export function createBotThreads({
 
     async continue(actor, id, { prompt, ...selection }) {
       const thread = await owned(actor, id);
+
       if (thread.awaitingAnswer) {
         throw new UnprocessableError(
           "The agent in this thread asked the person a question and waits for the answer. Tell the person to answer it in the thread: a message from you cannot.",
         );
       }
+
       const choice = actor.via === "person" ? selection : {};
       await followingUp(actor, id, () =>
         messages.send(
@@ -194,21 +204,26 @@ export function createBotThreads({
         id,
         { state: archived ? "archived" : "open" },
       );
+
       if (!changed) throw new UnprocessableError("This thread no longer exists");
+
       if (archived) {
         await watch.settle(id, actor.botId);
         putAway({ id: changed.id, runtimeId: changed.runtimeId });
       }
+
       return view(actor.userId, changed);
     },
 
     async stop(actor, id) {
       const thread = await owned(actor, id);
+
       if (!runs.isRunning(id)) {
         throw new UnprocessableError(
           "No run is going on in this thread. Look at it with get_thread.",
         );
       }
+
       await followingUp(actor, id, async () => {
         await watch.settle(id, actor.botId);
         runs.cancel(id);

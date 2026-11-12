@@ -23,7 +23,9 @@ function reportDropped({ message }: WaitingPrompt) {
 
 function dropFirstPrompt(threadId: string) {
   const first = waiting.get(threadId);
+
   if (!first) return;
+
   waiting.delete(threadId);
   reportDropped(first);
 }
@@ -39,6 +41,7 @@ function dropOldestFirstPrompt() {
   for (const entry of waiting) {
     if (!oldest || entry[1].handedOverAt < oldest[1].handedOverAt) oldest = entry;
   }
+
   if (oldest) dropFirstPrompt(oldest[0]);
 }
 
@@ -49,19 +52,25 @@ export function handOverFirstPrompt(
 ) {
   const now = Date.now();
   dropStaleFirstPrompts(now);
+
   if (!waiting.has(threadId)) {
     while (waiting.size >= FIRST_PROMPT_LIMIT) dropOldestFirstPrompt();
   }
+
   waiting.set(threadId, { message, selection, handedOverAt: now });
 }
 
 export function takeFirstPrompt(threadId: string) {
   const first = waiting.get(threadId);
+
   if (!first) return;
+
   waiting.delete(threadId);
+
   if (Date.now() - first.handedOverAt >= FIRST_PROMPT_LIFETIME_MS) {
     reportDropped(first);
     return;
   }
+
   return first;
 }

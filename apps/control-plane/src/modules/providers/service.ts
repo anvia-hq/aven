@@ -37,27 +37,37 @@ function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): Provid
 
 function azureEndpointOf(value: string) {
   const parsed = azureEndpoint.safeParse(value);
+
   if (!parsed.success) throw new InvalidProviderError("An Azure resource URL must be https");
+
   return parsed.data;
 }
 
 function bedrockEndpointOf(value: string) {
   const parsed = bedrockEndpoint.safeParse(value);
+
   if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
+
   return parsed.data;
 }
 
 function vertexEndpointOf(value: string) {
   const parsed = vertexEndpoint.safeParse(value);
+
   if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
+
   return parsed.data;
 }
 
 function changedBaseUrl(kind: ProviderKind, baseUrl: string | undefined) {
   if (baseUrl === undefined) return undefined;
+
   if (kind === "azure") return azureEndpointOf(baseUrl);
+
   if (kind === "bedrock") return bedrockEndpointOf(baseUrl);
+
   if (kind === "vertex") return vertexEndpointOf(baseUrl);
+
   return baseUrl;
 }
 
@@ -71,7 +81,9 @@ const secretColumns = (apiKey: string | undefined) =>
 
 function keyColumns(apiKey: string | undefined, dropKey: boolean) {
   if (apiKey) return secretColumns(apiKey);
+
   if (dropKey) return { apiKeyEncrypted: null, keyHint: null };
+
   return {};
 }
 
@@ -103,18 +115,23 @@ export const providersService = {
         .from(providers)
         .where(eq(providers.userId, userId))
         .limit(1);
+
       if (SINGLE_CREDENTIAL.has(body.kind)) {
         const [same] = await tx
           .select({ id: providers.id })
           .from(providers)
           .where(and(eq(providers.userId, userId), eq(providers.kind, body.kind)))
           .limit(1);
+
         if (same)
           throw new InvalidProviderError("This provider is already connected; remove it first");
       }
+
       const cannotRun = providerNeedsKey(body.kind) && !body.apiKey;
       const isDefault = !cannotRun && (body.isDefault ?? existing.length === 0);
+
       if (isDefault) await clearDefault(tx, userId);
+
       const [row] = await tx
         .insert(providers)
         .values({
@@ -139,19 +156,25 @@ export const providersService = {
   ) {
     return db.transaction(async (tx) => {
       const [current] = await tx.select().from(providers).where(ownProvider(userId, id));
+
       if (!current) return null;
+
       if (body.baseUrl !== undefined && !hasBaseUrl(current.kind)) {
         throw new InvalidProviderError(
           "Only Azure, Bedrock, Vertex AI and OpenAI-compatible providers have a base URL",
         );
       }
+
       if (body.modelId === null && hasBaseUrl(current.kind)) {
         throw new InvalidProviderError("This provider needs a model id");
       }
+
       const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
+
       if (body.apiKey !== undefined && current.kind !== "vertex" && body.apiKey.length > 500) {
         throw new InvalidProviderError("An API key is at most 500 characters");
       }
+
       if (
         body.apiKey !== undefined &&
         current.kind === "vertex" &&
@@ -159,13 +182,17 @@ export const providersService = {
       ) {
         throw new InvalidProviderError("Give a service account's JSON key, or an access token");
       }
+
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
+
       if (body.isDefault === true) {
         if (providerNeedsKey(current.kind) && !keyed) {
           throw new InvalidProviderError("Add this provider's key before making it the default");
         }
+
         await clearDefault(tx, userId);
       }
+
       const [row] = await tx
         .update(providers)
         .set({
@@ -187,7 +214,9 @@ export const providersService = {
         .delete(providers)
         .where(ownProvider(userId, id))
         .returning({ isDefault: providers.isDefault });
+
       if (!row) return false;
+
       if (row.isDefault) {
         const [next] = await tx
           .select({ id: providers.id })
@@ -195,16 +224,20 @@ export const providersService = {
           .where(eq(providers.userId, userId))
           .orderBy(asc(providers.createdAt))
           .limit(1);
+
         if (next)
           await tx.update(providers).set({ isDefault: true }).where(eq(providers.id, next.id));
       }
+
       return true;
     });
   },
 
   async listModels(userId: string, id: string) {
     const [row] = await db.select().from(providers).where(ownProvider(userId, id));
+
     if (!row) return null;
+
     const source = sourceOf(row);
     const models = await modelsOf(row, source);
     const [efforts, labels] = await Promise.all([
@@ -235,8 +268,10 @@ const sourceOf = (row: ProviderRow): ModelSource => ({
 
 async function modelsOf(row: ProviderRow, source: ModelSource) {
   if (row.kind !== "azure" && row.kind !== "vertex") return listAgentModels(source);
+
   const listed = await listAgentModels(source).catch((error) => {
     if (error instanceof ModelListError) return [];
+
     throw error;
   });
   return [...new Set([row.modelId ?? "", ...listed])].filter(Boolean);

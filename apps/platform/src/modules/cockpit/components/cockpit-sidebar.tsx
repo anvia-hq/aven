@@ -25,7 +25,9 @@ type Filtered = Exclude<Page, "/cockpit/tags">;
 
 function countOn(page: Filtered, tag: CockpitTag) {
   if (page === "/cockpit/tasks") return tag.tasks;
+
   if (page === "/cockpit/notes") return tag.notes;
+
   return tag.inbox;
 }
 

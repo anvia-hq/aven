@@ -24,6 +24,7 @@ export function InheritedVariables({
     ...personal.variables.map((variable) => ({ name: variable.name, from: "You" })),
     ...workspace.variables.map((variable) => ({ name: variable.name, from: "Workspace" })),
   ].filter((row, index, all) => all.findIndex((other) => other.name === row.name) === index);
+
   if (rows.length === 0) return null;
 
   const title = "Also set for these threads";
@@ -54,6 +55,7 @@ export function InheritedVariables({
       </SectionCard>
     );
   }
+
   return (
     <section aria-label="Inherited variables" className="flex flex-col gap-2">
       <h2 className="text-sm text-muted-foreground">{title}</h2>

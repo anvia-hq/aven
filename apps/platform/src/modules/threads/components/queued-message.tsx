@@ -18,6 +18,7 @@ export function QueuedMessage({
   showAuthor?: boolean;
 }) {
   if (systemNoteOf(message.prompt)?.kind === "process") return null;
+
   const { mine, name, text } = authorOf(message.prompt, viewer, message.senderId);
   return (
     <div

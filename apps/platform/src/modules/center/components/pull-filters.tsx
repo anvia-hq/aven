@@ -34,14 +34,23 @@ export function pullChips(filters: CenterFilters, change: (next: CenterSearch) =
   const chips: Chip[] = [];
   const add = (key: string, label: string, remove: CenterSearch) =>
     chips.push({ key, label, remove: () => change(remove) });
+
   if (filters.state !== "open") add("state", STATE_LABELS[filters.state], { state: undefined });
+
   if (filters.reviewRequested) add("rr", "Needs my review", { reviewRequested: undefined });
+
   if (filters.author) add("author", "Mine", { author: undefined });
+
   if (filters.review) add("review", REVIEW_LABELS[filters.review], { review: undefined });
+
   if (filters.checks) add("checks", CHECK_LABELS[filters.checks], { checks: undefined });
+
   if (filters.label) add("label", `Label: ${filters.label}`, { label: undefined });
+
   if (filters.stale) add("stale", `Idle ${filters.stale}+ days`, { stale: undefined });
+
   if (filters.sort !== "updated") add("sort", SORT_LABELS[filters.sort], { sort: undefined });
+
   return chips;
 }
 

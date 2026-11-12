@@ -57,9 +57,11 @@ export function NotesIndex({
   const starting = useRef(false);
   async function startNote() {
     if (starting.current) return;
+
     starting.current = true;
     try {
       const made = await create({ title: "Untitled", tags: tag ? [tag] : [] });
+
       if (made) onOpen(made.id, true);
     } finally {
       starting.current = false;

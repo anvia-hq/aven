@@ -51,6 +51,7 @@ export const defaultCreateAgent =
     compact,
   }) => {
     if (!model) throw new Error("The control plane sent no model for this run");
+
     if (compact) {
       return createCompactionAgent({
         id,
@@ -63,6 +64,7 @@ export const defaultCreateAgent =
         contextWindow: model.contextWindow,
       });
     }
+
     return createCodingAgent({
       id,
       retries: role ? undefined : false,
@@ -121,6 +123,7 @@ export function startRuntime(options: RuntimeOptions) {
 
   const send = (message: RuntimeToControlPlane) => {
     if (socket?.readyState !== WebSocket.OPEN) return false;
+
     socket.send(JSON.stringify(message));
     return true;
   };
@@ -145,6 +148,7 @@ export function startRuntime(options: RuntimeOptions) {
 
   const report: DriverContext["report"] = (runId, make, source) => {
     const message = outbox.push(runId, make, source);
+
     if (message && outbox.attached(runId)) send(message);
   };
 
@@ -175,7 +179,9 @@ export function startRuntime(options: RuntimeOptions) {
 
   const botMachines = new RemoteWorkspaces((botId) => (op, args) => {
     const replyId = bots.replyOnMachine(botId);
+
     if (!replyId) return Promise.reject(new Error("The computer is reached only during a reply"));
+
     return call("machine.call", { replyId, op, args }, machineCallWait(args));
   });
 
@@ -196,7 +202,9 @@ export function startRuntime(options: RuntimeOptions) {
     [...driver.live].find(([, run]) => run.threadId === threadId && run.machine)?.[0];
   const machines = new RemoteWorkspaces((threadId) => (op, args) => {
     const runId = runOnMachine(threadId);
+
     if (!runId) return Promise.reject(new Error("The computer is reached only during a run"));
+
     return call("machine.call", { runId, op, args }, machineCallWait(args));
   });
   const placed = new PlacedWorkspaces(options.sandbox, machines, (threadId) =>
@@ -216,10 +224,12 @@ export function startRuntime(options: RuntimeOptions) {
     controlPlane: origin,
     starting: (threadId) => {
       if (!runOnMachine(threadId)) processEnds.arm(threadId);
+
       return idle.starting(threadId);
     },
     finished: (threadId, ended) => {
       idle.schedule(threadId);
+
       if (ended === "response") processEnds.settle(threadId);
       else processEnds.suspend(threadId);
     },
@@ -291,7 +301,6 @@ export function startRuntime(options: RuntimeOptions) {
         return;
       default:
         message satisfies never;
-        return;
     }
   }
 
@@ -305,12 +314,14 @@ export function startRuntime(options: RuntimeOptions) {
         cpu,
         sandboxes: options.sandbox.running?.() ?? 0,
       });
+
       if (socket?.readyState === WebSocket.OPEN) send({ type: "host.stats", stats });
     } catch {}
   }
 
   function connect() {
     if (stopped) return;
+
     const init = { headers: { authorization: `Bearer ${options.token}` } };
     const ws = new WebSocket(options.url, init as unknown as string[]);
     ws.binaryType = "arraybuffer";
@@ -338,10 +349,14 @@ export function startRuntime(options: RuntimeOptions) {
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
         const frame = decodeViewerFrame(new Uint8Array(event.data));
+
         if (!frame) return;
+
         if (terminals.has(frame.viewerId)) terminals.write(frame.viewerId, frame.payload);
+
         return;
       }
+
       let message: ControlPlaneToRuntime;
       try {
         message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
@@ -357,11 +372,14 @@ export function startRuntime(options: RuntimeOptions) {
       clearInterval(statsTimer);
       terminals.closeAll();
       bots.abortAll("The connection to the control plane dropped");
+
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
         stopped = true;
         options.onRefused?.(event.reason || "Refused by the control plane");
       }
+
       if (stopped) return;
+
       retry = setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
     };

@@ -146,22 +146,33 @@ const COLOR = /^#[0-9a-fA-F]{6}$/;
 export function parseAvatarSetting(avatar: string): AvatarSetting | null {
   try {
     const value: unknown = JSON.parse(avatar);
+
     if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+
     const { seed, family, color, ...rest } = value as Record<string, unknown>;
+
     if (Object.keys(rest).length > 0) return null;
+
     const setting: AvatarSetting = {};
+
     if (seed !== undefined) {
       if (typeof seed !== "string" || seed.length < 1 || seed.length > 64) return null;
+
       setting.seed = seed;
     }
+
     if (family !== undefined) {
       if (typeof family !== "string" || !FAMILY.test(family)) return null;
+
       setting.family = family;
     }
+
     if (color !== undefined) {
       if (typeof color !== "string" || !COLOR.test(color)) return null;
+
       setting.color = color;
     }
+
     return setting;
   } catch {
     return null;

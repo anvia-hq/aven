@@ -374,7 +374,9 @@ describe("a bot's reply with the person's MCP servers", () => {
     (steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
     ({ send, memory, mcp, mcpServers }) => {
       const tools: AnyTool[] = [createSendMessageTool(send)];
+
       if (mcp) tools.push(...mcp.tools);
+
       tools.push(...createMcpServerTools(mcpServers));
       return new Agent({
         id: "bot",
@@ -444,6 +446,7 @@ describe("a bot's reply with the person's MCP servers", () => {
         ]),
         answer: (message) => {
           if (message.method !== "bot.mcp") return undefined;
+
           const { op } = message.params as { op: string };
           return op === "remove" || op === "report" ? null : view;
         },

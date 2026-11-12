@@ -1,5 +1,4 @@
-import type { ReactNode } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
 

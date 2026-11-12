@@ -18,7 +18,9 @@ async function add(page: Page, name: string, value: string, secret = false) {
     .click();
   await page.getByLabel("Name 1").fill(name);
   await page.getByLabel("Value 1").fill(value);
+
   if (secret) await page.getByRole("switch", { name: "Secret" }).click();
+
   await page.getByRole("button", { name: "Add variable" }).click();
   await expect(page.getByText("Variable saved")).toBeVisible();
 }

@@ -43,6 +43,7 @@ export function createGithubAppSetup({
 } = {}) {
   const requireOwner = async (person: Person) => {
     if (!(await isOwner(person))) throw new ForbiddenError("Platform owners only");
+
     if (client.configured) throw new ConflictError("GitHub is already set up");
   };
 
@@ -52,6 +53,7 @@ export function createGithubAppSetup({
     if (!(await isAdmin(organizationId, person.id))) {
       throw new ForbiddenError("Only an owner or an admin can set up the workspace's GitHub App");
     }
+
     if (await hasOwnApp(organizationId)) {
       throw new ConflictError("This workspace already has its own GitHub App");
     }
@@ -73,6 +75,7 @@ export function createGithubAppSetup({
     ) {
       if (organizationId === undefined) await requireOwner(person);
       else await requireWorkspaceAdmin(person, organizationId);
+
       const base = origin();
       const name = options.name ?? `Aven (${new URL(base).hostname})`.slice(0, 34);
       return {
@@ -91,9 +94,11 @@ export function createGithubAppSetup({
       organizationId?: string,
     ) {
       const state = readSetupState(input.state, person.id);
+
       if (!state) {
         throw new UnprocessableError("This setup link is not valid or has expired. Start again.");
       }
+
       if (state.organizationId === null) {
         await requireOwner(person);
         const config = await convert(input.code, urls);
@@ -101,9 +106,11 @@ export function createGithubAppSetup({
         client.configure(config);
         return;
       }
+
       if (state.organizationId !== organizationId) {
         throw new UnprocessableError("This setup link is for another workspace. Start again.");
       }
+
       await requireWorkspaceAdmin(person, state.organizationId);
       const config = await convert(input.code, urls);
       await saveOrganization(state.organizationId, person.id, config);

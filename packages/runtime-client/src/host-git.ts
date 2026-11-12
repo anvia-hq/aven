@@ -54,16 +54,22 @@ const NOT_A_REPOSITORY = { code: 128, stdout: "", stderr: "fatal: not a git repo
 
 const kindOf = async (path: string) => {
   const stat = await lstat(path).catch(() => null);
+
   if (!stat) return "missing";
+
   if (stat.isSymbolicLink()) return "link";
+
   if (stat.isDirectory()) return "directory";
+
   return stat.isFile() ? "file" : "other";
 };
 
 async function readPlainFile(path: string) {
   const flags = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
   const file = await open(path, flags).catch(() => null);
+
   if (!file) return null;
+
   try {
     return (await file.stat()).isFile() ? await file.readFile("utf8") : null;
   } finally {
@@ -73,8 +79,11 @@ async function readPlainFile(path: string) {
 
 async function hasLink(dir: string, depth = Infinity): Promise<boolean> {
   if (depth === 0) return false;
+
   const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+
   if (entries.some((entry) => entry.isSymbolicLink())) return true;
+
   const folders = entries.filter((entry) => entry.isDirectory());
   const found = await Promise.all(
     folders.map((entry) => hasLink(join(dir, entry.name), depth - 1)),
@@ -84,14 +93,19 @@ async function hasLink(dir: string, depth = Infinity): Promise<boolean> {
 
 async function isSafeRepository(repo: string) {
   if ((await kindOf(repo)) !== "directory") return false;
+
   if ((await kindOf(join(repo, "HEAD"))) !== "file") return false;
+
   if (!["file", "missing"].includes(await kindOf(join(repo, "config")))) return false;
+
   const kinds = await Promise.all(
     [...LINKED, ...REDIRECTS].map((name) => kindOf(join(repo, name))),
   );
   const linked = kinds.slice(0, LINKED.length);
   const redirects = kinds.slice(LINKED.length);
+
   if (linked.includes("link") || redirects.some((kind) => kind !== "missing")) return false;
+
   const nested = await Promise.all([
     hasLink(join(repo, "refs")),
     hasLink(join(repo, "logs")),
@@ -109,7 +123,9 @@ async function safeConfig(repo: string, run: Git) {
   const sections = new Map<string, string[]>([["core", ["bare = false"]]]);
   for (const entry of read.code === 0 ? read.stdout.split("\0") : []) {
     const [key = "", value = ""] = entry.split("\n");
+
     if (!COPIED_KEY.test(key) || !PLAIN_VALUE.test(value)) continue;
+
     const at = key.indexOf(".");
     const lines = sections.get(key.slice(0, at)) ?? [];
     lines.push(`${key.slice(at + 1)} = ${value}`);
@@ -122,13 +138,17 @@ async function shadowOf(repo: string, run: Git) {
   const present = new Set(await readdir(repo));
   const linked = LINKED.filter((entry) => present.has(entry));
   const head = await readPlainFile(join(repo, "HEAD"));
+
   if (head === null) return null;
+
   const shadow = await mkdtemp(join(tmpdir(), "aven-git-"));
   try {
     await Promise.all(linked.map((entry) => symlink(join(repo, entry), join(shadow, entry))));
     await mkdir(join(shadow, "info"));
     const exclude = await readPlainFile(join(repo, "info", "exclude"));
+
     if (exclude !== null) await writeFile(join(shadow, "info", "exclude"), exclude);
+
     await writeFile(join(shadow, "config"), await safeConfig(repo, run));
     await writeFile(join(shadow, "HEAD"), head);
   } catch (error) {
@@ -144,7 +164,9 @@ async function returnReplaced(shadow: string, linked: string[], repo: string, he
       await rename(join(shadow, entry), join(repo, entry));
     }
   }
+
   if ((await Bun.file(join(shadow, "HEAD")).text()) === head) return;
+
   const moved = join(repo, `HEAD.aven-${crypto.randomUUID()}`);
   await rename(join(shadow, "HEAD"), moved).catch(async () => {
     await writeFile(moved, await Bun.file(join(shadow, "HEAD")).text());
@@ -155,9 +177,13 @@ async function returnReplaced(shadow: string, linked: string[], repo: string, he
 export function hostGit(run: Git = git): Git {
   return async (args, options) => {
     const repo = join(options.cwd, ".git");
+
     if (!(await isSafeRepository(repo))) return NOT_A_REPOSITORY;
+
     const shadowed = await shadowOf(repo, run);
+
     if (!shadowed) return NOT_A_REPOSITORY;
+
     const { shadow, linked, head } = shadowed;
     try {
       const env = {

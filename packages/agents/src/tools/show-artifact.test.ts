@@ -16,7 +16,9 @@ function setup(files: Record<string, Uint8Array>) {
   const tool = createShowArtifactTool({
     readFile: async ({ path }) => {
       const bytes = files[path];
+
       if (!bytes) throw new Error(`File not found: ${path}`);
+
       return bytes;
     },
     save: async (bytes, mediaType) => {

@@ -11,6 +11,7 @@ export const goalSessionMessage = (session: number): Message => ({
 
 export function goalReport(objective: string, end: Exclude<GoalEnd, { type: "error" }>) {
   const lines = [`[Aven] The goal you started is over. Objective: ${objective}`];
+
   if (end.type === "complete") {
     lines.push(
       `It is complete. ${end.summary}`,
@@ -24,6 +25,7 @@ export function goalReport(objective: string, end: Exclude<GoalEnd, { type: "err
       "Tell the user where it stands and what you need from them to continue.",
     );
   }
+
   lines.push("Do not start another goal in this reply.");
   return lines.join("\n\n");
 }

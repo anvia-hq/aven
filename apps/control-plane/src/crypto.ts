@@ -11,7 +11,9 @@ const TAG_BYTES = 16;
 function keyFromEnvironment() {
   const raw = process.env.PROVIDER_ENCRYPTION_KEY;
   const bytes = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
+
   if (bytes.length !== 32) throw new Error(KEY_ERROR);
+
   return bytes;
 }
 
@@ -27,6 +29,7 @@ export function encryptSecret(plain: string) {
 export function decryptSecret(stored: string) {
   const parts = stored.split(".").map((part) => Buffer.from(part, "base64"));
   const [iv, tag, data] = parts;
+
   if (
     parts.length !== 3 ||
     !iv ||
@@ -37,6 +40,7 @@ export function decryptSecret(stored: string) {
   ) {
     throw new Error("Stored secret is malformed");
   }
+
   const decipher = createDecipheriv("aes-256-gcm", KEY, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");

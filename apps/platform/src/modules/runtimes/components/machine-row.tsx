@@ -19,12 +19,14 @@ function missing(runtime: Runtime) {
       reason: runtime.lastSeenAt ? `Offline, seen ${timeAgo(runtime.lastSeenAt, true)}` : "Offline",
     };
   }
+
   if (runtime.stats) {
     return {
       short: "Waiting…",
       reason: `No load reported since ${timeAgo(runtime.stats.reportedAt, true)}: the runner is connected but has stopped saying.`,
     };
   }
+
   if (runtime.outdated) {
     return {
       short: "Update runner",
@@ -32,6 +34,7 @@ function missing(runtime: Runtime) {
         "No load reported: this runner is behind the server. Update it with the button, or run aven update on its machine.",
     };
   }
+
   return { short: "Waiting…", reason: "Waiting for the runner to report its load." };
 }
 

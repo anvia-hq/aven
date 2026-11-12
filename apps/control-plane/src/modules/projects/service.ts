@@ -45,6 +45,7 @@ function githubOf(project: GithubProject) {
   if (!project.githubInstallationId || !project.repoFullName) {
     throw new NotFoundError("This project is a folder on a computer, not a GitHub repository");
   }
+
   return {
     installationId: project.githubInstallationId,
     repo: project.repoFullName,
@@ -96,9 +97,12 @@ export const projectsService = {
     if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
+
     const repo = await githubService.repo(organizationId, body.installationId, body.repository);
+
     if (!repo)
       throw new RepositoryNotFoundError("Repository not found on that GitHub installation");
+
     const [project] = await db
       .insert(projects)
       .values({
@@ -113,15 +117,21 @@ export const projectsService = {
       })
       .onConflictDoNothing()
       .returning();
+
     if (!project) throw new RepositoryAlreadyImportedError("This repository is already imported");
+
     return project;
   },
 
   async addFolder(organizationId: string, userId: string, body: AddFolderBody) {
     const runtime = await runtimesService.get(organizationId, body.runtimeId, userId);
+
     if (!runtime) throw new RuntimeNotFoundError("Runner not found");
+
     const path = normalize(body.path).replace(/[\\/]+$/, "") || sep;
+
     if (!isAbsolute(path)) throw new FolderNotServedError("Give the folder as an absolute path");
+
     if (!insideServed(runtime.directories, path)) {
       throw new FolderNotServedError(
         runtime.directories.length === 0
@@ -129,6 +139,7 @@ export const projectsService = {
           : `${runtime.name} does not serve that folder. It serves: ${runtime.directories.join(", ")}`,
       );
     }
+
     const [project] = await db
       .insert(projects)
       .values({
@@ -140,12 +151,15 @@ export const projectsService = {
       })
       .onConflictDoNothing()
       .returning();
+
     if (!project) throw new RepositoryAlreadyImportedError("This folder is already a project");
+
     return project;
   },
 
   async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {
     if (project.createdBy === userId || (await isOwnerOrAdmin(organizationId, userId))) return;
+
     throw new ForbiddenError(
       "Only the person who imported the project, an owner or an admin can do that",
     );
@@ -154,9 +168,11 @@ export const projectsService = {
   async update(organizationId: string, userId: string, id: string, body: UpdateProjectBody) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
     await projectsService.requireManager(organizationId, userId, project);
+
     if (!(await runtimesService.get(organizationId, body.runtimeId, userId))) {
       throw new RuntimeNotFoundError("Runner not found");
     }
+
     const [updated] = await db
       .update(projects)
       .set({ runtimeId: body.runtimeId })
@@ -194,6 +210,7 @@ export const projectsService = {
     if (!(await runtimesService.get(organizationId, project.runtimeId, userId))) {
       throw new ForbiddenError("This project is on a computer that is private to its owner");
     }
+
     return { runtimeId: project.runtimeId, directory: project.directory! };
   },
 
@@ -205,6 +222,7 @@ export const projectsService = {
     folders: ProjectFolders,
   ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+
     if (project.directory) {
       const { runtimeId, directory } = await projectsService.folderRunner(
         organizationId,
@@ -213,6 +231,7 @@ export const projectsService = {
       );
       return folders.files(runtimeId, directory, path);
     }
+
     const github = githubOf(project);
     const entries = await githubService.folder(github.installationId, github.repo, path);
     return { entries: orNotFound(entries, "Folder not found") };
@@ -220,6 +239,7 @@ export const projectsService = {
 
   async readme(organizationId: string, userId: string, id: string, folders: ProjectFolders) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+
     if (project.directory) {
       const { runtimeId, directory } = await projectsService.folderRunner(
         organizationId,
@@ -228,7 +248,9 @@ export const projectsService = {
       );
       return folders.readme(runtimeId, directory);
     }
+
     if (!project.githubInstallationId || !project.repoFullName) return { readme: null };
+
     return {
       readme: await githubService.readme(project.githubInstallationId, project.repoFullName),
     };
@@ -243,6 +265,7 @@ export const projectsService = {
     filters?: GithubCommitFilters,
   ) {
     const project = orNotFound(await projectsService.get(organizationId, id), "Project not found");
+
     if (project.directory) {
       const { runtimeId, directory } = await projectsService.folderRunner(
         organizationId,
@@ -251,6 +274,7 @@ export const projectsService = {
       );
       return { ...(await folders.commits(runtimeId, directory, page)), page };
     }
+
     const github = githubOf(project);
     const found = await githubService.commits(
       github.installationId,
@@ -328,11 +352,15 @@ export const projectsService = {
       .from(threads)
       .innerJoin(projects, eq(projects.id, threads.projectId))
       .where(eq(threads.id, threadId));
+
     if (!row) throw new Error("Unknown thread");
+
     if (row.deletedAt) throw new Error("The thread's project was deleted");
+
     if (!row.cloneUrl || !row.defaultBranch || !row.githubInstallationId) {
       throw new Error("The thread's project is a folder on a computer, not a repository to clone");
     }
+
     return {
       cloneUrl: row.cloneUrl,
       defaultBranch: row.defaultBranch,

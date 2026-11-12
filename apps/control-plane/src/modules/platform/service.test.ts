@@ -41,6 +41,7 @@ run("who owns the platform (real postgres)", () => {
   afterAll(async () => {
     if (previousOwners === undefined) delete process.env.PLATFORM_OWNER_EMAILS;
     else process.env.PLATFORM_OWNER_EMAILS = previousOwners;
+
     await db.delete(users).where(inArray(users.id, [first.id, second.id, listed.id]));
   });
 
@@ -123,6 +124,7 @@ run("removing an account (real postgres)", () => {
   afterAll(async () => {
     if (previousOwners === undefined) delete process.env.PLATFORM_OWNER_EMAILS;
     else process.env.PLATFORM_OWNER_EMAILS = previousOwners;
+
     await db.delete(organizations).where(inArray(organizations.id, [shared, solo]));
     await db.delete(users).where(
       inArray(

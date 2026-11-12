@@ -38,6 +38,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                   <BotActivity key={item.key} messages={item.messages} bots={bots} self={bot} />
                 );
               }
+
               const { message } = item;
               const before = items[index - 1];
               const together = before?.type === "message" && before.message.role === message.role;
@@ -91,7 +92,9 @@ function BotAsks({
   send: (text: string) => Promise<boolean>;
 }) {
   const providerKey = questions[0]?.providerKey;
+
   if (providerKey) return <ProviderKeyForm botName={botName} ask={providerKey} onSaved={send} />;
+
   return <BotQuestionForm botName={botName} questions={questions} onSubmit={send} />;
 }
 

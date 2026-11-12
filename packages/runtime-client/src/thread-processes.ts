@@ -8,7 +8,9 @@ const SHELLS = new Set(["sh", "bash", "zsh"]);
 
 function commandLine({ command, args }: Pick<SandboxProcessInfo, "command" | "args">) {
   const shell = command.split("/").pop() ?? command;
+
   if (SHELLS.has(shell) && args.length === 2 && args[0] === "-c") return args[1] ?? command;
+
   return [command, ...args].join(" ");
 }
 
@@ -54,7 +56,9 @@ export function threadProcesses(
       requireUp();
       const started = await sandbox.startProcess({ command: "sh", args: ["-c", command] });
       const info = (await sandbox.listProcesses()).find((process) => process.id === started.id);
+
       if (!info) throw new Error("The command did not start");
+
       return hidden(processView(info));
     },
     async stop(processId) {

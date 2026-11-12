@@ -93,21 +93,35 @@ async function main(argv: string[]) {
       return;
     case "server":
       if (sub === "install") return serverInstall(args);
+
       if (sub === undefined || sub === "start") return serverStart();
+
       if (sub === "restart") return serverRestart();
+
       if (sub === "stop") return serverStop();
+
       if (sub === "status") return serverStatus();
+
       if (sub === "logs") return serverLogs(args.positionals[2], follows(args));
+
       throw new Error(`Unknown command "server ${sub}".\n\n${usage}`);
     case "runner":
       if (sub === "install") return runnerInstall(args);
+
       if (sub === "run") return runnerRun();
+
       if (sub === "start") return runnerStart();
+
       if (sub === "stop") return runnerStop();
+
       if (sub === "restart") return runnerRestart();
+
       if (sub === "status" || sub === undefined) return runnerStatus();
+
       if (sub === "logs") return runnerLogs(follows(args));
+
       if (sub === "uninstall") return runnerUninstall();
+
       throw new Error(`Unknown command "runner ${sub}".\n\n${usage}`);
     case "install":
       return install(args);

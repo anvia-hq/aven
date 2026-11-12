@@ -1,5 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
+import type * as CryptoModule from "../../crypto";
 import type { GithubClient } from "./client";
 import type { GithubUserGrant } from "./types";
 
@@ -55,7 +56,7 @@ run("a person's GitHub connection (postgres)", async () => {
     try {
       const { encryptSecret } = (await import(
         `../../crypto.ts?key=${crypto.randomUUID()}`
-      )) as typeof import("../../crypto");
+      )) as typeof CryptoModule;
       return encryptSecret(plain);
     } finally {
       if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
@@ -146,7 +147,9 @@ run("a person's GitHub connection (postgres)", async () => {
         userProfile: async () => profile,
         refreshGrant: async (token) => {
           refreshed.push(token);
+
           if (down) throw new Error("GitHub is down");
+
           return grant({ accessToken: "ghu_back", refreshToken: "ghr_back" });
         },
       }),

@@ -49,7 +49,9 @@ export function useFolderActions() {
   const create = useFolderMutation<NewFolder>({
     request: async ({ name, threadId }) => {
       const folder = await postJson<Folder>("/folders", { name });
+
       if (!threadId) return folder;
+
       try {
         await moveRequest({ threadId, folderId: folder.id });
       } catch (error) {

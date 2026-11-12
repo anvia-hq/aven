@@ -13,6 +13,7 @@ export function ThreadMentionChip({ id, title, link = false }: Props) {
       <span className="truncate">{title}</span>
     </>
   );
+
   if (!link) {
     return (
       <span className={CHIP} title={`Thread: ${title}`} data-mention="thread">
@@ -20,6 +21,7 @@ export function ThreadMentionChip({ id, title, link = false }: Props) {
       </span>
     );
   }
+
   return (
     <Link
       to="/threads/$threadId"

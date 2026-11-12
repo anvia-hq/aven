@@ -20,7 +20,9 @@ const titleOf = (thread: { title: string }) => thread.title.replace(/[\s[\]()]+/
 
 const lastWords = (thread: BotThreadDetail) => {
   const text = thread.turns.findLast((turn) => turn.role === "assistant")?.text.trim();
+
   if (!text) return undefined;
+
   return text.length > LAST_WORDS_MAX ? `${text.slice(0, LAST_WORDS_MAX)}… (cut)` : text;
 };
 
@@ -35,12 +37,14 @@ export function endedNote(thread: BotThreadDetail, ending: NoteEnding, lastError
       ? `Its agent's last message:\n${fenced(words)}`
       : "Its agent wrote no message at the end.",
   ];
+
   if (thread.pullRequests.length > 0) {
     const pulls = thread.pullRequests.map(
       (pull) => `- #${pull.number} (${pull.state}) ${pull.url}: ${pull.title}`,
     );
     parts.push(`Its pull requests:\n${fenced(pulls.join("\n"))}`);
   }
+
   parts.push(
     `${NOT_AN_INSTRUCTION} Tell the person how it went in a message or two, and link the thread as [${title}](/threads/${thread.id}). Do not mention this note.`,
   );
@@ -49,7 +53,9 @@ export function endedNote(thread: BotThreadDetail, ending: NoteEnding, lastError
 
 function inferred(thread: BotThreadDetail, lastError?: string | null): NoteEnding {
   if (thread.awaitingAnswer) return { outcome: "question" };
+
   if (lastError) return { outcome: "failed", error: lastError };
+
   return { outcome: "unknown" };
 }
 
@@ -122,6 +128,7 @@ export function createThreadWatcher(options: {
     try {
       await before.catch(() => undefined);
       const watcher = await threadWatchService.claim(threadId, startedAt);
+
       if (watcher) await tell(threadId, watcher, how);
     } finally {
       forget(threadId);
@@ -135,7 +142,9 @@ export function createThreadWatcher(options: {
     known?: BotThreadDetail,
   ) {
     const quietMs = now() - run.lastEventAt;
+
     if (quietMs < QUIET_ALERT_MS || alerted.get(threadId) === run.startedAt) return;
+
     alerted.set(threadId, run.startedAt);
     try {
       const thread = known ?? (await get(watcher.userId, threadId));
@@ -159,7 +168,9 @@ export function createThreadWatcher(options: {
     thread: BotThreadDetail,
   ) {
     const seen = quietSince(thread);
+
     if (seen === undefined) return;
+
     await alertIfQuiet(
       row.threadId,
       row,
@@ -170,14 +181,20 @@ export function createThreadWatcher(options: {
 
   async function check(row: Watcher & { threadId: string; run: WatchedRun }) {
     if (ending.has(row.threadId)) return;
+
     const current = activity(row.threadId);
+
     if (current && current.startedAt === row.run) return alertIfQuiet(row.threadId, row, current);
+
     if (!current) {
       const thread = await get(row.userId, row.threadId);
+
       if (thread.running) return stillGoing(row, thread);
     }
+
     alerted.delete(row.threadId);
     const watcher = await threadWatchService.claim(row.threadId, row.run);
+
     if (watcher) await tell(row.threadId, watcher, { outcome: "unknown" });
   }
 
@@ -204,6 +221,7 @@ export function createThreadWatcher(options: {
     },
     start() {
       if (timer) return;
+
       void guarded();
       timer = setInterval(() => void guarded(), intervalMs);
       timer.unref();

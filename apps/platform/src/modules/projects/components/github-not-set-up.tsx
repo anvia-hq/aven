@@ -24,6 +24,7 @@ export function GithubNotSetUp() {
       </div>
     );
   }
+
   return (
     <p className="text-sm text-muted-foreground">
       GitHub is not set up on this control plane. A platform owner can set it up in Settings &gt;

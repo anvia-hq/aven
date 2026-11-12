@@ -25,13 +25,18 @@ export function useCreateGithubApp() {
   ) {
     setWorking(true);
     const params = new URLSearchParams();
+
     if (options.organization) params.set("organization", options.organization);
+
     if (options.public) params.set("public", "true");
+
     if (options.workspace) params.set("scope", "workspace");
+
     const query = params.size > 0 ? `?${params}` : "";
     const manifest = await attempt("Could not start the GitHub App setup", () =>
       api<AppManifest>(`/github/app/manifest${query}`),
     );
+
     if (manifest) postManifest(manifest);
     else setWorking(false);
   }

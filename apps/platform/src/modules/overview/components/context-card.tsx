@@ -28,6 +28,7 @@ export function ContextCard({
       </OverviewCard>
     );
   }
+
   if (!context) {
     return (
       <OverviewCard title="Context">

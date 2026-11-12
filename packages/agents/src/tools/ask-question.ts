@@ -65,7 +65,9 @@ export function createAskQuestionTool(ask: AskQuestion) {
     inputSchema: askQuestionSchema,
     async execute({ questions }) {
       const { relayed: via } = await ask(toQuestions(questions));
+
       if (!via) return { shown: true, note: SHOWN };
+
       return { relayed: via, note: relayed(via.name) };
     },
   });

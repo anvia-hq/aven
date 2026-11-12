@@ -63,7 +63,9 @@ function McpServerRow({ server }: { server: McpServer }) {
 
 export function McpServersList() {
   const { servers, loaded } = useMcpServers();
+
   if (!loaded) return null;
+
   if (servers.length === 0) {
     return (
       <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
@@ -71,6 +73,7 @@ export function McpServersList() {
       </p>
     );
   }
+
   return (
     <ul aria-label="MCP servers" className="flex flex-col">
       {servers.map((server) => (

@@ -73,6 +73,7 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
     setBusy(true);
     try {
       const saved = server ? await update(server, input) : await create(input);
+
       if (saved) onDone();
     } finally {
       setBusy(false);

@@ -58,6 +58,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       </Link>
     );
   }
+
   if (!project.repoFullName) {
     return (
       <div className={rowClass}>
@@ -66,6 +67,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       </div>
     );
   }
+
   return (
     <a
       href={blobUrl(project.repoFullName ?? "", project.defaultBranch ?? "main", entry.path)}

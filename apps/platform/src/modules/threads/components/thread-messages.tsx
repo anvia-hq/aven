@@ -67,7 +67,9 @@ export function ThreadMessages({
   const place = (speaker: Speaker | null) => {
     const space = speaker ? spaceBefore(previous, speaker) : "";
     const first = !sameSpeaker(previous, speaker);
+
     if (speaker) previous = speaker;
+
     return { space, first };
   };
   const listed = entries.listed.map((entry) => ({ ...entry, ...place(entry.speaker) }));

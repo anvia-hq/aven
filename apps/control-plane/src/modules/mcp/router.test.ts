@@ -20,7 +20,9 @@ run("the MCP servers routes (real postgres)", async () => {
 
   const call = (method: string, path: string, token: string | undefined, body?: object) => {
     const headers: Record<string, string> = { "content-type": "application/json" };
+
     if (token) headers.authorization = `Bearer ${token}`;
+
     return fetch(`${base}${path}`, {
       method,
       headers,

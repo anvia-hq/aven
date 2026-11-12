@@ -9,9 +9,13 @@ const BY_NAME: Record<string, BundledLanguage> = { dockerfile: "docker", makefil
 export function languageOf(path: string): BundledLanguage | null {
   const name = path.slice(path.lastIndexOf("/") + 1).toLowerCase();
   const byName = BY_NAME[name];
+
   if (byName) return byName;
+
   const dot = name.lastIndexOf(".");
+
   if (dot === -1) return null;
+
   const extension = name.slice(dot + 1);
   return extension in bundledLanguages ? (extension as BundledLanguage) : null;
 }
@@ -26,7 +30,9 @@ const load = () =>
 
 export async function highlight(text: string, path: string): Promise<HighlightedLine[] | null> {
   const lang = languageOf(path);
+
   if (!lang || text.length > MAX_CHARS) return null;
+
   const shiki = await load();
   await shiki.loadLanguage(lang);
   const { tokens } = shiki.codeToTokens(text, {

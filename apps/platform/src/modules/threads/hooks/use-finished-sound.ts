@@ -13,6 +13,7 @@ export function useFinishedSound() {
     if (finishedThreads(seen.current, threads).length > 0 && finishedSoundOn()) {
       if (document.hidden || !document.hasFocus()) playChime();
     }
+
     seen.current = new Map(threads.map((thread) => [thread.id, thread.running]));
   }, [threads]);
 }

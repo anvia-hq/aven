@@ -61,6 +61,7 @@ export function useCenterFeed(
       );
       feed.pulls.sort(PULL_ORDER[sort]);
       feed.commits.sort((a, b) => b.commit.date.localeCompare(a.commit.date));
+
       if (current) setAnswer({ key, feed });
     })();
     return () => {

@@ -56,9 +56,11 @@ export const botsService = {
     return db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`bots:${userId}`}))`);
       const [owned] = await tx.select({ total: count() }).from(bots).where(eq(bots.userId, userId));
+
       if ((owned?.total ?? 0) >= BOT_LIMIT) {
         throw new UnprocessableError(`You already have ${BOT_LIMIT} bots`);
       }
+
       const handles = await tx
         .select({ handle: bots.handle })
         .from(bots)
@@ -87,10 +89,13 @@ export const botsService = {
 
   async update(userId: string, id: string, body: UpdateBotBody) {
     const [current] = await db.select().from(bots).where(ownBot(userId, id));
+
     if (!current) return null;
 
     const { providerId, modelId, reasoningEffort, runtimeId, ...details } = body;
+
     if (runtimeId) await requireUsableRuntime(userId, runtimeId);
+
     const touchesModel = [providerId, modelId, reasoningEffort].some(
       (value) => value !== undefined,
     );
@@ -98,6 +103,7 @@ export const botsService = {
       ? await checkedModel(userId, current, { providerId, modelId, reasoningEffort })
       : {};
     const changes = { ...details, ...model, runtimeId };
+
     if (Object.values(changes).every((value) => value === undefined)) return view(current);
 
     const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();
@@ -107,6 +113,7 @@ export const botsService = {
 
 async function checkedModel(userId: string, current: BotModel, change: ModelChange) {
   if (change.providerId) await requireOwnProvider(userId, change.providerId);
+
   const model = modelAfter(current, change);
   await requireEffortOf(userId, model);
   return model;
@@ -117,7 +124,9 @@ type ModelChange = Pick<UpdateBotBody, "providerId" | "modelId" | "reasoningEffo
 
 function modelAfter(current: BotModel, change: ModelChange): BotModel {
   const providerId = change.providerId === undefined ? current.providerId : change.providerId;
+
   if (!providerId) return { providerId: null, modelId: null, reasoningEffort: null };
+
   const changed = change.providerId !== undefined || change.modelId !== undefined;
   const kept = changed ? { modelId: null, reasoningEffort: null } : current;
   return {
@@ -130,6 +139,7 @@ function modelAfter(current: BotModel, change: ModelChange): BotModel {
 
 async function requireEffortOf(userId: string, model: BotModel) {
   if (!model.providerId || !model.reasoningEffort) return;
+
   await resolveModel(userId, {
     providerId: model.providerId,
     modelId: model.modelId ?? undefined,
@@ -142,5 +152,6 @@ async function requireOwnProvider(userId: string, providerId: string) {
     .select({ id: providers.id })
     .from(providers)
     .where(and(eq(providers.id, providerId), eq(providers.userId, userId)));
+
   if (!row) throw new UnprocessableError("Provider not found");
 }

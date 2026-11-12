@@ -24,6 +24,7 @@ export const mcpRouter = new Elysia({ prefix: "/mcp-servers" })
       if (!(await mcpService.remove(user.id, params.id))) {
         throw new NotFoundError("MCP server not found");
       }
+
       return { ok: true };
     },
     { auth: true, params: mcpParams },

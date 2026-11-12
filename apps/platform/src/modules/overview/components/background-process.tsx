@@ -22,8 +22,11 @@ const CHIP = "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium whites
 
 function statusText({ status, exitCode, startedAt, endedAt }: ProcessView) {
   if (status === "running") return `Running for ${timeAgo(startedAt)}`;
+
   const when = endedAt ? ` · ${timeAgo(endedAt, true)}` : "";
+
   if (status === "stopped") return `Stopped${when}`;
+
   return exitCode ? `Exited with code ${exitCode}${when}` : `Finished${when}`;
 }
 
@@ -35,12 +38,15 @@ function StatusMark({ process }: { process: ProcessView }) {
       </span>
     );
   }
+
   if (process.status === "exited" && process.exitCode) {
     return <DangerCircle className="size-4 text-destructive" aria-hidden />;
   }
+
   if (process.status === "stopped") {
     return <StopSolid className="size-3 text-muted-foreground" aria-hidden />;
   }
+
   return <Check className="size-4 text-muted-foreground" aria-hidden />;
 }
 
@@ -52,6 +58,7 @@ function StateChip({ process }: { process: ProcessView }) {
       </span>
     );
   }
+
   if (process.status === "exited" && process.exitCode) {
     return (
       <span className={cn(CHIP, "bg-destructive/15 text-destructive")}>
@@ -59,6 +66,7 @@ function StateChip({ process }: { process: ProcessView }) {
       </span>
     );
   }
+
   return (
     <span className={cn(CHIP, "bg-muted text-muted-foreground")}>
       {process.status === "stopped" ? "Stopped" : "Done"}

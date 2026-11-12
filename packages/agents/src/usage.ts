@@ -25,7 +25,9 @@ export function usageFromHistory(messages: readonly Message[]): ThreadUsage {
   let context: ContextUsage | undefined;
   for (const message of messages) {
     const generation = getAssistantGenerationMetadata(message);
+
     if (!generation) continue;
+
     totals = addUsage(totals, tokenUsageOf(generation.usage));
     context = contextOf(generation.contextUsage) ?? context;
   }

@@ -94,7 +94,9 @@ run("a thread's background processes (real postgres, real WebSocket)", async () 
       ws.onerror = () => reject(new Error("runtime could not connect"));
       ws.onmessage = (event) => {
         const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
+
         if (message.type !== "call" || !message.method.startsWith("processes.")) return;
+
         calls.push({ method: message.method, params: message.params });
         ws.send(
           JSON.stringify({
@@ -108,6 +110,7 @@ run("a thread's background processes (real postgres, real WebSocket)", async () 
     const deadline = Date.now() + 3000;
     while (!hub.isOnline(runtime.id)) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
     return { thread, calls };
@@ -132,6 +135,7 @@ run("a thread's background processes (real postgres, real WebSocket)", async () 
     const { thread, calls } = await setup((method) => {
       if (method === "processes.logs")
         return { ok: true, result: { stdout: "ready\n", stderr: "", truncated: false } };
+
       const status = method === "processes.stop" ? "stopped" : "running";
       return { ok: true, result: { processes: [{ ...running, status }] } };
     });

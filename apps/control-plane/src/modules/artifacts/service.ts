@@ -17,24 +17,31 @@ export function createArtifactsService(runner: Runner) {
         logged: "The artifacts.read call was refused:",
         message: "The image could not be read",
       });
+
       if (!image) throw new NotFoundError("No such image");
+
       const bytes = Buffer.from(image.data, "base64");
+
       if (image.mediaType === "text/html") {
         return new Response(framedHtml(bytes.toString("utf8")), { headers: HTML_HEADERS });
       }
+
       const headers = {
         "content-type": image.mediaType,
         "accept-ranges": "bytes",
         ...IMAGE_HEADERS,
       };
       const wanted = byteRange(range, bytes.length);
+
       if (wanted === "unsatisfiable") {
         return new Response(null, {
           status: 416,
           headers: { ...headers, "content-range": `bytes */${bytes.length}` },
         });
       }
+
       if (!wanted) return new Response(bytes, { headers });
+
       return new Response(bytes.subarray(wanted.start, wanted.end + 1), {
         status: 206,
         headers: {

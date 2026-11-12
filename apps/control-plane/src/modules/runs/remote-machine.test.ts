@@ -105,11 +105,15 @@ const forkIdFrom = (body: string) => {
 
 const parentForkReply = (body: string) => {
   if (body.includes(".git/aven-forks/")) return answer("taken");
+
   const id = forkIdFrom(body);
+
   if (body.includes("forks have stopped") && id) return tool("take_fork_changes", { id });
+
   if (body.includes("The fork is working") && id) {
     return tool("wait_for_forks", { ids: [id], timeoutSeconds: 30 });
   }
+
   if (hasToolResult(body)) {
     return tool("fork_thread", {
       task: "Create fork.txt containing from-fork.",
@@ -117,6 +121,7 @@ const parentForkReply = (body: string) => {
       title: FORK_TITLE,
     });
   }
+
   return toolCall("echo parent > parent.txt");
 };
 
@@ -124,7 +129,9 @@ const scripted = (body: string) => {
   if (body.includes("You are a fork of the thread")) {
     return hasToolResult(body) ? answer("wrote fork.txt") : toolCall("echo from-fork > fork.txt");
   }
+
   if (body.includes(FORK_MARK)) return parentForkReply(body);
+
   const command = body.includes("please sleep")
     ? "echo up > ready; sleep 30"
     : "pwd; echo made > proof.txt";
@@ -251,6 +258,7 @@ run(
       const deadline = Date.now() + ms;
       while (!check()) {
         if (Date.now() > deadline) throw new Error("timed out");
+
         await Bun.sleep(25);
       }
     };
@@ -336,9 +344,11 @@ run(
         if (!manager.isRunning(parent.id) && bodies.length > before && bodies.length < before + 5) {
           throw new Error(`the parent run ended early: ${bodies.at(-1)?.slice(-1200)}`);
         }
+
         if (Date.now() > deadline) {
           throw new Error(`timed out waiting for the fork: ${bodies.at(-1)?.slice(-1200)}`);
         }
+
         await Bun.sleep(25);
       }
 
@@ -353,7 +363,9 @@ run(
       const wrote = [];
       for (const id of await readdir(join(machineHome, "workspaces"))) {
         if (id === parent.id) continue;
+
         const file = join(machineHome, "workspaces", id, "fork.txt");
+
         if (await Bun.file(file).exists()) wrote.push(file);
       }
       expect(wrote).toHaveLength(1);

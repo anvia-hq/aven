@@ -25,7 +25,7 @@ function memoryStore() {
     save: (
       threadId: string,
       watch: { baseline: readonly string[]; tracked: readonly string[]; told: readonly string[] },
-    ) => void kept.set(threadId, JSON.parse(JSON.stringify(watch))),
+    ) => void kept.set(threadId, structuredClone(watch)),
     clear: (threadId: string) => void kept.delete(threadId),
   };
 }

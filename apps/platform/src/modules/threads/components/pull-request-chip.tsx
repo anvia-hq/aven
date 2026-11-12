@@ -18,7 +18,9 @@ type Props = { pullRequests: ThreadPullRequest[] };
 
 export function PullRequestChip({ pullRequests }: Props) {
   const [newest] = pullRequests;
+
   if (!newest) return null;
+
   const more = pullRequests.length - 1;
   return (
     <ButtonGroup>

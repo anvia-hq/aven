@@ -17,11 +17,13 @@ import type { ConnectedMcp, MachineCallsContext, ThreadRef } from "./types";
 
 const bytesOf = (data: unknown) => {
   if (typeof data !== "string") throw new Error("Invalid parameters");
+
   return Uint8Array.fromBase64(data);
 };
 
 const textOf = (value: unknown) => {
   if (typeof value !== "string") throw new Error("Invalid parameters");
+
   return value;
 };
 
@@ -30,11 +32,14 @@ const MCP_SERVERS_MAX = 50;
 const mcpServersOf = (value: unknown): RunMcpServer[] => {
   if (!Array.isArray(value) || value.length > MCP_SERVERS_MAX)
     throw new Error("Invalid parameters");
+
   return value.map((entry) => {
     const { id, name, url, headers, allowLocal } = asRecord(entry);
+
     if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") {
       throw new Error("Invalid parameters");
     }
+
     return {
       id,
       name,
@@ -52,6 +57,7 @@ const operationIdOf = (value: unknown) => {
   if (typeof value !== "string" || value.length === 0 || value.length > OPERATION_ID_MAX) {
     throw new Error("Invalid parameters");
   }
+
   return value;
 };
 
@@ -78,11 +84,13 @@ export function createMachineCalls({
     const key = JSON.stringify(servers);
     const kept = mcps.get(threadId);
     let connected = kept?.connected;
+
     if (!kept || kept.key !== key || kept.connected.results.some((result) => result.error)) {
       await closeMcp(threadId);
       connected = await connectMcpServers(servers);
       mcps.set(threadId, { key, connected });
     }
+
     const { results, note, servers: groups } = connected!;
     return {
       results,
@@ -102,7 +110,9 @@ export function createMachineCalls({
   async function callMcp(threadId: string, args: Record<string, unknown>) {
     const name = textOf(args.tool);
     const tool = mcps.get(threadId)?.connected.tools.find((candidate) => candidate.name === name);
+
     if (!tool) throw new Error("This thread's MCP servers are not connected on this computer");
+
     return normalizeToolResultOutput(await tool.call(args.input as never));
   }
 
@@ -110,7 +120,9 @@ export function createMachineCalls({
     stopped.add(key);
     while (stopped.size > REMEMBERED_STOPS) {
       const oldest = stopped.values().next().value;
+
       if (oldest === undefined) return;
+
       stopped.delete(oldest);
     }
   }
@@ -118,10 +130,12 @@ export function createMachineCalls({
   function stopExec(threadId: string, operationId: string) {
     const key = commandKey(threadId, operationId);
     const command = running.get(key);
+
     if (command) {
       command.abort();
       return;
     }
+
     rememberStop(key);
   }
 
@@ -141,14 +155,19 @@ export function createMachineCalls({
 
   async function runtimeOf(threadId: string): Promise<SandboxRuntime> {
     const known = boxes.get(threadId)?.runtime;
+
     if (known) return known;
+
     if (!(await sandbox.workspace(threadId))) {
       throw new Error("This thread's computer is not prepared");
     }
+
     await idle.starting(threadId);
     const box = await sandbox.acquire({ id: threadId });
     boxes.set(threadId, box);
+
     if (!box.runtime) throw new Error("This runner cannot lend its computer");
+
     return box.runtime;
   }
 
@@ -157,12 +176,17 @@ export function createMachineCalls({
       args.operationId === undefined ? undefined : operationIdOf(args.operationId);
     const key = operationId ? commandKey(threadId, operationId) : undefined;
     const controller = new AbortController();
+
     if (key) {
       if (stopped.delete(key)) controller.abort();
+
       running.set(key, controller);
     }
+
     const options: Record<string, unknown> = { ...args };
+
     if (key) options.abortSignal = controller.signal;
+
     try {
       const result = await (
         await runtimeOf(threadId)
@@ -253,18 +277,23 @@ export function createMachineCalls({
         return (await runtimeOf(threadId)).stopProcess({ processId: textOf(args.processId) });
       case "uploads.save": {
         if (!sandbox.uploads) throw new Error("This runner cannot take attached files");
+
         const save = args.exact === true ? sandbox.uploads.put : sandbox.uploads.save;
+
         if (!save) throw new Error("This runner cannot take attached files under a given name");
+
         return {
           path: await save.call(sandbox.uploads, threadId, textOf(args.name), bytesOf(args.data)),
         };
       }
       case "artifacts.keep":
         if (!sandbox.artifacts) throw new Error("This runner keeps no images");
+
         await sandbox.artifacts.keep(threadId, textOf(args.name), bytesOf(args.data));
         return null;
       case "artifacts.save":
         if (!sandbox.artifacts) throw new Error("This runner keeps no images");
+
         return {
           name: await sandbox.artifacts.save(threadId, bytesOf(args.data), textOf(args.mediaType)),
         };
@@ -278,7 +307,9 @@ export function createMachineCalls({
         return takeFork(sandbox, threadId, textOf(args.forkId));
       case "git.fetch": {
         const root = await sandbox.workspace(threadId);
+
         if (!root) throw new Error("The thread has no workspace yet");
+
         return fetchBranch(root, args.repo as RepoAccess, args.branch as string | undefined);
       }
     }
@@ -286,6 +317,7 @@ export function createMachineCalls({
 
   async function installSkills(threadId: string, args: Record<string, unknown>) {
     if (!sandbox.skills) throw new Error("This runner keeps no skills");
+
     const archives = asRecord(args.archives ?? {});
     const missing: string[] = [];
     const listings = await sandbox.skills.install(
@@ -293,7 +325,9 @@ export function createMachineCalls({
       (args.skills ?? []) as RunSkill[],
       async (digest) => {
         const archive = archives[digest];
+
         if (typeof archive === "string") return Uint8Array.fromBase64(archive);
+
         missing.push(digest);
         throw new Error("Its archive was not sent");
       },

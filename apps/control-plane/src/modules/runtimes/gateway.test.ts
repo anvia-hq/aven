@@ -53,7 +53,9 @@ describe("RunGateway", () => {
 
   const post = (path: string, token: string | null, body: unknown, key = "authorization") => {
     const headers = new Headers();
+
     if (token) headers.set(key, key === "authorization" ? `Bearer ${token}` : token);
+
     return fetch(`${base}/runtimes/gateway/${path}`, {
       method: "POST",
       headers,
@@ -481,6 +483,7 @@ describe("RunGateway", () => {
       );
     } finally {
       if (encryptionKey !== undefined) process.env.PROVIDER_ENCRYPTION_KEY = encryptionKey;
+
       if (authSecret !== undefined) process.env.BETTER_AUTH_SECRET = authSecret;
     }
   });

@@ -2,6 +2,8 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { noteDescription } from "@aven/protocol/memory";
 
+import type { MemoryCaller } from "./types";
+
 describe("noteDescription", () => {
   test("is the frontmatter's description, or else the first line of text", () => {
     expect(
@@ -24,7 +26,6 @@ run("runMemoryCommand (postgres)", async () => {
   const { threadsService } = await import("../threads/service");
   const { memoryService } = await import("./service");
   const { runMemoryCommand } = await import("./commands");
-  type Caller = import("./types").MemoryCaller;
 
   const { userId, orgA, cleanup } = await seedOrgPair();
   const runner = (await runtimesService.create(orgA, userId, { name: "m" })).runtime;
@@ -40,8 +41,8 @@ run("runMemoryCommand (postgres)", async () => {
     actor: { source: "thread" as const, threadId: thread },
     writable: true,
   };
-  const caller: Caller = { ...inProject, actor: { source: "person" } };
-  const ask = (command: Parameters<typeof runMemoryCommand>[1], as: Caller = caller) =>
+  const caller: MemoryCaller = { ...inProject, actor: { source: "person" } };
+  const ask = (command: Parameters<typeof runMemoryCommand>[1], as: MemoryCaller = caller) =>
     runMemoryCommand(as, command);
 
   test("a note is saved, listed, read with numbered lines, edited and deleted", async () => {

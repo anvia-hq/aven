@@ -19,11 +19,14 @@ export function SentImage({
 }) {
   const [attempt, setAttempt] = useState(0);
   const failed = attempt > RETRY_DELAYS_MS.length;
+
   if (failed || !file.image) return <FileChip name={file.name} size={file.size} />;
+
   const local = isLocalPreview(file.image);
   const src = local ? file.image : `${artifactsPath}/${file.image}`;
   const retry = () => {
     const delay = RETRY_DELAYS_MS[attempt];
+
     if (delay === undefined) setAttempt((count) => count + 1);
     else setTimeout(() => setAttempt((count) => count + 1), delay);
   };

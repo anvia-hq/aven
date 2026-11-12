@@ -67,7 +67,9 @@ export const mentionToken = ({ type, name }: Pick<MessageMention, "type" | "name
 
 export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | undefined {
   const part = messages.at(-1)?.parts.at(-1);
+
   if (part?.type !== "tool") return undefined;
+
   const { tool } = part;
   const asks = tool.name === QUESTION_TOOL_NAME || tool.name === SECRET_TOOL_NAME;
   return asks && tool.questions && tool.status === "running" ? tool : undefined;
@@ -83,6 +85,7 @@ export function answerableQuestion(
 
 export function questionAnswers(tool: ToolPart): QuestionAnswer[] {
   if (tool.status !== "done" || !tool.output) return [];
+
   try {
     const parsed: unknown = JSON.parse(tool.output);
     const answers = (parsed as { answers?: unknown } | null)?.answers;
@@ -140,7 +143,9 @@ function updateLastAssistant(
   change: (parts: MessagePart[]) => MessagePart[],
 ) {
   const index = messages.findLastIndex((message) => message.role === "assistant");
+
   if (index === -1) return messages;
+
   return messages.map((message, at) =>
     at === index ? { ...message, parts: change(message.parts) } : message,
   );
@@ -156,9 +161,13 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         role: "user",
         parts: [{ type: "text", text: event.prompt }],
       };
+
       if (event.attachments?.length) user.attachments = event.attachments;
+
       if (event.mentions?.length) user.mentions = event.mentions;
+
       if (event.senderId) user.senderId = event.senderId;
+
       return [
         ...messages,
         user,
@@ -171,8 +180,11 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         role: "user",
         parts: [{ type: "text", text: event.prompt }],
       };
+
       if (event.mentions?.length) user.mentions = event.mentions;
+
       if (event.senderId) user.senderId = event.senderId;
+
       return [
         ...messages,
         user,
@@ -182,19 +194,25 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
     case "text":
       return updateLastAssistant(messages, (parts) => {
         const last = parts.at(-1);
+
         if (last?.type === "text") {
           return [...parts.slice(0, -1), { type: "text", text: last.text + event.delta }];
         }
+
         if (event.delta.trim() === "") return parts;
+
         return [...parts, { type: "text", text: event.delta }];
       });
     case "reasoning":
       return updateLastAssistant(messages, (parts) => {
         const last = parts.at(-1);
+
         if (last?.type === "reasoning") {
           return [...parts.slice(0, -1), { type: "reasoning", text: last.text + event.delta }];
         }
+
         if (event.delta.trim() === "") return parts;
+
         return [...parts, { type: "reasoning", text: event.delta }];
       });
     case "tool_start":
@@ -206,12 +224,16 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       return updateLastAssistant(messages, (parts) =>
         parts.map((part) => {
           if (part.type !== "tool" || part.tool.id !== event.id) return part;
+
           const tool: ToolPart = { ...part.tool, status: event.status, output: event.output };
+
           if (event.artifacts) tool.artifacts = event.artifacts;
+
           if (tool.subagents)
             tool.subagents = tool.subagents.map((subagent) =>
               subagent.status === "running" ? { ...subagent, status: event.status } : subagent,
             );
+
           return { type: "tool", tool };
         }),
       );
@@ -225,6 +247,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         );
         return parts.map((part, at) => {
           if (at !== call || part.type !== "tool") return part;
+
           const subagents = part.tool.subagents?.map((subagent) =>
             subagent.index === event.index ? applySubagentEvent(subagent, event.event) : subagent,
           );
@@ -233,9 +256,13 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       });
     case "done": {
       const { workedMs } = event;
+
       if (workedMs === undefined) return messages;
+
       const index = messages.findLastIndex((message) => message.role === "assistant");
+
       if (index === -1) return messages;
+
       return messages.map((message, at) =>
         at === index ? { ...message, workedMs: (message.workedMs ?? 0) + workedMs } : message,
       );

@@ -15,8 +15,11 @@ export function useBotCompaction(bot: Bot) {
   async function commit() {
     const written = text.trim();
     const next = written === "" ? null : Number(written);
+
     if (next === bot.compactAfterTokens) return;
+
     const { min, max } = BOT_COMPACT_TOKENS;
+
     if (next !== null && (!Number.isInteger(next) || next < min || next > max)) {
       toast.add({
         title: "Could not save the bot",
@@ -26,6 +29,7 @@ export function useBotCompaction(bot: Bot) {
       setText(shown(bot));
       return;
     }
+
     if (!(await update(bot, { compactAfterTokens: next }))) setText(shown(bot));
   }
 

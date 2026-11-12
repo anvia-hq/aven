@@ -28,17 +28,23 @@ export class RunIdentities {
 
   revoke(runId: string) {
     const credential = this.#credentials.get(runId);
+
     if (!credential) return;
+
     this.#credentials.delete(runId);
     this.#grants.delete(credential);
   }
 
   async mint(credential: string, { audience, subjectScope, lifetime }: MintTokenBody) {
     const identity = this.#grants.get(credential);
+
     if (!identity) return null;
+
     const issuedAt = Math.floor(Date.now() / 1000);
     const driver: Record<string, string> = {};
+
     if (identity.driverId !== undefined) driver.driver_id = identity.driverId;
+
     return this.issuer.sign({
       aud: audience,
       sub: SUBJECTS[subjectScope](identity),

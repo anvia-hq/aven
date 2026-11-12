@@ -13,6 +13,7 @@ export type VariableScope =
 
 export function variablesPath(scope: VariableScope) {
   if (scope.kind === "project") return `/projects/${scope.projectId}/variables`;
+
   return `/variables/${scope.kind}`;
 }
 

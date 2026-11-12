@@ -21,9 +21,13 @@ async function lookUp(request: Request) {
 
 async function sessionOf(request: Request) {
   const cached = sessions.get(request);
+
   if (cached !== undefined) return cached;
+
   const inFlight = pending.get(request);
+
   if (inFlight) return inFlight;
+
   const lookup = lookUp(request);
   pending.set(request, lookup);
   return lookup;
@@ -34,7 +38,9 @@ export const authRouter = new Elysia({ name: "auth" })
     auth: {
       async resolve({ request, status }) {
         const session = await sessionOf(request);
+
         if (!session) return status(401, "Unauthorized");
+
         return { user: session.user, session: session.session };
       },
     },
@@ -42,10 +48,13 @@ export const authRouter = new Elysia({ name: "auth" })
       async resolve({ request, status }) {
         const session = await sessionOf(request);
         const organizationId = session?.session.activeOrganizationId;
+
         if (!session || !organizationId) return status(400, "No active organization");
+
         if (!(await authService.isMember(session.user.id, organizationId))) {
           return status(400, "No active organization");
         }
+
         return { organizationId };
       },
     },

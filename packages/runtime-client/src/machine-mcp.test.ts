@@ -67,7 +67,8 @@ async function machine() {
   let online = true;
   const call: MachineCall = async (op, args) => {
     if (!online) throw new Error("The computer is offline");
-    return answer({ threadId: "t1", op, args: JSON.parse(JSON.stringify(args ?? {})) });
+
+    return answer({ threadId: "t1", op, args: structuredClone(args ?? {}) });
   };
   return { call, answer, offline: () => (online = false) };
 }

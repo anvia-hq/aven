@@ -42,21 +42,28 @@ const renderEntity =
   (people: MentionPerson[]) =>
   ({ triggerId, id, text }: ComposerInputEntity) => {
     if (id === COMPACT_COMMAND) return <CommandChip name="compact" />;
+
     if (id === AGENT_ENTITY) return <AgentChip />;
+
     const personId = personIdOf(id);
+
     if (personId !== undefined) {
       const person = people.find((each) => each.id === personId);
       const name = person?.name ?? /^@\[(.*)\]\(/.exec(text)?.[1] ?? "Teammate";
       return <PersonChip name={name} image={person?.image ?? null} />;
     }
+
     const mention = mentionOf(triggerId, id);
     return mention ? <MentionChip {...mention} /> : null;
   };
 
 function personIcon(people: MentionPerson[], item: ComposerTriggerItem) {
   if (item.id === AGENT_ENTITY) return <Sparkles className="size-5 p-0.5" />;
+
   const id = personIdOf(item.id);
+
   if (id === undefined) return null;
+
   const person = people.find((each) => each.id === id);
   return person ? <PersonAvatar name={person.name} image={person.image} /> : null;
 }
@@ -111,7 +118,9 @@ function Composer({
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+
     if (composer.activeTrigger?.items.length) return;
+
     event.preventDefault();
     event.stopPropagation();
     void submit();
@@ -119,8 +128,10 @@ function Composer({
 
   function focusOnBoxClick(event: MouseEvent<HTMLDivElement>) {
     const target = event.target as HTMLElement;
+
     if (target.closest("button, a, input, [contenteditable], [role='menu'], [role='listbox']"))
       return;
+
     editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
   }
 

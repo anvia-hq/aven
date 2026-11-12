@@ -26,6 +26,7 @@ function setup(configured = false) {
     configured,
     configure(config: GithubConfig | null) {
       this.configured = config !== null;
+
       if (config) configuredWith.push(config);
     },
   };

@@ -59,6 +59,7 @@ describe("the output limit", () => {
     expect(maxTokens).toBe(16_000);
     const body = await sentTo(async (model) => {
       if (!isStreamingCompletionModel(model)) throw new Error("Anthropic models stream");
+
       for await (const _ of model.streamCompletion({
         chatHistory: [{ role: "user", content: "hello" }],
         documents: [],

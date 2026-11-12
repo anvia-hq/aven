@@ -61,8 +61,10 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
   async function renew(row: GithubUserTokenRow) {
     const { userId, appKey } = row;
     const expired = row.refreshExpiresAt !== null && row.refreshExpiresAt.getTime() <= Date.now();
+
     if (!row.refreshTokenEncrypted || expired)
       return drop(userId, appKey, "no usable refresh token");
+
     let refreshToken: string;
     try {
       refreshToken = decryptSecret(row.refreshTokenEncrypted);
@@ -70,7 +72,9 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
       return drop(userId, appKey, error);
     }
     const grant = await (await clients.forKey(appKey)).refreshGrant(refreshToken);
+
     if (!grant) return drop(userId, appKey, "GitHub refused the refresh token");
+
     await store(userId, appKey, grant, identityOf(row));
     return { token: grant.accessToken, identity: identityOf(row) };
   }
@@ -81,9 +85,12 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
     minRemainingMs = REFRESH_MARGIN_MS,
   ): Promise<GithubUserToken | null> {
     const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId, appKey));
+
     if (!row) return null;
+
     const fresh =
       row.accessExpiresAt === null || row.accessExpiresAt.getTime() - Date.now() > minRemainingMs;
+
     if (fresh) {
       try {
         return { token: decryptSecret(row.accessTokenEncrypted), identity: identityOf(row) };
@@ -91,6 +98,7 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
         return drop(userId, appKey, error);
       }
     }
+
     const turn = `${userId}:${appKey}`;
     const running = renewing.get(turn) ?? renew(row).finally(() => renewing.delete(turn));
     renewing.set(turn, running);
@@ -117,7 +125,9 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
     async forRun(userId: string, appKey: string = PLATFORM_APP): Promise<RunGithub | undefined> {
       try {
         const connection = await use(userId, appKey, RUN_MIN_REMAINING_MS);
+
         if (!connection) return undefined;
+
         const { id, login, name } = connection.identity;
         return { token: connection.token, id, login, name };
       } catch (error) {

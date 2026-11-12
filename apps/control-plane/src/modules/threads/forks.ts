@@ -21,9 +21,11 @@ export function createThreadForks({
 }): ThreadForks {
   const forkOf = async (thread: RunThreadInfo, id: string) => {
     const fork = await threadsService.get(thread.organizationId, id);
+
     if (!fork || fork.parentThreadId !== thread.id) {
       throw new UnprocessableError("That is not a fork of this thread");
     }
+
     return fork;
   };
 
@@ -35,7 +37,9 @@ export function createThreadForks({
     waiting.set(threadId, queued);
     while (waiting.size > waitingLimit) {
       const oldest = waiting.keys().next().value;
+
       if (oldest === undefined) return;
+
       const dropped = waiting.get(oldest)?.length ?? 0;
       waiting.delete(oldest);
       console.warn(
@@ -60,14 +64,19 @@ export function createThreadForks({
         console.warn(`Could not tell thread ${parent.id} about a fork:`, error);
         return;
       }
+
       queueNote(parent.id, prompt);
     }
   };
   const deliverWaiting = async (thread: { id: string; organizationId: string }) => {
     const prompts = waiting.get(thread.id);
+
     if (!prompts?.length) return;
+
     const parent = await threadsService.get(thread.organizationId, thread.id);
+
     if (!parent || parent.awaitingAnswer || parent.state === "archived") return;
+
     waiting.delete(thread.id);
     for (const prompt of prompts) await sendNote(parent, prompt);
   };
@@ -83,16 +92,19 @@ export function createThreadForks({
 
   const start: ThreadForks["start"] = async (thread, { task, context, title }) => {
     const parent = await threadsService.require(thread.organizationId, thread.id);
+
     if (parent.parentThreadId) {
       throw new UnprocessableError(
         "A fork cannot fork: do the work in this thread or tell the person.",
       );
     }
+
     if ((await threadsService.liveForks(parent.id)) >= FORKS_PER_THREAD) {
       throw new UnprocessableError(
         `This thread has ${FORKS_PER_THREAD} forks that are not archived. Wait for one to finish and have the person archive it.`,
       );
     }
+
     const userId = parent.createdBy;
     const fork = await threadsService.create(
       parent.organizationId,
@@ -122,15 +134,22 @@ export function createThreadForks({
       if (!fork.parentThreadId) {
         if (ending.outcome === "cancelled") waiting.delete(fork.id);
         else await deliverWaiting(fork);
+
         return;
       }
+
       if (ending.outcome === "cancelled") return;
+
       const parentWorking = runs.isRunning(fork.parentThreadId);
       const siblings = await threadsService.liveForkList(fork.parentThreadId);
+
       if (!parentWorking && siblings.some((other) => runs.isRunning(other.id))) return;
+
       const parent = await threadsService.get(fork.organizationId, fork.parentThreadId);
       const forked = await threadsService.get(fork.organizationId, fork.id);
+
       if (!parent || !forked) return;
+
       const how = {
         done: "is done",
         failed: "failed",

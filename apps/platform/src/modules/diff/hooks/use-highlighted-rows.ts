@@ -16,7 +16,9 @@ function sides(hunks: DiffHunk[]) {
         oldLines.push(row.text);
         continue;
       }
+
       if (row.kind === "ctx") oldLines.push(row.text);
+
       at.set(row, { side: "new", index: newLines.length });
       newLines.push(row.text);
     }
@@ -33,7 +35,9 @@ export function useHighlightedRows(
   const newColoured = useHighlightedLines(newText, path);
   return (row) => {
     const place = at.get(row);
+
     if (!place) return null;
+
     const coloured = place.side === "old" ? oldColoured : newColoured;
     return coloured?.[place.index] ?? null;
   };

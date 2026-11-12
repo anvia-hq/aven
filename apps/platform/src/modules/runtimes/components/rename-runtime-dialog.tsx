@@ -26,14 +26,19 @@ export function RenameRuntimeDialog({ runtime }: { runtime: Runtime }) {
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
+
     if (next) setName(runtime.name);
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+
     if (!trimmed || trimmed === runtime.name) return;
+
     setWorking(true);
+
     if (await rename(runtime, trimmed)) setOpen(false);
+
     setWorking(false);
   }
 

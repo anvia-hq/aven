@@ -12,6 +12,7 @@ const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 function resolveTheme(theme: Theme, systemDark: boolean): "light" | "dark" {
   if (theme === "system") return systemDark ? "dark" : "light";
+
   return theme;
 }
 
@@ -42,15 +43,20 @@ export function useTheme() {
     const option = SANS_FONTS.find((item) => item.id === font) ?? SANS_FONTS[0];
     document.documentElement.style.setProperty("--app-font", option.family);
     const existing = document.getElementById(FONT_LINK_ID);
+
     if (!option.googleQuery) {
       existing?.remove();
       return;
     }
+
     const link = existing ?? document.createElement("link");
+
     if (!(link instanceof HTMLLinkElement)) return;
+
     link.id = FONT_LINK_ID;
     link.rel = "stylesheet";
     link.href = `https://fonts.googleapis.com/css2?${option.googleQuery}&display=swap`;
+
     if (!existing) document.head.appendChild(link);
   }, [font]);
 

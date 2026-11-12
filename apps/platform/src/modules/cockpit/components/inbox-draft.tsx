@@ -44,10 +44,12 @@ export function InboxDraft({
 
   async function add() {
     if (!ready) return;
+
     setBusy(true);
     try {
       settled.current = true;
       const made = await capture({ title: title.trim(), body, tags });
+
       if (made) onAdded(made.id);
       else settled.current = false;
     } finally {

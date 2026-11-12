@@ -24,6 +24,7 @@ export function RotateRuntimeDialog({ runtime }: { runtime: Runtime }) {
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
+
     if (!next) setRotated(null);
   }
 

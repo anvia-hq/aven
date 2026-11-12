@@ -25,7 +25,9 @@ export function useInbox() {
       inbox.update(item, patch, "Could not save it"),
     async remove(item: InboxItem) {
       const removed = await inbox.remove(item, "Could not delete it");
+
       if (removed) toast.add({ title: "Deleted", description: item.title });
+
       return removed;
     },
   };

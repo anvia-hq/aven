@@ -41,12 +41,15 @@ export function useProviderForm(
       const region = readTrimmedField("region");
       return region ? bedrockBaseUrl(region) : undefined;
     }
+
     if (vertex) {
       const project = readTrimmedField("project");
       const location = readTrimmedField("location");
       return project && location ? vertexBaseUrl(project, location) : undefined;
     }
+
     if (preset) return preset.baseUrl;
+
     return compatible || azure ? readTrimmedField("baseUrl") : undefined;
   }
 
@@ -64,18 +67,22 @@ export function useProviderForm(
     const keyless = compatible && preset?.needsKey !== true;
     const ready =
       saved || ((apiKey || keyless) && (baseUrl || !(compatible || azure || bedrock || vertex)));
+
     if (!ready) {
       latest.current += 1;
       setModelsState({ status: "idle", models: null });
       return;
     }
+
     const request = ++latest.current;
     setModelsState((current) => ({ ...current, status: "loading", error: undefined }));
     try {
       const listed = await (saved
         ? listSavedModels(provider)
         : listModels({ kind, apiKey, baseUrl }));
+
       if (request !== latest.current) return;
+
       const list = [...new Set([provider?.modelId ?? "", ...listed.models])].filter(Boolean).sort();
       setModelsState({
         status: list.length ? "ready" : "error",
@@ -86,24 +93,30 @@ export function useProviderForm(
       setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
     } catch (failure) {
       if (request !== latest.current) return;
+
       const refused = /answered (401|403)\b/.test(errorMessage(failure));
+
       if (!apiKey && !saved && refused) {
         setModelsState({ status: "idle", models: null });
         return;
       }
+
       setModelsState((current) => ({ ...current, status: "error", error: errorMessage(failure) }));
     }
   }
 
   function scheduleLoad(event: FormEvent<HTMLFormElement>) {
     const name = (event.target as HTMLInputElement).name;
+
     if (!SOURCE_FIELDS.has(name)) return;
+
     clearTimeout(timer.current);
     timer.current = setTimeout(() => void loadModels(), AUTO_LOAD_DELAY_MS);
   }
 
   function loadOnOpen(open: boolean) {
     if (!open) return;
+
     timer.current = setTimeout(() => void loadModels(), 0);
   }
 
@@ -119,6 +132,7 @@ export function useProviderForm(
       ? await update(provider, { name, apiKey, baseUrl, modelId: chosenModel ?? null })
       : await create({ kind, name, apiKey, baseUrl, modelId: chosenModel });
     setSubmitting(false);
+
     if (done) {
       reset();
       onDone();

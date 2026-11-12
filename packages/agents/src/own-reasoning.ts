@@ -7,8 +7,11 @@ export const ownedByAnthropic: ReasoningOwnership = (id) => id?.startsWith("thin
 
 function keepingReasoning(message: Message, keep: (part: ReasoningPart) => boolean): Message[] {
   if (message.role !== "assistant" || typeof message.content === "string") return [message];
+
   const content = message.content.filter((part) => part.type !== "reasoning" || keep(part));
+
   if (content.length === message.content.length) return [message];
+
   return content.length > 0 ? [{ ...message, content }] : [];
 }
 
@@ -33,10 +36,13 @@ function withChatHistory<T extends CompletionModel>(
   return new Proxy(model, {
     get(target, key) {
       const value: unknown = Reflect.get(target, key, target);
+
       if (typeof value !== "function") return value;
+
       if (key === "completion" || key === "streamCompletion" || key === "traceRequest")
         return (request: CompletionRequest, ...rest: unknown[]) =>
           (value as (...args: unknown[]) => unknown).call(target, clean(request), ...rest);
+
       return value.bind(target);
     },
   });
@@ -53,11 +59,15 @@ export function withAnthropicReasoning<T extends CompletionModel>(model: T): T {
 function withoutEmptyText(history: Message[]): Message[] {
   return history.flatMap((message): Message[] => {
     if (message.role !== "assistant") return [message];
+
     if (typeof message.content === "string") return message.content.trim() === "" ? [] : [message];
+
     const content = message.content.filter(
       (part) => part.type !== "text" || part.text.trim() !== "",
     );
+
     if (content.length === message.content.length) return [message];
+
     return content.length > 0 ? [{ ...message, content }] : [];
   });
 }

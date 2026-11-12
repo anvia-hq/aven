@@ -44,6 +44,7 @@ export class ViewerStreams {
     if (this.#viewers.size >= MAX_VIEWERS) {
       throw new UnavailableError("Too many terminals are open on this runner");
     }
+
     const viewerId = crypto.randomUUID();
     this.#viewers.set(viewerId, { sink, ready: false, kind, waiting: [], waitingBytes: 0 });
     return viewerId;
@@ -53,11 +54,14 @@ export class ViewerStreams {
     return {
       write: (bytes) => {
         const viewer = this.#viewers.get(viewerId);
+
         if (!viewer) return;
+
         if (viewer.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
       },
       close: () => {
         if (!this.#viewers.delete(viewerId) || this.connectionClosed()) return;
+
         this.post({ type: closeType, viewerId });
       },
     };
@@ -65,7 +69,9 @@ export class ViewerStreams {
 
   opened(viewerId: string, kind: Viewer["kind"]) {
     const viewer = this.#viewers.get(viewerId);
+
     if (viewer?.kind !== kind) return;
+
     viewer.ready = true;
     for (const bytes of viewer.waiting) this.sendFrame(encodeViewerFrame(viewerId, bytes));
     viewer.waiting = [];
@@ -74,15 +80,20 @@ export class ViewerStreams {
 
   closed(viewerId: string, kind: Viewer["kind"], reason: string) {
     const viewer = this.#viewers.get(viewerId);
+
     if (viewer?.kind !== kind) return;
+
     this.#viewers.delete(viewerId);
     viewer.sink.closed(reason);
   }
 
   receive(frame: Uint8Array) {
     const decoded = decodeViewerFrame(frame);
+
     if (!decoded) return;
+
     const viewer = this.#viewers.get(decoded.viewerId);
+
     if (viewer?.ready) viewer.sink.data(decoded.payload);
   }
 

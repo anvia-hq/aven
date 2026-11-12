@@ -20,11 +20,17 @@ export const PROBLEM_TEXT: Record<RowProblem, string> = {
 
 function problemOf(row: VariableRow, rows: readonly VariableRow[]): RowProblem | null {
   const name = row.name.trim();
+
   if (name === "") return null;
+
   if (name.length > MAX_NAME_LENGTH || !NAME.test(name)) return "name";
+
   if (isReservedName(name)) return "reserved";
+
   if (rows.some((other) => other.id !== row.id && other.name.trim() === name)) return "duplicate";
+
   if (row.value.length > MAX_VALUE_LENGTH) return "long";
+
   return null;
 }
 
@@ -67,6 +73,7 @@ export function rowsAfterPaste(
   const byName = new Map<string, number>();
   merged.forEach((row, position) => {
     const name = row.name.trim();
+
     if (name !== "") byName.set(name, position);
   });
   return merged.filter((row, position) => {

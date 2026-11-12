@@ -20,7 +20,9 @@ type Offered = {
 
 const outputOf = (output: Normalized) => {
   if (output.type === "text") return output.value;
+
   if (output.type === "content") return ToolOutput.content(output.value);
+
   return output.value;
 };
 
@@ -74,6 +76,7 @@ export function combineMcp(here: ConnectedMcp, machine: ConnectedMcp): Connected
   const clashed = new Map<string, string>();
   for (const server of machine.servers) {
     const clash = server.tools.map((tool) => tool.name).find((name) => taken.has(name));
+
     if (clash !== undefined) {
       clashed.set(
         server.id,
@@ -81,6 +84,7 @@ export function combineMcp(here: ConnectedMcp, machine: ConnectedMcp): Connected
       );
       continue;
     }
+
     for (const tool of server.tools) taken.set(tool.name, server.name);
     kept.push(server);
   }

@@ -15,8 +15,10 @@ import type { Args } from "../types";
 
 async function readServerEnv(dir: string) {
   const text = await readFile(join(dir, ".env"), "utf8").catch(() => undefined);
+
   if (text === undefined)
     throw new Error(`No server is installed in ${dir}. Run: aven server install`);
+
   return parseEnv(text);
 }
 
@@ -25,11 +27,13 @@ const healthUrl = (env: Record<string, string>) =>
 
 async function runCompose(dir: string, args: string[]) {
   const code = await run(composeCommand(dir, args));
+
   if (code !== 0) throw new Error(`docker compose ${args[0]} failed (exit ${code})`);
 }
 
 export async function serverInstall(args: Args) {
   const problem = await dockerProblem();
+
   if (problem) throw new Error(problem);
 
   const dir = serverDir();
@@ -52,6 +56,7 @@ export async function serverInstall(args: Args) {
   );
   for (const note of notes) if (!installed) console.log(note);
   const taken = installed ? undefined : needed.find((port) => !portIsFree(port));
+
   if (taken !== undefined)
     throw new Error(
       `Port ${taken} is in use. Pick another with --port, --https-port or --api-port.`,
@@ -59,12 +64,14 @@ export async function serverInstall(args: Args) {
 
   const values = installEnvValues(args, options);
   const { changed } = await writeServerFiles(dir, { compose, envTemplate }, options, values);
+
   if (changed.length > 0) {
     console.log(`\nUpdated ${join(dir, ".env")}:`);
     for (const line of envChangeLines(changed)) console.log(`  ${line}`);
   } else if (Object.keys(values).length > 0) {
     console.log(`\nNothing in ${join(dir, ".env")} changed.`);
   }
+
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);
   const env = await readServerEnv(dir);
@@ -74,6 +81,7 @@ export async function serverInstall(args: Args) {
 async function waitUntilHealthy(dir: string) {
   const env = await readServerEnv(dir);
   console.log("Waiting for the server to answer...");
+
   if (!(await waitForHealthy(healthUrl(env))))
     throw new Error(`The server did not answer at ${healthUrl(env)}. See: aven server logs`);
 }
@@ -109,8 +117,11 @@ export async function serverStatus() {
 
 export async function serverLogs(service: string | undefined, follow: boolean) {
   const args = ["logs", "--tail", "200"];
+
   if (follow) args.push("-f");
+
   if (service) args.push(service);
+
   await run(composeCommand(serverDir(), args));
 }
 
@@ -119,6 +130,7 @@ export async function serverUpgrade(release: string) {
   const envPath = join(dir, ".env");
   recordProject(dir);
   const existing = await readFile(envPath, "utf8").catch(() => undefined);
+
   if (existing === undefined) return false;
 
   await writeFile(join(dir, "docker-compose.yml"), compose);
@@ -126,7 +138,9 @@ export async function serverUpgrade(release: string) {
     envPath,
     setEnv(addMissingKeys(existing, envTemplate), { AVEN_VERSION: release }),
   );
+
   if (release === "latest") await runCompose(dir, ["pull"]);
+
   await runCompose(dir, ["up", "-d"]);
   await waitUntilHealthy(dir);
   return true;

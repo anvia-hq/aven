@@ -21,15 +21,19 @@ export function splitWith(
   split: string | undefined,
 ): { threadId: string; split: string } | undefined {
   const other = split ?? threadId;
+
   if (side === "left") {
     if (dropped === threadId && split === undefined) return undefined;
+
     return dropped === other
       ? { threadId: other, split: threadId }
       : { threadId: dropped, split: other };
   }
+
   if (dropped === threadId) {
     return split === undefined ? undefined : { threadId: split, split: threadId };
   }
+
   return { threadId, split: dropped };
 }
 

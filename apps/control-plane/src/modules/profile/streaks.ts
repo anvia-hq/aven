@@ -11,7 +11,9 @@ export function streaksOf(days: readonly string[], today: string) {
   let previous: number | undefined;
   for (const day of unique) {
     const time = startOf(day);
+
     if (!Number.isFinite(time)) continue;
+
     run = previous !== undefined && time - previous === DAY_MS ? run + 1 : 1;
     longest = Math.max(longest, run);
     previous = time;
@@ -20,7 +22,9 @@ export function streaksOf(days: readonly string[], today: string) {
   const active = new Set(unique);
   let current = 0;
   let cursor = startOf(today);
+
   if (!active.has(dayOf(cursor))) cursor -= DAY_MS;
+
   while (active.has(dayOf(cursor))) {
     current += 1;
     cursor -= DAY_MS;

@@ -61,7 +61,9 @@ describe("downloadVerified", () => {
     (async (url: string) => {
       if (url.endsWith("checksums.txt"))
         return new Response(`${checksum}  ${assetName("1.0.0", "linux-amd64")}\n`);
+
       if (url.endsWith(".tar.gz")) return new Response(archive);
+
       return new Response("", { status: 404 });
     }) as unknown as typeof fetch;
 

@@ -26,6 +26,7 @@ export function useAvatar() {
       });
     });
     setBusy(false);
+
     if (stored) await saved("Photo saved");
   }
 
@@ -35,6 +36,7 @@ export function useAvatar() {
       api<{ image: null }>("/profile/avatar", { method: "DELETE" }),
     );
     setBusy(false);
+
     if (removed) await saved("Photo removed");
   }
 

@@ -11,7 +11,9 @@ export function crowdOf(thread: Thread): Crowd | null {
     image: thread.createdByImage,
   };
   const others = thread.participants.filter((person) => person.id !== creator.id);
+
   if (others.length === 0 && !isDriving(thread.drivingUntil)) return null;
+
   const people = [creator, ...others];
   return {
     shown: people.slice(0, CROWD_SHOWN),

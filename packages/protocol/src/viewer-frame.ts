@@ -9,6 +9,7 @@ export function encodeViewerFrame(viewerId: string, payload: Uint8Array): Uint8A
 
 export function decodeViewerFrame(frame: Uint8Array) {
   if (frame.length < VIEWER_ID_BYTES) return null;
+
   const hex = frame.subarray(0, VIEWER_ID_BYTES).toHex();
   const viewerId = [8, 12, 16, 20].reduceRight(
     (id, at) => `${id.slice(0, at)}-${id.slice(at)}`,

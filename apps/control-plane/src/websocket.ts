@@ -35,10 +35,12 @@ export function bridgeToRunner<Handle extends { close(): void }>(tooSlow: string
               ws.close(CloseCode.PolicyViolation, tooSlow);
               return;
             }
+
             ws.raw.send(bytes);
           },
           closed: (reason) => ws.close(CloseCode.GoingAway, reason.slice(0, 120)),
         });
+
         if (ws.raw.readyState !== WebSocket.OPEN) handle.close();
         else handles.set(ws.raw, handle);
       } catch (error) {

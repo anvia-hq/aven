@@ -20,29 +20,43 @@ function fence(text: string, least: number) {
 
 function styled(text: string, styles: Styles = {}) {
   if (!text) return text;
+
   if (styles.code) {
     const ticks = fence(text, 1);
     const pad = text.startsWith("`") || text.endsWith("`") ? " " : "";
     return `${ticks}${pad}${text}${pad}${ticks}`;
   }
+
   const [, lead = "", core = "", trail = ""] = /^(\s*)([\s\S]*?)(\s*)$/.exec(text) ?? [];
+
   if (!core) return text;
+
   let out = core;
+
   if (styles.bold) out = `**${out}**`;
+
   if (styles.italic) out = `*${out}*`;
+
   if (styles.strike) out = `~~${out}~~`;
+
   return `${lead}${out}${trail}`;
 }
 
 function inline(content: unknown): string {
   if (typeof content === "string") return content;
+
   if (!Array.isArray(content)) return "";
+
   return content
     .map((part: Inline | string) => {
       if (typeof part === "string") return part;
+
       if (!part || typeof part !== "object") return "";
+
       if (part.type === "link") return `[${inline(part.content)}](${part.href ?? ""})`;
+
       if (typeof part.text === "string") return styled(part.text, part.styles);
+
       return inline(part.content);
     })
     .join("");
@@ -55,7 +69,9 @@ function table(content: unknown) {
       .replace(/\s*\n\s*/g, " ")
       .replace(/\|/g, "\\|");
   const lines = rows.map((row) => `| ${(row.cells ?? []).map(cell).join(" | ")} |`);
+
   if (lines.length === 0) return "";
+
   const width = rows[0]?.cells?.length ?? 1;
   lines.splice(1, 0, `|${" --- |".repeat(width)}`);
   return lines.join("\n");
@@ -119,7 +135,9 @@ function block(item: Block, number: number): string {
   }
   const children = Array.isArray(item.children) ? blocks(item.children.filter(isBlock)) : "";
   const head = marker ? `${marker}${indent(line, marker.length).trimStart()}` : line;
+
   if (!children) return head;
+
   const under = indent(children, marker.length);
   return head ? `${head}\n${marker ? "" : "\n"}${under}` : under;
 }
@@ -134,11 +152,14 @@ function blocks(list: Block[]): string {
       const first = Number.isFinite(start) && start > 0 ? start : 1;
       number = previous === "numberedListItem" ? number + 1 : first;
     }
+
     const text = block(item, number);
+
     if (!text.trim()) {
       previous = item.type;
       continue;
     }
+
     const tight =
       previous !== undefined && LIST_ITEMS.has(previous) && LIST_ITEMS.has(item.type ?? "");
     out += out ? (tight ? "\n" : "\n\n") + text : text;
@@ -153,12 +174,15 @@ export function isBlockDocument(parsed: unknown): parsed is unknown[] {
 
 export function cockpitMarkdown(body: string): string {
   if (!body.trimStart().startsWith("[")) return body;
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(body);
   } catch {
     return body;
   }
+
   if (!isBlockDocument(parsed)) return body;
+
   return blocks(parsed as Block[]).trim();
 }

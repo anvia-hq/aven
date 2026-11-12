@@ -18,6 +18,7 @@ export const terminalRouter = (hub: RuntimeHub) => {
     query: terminalSize,
     async beforeHandle({ request, status, organizationId, user, params }) {
       if (!originAllowed(request)) return status(403, "Forbidden origin");
+
       await service.requireShell(organizationId, user.id, params.id);
     },
     async open(ws) {
@@ -26,12 +27,16 @@ export const terminalRouter = (hub: RuntimeHub) => {
     },
     message(ws, message) {
       const terminal = terminals.handle(ws);
+
       if (!terminal) return;
+
       if (ArrayBuffer.isView(message)) {
         terminal.write(bytesOf(message));
         return;
       }
+
       const control = terminalControl.safeParse(message);
+
       if (control.success) terminal.resize(control.data.cols, control.data.rows);
     },
     close(ws) {

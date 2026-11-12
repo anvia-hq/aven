@@ -34,7 +34,9 @@ function Status({ runtime }: { runtime: Runtime }) {
 
 function Load({ runtime }: { runtime: Runtime }) {
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
+
   if (!stats) return <span className="text-xs text-muted-foreground">–</span>;
+
   return (
     <span className="flex items-center gap-2.5">
       {machineMetrics(stats).map((metric) => (
@@ -61,6 +63,7 @@ export function RuntimesList() {
   const { runtimes, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
 
   if (!loaded) return null;
+
   if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
 
   return (

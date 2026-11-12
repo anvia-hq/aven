@@ -15,7 +15,9 @@ const decode = (part: string) => JSON.parse(Buffer.from(part, "base64url").toStr
 async function verify(token: string, jwks: ReturnType<Issuer["jwks"]>) {
   const [header, payload, signature] = token.split(".") as [string, string, string];
   const jwk = jwks.keys.find((key) => key.kid === decode(header).kid);
+
   if (!jwk) return false;
+
   const key = await crypto.subtle.importKey(
     "jwk",
     jwk,

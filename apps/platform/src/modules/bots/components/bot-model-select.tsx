@@ -26,6 +26,7 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
   }
 
   let shown = "Default model";
+
   if (provider) shown = modelId ? labelOf(provider.id, modelId) : "Provider default";
 
   async function choose(change: { providerId: string | null; modelId?: string }) {

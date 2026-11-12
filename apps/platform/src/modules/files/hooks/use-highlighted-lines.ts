@@ -15,6 +15,7 @@ const keyOf = (account: string | null, text: string, path: string) =>
 function remember(key: string, lines: HighlightedLine[]) {
   made.delete(key);
   made.set(key, lines);
+
   if (made.size > KEPT) made.delete(made.keys().next().value as string);
 }
 
@@ -32,17 +33,22 @@ export function useHighlightedLines(text: string, path: string): HighlightedLine
 
   useEffect(() => {
     if (kept?.key === key) return;
+
     const cached = made.get(key);
+
     if (cached) {
       setKept({ key, lines: cached });
       return;
     }
+
     let current = true;
     import("../highlight")
       .then(({ highlight }) => highlight(text, path))
       .then((highlighted) => {
         if (!highlighted) return;
+
         remember(key, highlighted);
+
         if (current) setKept({ key, lines: highlighted });
       })
       .catch(() => undefined);
@@ -52,5 +58,6 @@ export function useHighlightedLines(text: string, path: string): HighlightedLine
   }, [key, text, path, kept]);
 
   if (kept?.key === key) return kept.lines;
+
   return made.get(key) ?? null;
 }

@@ -28,6 +28,7 @@ run("a bot's use of the person's providers (postgres)", async () => {
   afterAll(async () => {
     if (previousKey === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
     else process.env.PROVIDER_ENCRYPTION_KEY = previousKey;
+
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 

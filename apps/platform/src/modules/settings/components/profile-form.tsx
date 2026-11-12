@@ -19,6 +19,7 @@ export function ProfileForm({ name, email, image }: Props) {
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const next = String(new FormData(event.currentTarget).get("name") ?? "").trim();
+
     if (next) await updateProfile(next);
   }
 

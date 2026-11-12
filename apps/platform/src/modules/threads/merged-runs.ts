@@ -20,8 +20,10 @@ export function mergedRuns(messages: ChatMessage[], running: boolean): ChatMessa
       notes += 1;
       return;
     }
+
     const live = running && index === messages.length - 1;
     const previous = merged[merged.length - 1 - notes];
+
     if (message.role === "assistant" && previous?.role === "assistant" && !live) {
       merged.splice(merged.length - notes, notes);
       merged[merged.length - 1] = {
@@ -32,6 +34,7 @@ export function mergedRuns(messages: ChatMessage[], running: boolean): ChatMessa
     } else {
       merged.push(message);
     }
+
     notes = 0;
   });
   return merged;

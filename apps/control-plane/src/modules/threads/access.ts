@@ -15,6 +15,7 @@ export const threadAccess = new Elysia({ name: "thread-access" }).use(authRouter
       };
       const { id } = params;
       const viewer = { organizationId, userId: user.id };
+
       if (access === "own") await threadsService.owned(viewer, id);
       else if (access === "drive") await threadsService.drivable(viewer, id);
       else await threadsService.readable(viewer, id);

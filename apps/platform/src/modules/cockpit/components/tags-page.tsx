@@ -98,7 +98,9 @@ export function TagsPage() {
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!valid || taken || busy) return;
+
     setBusy(true);
     try {
       if (await add(name)) setDraft("");

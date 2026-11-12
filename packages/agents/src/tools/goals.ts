@@ -70,9 +70,12 @@ export function createGoalTools(host: GoalHost) {
     execute: async ({ action, reason }, { abortSignal }) => {
       if (action === "complete") {
         const goal = await host.get();
+
         if (goal && goal.phase !== "complete" && goal.checks.length > 0) {
           if (!host.check) throw new Error("You have no computer to run the checks on.");
+
           const failed = await host.check(goal.checks, abortSignal);
+
           if (failed.length > 0) {
             return {
               goal,
@@ -81,6 +84,7 @@ export function createGoalTools(host: GoalHost) {
           }
         }
       }
+
       const goal = await host.update(action, reason);
       return { goal, next: NEXT[action] };
     },

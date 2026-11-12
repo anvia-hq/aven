@@ -18,9 +18,13 @@ export async function updateRestoredWorkspace(
     ["checkout", "-f", "-B", threadBranch(threadId), `origin/${access.defaultBranch}`],
     { cwd: root },
   );
+
   if (checkout.code !== 0)
     throw gitFailure("Could not update the workspace", checkout, access.token);
+
   const cleaned = await hostGit(run)(["clean", "-f", "-d"], { cwd: root });
+
   if (cleaned.code !== 0) throw gitFailure("Could not update the workspace", cleaned, access.token);
+
   await trackPushes(root, run);
 }

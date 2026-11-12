@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
+import type * as CryptoModule from "../../crypto";
+
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
 const allowedBefore = process.env.PROVIDER_ALLOWED_HOSTS;
@@ -26,7 +28,7 @@ run("providersService (postgres)", async () => {
     try {
       const { encryptSecret } = (await import(
         `../../crypto.ts?key=${crypto.randomUUID()}`
-      )) as typeof import("../../crypto");
+      )) as typeof CryptoModule;
       return encryptSecret(plain);
     } finally {
       if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;

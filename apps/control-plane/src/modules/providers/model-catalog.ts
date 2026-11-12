@@ -69,11 +69,17 @@ const GEMINI_OTHER = /embedding|tts|image|live|audio|aqa|robotics|computer-use/;
 
 export function looksLikeChatModel(kind: Provider, id: string) {
   if (kind === "anthropic") return id.startsWith("claude-");
+
   if (kind === "bedrock") return !BEDROCK_OTHER.test(id);
+
   if (kind === "vertex") return true;
+
   if (kind === "gemini") return GEMINI_CHAT.test(id) && !GEMINI_OTHER.test(id);
+
   if (kind === "azure") return true;
+
   if (kind === "openai") return OPENAI_CHAT.test(id) && !OPENAI_OTHER.test(id);
+
   return true;
 }
 
@@ -81,6 +87,7 @@ const configuredUrl = () => process.env.MODEL_CATALOG_URL ?? DEFAULT_URL;
 
 function commonWindow(values: number[] | undefined) {
   if (!values) return null;
+
   const counts = new Map<number, number>();
   for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1);
   return [...counts].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? null;
@@ -105,7 +112,9 @@ export function createModelCatalog(
 
   async function readCatalog(url: string): Promise<Snapshot> {
     const res = await fetchFn(url, { signal: AbortSignal.timeout(8_000) });
+
     if (!res.ok) throw new Error(String(res.status));
+
     const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
     const next: Partial<Record<Provider, Map<string, Entry>>> = {};
     for (const kind of ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure"] as const) {
@@ -133,7 +142,9 @@ export function createModelCatalog(
     for (const provider of Object.values(json)) {
       for (const [id, info] of Object.entries(provider?.models ?? {})) {
         const window = isRecord(info) ? contextWindowOf(info) : null;
+
         if (window === null) continue;
+
         const name = id.toLowerCase().split("/").pop() ?? id;
         const seen = byName.get(name) ?? [];
         seen.push(window);
@@ -147,10 +158,12 @@ export function createModelCatalog(
     try {
       const url = catalogUrl();
       const snapshot = url ? await readCatalog(url) : null;
+
       if (!snapshot) {
         nextTry = now() + RETRY_MS;
         return;
       }
+
       entries = snapshot.entries;
       windows = snapshot.windows;
       nextTry = now() + TTL_MS;
@@ -161,6 +174,7 @@ export function createModelCatalog(
 
   function startLoading() {
     if (loading) return loading;
+
     const shared = refresh().finally(() => {
       loading = null;
     });
@@ -171,14 +185,17 @@ export function createModelCatalog(
   async function lookup(kind: Provider) {
     if (now() >= nextTry) {
       const pending = startLoading();
+
       if (!entries) await pending;
     }
+
     return entries?.[kind] ?? null;
   }
 
   return {
     async chatModels(kind: Provider, ids: string[]) {
       if (kind === "openai-compatible") return ids;
+
       const known = await lookup(kind);
       return ids.filter((id) => {
         const entry = known?.get(catalogId(kind, id));
@@ -195,25 +212,32 @@ export function createModelCatalog(
     },
     async efforts(kind: Provider, id: string) {
       if (kind === "openai-compatible" || kind === "bedrock" || kind === "vertex") return null;
+
       const levels = (await lookup(kind))?.get(id)?.efforts;
       return levels?.length ? levels : null;
     },
     async contextWindow(kind: Provider, id: string) {
       if (kind === "openai-compatible") return null;
+
       const own = (await lookup(kind))?.get(catalogId(kind, id))?.contextWindow ?? null;
+
       if (own !== null || kind !== "azure") return own;
+
       return commonWindow(windows.get(id.toLowerCase()));
     },
     async label(kind: Provider, id: string) {
       if (kind === "openai-compatible") return null;
+
       return (await lookup(kind))?.get(catalogId(kind, id))?.label ?? null;
     },
     async seesImages(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
+
       return (await lookup(kind))?.get(catalogId(kind, id))?.images ?? true;
     },
     async canRun(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;
+
       const entry = (await lookup(kind))?.get(catalogId(kind, id));
       return entry ? entry.usable : looksLikeChatModel(kind, id);
     },

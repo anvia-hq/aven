@@ -4,6 +4,7 @@ export function chatItems(messages: readonly BotChatMessage[]): ChatItem[] {
   const items: ChatItem[] = [];
   for (const message of messages) {
     const last = items.at(-1);
+
     if (!message.peer) {
       items.push({ type: "message", key: message.id, message });
     } else if (last?.type === "activity") {
@@ -27,6 +28,7 @@ export function activitySummary(messages: readonly BotChatMessage[]) {
 
 function leadOf(messages: readonly BotChatMessage[]) {
   if (messages.length > 1) return `${messages.length} messages with`;
+
   return messages[0]?.peer?.direction === "to" ? "Messaged" : "Heard from";
 }
 

@@ -35,7 +35,9 @@ export function useMcpServers() {
       await request();
       return true;
     });
+
     if (!changed) return false;
+
     await refresh();
     return true;
   }
@@ -44,7 +46,9 @@ export function useMcpServers() {
     const created = await change("Could not add MCP server", () =>
       postJson<McpServer>("/mcp-servers", input),
     );
+
     if (created) toast.add({ title: "MCP server added", description: input.name, type: "success" });
+
     return created;
   }
 
@@ -52,7 +56,9 @@ export function useMcpServers() {
     const saved = await change("Could not save MCP server", () =>
       postJson<McpServer>(`/mcp-servers/${server.id}`, input, "PATCH"),
     );
+
     if (saved) toast.add({ title: "MCP server saved", description: input.name, type: "success" });
+
     return saved;
   }
 
@@ -66,6 +72,7 @@ export function useMcpServers() {
     const removed = await change("Could not remove MCP server", () =>
       api<{ ok: true }>(`/mcp-servers/${server.id}`, { method: "DELETE" }),
     );
+
     if (removed) toast.add({ title: "MCP server removed", description: server.name });
   }
 

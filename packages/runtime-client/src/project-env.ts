@@ -19,6 +19,7 @@ export function withProjectEnv(sandbox: SandboxRuntime, current: () => Env | und
         return (options: Parameters<SandboxRuntime[typeof property]>[0]) =>
           target[property](merged(options));
       }
+
       const value = Reflect.get(target, property, target);
       return typeof value === "function" ? value.bind(target) : value;
     },

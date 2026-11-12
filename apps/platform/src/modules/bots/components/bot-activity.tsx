@@ -8,7 +8,9 @@ import { BotAvatar } from "./bot-avatar";
 
 function route(message: BotChatMessage, self: Pick<Bot, "name">, bots: readonly Bot[]) {
   const { peer } = message;
+
   if (!peer) return "";
+
   const other = peerName(peer, bots);
   return peer.direction === "to" ? `${self.name} → ${other}` : `${other} → ${self.name}`;
 }

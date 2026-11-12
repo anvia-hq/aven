@@ -38,6 +38,7 @@ export function PriorityFlag({ priority }: { priority: TaskPriority }) {
 
 export function DueDate({ task }: { task: Pick<CockpitTask, "dueDate" | "status"> }) {
   if (!task.dueDate) return null;
+
   return (
     <span
       className={cn(

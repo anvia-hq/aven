@@ -99,6 +99,7 @@ function invalid(error: z.ZodError) {
 
 function checkFields(kind: CockpitKind, given: CockpitFields) {
   const wrong = Object.keys(given).filter((key) => !KIND_FIELDS[kind].includes(key));
+
   if (wrong.length > 0) {
     throw new UnprocessableError(
       `${kind} has no ${wrong.join(", ")}; its fields are ${KIND_FIELDS[kind].join(", ")}`,
@@ -115,7 +116,9 @@ function shape(kind: CockpitKind, given: CockpitFields) {
 
 function parse<S extends z.ZodType>(schema: S, value: unknown): z.infer<S> {
   const parsed = schema.safeParse(value);
+
   if (!parsed.success) throw invalid(parsed.error);
+
   return parsed.data;
 }
 
@@ -131,7 +134,9 @@ async function find(kind: CockpitKind, userId: string, id: string) {
         (record) => kind === "tasks" && (record as CockpitTask).number === Number(key[1]),
       )
     : records.find((record) => record.id === id.trim());
+
   if (!found) throw new UnprocessableError(`There is no ${kind} record ${id}.`);
+
   return found;
 }
 
@@ -140,54 +145,74 @@ function line(kind: CockpitKind, record: CockpitRecord) {
     kind === "tasks" ? `T-${(record as CockpitTask).number}` : record.id,
     record.title,
   ];
+
   if (kind === "tasks") {
     const task = record as CockpitTask;
     parts.push(task.status, `priority ${task.priority}`);
+
     if (task.dueDate) parts.push(`due ${task.dueDate}`);
   }
+
   if (kind === "inbox" && (record as InboxItem).done) parts.push("done");
+
   if (kind === "notes" && (record as CockpitNote).pinned) parts.push("pinned");
+
   if (record.tags.length > 0) parts.push(`tags ${record.tags.join(", ")}`);
+
   const text = preview(bodyOf(kind, record));
   return `- ${parts.join(" · ")}${text ? `\n  ${text}` : ""}`;
 }
 
 async function listing(userId: string, cmd: Extract<CockpitCommand, { command: "list" }>) {
   if (cmd.status && cmd.kind !== "tasks") throw new UnprocessableError("Only tasks have a status.");
+
   if (cmd.done !== undefined && cmd.kind !== "inbox") {
     throw new UnprocessableError("Only inbox items are done or open.");
   }
+
   const tag = cmd.tag === undefined ? undefined : normalizeTag(cmd.tag);
   const needle = cmd.query?.trim().toLowerCase();
   const shown = (await list(cmd.kind, userId)).filter((record) => {
     if (tag && !record.tags.includes(tag)) return false;
+
     if (cmd.status && (record as CockpitTask).status !== cmd.status) return false;
+
     if (cmd.done !== undefined && (record as InboxItem).done !== cmd.done) return false;
+
     if (!needle) return true;
+
     return `${record.title}\n${cockpitMarkdown(bodyOf(cmd.kind, record))}`
       .toLowerCase()
       .includes(needle);
   });
+
   if (shown.length === 0) return `No ${cmd.kind} records match.`;
+
   const lines = [
     `${shown.length} ${cmd.kind} record${shown.length === 1 ? "" : "s"}:`,
     ...shown.slice(0, LISTED_MAX).map((record) => line(cmd.kind, record)),
   ];
   const more = shown.length - LISTED_MAX;
+
   if (more > 0) lines.push(`…and ${more} more; narrow it with tag, status or query.`);
+
   return lines.join("\n");
 }
 
 function shown(kind: CockpitKind, record: CockpitRecord) {
   const facts = [`id: ${record.id}`, `title: ${record.title}`];
+
   if (kind === "tasks") {
     const task = record as CockpitTask;
     facts.unshift(`key: T-${task.number}`);
     facts.push(`status: ${task.status}`, `priority: ${task.priority}`);
     facts.push(`due: ${task.dueDate ?? "none"}`);
   }
+
   if (kind === "inbox") facts.push(`done: ${(record as InboxItem).done}`);
+
   if (kind === "notes") facts.push(`pinned: ${(record as CockpitNote).pinned}`);
+
   facts.push(`tags: ${record.tags.join(", ") || "none"}`, `updated: ${record.updatedAt}`);
   const whole = cockpitMarkdown(bodyOf(kind, record)).trim();
   const body =
@@ -199,6 +224,7 @@ function shown(kind: CockpitKind, record: CockpitRecord) {
 
 async function placed(userId: string, task: CockpitTask, changes: UpdateTaskBody) {
   if (!changes.status || changes.status === task.status) return changes;
+
   const column = (await cockpitService.tasks.list(userId)).filter(
     (each) => each.status === changes.status,
   );
@@ -208,8 +234,11 @@ async function placed(userId: string, task: CockpitTask, changes: UpdateTaskBody
 
 async function create(userId: string, kind: CockpitKind, given: CockpitFields) {
   const values = shape(kind, given);
+
   if (kind === "tasks") return cockpitService.tasks.create(userId, parse(createTaskBody, values));
+
   if (kind === "notes") return cockpitService.notes.create(userId, parse(createNoteBody, values));
+
   const { done, ...rest } = values;
   const made = await cockpitService.inbox.create(userId, parse(createInboxBody, rest));
   return done === true ? cockpitService.inbox.update(userId, made.id, { done: true }) : made;
@@ -222,23 +251,28 @@ async function update(
   given: CockpitFields,
 ) {
   const values = shape(kind, given);
+
   if (kind === "tasks") {
     const changes = await placed(userId, record as CockpitTask, parse(updateTaskBody, values));
     return cockpitService.tasks.update(userId, record.id, changes);
   }
+
   if (kind === "notes") {
     return cockpitService.notes.update(userId, record.id, parse(updateNoteBody, values));
   }
+
   return cockpitService.inbox.update(userId, record.id, parse(updateInboxBody, values));
 }
 
 async function convert(userId: string, id: string, given: CockpitFields = {}) {
   const item = (await find("inbox", userId, id)) as InboxItem;
+
   if (item.done) {
     throw new UnprocessableError(
       `${label("inbox", item)} is already done, so it was probably converted; look for its task, or set it to not done first.`,
     );
   }
+
   const values = shape("tasks", {
     ...given,
     title: given.title ?? item.title,
@@ -252,14 +286,18 @@ async function convert(userId: string, id: string, given: CockpitFields = {}) {
 
 export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
   const parsed = command.safeParse(raw);
+
   if (!parsed.success) throw invalid(parsed.error);
+
   const cmd = parsed.data;
   const { userId } = caller;
+
   if (caller.access === "read" && (COCKPIT_WRITES as readonly string[]).includes(cmd.command)) {
     throw new UnprocessableError(
       "You can only read the person's cockpit here; tell them what to add or change.",
     );
   }
+
   switch (cmd.command) {
     case "list":
       return listing(userId, cmd);
@@ -267,7 +305,9 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
       return shown(cmd.kind, await find(cmd.kind, userId, cmd.id));
     case "tags": {
       const tags = await cockpitService.tags(userId);
+
       if (tags.length === 0) return "The person has no tags yet.";
+
       return tags
         .map((tag) => `- ${tag.name}: ${tag.inbox} inbox, ${tag.tasks} tasks, ${tag.notes} notes`)
         .join("\n");
@@ -289,6 +329,7 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
           "Delete from the cockpit only when the person asks you to in their own message.",
         );
       }
+
       const record = await find(cmd.kind, userId, cmd.id);
       await cockpitService[cmd.kind].remove(userId, record.id);
       return `Deleted ${label(cmd.kind, record)}.`;

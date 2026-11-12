@@ -44,8 +44,10 @@ function NoteForm({
     setBusy(true);
     try {
       let saved = false;
+
       if (note) saved = await update(note, input);
       else if (chosen) saved = await create(chosen, input);
+
       if (saved) onDone();
     } finally {
       setBusy(false);

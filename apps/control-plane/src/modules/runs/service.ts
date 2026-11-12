@@ -136,9 +136,13 @@ export class RunManager {
         model: model ?? undefined,
       });
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
+
       if (senderId) opening.senderId = senderId;
+
       if (attachments.length > 0) opening.attachments = attachments.map(withoutBytes);
+
       if (mentions.length > 0) opening.mentions = mentions;
+
       await this.#begin(channel, handle, opening);
     });
   }
@@ -194,6 +198,7 @@ export class RunManager {
 
   async #reserved(channel: Channel, work: (channel: Channel) => Promise<void>) {
     if (channel.run || channel.starting) throw new RunBusyError();
+
     channel.starting = true;
     try {
       await work(channel);
@@ -244,7 +249,9 @@ export class RunManager {
       console.warn(`Could not load the history of thread ${thread.id}:`, error);
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
+
     if (opening.type === "run_start") this.#recordSender(channel, run, opening.senderId);
+
     this.#emit(channel, opening);
     run.markAtStart = answerMark(run.messages);
     this.#recordFailure(channel, null);
@@ -253,7 +260,9 @@ export class RunManager {
 
   cancel(threadId: string) {
     const run = this.#channels.get(threadId)?.run;
+
     if (!run) return false;
+
     run.cancelled = true;
     run.handle.cancel("Cancelled by user");
     return true;
@@ -261,11 +270,16 @@ export class RunManager {
 
   async steer(thread: RunThread, message: QueuedSteer): Promise<"queued" | "ended"> {
     const channel = this.#channels.get(thread.id);
+
     if (!channel) return "ended";
+
     channel.thread = thread;
     const run = channel.run;
+
     if (!run) return "ended";
+
     if (run.steerIds.has(message.id)) throw new ConflictError("That message was sent already");
+
     run.steerIds.add(message.id);
     run.steers.set(message.id, message);
     this.#emit(channel, { type: "steer_queued", ...message });
@@ -281,9 +295,13 @@ export class RunManager {
       console.warn(`Could not hand a message to the run of thread ${thread.id}:`, error);
       throw new UnavailableError("The runner could not be reached; try again shortly");
     }
+
     if (result.status === "queued") return "queued";
+
     this.#reject(channel, run, message.id);
+
     if (result.status === "refused") throw new ConflictError(result.reason);
+
     await run.finished.promise;
     return "ended";
   }
@@ -305,16 +323,19 @@ export class RunManager {
       yield { type: "snapshot", ...snapshot };
       while (!signal.aborted) {
         const event = queue.shift();
+
         if (event) {
           yield event;
           continue;
         }
+
         const timer = Bun.sleep(PING_MS).then(() => null);
         const arrived = new Promise<undefined>((resolve) => {
           wake = () => resolve(undefined);
         });
         const woke = await Promise.race([arrived, aborted, timer]);
         wake = undefined;
+
         if (woke === null && queue.length === 0 && !signal.aborted) yield null;
       }
     } finally {
@@ -331,19 +352,25 @@ export class RunManager {
       turn: 0,
       messages: [{ role: "user", content: prompt }],
     });
+
     if (senderId) {
       await this.#senders.record(thread.id, at, senderId).catch((error: unknown) => {
         console.warn(`Could not keep who sent a message of thread ${thread.id}:`, error);
       });
     }
+
     const channel = this.#channels.get(thread.id);
+
     if (!channel || channel.run) return;
+
     this.#emit(channel, { type: "snapshot", ...(await this.#attach(channel, [])) });
   }
 
   async history(thread: RunThread) {
     const run = this.#channels.get(thread.id)?.run;
+
     if (run) return run.messages;
+
     return this.#stored(thread);
   }
 
@@ -375,6 +402,7 @@ export class RunManager {
 
   #channel(thread: RunThread): Channel {
     const existing = this.#channels.get(thread.id);
+
     if (existing) {
       existing.thread = thread;
       return existing;
@@ -387,15 +415,19 @@ export class RunManager {
 
   #release(channel: Channel) {
     if (channel.run || channel.starting || channel.subscribers.size > 0) return;
+
     this.#channels.delete(channel.thread.id);
   }
 
   async #attach(channel: Channel, queue: RunEvent[]) {
     for (;;) {
       const run = channel.run;
+
       if (run) {
         await run.ready;
+
         if (channel.run !== run) continue;
+
         queue.length = 0;
         const shown = latestMessages(run.messages);
         return {
@@ -407,13 +439,16 @@ export class RunManager {
           steers: [...run.steers.values()],
         };
       }
+
       const [history, times, senders, failure] = await Promise.all([
         this.#store.load({ scope: this.#scope(channel.thread) }),
         this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
         this.#senders.read(channel.thread.id).catch(() => new Map<number, string>()),
         this.#failure(channel),
       ]);
+
       if (channel.run) continue;
+
       queue.length = 0;
       const shown = latestMessages(
         withSenders(withWorkedTimes(messagesToChat(history), times), senders),
@@ -424,18 +459,23 @@ export class RunManager {
         running: false,
         usage: usageFromHistory(history),
       };
+
       if (failure) snapshot.error = failure;
+
       return snapshot;
     }
   }
 
   #emit(channel: Channel, event: RunEvent) {
     const { run } = channel;
+
     if (run) {
       run.messages = applyEvent(run.messages, event);
       run.lastEventAt = Date.now();
     }
+
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
+
     for (const subscriber of channel.subscribers) subscriber(event);
   }
 
@@ -448,6 +488,7 @@ export class RunManager {
         else this.#emit(channel, event);
       }
       const outcome = await run.handle.result;
+
       if (outcome.type === "interaction") {
         await this.#suspend(channel.thread, outcome.continuation);
         asked = true;
@@ -462,15 +503,19 @@ export class RunManager {
 
   async #suspend(thread: RunThread, continuation: unknown) {
     const saved = parseSaved(continuation);
+
     if (saved.interaction.type !== "tool-question") {
       throw new Error(`Run stopped on an unsupported interaction (${saved.interaction.type})`);
     }
+
     await this.#continuations.save(thread.id, saved);
   }
 
   #apply(channel: Channel, run: ActiveRun, id: string) {
     const message = run.steers.get(id);
+
     if (!message) return;
+
     run.steers.delete(id);
     this.#recordSender(channel, run, message.senderId);
     this.#emit(channel, { type: "steer", ...message });
@@ -478,6 +523,7 @@ export class RunManager {
 
   #recordSender(channel: Channel, run: ActiveRun, senderId: string | undefined) {
     if (!senderId) return;
+
     this.#senders
       .record(channel.thread.id, run.messages.length, senderId)
       .catch((error: unknown) => {
@@ -487,11 +533,13 @@ export class RunManager {
 
   #reject(channel: Channel, run: ActiveRun, id: string, reason?: string) {
     if (!run.steers.delete(id)) return;
+
     this.#emit(channel, { type: "steer_rejected", id, reason });
   }
 
   async #failure(channel: Channel) {
     if (channel.failure !== undefined) return channel.failure;
+
     return this.#failures.read(channel.thread.id).catch((error: unknown) => {
       console.warn(`Could not read why the last run of thread ${channel.thread.id} failed:`, error);
       return null;
@@ -512,18 +560,23 @@ export class RunManager {
     const workedMs = Date.now() - run.startedAt;
     const answered = run.messages.findLastIndex((message) => message.role === "assistant");
     const produced = answered !== -1 && answerMark(run.messages) !== run.markAtStart;
+
     if (ending.outcome === "failed") {
       this.#emit(channel, { type: "error", message: ending.error });
     } else {
       this.#emit(channel, produced ? { type: "done", workedMs } : { type: "done" });
+
       if (produced) {
         this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
           console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
         });
       }
     }
+
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);
+
     if (channel.run === run) channel.run = undefined;
+
     run.finished.resolve();
     const finished = { startedAt: run.startedAt };
     Promise.resolve(this.#onRunFinished(channel.thread, ending, finished)).catch((error) => {
@@ -535,7 +588,9 @@ export class RunManager {
 
 function endingOf(cancelled: boolean, asked: boolean, failure: string | undefined): RunEnding {
   if (cancelled) return { outcome: "cancelled" };
+
   if (failure !== undefined) return { outcome: "failed", error: failure };
+
   return asked ? { outcome: "question" } : { outcome: "done" };
 }
 

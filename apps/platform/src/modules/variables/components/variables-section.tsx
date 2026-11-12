@@ -95,6 +95,7 @@ export function VariablesSection({ scope, title, empty, framed = false }: Props)
       </SectionCard>
     );
   }
+
   return (
     <section aria-label={title} className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">

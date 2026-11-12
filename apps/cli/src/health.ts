@@ -7,7 +7,9 @@ export async function waitForHealthy(
     try {
       if ((await fetchFn(url, { signal: AbortSignal.timeout(3_000) })).ok) return true;
     } catch {}
+
     if (Date.now() + intervalMs > deadline) return false;
+
     await sleep(intervalMs);
   }
 }

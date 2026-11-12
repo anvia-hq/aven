@@ -16,6 +16,7 @@ export function useClipboard() {
       toast.add({ title: "Could not copy to the clipboard", type: "error" });
       return;
     }
+
     setCopied(true);
     clearTimeout(timer.current);
     timer.current = setTimeout(() => setCopied(false), COPIED_MS);

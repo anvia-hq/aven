@@ -46,14 +46,18 @@ export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsCo
         );
         continue;
       }
+
       send({ type: "call", id, method: waiting.method, params: waiting.params });
     }
   };
 
   const settle = (reply: Reply) => {
     const waiting = pending.get(reply.id);
+
     if (!waiting) return;
+
     pending.delete(reply.id);
+
     if (reply.ok) waiting.resolve(reply.result);
     else waiting.reject(new Error(reply.error ?? "The control plane reported an error"));
   };

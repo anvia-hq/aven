@@ -9,6 +9,7 @@ const RELEASE_TAG = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 
 export function staleImages(listing: string, current: string) {
   if (!RELEASE_TAG.test(current)) return [];
+
   return listing
     .split("\n")
     .map((line) => line.trim())
@@ -23,7 +24,9 @@ export function staleImages(listing: string, current: string) {
 export async function removeStaleImages(current: string) {
   try {
     const listing = await exec(["docker", "images", "--format", "{{.Repository}}:{{.Tag}}"]);
+
     if (listing.code !== 0) return;
+
     for (const image of staleImages(listing.out, current)) {
       if ((await exec(["docker", "image", "rm", image])).code === 0) {
         console.log(`Removed the old image ${image}`);

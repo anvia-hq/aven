@@ -42,9 +42,11 @@ function InboxPage() {
         />
       );
     }
+
     if (open) {
       return <InboxReader key={open.id} item={open} onClose={() => go({ item: undefined })} />;
     }
+
     return (
       <NothingOpen icon={Inbox}>
         Pick something from your inbox, or add a new one with +.

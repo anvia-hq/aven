@@ -7,9 +7,11 @@ import type { z } from "zod";
 
 function checked<Schema extends z.ZodType>(schema: Schema, body: unknown): z.output<Schema> {
   const result = schema.safeParse(body);
+
   if (!result.success) {
     throw new UnprocessableError(result.error.issues[0]?.message ?? "The MCP server is not valid");
   }
+
   return result.data;
 }
 
@@ -46,7 +48,9 @@ export const botMcp: BotMcp = {
 
   async update(userId, id, input) {
     const current = await mcpService.get(userId, id);
+
     if (!current) throw new UnprocessableError(NOT_FOUND);
+
     const { name, url, headers, target, enabled } = checked(
       updateMcpBody,
       Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)),
@@ -59,7 +63,9 @@ export const botMcp: BotMcp = {
       enabled,
       headers: headers ?? (moved ? [] : undefined),
     });
+
     if (!changed) throw new UnprocessableError(NOT_FOUND);
+
     return seenByBot(changed);
   },
 

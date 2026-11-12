@@ -26,19 +26,25 @@ export function withBackground(exec: AnyTool, start: AnyTool): AnyTool {
     },
     parseInput(args) {
       const { background, ...rest } = asRecord(args);
+
       if (background !== undefined && typeof background !== "boolean") {
         throw invalid("background must be true or false");
       }
+
       if (background !== true) return exec.parseInput ? exec.parseInput(rest as never) : rest;
+
       if ("timeoutMs" in rest || "input" in rest) {
         throw invalid("timeoutMs and input do not apply to a command run in the background");
       }
+
       const parsed = start.parseInput ? start.parseInput(rest as never) : rest;
       return { ...asRecord(parsed), background: true };
     },
     async call(args, context) {
       const { background, ...rest } = asRecord(args);
+
       if (background !== true) return exec.call(rest, context);
+
       const started = asRecord(await start.call(rest, context));
       const id = typeof started.id === "string" ? started.id : "unknown";
       return `Started in the background as process ${id}. It keeps running after this call; you are told with a [process] message when it ends. Read its output with read_process_logs, check on it with list_processes, stop it with stop_process. The user sees it under Background tasks.`;

@@ -18,6 +18,7 @@ export function useOrganizations() {
 
   async function switchTo(organizationId: string) {
     const { error } = await authClient.organization.setActive({ organizationId });
+
     if (error) {
       toast.add({
         title: "Could not switch organization",
@@ -26,6 +27,7 @@ export function useOrganizations() {
       });
       return;
     }
+
     resetOrganizationData();
   }
 

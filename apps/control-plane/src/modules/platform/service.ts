@@ -82,8 +82,11 @@ export const platformService = {
 
   async removePerson(actor: { id: string }, personId: string, putAway: PutAwayThread) {
     if (personId === actor.id) throw new ForbiddenError("You cannot remove your own account");
+
     const [person] = await db.select().from(users).where(eq(users.id, personId));
+
     if (!person) throw new NotFoundError("There is no such account");
+
     if (await this.isOwner(person)) throw new ForbiddenError("A platform owner cannot be removed");
 
     const memberships = await db
@@ -103,6 +106,7 @@ export const platformService = {
         .where(
           and(eq(members.organizationId, membership.organizationId), ne(members.userId, personId)),
         );
+
       if (!others?.count) aloneIn.push(membership.organizationId);
       else if (membership.role === "owner") {
         throw new ConflictError(
@@ -121,6 +125,7 @@ export const platformService = {
     await db.transaction(async (tx) => {
       if (aloneIn.length > 0)
         await tx.delete(organizations).where(inArray(organizations.id, aloneIn));
+
       await tx.delete(users).where(eq(users.id, personId));
     });
     for (const thread of running) putAway(thread);
@@ -139,6 +144,7 @@ export const platformService = {
         ),
       )
       .limit(1);
+
     if (sharedProject) {
       throw new ConflictError(
         `${person.name} imported the project ${sharedProject.name}, and other people have threads in it, archived ones too, which would be deleted with it. Have someone else import the project first`,
@@ -167,12 +173,15 @@ export const platformService = {
       .innerJoin(githubInstallations, eq(githubInstallations.id, projects.githubInstallationId))
       .where(and(eq(githubInstallations.connectedBy, person.id), ne(projects.createdBy, person.id)))
       .limit(1);
+
     if (usedInstallation) {
       throw new ConflictError(
         `${person.name} connected the GitHub account ${usedInstallation.account}, which other people's projects use. Have someone else connect it and import those projects again first`,
       );
     }
+
     const used = usedProject ?? usedThread;
+
     if (used) {
       throw new ConflictError(
         `${person.name} added the runner ${used.runner}, which other people's projects or threads use. Move them to another runner first`,
@@ -198,6 +207,7 @@ export const platformService = {
 
   async canRegister(email: string) {
     if (isListedOwner(email) || (await this.isRegistrationEnabled())) return true;
+
     const [invitation] = await db
       .select({ id: invitations.id })
       .from(invitations)

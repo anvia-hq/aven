@@ -86,8 +86,10 @@ describe("createCodingAgent", () => {
     const first = agent.stream({ prompt: "paint it" });
     for await (const _event of first);
     const suspended = await first.result;
+
     if (suspended.type !== "interaction")
       throw new Error(`expected a suspension, got ${suspended.type}`);
+
     expect(suspended.interaction.type).toBe("tool-question");
 
     const second = agent.stream({
@@ -191,6 +193,7 @@ describe("history from earlier runs", () => {
       port: 0,
       async fetch(request) {
         if (new URL(request.url).pathname.endsWith("/messages")) bodies.push(await request.json());
+
         return new Response("refused on purpose", { status: 400 });
       },
     });

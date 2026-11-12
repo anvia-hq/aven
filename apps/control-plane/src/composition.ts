@@ -143,6 +143,7 @@ export const botApi = createBotApi({
   routes: () => botApiApp.current?.routes() ?? [],
   handle: async (request) => {
     if (!botApiApp.current) throw new Error("The server is not ready");
+
     return botApiApp.current.handle(request);
   },
   organizationsOf,

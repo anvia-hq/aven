@@ -18,7 +18,9 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
 
   get uploads() {
     const { host } = this;
+
     if (!host.uploads) return undefined;
+
     const of = (threadId: string) => this.#of(threadId).uploads ?? host.uploads!;
     return {
       save: (threadId: string, name: string, bytes: Uint8Array) =>
@@ -32,7 +34,9 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
 
   get artifacts() {
     const { host } = this;
+
     if (!host.artifacts) return undefined;
+
     const of = (threadId: string) => this.#of(threadId).artifacts ?? host.artifacts!;
     return {
       save: (threadId: string, bytes: Uint8Array, mediaType: string) =>
@@ -45,7 +49,9 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
 
   get skills() {
     const { host } = this;
+
     if (!host.skills) return undefined;
+
     return {
       install: (...args: Parameters<NonNullable<ThreadWorkspaces["skills"]>["install"]>) =>
         (this.#of(args[0]).skills ?? host.skills!).install(...args),
@@ -70,22 +76,30 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
 
   async markTurn(threadId: string) {
     const workspaces = this.#of(threadId);
+
     if (workspaces.markTurn) return workspaces.markTurn(threadId);
+
     const root = await workspaces.workspace(threadId);
     return root ? markTurn(root).catch(() => false) : false;
   }
 
   async fetchBranch(threadId: string, access: RepoAccess, branch?: string) {
     const workspaces = this.#of(threadId);
+
     if (workspaces.fetchBranch) return workspaces.fetchBranch(threadId, access, branch);
+
     const root = await workspaces.workspace(threadId);
+
     if (!root) throw new Error("The thread has no workspace yet");
+
     return fetchBranch(root, access, branch);
   }
 
   async takeFork(threadId: string, forkId: string) {
     const workspaces = this.#of(threadId);
+
     if (workspaces.takeFork) return workspaces.takeFork(threadId, forkId);
+
     return takeFork(workspaces, threadId, forkId);
   }
 

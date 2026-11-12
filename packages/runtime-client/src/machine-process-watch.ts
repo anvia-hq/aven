@@ -13,6 +13,7 @@ export function createMachineProcessWatch(
     },
     end(threadId, phase) {
       guests.delete(threadId);
+
       if (phase === "settle") watch.settle(threadId);
       else watch.suspend(threadId);
     },

@@ -14,10 +14,14 @@ type Draft = { input: string; entities: Composer["entities"] };
 
 function readDraft(key: string): Draft | null {
   const raw = safeStorage.getItem(key);
+
   if (raw === null) return null;
+
   try {
     const parsed = JSON.parse(raw) as Partial<Draft>;
+
     if (typeof parsed.input !== "string") return null;
+
     return { input: parsed.input, entities: Array.isArray(parsed.entities) ? parsed.entities : [] };
   } catch {
     return null;
@@ -32,16 +36,19 @@ export function useComposerDraft(threadId: string | undefined, composer: Compose
   useEffect(() => {
     if (key !== null) {
       const draft = readDraft(key);
+
       if (draft) {
         setInput(draft.input);
         setEntities(draft.entities);
       }
     }
+
     setRestored(true);
   }, [key, setInput, setEntities]);
 
   useEffect(() => {
     if (key === null || !restored) return;
+
     if (input === "") safeStorage.removeItem(key);
     else safeStorage.setItem(key, JSON.stringify({ input, entities }));
   }, [key, restored, input, entities]);

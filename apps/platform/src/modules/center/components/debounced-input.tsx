@@ -15,6 +15,7 @@ export function DebouncedInput({ value, onCommit, ...props }: Props) {
   useEffect(() => setText(value ?? ""), [value]);
   useEffect(() => {
     if (text.trim() === (value ?? "")) return;
+
     const timer = setTimeout(() => commit.current(text.trim() || undefined), 400);
     return () => clearTimeout(timer);
     // oxlint-disable-next-line react-hooks/exhaustive-deps

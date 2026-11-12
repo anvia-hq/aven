@@ -20,10 +20,12 @@ export function useInvitation(invitationId: string) {
 
   useEffect(() => {
     if (!signedIn) return;
+
     let current = true;
     authClient.organization.getInvitation({ query: { id: invitationId } }).then(
       (result) => {
         if (!current) return;
+
         if (result.error) setError(result.error.message ?? "This invitation is not valid");
         else setInvitation(result.data);
       },
@@ -40,11 +42,13 @@ export function useInvitation(invitationId: string) {
     setError(null);
     setAccepting(true);
     const result = await authClient.organization.acceptInvitation({ invitationId });
+
     if (result.error) {
       setError(result.error.message ?? "Could not accept the invitation");
       setAccepting(false);
       return;
     }
+
     await authClient.organization.setActive({
       organizationId: result.data.invitation.organizationId,
     });

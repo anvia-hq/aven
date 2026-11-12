@@ -13,6 +13,7 @@ const NOTHING_MATCHES: Record<string, string> = {
 
 function emptyMenu({ loading, trigger }: ComposerTriggerState) {
   if (loading) return "Searching…";
+
   return NOTHING_MATCHES[trigger.id] ?? "Nothing matches";
 }
 

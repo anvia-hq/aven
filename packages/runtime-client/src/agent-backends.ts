@@ -11,7 +11,9 @@ export function backendFor(
 ): Promise<AgentBackend> {
   const name = asked ?? NATIVE;
   const backend = installed.get(name);
+
   if (backend) return backend;
+
   const label = BACKEND_NAME.test(name) ? `the ${name} agent backend` : "that agent backend";
   return Promise.reject(new Error(`This runner does not drive ${label}`));
 }

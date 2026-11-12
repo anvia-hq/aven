@@ -23,6 +23,7 @@ test.describe("steering a running agent", () => {
     });
     runner = child;
     await page.goto(`/threads/${threadId}`);
+
     if (attach) {
       await page.locator('input[type="file"]').setInputFiles({
         name: "shot.png",
@@ -34,6 +35,7 @@ test.describe("steering a running agent", () => {
       });
       await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
     }
+
     await page.request.post(`/api/threads/${threadId}/messages`, { data: { prompt: "build it" } });
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     return { events, threadId };
@@ -72,9 +74,12 @@ test.describe("steering a running agent", () => {
     let calls = 0;
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
+
       const call = ++calls;
       await new Promise((resolve) => setTimeout(resolve, 1500));
+
       if (call === 1) return route.continue();
+
       return route.fulfill({ status: 409, contentType: "text/plain", body: "No thanks" });
     });
     const prompt = page.getByRole("textbox", { name: "Prompt" });

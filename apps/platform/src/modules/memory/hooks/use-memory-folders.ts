@@ -9,7 +9,9 @@ type Placed = Pick<MemoryNote, "scope" | "projectId" | "botId">;
 
 function keyOf({ scope, projectId, botId }: Placed) {
   if (scope === "project") return `project:${projectId}`;
+
   if (scope === "bot") return `bot:${botId}`;
+
   return "personal";
 }
 
@@ -46,6 +48,7 @@ export function useMemoryFolders() {
   }
   for (const note of notes) {
     const key = keyOf(note);
+
     if (!sections.has(key) && note.scope === "project" && note.projectId) {
       sections.set(key, {
         key,
@@ -55,6 +58,7 @@ export function useMemoryFolders() {
         notes: [],
       });
     }
+
     sections.get(key)?.notes.push(note);
   }
 

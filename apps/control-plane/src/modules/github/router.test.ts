@@ -58,6 +58,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     canSetUpWorkspace: async (person: { email: string }) => person.email.startsWith("owner"),
     manifest: (_person: unknown, options: unknown, organizationId?: string) => {
       if (setupRefused) throw setupRefused;
+
       setupCalls.push({ call: "manifest", arg: { ...(options as object), organizationId } });
       return {
         postUrl: "https://github.test/settings/apps/new?state=s",
@@ -66,6 +67,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     },
     complete: async (_person: unknown, input: unknown) => {
       if (setupRefused) throw setupRefused;
+
       setupCalls.push({ call: "complete", arg: input });
     },
   } as unknown as Pick<

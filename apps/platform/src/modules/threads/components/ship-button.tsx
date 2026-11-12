@@ -24,6 +24,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
   if (action.kind === "loading") {
     return <ShipPlaceholder />;
   }
+
   if (action.kind === "failed") {
     return (
       <Button
@@ -38,6 +39,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       </Button>
     );
   }
+
   if (action.kind === "set-up") {
     return (
       <Button
@@ -52,6 +54,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       </Button>
     );
   }
+
   if (action.kind === "connect") {
     const next = encodeURIComponent(`/threads/${threadId}`);
     const app = action.appKey ? `&app=${encodeURIComponent(action.appKey)}` : "";
@@ -67,6 +70,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       </Button>
     );
   }
+
   if (action.kind === "blocked") {
     return (
       <Tooltip>
@@ -80,6 +84,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       </Tooltip>
     );
   }
+
   if (action.kind === "open") {
     return (
       <Button
@@ -94,7 +99,9 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       </Button>
     );
   }
+
   if (action.kind === "none") return null;
+
   return (
     <ButtonGroup>
       <Button

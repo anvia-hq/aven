@@ -59,9 +59,11 @@ export class DirectorySandbox implements SandboxRuntime {
     const relative = posix.isAbsolute(normalized)
       ? posix.relative(this.workdir, normalized) || "."
       : normalized;
+
     if (relative === ".." || relative.startsWith("../")) {
       throw new Error(`Sandbox path cannot leave the workspace: ${input}`);
     }
+
     return join(this.workdir, relative);
   }
 
@@ -77,7 +79,9 @@ export class DirectorySandbox implements SandboxRuntime {
       : undefined;
     const abort = () => killGroup(proc);
     options.abortSignal?.addEventListener("abort", abort, { once: true });
+
     if (options.abortSignal?.aborted) abort();
+
     try {
       const [stdout, stderr, exitCode] = await Promise.all([
         new Response(proc.stdout as ReadableStream).bytes(),
@@ -111,6 +115,7 @@ export class DirectorySandbox implements SandboxRuntime {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         throw new Error(`File not found: ${path}`);
       }
+
       throw error;
     }
   }
@@ -152,7 +157,9 @@ export class DirectorySandbox implements SandboxRuntime {
     return Promise.all(
       entries.map(async (entry) => {
         const path = posix.join(relative, entry.name);
+
         if (!entry.isFile()) return { path, type: entry.isDirectory() ? "directory" : "other" };
+
         return {
           path,
           type: "file",
@@ -212,11 +219,13 @@ export class DirectorySandbox implements SandboxRuntime {
 
   async stopProcess({ processId }: { processId: string }) {
     const managed = this.#get(processId);
+
     if (managed.info.status === "running") {
       managed.info = { ...managed.info, status: "stopped" };
       killGroup(managed.proc);
       await managed.proc.exited;
     }
+
     return managed.info;
   }
 
@@ -231,7 +240,9 @@ export class DirectorySandbox implements SandboxRuntime {
 
   #get(processId: string) {
     const managed = this.#processes.get(processId);
+
     if (!managed) throw new Error(`Unknown process: ${processId}`);
+
     return managed;
   }
 }
@@ -259,6 +270,7 @@ export function directoryWorkspaces(seed?: (root: string) => Promise<void>): Thr
     sandboxes.delete(threadId);
     const root = roots.get(threadId);
     roots.delete(threadId);
+
     if (root) await rm(root, { recursive: true, force: true });
   };
   return {
@@ -266,6 +278,7 @@ export function directoryWorkspaces(seed?: (root: string) => Promise<void>): Thr
     sandboxes,
     async acquire(thread): Promise<ThreadSandbox> {
       let sandbox = sandboxes.get(thread.id);
+
       if (!sandbox) {
         const root = await realpath(await mkdtemp(join(tmpdir(), "aven-directory-workspace-")));
         roots.set(thread.id, root);
@@ -273,6 +286,7 @@ export function directoryWorkspaces(seed?: (root: string) => Promise<void>): Thr
         sandbox = new DirectorySandbox(thread.id, root);
         sandboxes.set(thread.id, sandbox);
       }
+
       const current = sandbox;
       return {
         tools: sandboxTools(current, { id: thread.id, artifacts }),

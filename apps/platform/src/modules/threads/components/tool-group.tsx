@@ -66,6 +66,7 @@ function summarize(tools: ToolPart[]) {
   const editedFiles = new Set<string>();
   for (const tool of tools) {
     const kind = kindOf(tool.name);
+
     if (kind === edit) {
       editedFiles.add(tool.target);
       counts.set(kind, editedFiles.size);

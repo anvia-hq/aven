@@ -53,6 +53,7 @@ export const preferencesService = {
       checkTimezone(timezone);
     } catch (error) {
       if (error instanceof CronError) throw new UnprocessableError(error.message);
+
       throw error;
     }
   },

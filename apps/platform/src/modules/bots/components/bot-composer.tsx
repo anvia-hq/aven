@@ -35,20 +35,25 @@ type Props = {
 
 function avatarOf(data: ComposerInputEntity["data"]) {
   if (typeof data !== "object" || data === null || Array.isArray(data)) return "";
+
   const { avatar } = data as { avatar?: unknown };
   return typeof avatar === "string" ? avatar : "";
 }
 
 function kindOf(data: ComposerInputEntity["data"]) {
   if (typeof data !== "object" || data === null || Array.isArray(data)) return "";
+
   const { kind } = data as { kind?: unknown };
   return kind;
 }
 
 const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) => {
   if (triggerId === "skill") return <MentionChip type="skill" name={id} />;
+
   if (triggerId !== "bot") return null;
+
   if (kindOf(data) === "thread") return <ThreadMentionChip id={id} title={label} />;
+
   return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} />;
 };
 
@@ -83,16 +88,21 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
       setExpanded(false);
       return;
     }
+
     const box = editor.current;
+
     if (!box) return;
+
     if (composer.input.includes("\n") || box.scrollHeight > SINGLE_LINE_HEIGHT) setExpanded(true);
   }, [composer.input]);
 
   const submit = async () => {
     if (!canSend) return;
+
     setSending(true);
     try {
       const files = await attachments.encode();
+
       if (await onSend(message, files)) {
         composer.setInput("");
         composer.setEntities([]);
@@ -111,7 +121,9 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+
     if (composer.activeTrigger?.items.length) return;
+
     event.preventDefault();
     event.stopPropagation();
     void submit();

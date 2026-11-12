@@ -25,12 +25,16 @@ export function useArtifactFrame() {
   useEffect(() => {
     const listen = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return;
+
       const data: unknown = event.data;
+
       if (typeof data !== "object" || data === null || !("aven" in data)) return;
+
       if (data.aven === "ready") {
         setReady(true);
         send();
       }
+
       if (data.aven === "height" && "value" in data && typeof data.value === "number") {
         setHeight(Math.min(FRAME_MAX_HEIGHT, Math.max(FRAME_MIN_HEIGHT, data.value)));
       }
@@ -46,6 +50,7 @@ export function useArtifactFrame() {
 
   useEffect(() => {
     if (ready) return;
+
     const timer = setTimeout(() => setLate(true), FRAME_LOAD_MS);
     return () => clearTimeout(timer);
   }, [ready, attempt]);

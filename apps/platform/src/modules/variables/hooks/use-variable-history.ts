@@ -11,11 +11,13 @@ export function useVariableHistory(scope: VariableScope, open: boolean) {
 
   useEffect(() => {
     if (!open) return;
+
     let current = true;
     api<VariableEvent[]>(path)
       .then((found) => current && setEvents(found))
       .catch((failure: unknown) => {
         if (!current) return;
+
         toast.add({
           title: "Could not load history",
           description: errorMessage(failure),

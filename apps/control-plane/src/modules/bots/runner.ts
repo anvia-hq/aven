@@ -106,6 +106,7 @@ export class BotRunner {
 
   note(botId: string, role: BotChatMessage["role"], text: string, peer: BotChatPeer) {
     const channel = this.#channels.get(botId);
+
     if (channel) this.#say(channel, role, text, { peer });
   }
 
@@ -117,13 +118,19 @@ export class BotRunner {
     const { shown, ...reply } = input;
     this.#replier.ready(reply.model, reply.bot);
     const channel = await this.#open(reply.bot.id, reply.userId);
+
     if (channel.pending >= MAX_PENDING) {
       throw new ConflictError("The bot has a lot to answer already; give it a moment");
     }
+
     this.#channels.set(reply.bot.id, channel);
+
     if (shown) this.#say(channel, "user", shown.text, shown);
+
     channel.pending += 1;
+
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
+
     channel.tail = channel.tail.then(() => this.#reply(reply, channel));
   }
 
@@ -173,6 +180,7 @@ export class BotRunner {
         this.#watchers.set(userId, watchers);
         return () => {
           watchers.delete(watcher);
+
           if (watchers.size === 0) this.#watchers.delete(userId);
         };
       },
@@ -200,16 +208,19 @@ export class BotRunner {
       yield first;
       while (!signal.aborted) {
         const item = queue.shift();
+
         if (item !== undefined) {
           yield item;
           continue;
         }
+
         const timer = Bun.sleep(PING_MS).then(() => null);
         const arrived = new Promise<undefined>((resolve) => {
           wake = () => resolve(undefined);
         });
         const woke = await Promise.race([arrived, aborted, timer]);
         wake = undefined;
+
         if (woke === null && queue.length === 0 && !signal.aborted) yield null;
       }
     } finally {
@@ -227,6 +238,7 @@ export class BotRunner {
 
   async #open(botId: string, userId: string) {
     let channel = this.#channels.get(botId);
+
     if (!channel) {
       const made: Channel = {
         botId,
@@ -244,6 +256,7 @@ export class BotRunner {
       this.#channels.set(botId, made);
       channel = made;
     }
+
     try {
       await channel.loaded;
     } catch (error) {
@@ -269,9 +282,13 @@ export class BotRunner {
     }: Pick<BotChatMessage, "peer" | "questions" | "attachments"> = {},
   ) {
     const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
+
     if (peer) message.peer = peer;
+
     if (questions) message.questions = questions;
+
     if (attachments?.length) message.attachments = attachments;
+
     this.#emit(channel, { type: "message", message });
   }
 
@@ -280,6 +297,7 @@ export class BotRunner {
     const working = channel.typing;
     channel.typing = isTyping(channel.typing, event);
     for (const subscriber of channel.subscribers) subscriber(event);
+
     if (channel.typing !== working) {
       for (const watcher of this.#watchers.get(channel.userId) ?? []) watcher();
     }
@@ -287,6 +305,7 @@ export class BotRunner {
 
   async #afterReply(input: ReplyRequest, channel: Channel, ok: boolean) {
     if (!this.#settled || channel.pending !== 1 || this.#shutdown.signal.aborted) return;
+
     const { bot, userId, prompt } = input;
     await this.#settled({ userId, botId: bot.id, prompt, ok }).catch((error: unknown) => {
       console.warn(`The goal of bot ${bot.id} could not go on:`, describeError(error));
@@ -315,7 +334,9 @@ export class BotRunner {
     } finally {
       await this.#afterReply(input, channel, ok);
       channel.pending -= 1;
+
       if (channel.pending === 0) this.#emit(channel, { type: "typing", typing: false });
+
       this.#release(bot.id, channel);
     }
   }

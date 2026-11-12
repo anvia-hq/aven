@@ -7,7 +7,9 @@ scratch.width = scratch.height = 1;
 export function resolveInk(element: Element): Rgb {
   const css = getComputedStyle(element).color;
   const cached = known.get(css);
+
   if (cached) return cached;
+
   const context = scratch.getContext("2d", { willReadFrequently: true })!;
   context.clearRect(0, 0, 1, 1);
   context.fillStyle = css;
@@ -28,9 +30,11 @@ export function onThemeChange(listener: () => void) {
       attributeFilter: ["class", "data-theme", "style"],
     });
   }
+
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
+
     if (listeners.size === 0) theme.disconnect();
   };
 }

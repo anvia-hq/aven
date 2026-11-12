@@ -6,7 +6,9 @@ const FENCE = "process_output";
 
 function fenced(label: string, text: string) {
   const body = text.trim();
+
   if (!body) return "";
+
   return `\n${label}:\n<${FENCE}>\n${body.replaceAll(`</${FENCE}>`, "")}\n</${FENCE}>`;
 }
 
@@ -28,7 +30,9 @@ export function createProcessEnds({
   return {
     async ended(runtimeId, ended) {
       const thread = await threadsService.byId(ended.threadId);
+
       if (!thread || thread.runtimeId !== runtimeId || thread.state === "archived") return;
+
       await messages.send(
         thread.organizationId,
         thread.createdBy,

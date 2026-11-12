@@ -66,6 +66,7 @@ async function roomFor(
   userId: string,
 ) {
   const [counted] = await tx.select({ n: count() }).from(table).where(eq(table.userId, userId));
+
   if ((counted?.n ?? 0) >= COCKPIT_ITEMS_MAX) {
     throw new UnprocessableError(`You can keep at most ${COCKPIT_ITEMS_MAX} of these`);
   }
@@ -80,6 +81,7 @@ async function tagInUse(tx: Tx, userId: string, name: string) {
       .from(table)
       .where(and(eq(table.userId, userId), sql`${name} = any(${table.tags})`))
       .limit(1);
+
     if (row) return true;
   }
   return false;
@@ -90,6 +92,7 @@ async function checkDefinedRoom(tx: Tx, userId: string) {
     .select({ n: count() })
     .from(cockpitTags)
     .where(eq(cockpitTags.userId, userId));
+
   if (Number(row?.n ?? 0) >= TAGS_DEFINED_MAX) {
     throw new UnprocessableError(`At most ${TAGS_DEFINED_MAX} tags`);
   }
@@ -123,7 +126,9 @@ export const cockpitService = {
         .set(input)
         .where(and(eq(cockpitInboxItems.userId, userId), eq(cockpitInboxItems.id, id)))
         .returning();
+
       if (!row) throw notFound("Inbox item");
+
       return inboxView(row);
     },
     async remove(userId: string, id: string) {
@@ -131,6 +136,7 @@ export const cockpitService = {
         .delete(cockpitInboxItems)
         .where(and(eq(cockpitInboxItems.userId, userId), eq(cockpitInboxItems.id, id)))
         .returning({ id: cockpitInboxItems.id });
+
       if (!gone) throw notFound("Inbox item");
     },
   },
@@ -183,7 +189,9 @@ export const cockpitService = {
         .set(input)
         .where(and(eq(cockpitTasks.userId, userId), eq(cockpitTasks.id, id)))
         .returning();
+
       if (!row) throw notFound("Task");
+
       return taskView(row);
     },
     async remove(userId: string, id: string) {
@@ -191,6 +199,7 @@ export const cockpitService = {
         .delete(cockpitTasks)
         .where(and(eq(cockpitTasks.userId, userId), eq(cockpitTasks.id, id)))
         .returning({ id: cockpitTasks.id });
+
       if (!gone) throw notFound("Task");
     },
   },
@@ -228,7 +237,9 @@ export const cockpitService = {
         .set(input)
         .where(and(eq(cockpitNotes.userId, userId), eq(cockpitNotes.id, id)))
         .returning();
+
       if (!row) throw notFound("Note");
+
       return noteView(row);
     },
     async remove(userId: string, id: string) {
@@ -236,6 +247,7 @@ export const cockpitService = {
         .delete(cockpitNotes)
         .where(and(eq(cockpitNotes.userId, userId), eq(cockpitNotes.id, id)))
         .returning({ id: cockpitNotes.id });
+
       if (!gone) throw notFound("Note");
     },
   },
@@ -284,9 +296,11 @@ export const cockpitService = {
         .select({ id: cockpitTags.id })
         .from(cockpitTags)
         .where(and(eq(cockpitTags.userId, userId), eq(cockpitTags.name, input.name)));
+
       if (defined || (await tagInUse(tx, userId, input.name))) {
         throw new ConflictError(`There is a tag ${input.name} already`);
       }
+
       await checkDefinedRoom(tx, userId);
       await tx.insert(cockpitTags).values({ userId, name: input.name, color: input.color ?? null });
     });
@@ -301,6 +315,7 @@ export const cockpitService = {
         .select({ id: cockpitTags.id })
         .from(cockpitTags)
         .where(and(eq(cockpitTags.userId, userId), eq(cockpitTags.name, name)));
+
       if (row && color === null && (await tagInUse(tx, userId, name))) {
         await tx.delete(cockpitTags).where(eq(cockpitTags.id, row.id));
       } else if (row) {
@@ -315,7 +330,9 @@ export const cockpitService = {
 
   async tag(userId: string, name: string) {
     const tag = (await this.tags(userId)).find((each) => each.name === name);
+
     if (!tag) throw notFound("Tag");
+
     return tag;
   },
 };

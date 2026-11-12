@@ -21,6 +21,7 @@ type Input = {
 
 export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
   const { interaction } = parseSaved(input.continuation);
+
   if (interaction.type !== "tool-question" || interaction.toolName !== SECRET_TOOL_NAME) {
     return input.answers;
   }
@@ -30,9 +31,11 @@ export async function keepSecretAnswers(input: Input): Promise<Answer[]> {
   } catch (error) {
     throw new UnprocessableError(describeError(error));
   }
+
   if (input.skip) {
     return input.answers.map(({ questionId }) => ({ questionId, value: "not provided" }));
   }
+
   for (const { id } of interaction.questions) {
     if (!variableName.safeParse(id).success) {
       throw new UnprocessableError(`${id} cannot be a variable name`);

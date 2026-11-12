@@ -43,6 +43,7 @@ export async function connectMcpServers(
           return;
         }
       }
+
       const client = new McpClient({
         name: config.name,
         transport: {
@@ -73,8 +74,10 @@ export async function connectMcpServers(
   const taken = new Map<string, string>();
   for (const connection of connections) {
     if (!connection) continue;
+
     const { config, client, server } = connection;
     const clash = server.tools.map((tool) => tool.name).find((name) => taken.has(name));
+
     if (clash !== undefined) {
       fail(
         config,
@@ -83,6 +86,7 @@ export async function connectMcpServers(
       await client.close().catch(() => undefined);
       continue;
     }
+
     for (const tool of server.tools) taken.set(tool.name, config.name);
     clients.push(client);
     servers.push(server);

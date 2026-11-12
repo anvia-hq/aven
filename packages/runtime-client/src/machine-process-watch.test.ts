@@ -46,7 +46,9 @@ function watching(initial: ProcessView[] = []) {
       },
       async stopProcess({ processId }: { processId: string }) {
         const found = world.find((process) => process.id === processId);
+
         if (!found) throw new Error("No such process");
+
         found.status = "stopped";
         return found;
       },
@@ -56,7 +58,9 @@ function watching(initial: ProcessView[] = []) {
       logs: async () => ({ stdout: "out", stderr: "err", truncated: false }),
       stop: async (processId: string) => {
         const found = world.find((process) => process.id === processId);
+
         if (!found) throw new Error("No such process");
+
         found.status = "stopped";
         return world.map((process) => ({ ...process }));
       },
@@ -133,22 +137,26 @@ describe("a process the control-plane agent starts on a machine", () => {
     await t.prepare();
     await tick();
     const old = t.world[0];
+
     if (old) {
       old.status = "exited";
       old.exitCode = 0;
       old.endedAt = new Date(Date.parse(old.startedAt) + 90_000).toISOString();
     }
+
     const started = (await t.call({
       threadId: "t1",
       op: "startProcess",
       args: { command: "sh", args: ["-c", "bun test"] },
     })) as { id: string };
     const fresh = t.world.find((process) => process.id === started.id);
+
     if (fresh) {
       fresh.status = "exited";
       fresh.exitCode = 0;
       fresh.endedAt = new Date(Date.parse(fresh.startedAt) + 90_000).toISOString();
     }
+
     await tick();
     await tick();
 
@@ -179,7 +187,9 @@ describe("a process the control-plane agent starts on a machine", () => {
       args: { command: "sleep", args: ["30"] },
     })) as { id: string };
     const fresh = t.world.find((process) => process.id === started.id);
+
     if (fresh) Object.assign(fresh, { ...proc(started.id, "exited"), command: "sleep 30" });
+
     await tick();
     expect(
       t.sent.map((message) => (message.type === "process.ended" ? message.processId : "")),
@@ -197,7 +207,9 @@ describe("a process the control-plane agent starts on a machine", () => {
     await tick();
     await t.runner("process.watch", { threadId: "t1", phase: "suspend" });
     const fresh = t.world.find((process) => process.id === started.id);
+
     if (fresh) Object.assign(fresh, proc(started.id, "exited"));
+
     await tick();
     expect(t.sent).toEqual([]);
     expect(t.guests.has("t1")).toBe(false);
@@ -218,7 +230,9 @@ describe("a process the control-plane agent starts on a machine", () => {
       args: { command: "true" },
     })) as { id: string };
     const fresh = t.world.find((process) => process.id === started.id);
+
     if (fresh) Object.assign(fresh, proc(started.id, "exited"));
+
     await t.runner("process.watch", { threadId: "t1", phase: "settle" });
     await tick();
     expect(t.sent).toHaveLength(1);

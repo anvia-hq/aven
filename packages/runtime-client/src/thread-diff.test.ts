@@ -15,6 +15,7 @@ async function workspace({ branchClone = false } = {}) {
   const root = join(base, "work");
   const sh = async (cwd: string, ...args: string[]) => {
     const result = await git(args, { cwd });
+
     if (result.code !== 0) throw new Error(result.stderr);
   };
   await Bun.$`mkdir ${remote} ${root}`;

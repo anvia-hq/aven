@@ -47,7 +47,9 @@ export function VariableRows({
                 onChange={(event) => onChange(row.id, { name: event.target.value })}
                 onPaste={(event) => {
                   const text = event.clipboardData.getData("text");
+
                   if (!looksLikeEnv(text)) return;
+
                   event.preventDefault();
                   onPaste(row.id, text);
                 }}

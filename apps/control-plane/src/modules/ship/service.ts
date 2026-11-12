@@ -49,7 +49,9 @@ export function shipMode(
   pullRequests: Pick<ThreadPullRequest, "state">[],
 ): ShipMode {
   const [latest] = pullRequests;
+
   if (!latest) return "first";
+
   return requested ?? (latest.state === "open" ? "update" : "new");
 }
 
@@ -65,7 +67,9 @@ export function createShipService(
     (async (organizationId: string, threadId: string) => {
       const thread = await threadsService.require(organizationId, threadId);
       const project = await projectsService.get(organizationId, thread.projectId);
+
       if (!project) throw new ConflictError("This thread's project was deleted");
+
       return {
         ...project,
         pullRequests: thread.pullRequests,
@@ -108,16 +112,20 @@ export function createShipService(
       { mode, ...selection }: ModelSelection & { mode?: "update" | "new" } = {},
     ) {
       const project = await load(organizationId, threadId);
+
       if (!project.githubInstallationId && project.lifetime === "ephemeral")
         throw new ConflictError(
           "This runner is temporary and has no GitHub of its own: connect the project to GitHub to ship",
         );
+
       if (project.githubInstallationId && project.repoFullName) {
         const connection = await userTokens.use(
           userId,
           await github.appKeyOf(project.githubInstallationId),
         );
+
         if (!connection) throw new GithubNotConnectedError();
+
         await github.requireWritable(project.githubInstallationId);
         await github.requirePush(
           project.githubInstallationId,

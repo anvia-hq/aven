@@ -110,7 +110,9 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
       ws.onerror = () => reject(new Error("runtime could not connect"));
       ws.onmessage = (event) => {
         const message = JSON.parse(String(event.data)) as ControlPlaneToRuntime;
+
         if (message.type !== "call" || message.method !== "runner.update") return;
+
         calls.push(message.params);
         ws.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: answer }));
       };
@@ -118,6 +120,7 @@ run("asking a runner to update itself (real postgres, real WebSocket)", () => {
     const deadline = Date.now() + 3000;
     while (!hub.isOnline(runtime.id)) {
       if (Date.now() > deadline) throw new Error("timed out");
+
       await Bun.sleep(20);
     }
     return { runtime, calls };

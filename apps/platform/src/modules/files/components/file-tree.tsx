@@ -24,6 +24,7 @@ function Nodes({ folder, depth, ...rest }: NodeProps) {
       {(folders[folder] ?? []).map((entry) => {
         const path = join(folder, entry.name);
         const indent = { paddingLeft: `${depth * 0.875 + 0.5}rem` };
+
         if (entry.type === "file") {
           return (
             <FileButton
@@ -36,6 +37,7 @@ function Nodes({ folder, depth, ...rest }: NodeProps) {
             />
           );
         }
+
         const open = expanded.includes(path);
         return (
           <div key={path}>

@@ -14,7 +14,9 @@ const sourceOf = (threadId: string, artifact: ToolArtifact) =>
   `/api/threads/${threadId}/artifacts/${artifact.name}`;
 function labelOf(artifact: ToolArtifact) {
   if (artifact.caption) return artifact.caption;
+
   if (isPage(artifact)) return "Page shown by the agent";
+
   return isVideo(artifact) ? "Video shown by the agent" : "Image shown by the agent";
 }
 
@@ -55,6 +57,7 @@ function Tile({
   };
 
   let media;
+
   if (failed) {
     media = <Unavailable video={video} onRetry={retry} />;
   } else if (video) {

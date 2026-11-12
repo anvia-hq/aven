@@ -33,6 +33,7 @@ function ProjectPage() {
 
   if (!project) {
     if (!loaded) return null;
+
     return <NotFound as="main" title="Project not found" to="/projects" back="Back to projects" />;
   }
 

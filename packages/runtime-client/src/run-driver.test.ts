@@ -104,7 +104,9 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
   const made: string[] = [];
   const acquired: string[] = [];
   const installed = new Map<string, Promise<AgentBackend>>([["native", native]]);
+
   if (other) installed.set("other", other);
+
   const sandbox: ThreadWorkspaces = {
     async acquire(threadRef) {
       acquired.push(threadRef.id);
@@ -128,6 +130,7 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
     },
     report: (runId, make) => {
       const message = outbox.push(runId, make);
+
       if (message) reported.push(message);
     },
     boxes: new Map(),

@@ -27,6 +27,7 @@ export function InviteMemberDialog() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const sent = await invite(String(new FormData(event.currentTarget).get("email")).trim(), role);
+
     if (sent) setOpen(false);
   }
 

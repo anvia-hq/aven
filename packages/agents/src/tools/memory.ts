@@ -44,7 +44,9 @@ type MemoryInput = z.infer<typeof memorySchema>;
 
 function required<K extends keyof MemoryInput>(input: MemoryInput, key: K) {
   const value = input[key];
+
   if (value === undefined) throw new Error(`${input.command} needs ${key}`);
+
   return value as NonNullable<MemoryInput[K]>;
 }
 

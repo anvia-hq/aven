@@ -13,6 +13,7 @@ function storedKeys(): string[] {
     const keys: string[] = [];
     for (let at = 0; at < localStorage.length; at += 1) {
       const key = localStorage.key(at);
+
       if (key !== null) keys.push(key);
     }
     return keys;

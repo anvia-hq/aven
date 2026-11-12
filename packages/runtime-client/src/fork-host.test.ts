@@ -51,7 +51,9 @@ describe("createForkHost", () => {
       call: (async () => view("done")) as never,
     });
     const taken = await host.take(FORK);
+
     if (taken.empty) throw new Error("expected changes");
+
     expect(taken.patchPath).toBe("/workspace/.git/aven-forks/abcdef12.patch");
     expect(taken.files).toEqual(["b.txt"]);
     const patch = await readFile(join(parent, ".git", "aven-forks", "abcdef12.patch"), "utf8");

@@ -20,7 +20,9 @@ export function useUnreadThreads() {
   useEffect(() => {
     const finished = finishedThreads(seen.current, threads).map((thread) => thread.id);
     seen.current = new Map(threads.map((thread) => [thread.id, thread.running]));
+
     if (threads.length === 0) return;
+
     setUnread((current) =>
       nextUnread(
         current,

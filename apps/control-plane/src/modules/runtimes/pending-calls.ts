@@ -34,7 +34,9 @@ export class PendingCalls {
 
   settle(reply: Reply) {
     const waiting = this.#calls.get(reply.id);
+
     if (!waiting) return;
+
     if (reply.ok) waiting.resolve(reply.result);
     else waiting.reject(new Error(reply.error ?? "The runtime reported an error"));
   }

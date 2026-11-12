@@ -25,6 +25,7 @@ export function tilePalettes(projectIds: readonly string[]) {
     let best = start;
     for (let step = 1; step < palettes.length; step++) {
       const candidate = (start + step) % palettes.length;
+
       if (uses[candidate]! < uses[best]!) best = candidate;
     }
     uses[best]! += 1;

@@ -15,6 +15,7 @@ const day = (value: unknown) =>
 
 function opened(value: unknown, pattern: RegExp) {
   if (typeof value !== "string") return undefined;
+
   const [project, what, ...more] = value.split(":");
   return project && what && more.length === 0 && pattern.test(what) ? value : undefined;
 }
@@ -94,29 +95,46 @@ export function activeQuickView(filters: CenterFilters) {
 
 export function pullsQuery(filters: CenterFilters, login: string | null): string | null {
   const needsLogin = filters.author === "me" || filters.reviewRequested === "me";
+
   if (needsLogin && !login) return null;
+
   const query = new URLSearchParams({
     state: filters.state === "draft" ? "open" : filters.state,
     page: "1",
     sort: filters.sort,
   });
+
   if (filters.state === "draft") query.set("draft", "true");
+
   if (filters.author && login) query.set("author", login);
+
   if (filters.reviewRequested && login) query.set("reviewRequested", login);
+
   if (filters.review) query.set("review", filters.review);
+
   if (filters.checks) query.set("checks", filters.checks);
+
   if (filters.label) query.set("label", filters.label);
+
   if (filters.text) query.set("text", filters.text);
+
   if (filters.stale) query.set("staleDays", String(filters.stale));
+
   return query.toString();
 }
 
 export function commitFilterQuery(search: CenterSearch, one: boolean) {
   const query = new URLSearchParams();
+
   if (search.commitAuthor) query.set("author", search.commitAuthor);
+
   if (search.since) query.set("since", search.since);
+
   if (search.until) query.set("until", search.until);
+
   if (one && search.path) query.set("path", search.path);
+
   if (one && search.branch) query.set("branch", search.branch);
+
   return query.toString();
 }

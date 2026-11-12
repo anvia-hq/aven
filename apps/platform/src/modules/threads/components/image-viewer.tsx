@@ -29,6 +29,7 @@ export function ImageViewer({
         className="flex h-[80vh] w-[80vw] max-w-[80vw] flex-col gap-0 p-2 sm:max-w-[80vw]"
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") step(-1);
+
           if (event.key === "ArrowRight") step(1);
         }}
       >

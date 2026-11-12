@@ -17,6 +17,7 @@ export function mentionNote(
   const files = of("file");
   const asked = of("skill");
   const sections: string[] = [];
+
   if (files.length > 0) {
     sections.push(
       [
@@ -25,6 +26,7 @@ export function mentionNote(
       ].join("\n"),
     );
   }
+
   if (asked.length > 0) {
     const lines = asked.map((name) => {
       const skill = skills.find((candidate) => candidate.name === name);
@@ -37,13 +39,18 @@ export function mentionNote(
       ].join("\n"),
     );
   }
+
   return sections.length > 0 ? sections.join("\n\n") : undefined;
 }
 
 export function mentionOf(value: unknown): MessageMention | undefined {
   const { type, name, from, to } = asRecord(value);
+
   if ((type !== "file" && type !== "skill") || typeof name !== "string") return undefined;
+
   if (typeof from !== "number" || typeof to !== "number") return undefined;
+
   if (to - from !== mentionToken({ type, name }).length) return undefined;
+
   return { type, name, from, to };
 }

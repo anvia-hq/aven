@@ -11,8 +11,11 @@ export function mentionCode({
 }: ComponentProps<"code"> & { node?: unknown }) {
   if (typeof children === "string" && children.startsWith(MENTION_MARK)) {
     const [type, ...name] = children.slice(MENTION_MARK.length).split(":");
+
     if (type === "person") return <SentPersonMention name={name.join(":")} />;
+
     return <MentionChip type={type === "file" ? "file" : "skill"} name={name.join(":")} />;
   }
+
   return <code {...props}>{children}</code>;
 }

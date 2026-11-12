@@ -76,6 +76,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           runtime.id === LOCAL_RUNTIME_ID
             ? await platformService.isOwner(user)
             : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
+
         if (!allowed) {
           throw new ForbiddenError(
             runtime.id === LOCAL_RUNTIME_ID
@@ -83,6 +84,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
               : "Only the runner's owner, an owner or an admin can rename it",
           );
         }
+
         return orNotFound(
           await runtimesService.rename(organizationId, params.id, body.name),
           "Runtime not found",
@@ -107,6 +109,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
       async ({ params, body, organizationId, user, set }) => {
         if (!(await isOwnerOrAdmin(organizationId, user.id)))
           throw new ForbiddenError("Only an owner or an admin can update a runner");
+
         const runtime = orNotFound(
           await runtimesService.get(organizationId, params.id),
           "Runtime not found",

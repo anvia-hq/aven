@@ -22,12 +22,15 @@ export function updateStep(options: {
   pending: { to: string } | undefined;
 }): UpdateStep {
   if (options.pending?.to === options.version) return "finish";
+
   if (options.wanted === options.version && !options.force) return "current";
+
   return "replace";
 }
 
 export async function update(args: Args) {
   if (args.flags.finish) return finish();
+
   if (version === "dev")
     throw new Error("This is a development build of aven and cannot update itself.");
 
@@ -35,10 +38,12 @@ export async function update(args: Args) {
   const marker = pendingUpdateFile();
   const pending = await readPendingUpdate(marker);
   const step = updateStep({ version, wanted, force: Boolean(args.flags.force), pending });
+
   if (step === "current") {
     console.log(`aven ${version} is up to date.`);
     return;
   }
+
   if (step === "finish") {
     console.log(`The update to aven ${version} stopped before it finished. Finishing it.`);
     return finish();
@@ -49,6 +54,7 @@ export async function update(args: Args) {
   await writePendingUpdate(marker, { from: version, to: wanted, binary: process.execPath });
   await installBinary(archive, process.execPath);
   const code = await run([process.execPath, "update", "--finish"]);
+
   if (code !== 0) {
     console.error(
       `The update to aven ${wanted} stopped before it finished, so the server and the runner may still be ${version}. Run: aven update`,
@@ -60,9 +66,11 @@ export async function update(args: Args) {
 export async function finish() {
   const server = await serverUpgrade(version);
   const runner = await runnerUpgrade();
+
   if (!server && !runner)
     console.log("Neither a server nor a runner is installed on this machine.");
   else await removeStaleImages(version);
+
   await clearPendingUpdate(pendingUpdateFile());
   console.log(
     `aven ${version} is installed${server ? ", the server is updated" : ""}${runner ? ", the runner is updated" : ""}.`,

@@ -25,6 +25,7 @@ export function framedHtml(text: string) {
   const top = text.slice(0, 4096);
   for (const pattern of AFTER) {
     const found = pattern.exec(top);
+
     if (found) {
       const at = found.index + found[0].length;
       return text.slice(0, at) + BRIDGE + text.slice(at);

@@ -153,6 +153,7 @@ run("createThreadWatcher (postgres)", async () => {
       activity: (id) => (id === thread.id ? state.run : undefined),
       wake: async (_userId, botId, note, threadId) => {
         if (state.refuse) throw new Error("the runner is offline");
+
         if (threadId === thread.id) woken.push({ botId, note });
       },
       intervalMs: 60_000,

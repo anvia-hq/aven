@@ -93,7 +93,9 @@ export function useThread(threadId: string) {
     const source = new EventSource(`/api/threads/${threadId}/events`);
     source.onmessage = (message) => {
       const event = parseEvent(message.data);
+
       if (!event) return;
+
       setMessages((current) => applyEvent(current, event));
       setRunning((current) => isRunning(current, event));
       changePending((current) => settlePending(current, event));
@@ -111,6 +113,7 @@ export function useThread(threadId: string) {
         case "steer_rejected": {
           const lost = steersRef.current.find(({ id }) => id === event.id);
           changeSteers((current) => current.filter(({ id }) => id !== event.id));
+
           if (lost && event.reason) {
             toast.add({
               title: "A message was not delivered",
@@ -118,6 +121,7 @@ export function useThread(threadId: string) {
               type: "error",
             });
           }
+
           break;
         }
         case "snapshot":
@@ -155,6 +159,7 @@ export function useThread(threadId: string) {
     };
     source.onerror = () => {
       if (source.readyState !== EventSource.CLOSED) return;
+
       setRunning(false);
       setStartedAt(null);
       setError("Lost the connection to the server");
@@ -165,12 +170,16 @@ export function useThread(threadId: string) {
 
   const loadEarlier = useCallback(async () => {
     const before = hiddenRef.current;
+
     if (before === 0) return;
+
     setLoadingEarlier(true);
     const page = await attempt("Could not load earlier messages", () =>
       api<MessagesPage>(`/threads/${threadId}/messages?before=${before}`),
     ).finally(() => setLoadingEarlier(false));
+
     if (!page || hiddenRef.current !== before) return;
+
     hiddenRef.current = page.hidden;
     setHidden(page.hidden);
     setEarlier((current) => [...page.messages, ...current]);
@@ -182,6 +191,7 @@ export function useThread(threadId: string) {
       const dropSteer = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
       const dropPending = () => changePending((current) => withoutPending(current, id));
       const steering = running && message.attachments.length === 0;
+
       if (steering) {
         changeSteers((current) => [
           ...current,
@@ -190,6 +200,7 @@ export function useThread(threadId: string) {
       } else {
         changePending((current) => [...current, pendingMessage(id, message)]);
       }
+
       const sent = await attempt("Could not send message", async () => {
         const result = await postJson<{ steered: boolean }>(`/threads/${threadId}/messages`, {
           ...messageBody(message, selection),
@@ -198,9 +209,13 @@ export function useThread(threadId: string) {
         rememberModelSelection(threadId, selection);
         return result;
       });
+
       if (!sent?.steered) dropSteer();
+
       if (!sent || sent.steered || steering) dropPending();
+
       if (sent && wasArchived) void refresh();
+
       return sent !== null;
     },
     [threadId, running, changeSteers, changePending, wasArchived, refresh],
@@ -218,7 +233,9 @@ export function useThread(threadId: string) {
         await postJson(`/threads/${threadId}/answer`, { answers, ...selection, ...secret });
         return true;
       });
+
       if (sent && wasArchived) void refresh();
+
       return sent ?? false;
     },
     [threadId, wasArchived, refresh],

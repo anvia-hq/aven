@@ -3,7 +3,9 @@ import { useThreadProcesses } from "@/modules/overview/hooks/use-thread-processe
 export function BackgroundChip({ threadId, running }: { threadId: string; running: boolean }) {
   const { processes } = useThreadProcesses(threadId, running);
   const active = processes.filter((process) => process.status === "running");
+
   if (active.length === 0) return null;
+
   const [first] = active;
 
   return (

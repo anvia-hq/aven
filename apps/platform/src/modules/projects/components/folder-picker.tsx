@@ -28,6 +28,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
 
   const shown = listing?.data ?? null;
   let body = <Skeleton className="h-40 w-full" />;
+
   if (listing?.error) body = <PanelNotice>{listing.error}</PanelNotice>;
   else if (shown && shown.folders.length === 0) {
     body = <PanelNotice>No folders in here. Add this one, or make a new one.</PanelNotice>;
@@ -91,6 +92,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
                 event.preventDefault();
                 void submitName();
               }
+
               if (event.key === "Escape") setNaming(false);
             }}
             placeholder="New folder name"

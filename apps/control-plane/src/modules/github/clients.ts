@@ -26,28 +26,39 @@ export function createGithubClients(
 
   const kept = (app: { id: string; config: GithubConfig }) => {
     let client = own.get(app.id);
+
     if (!client) {
       client = make(app.config);
       own.set(app.id, client);
     }
+
     return client;
   };
 
   return {
     async forKey(appKey) {
       if (appKey === PLATFORM_APP) return platform;
+
       const client = own.get(appKey);
+
       if (client) return client;
+
       const app = await load.byId(appKey);
+
       if (!app) throw new GithubAppNotFoundError();
+
       return kept(app);
     },
 
     async forOrganization(organizationId) {
       const known = ofOrganization.get(organizationId);
+
       if (known) return { key: known, client: await this.forKey(known) };
+
       const app = await load.byOrganization(organizationId);
+
       if (!app) return { key: PLATFORM_APP, client: platform };
+
       ofOrganization.set(organizationId, app.id);
       return { key: app.id, client: kept(app) };
     },
@@ -55,6 +66,7 @@ export function createGithubClients(
     forget(organizationId) {
       const id = ofOrganization.get(organizationId);
       ofOrganization.delete(organizationId);
+
       if (id) own.delete(id);
     },
   };

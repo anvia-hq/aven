@@ -13,7 +13,9 @@ import type { ToolConcurrencyProbe } from "./types";
 
 const patched: ToolConcurrencyProbe = (registration: DurableAgentRegistration) => {
   const value = registration.toolConcurrency;
+
   if (value === undefined) return;
+
   if (!Number.isSafeInteger(value) || value < 1)
     throw new TypeError("Durable toolConcurrency must be a positive integer.");
 };

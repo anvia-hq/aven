@@ -45,7 +45,9 @@ export function useTerminal({ path }: Computer) {
 
   useEffect(() => {
     const element = target.current;
+
     if (!element) return;
+
     setPhase("connecting");
     setReason("");
     const term = new Terminal({

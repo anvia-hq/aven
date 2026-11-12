@@ -60,13 +60,17 @@ export function projectSubagentEvent(
 
 function assistantParts(content: string | readonly AssistantContentPart[]): MessagePart[] {
   if (typeof content === "string") return content.trim() ? [{ type: "text", text: content }] : [];
+
   const parts: MessagePart[] = [];
   for (const part of content) {
     if (part.type === "text" && part.text.trim()) parts.push({ type: "text", text: part.text });
+
     if (part.type === "reasoning") {
       const text = reasoningDisplayText(part);
+
       if (text.trim()) parts.push({ type: "reasoning", text });
     }
+
     if (part.type === "tool-call") parts.push({ type: "tool", tool: projectToolCall(part) });
   }
   return parts;
@@ -87,27 +91,36 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
         role: "user",
         parts: [{ type: "text", text }],
       };
+
       if (attachments?.length) user.attachments = attachments;
+
       if (mentions?.length) user.mentions = mentions;
+
       chat.push(user);
     } else if (message.role === "assistant") {
       const parts = assistantParts(message.content);
       const current = lastAssistant();
+
       if (current) current.parts.push(...parts);
       else add("assistant", parts);
     } else if (message.role === "tool") {
       const current = lastAssistant();
       for (const part of message.content) {
         if (part.type !== "tool-result" || !current) continue;
+
         const target = current.parts.find(
           (candidate) => candidate.type === "tool" && candidate.tool.id === part.toolCallId,
         );
+
         if (target?.type === "tool") {
           const { status, output, artifacts } = projectToolOutput(part.output, target.tool.name);
           target.tool.status = status;
           target.tool.output = output;
+
           if (artifacts) target.tool.artifacts = artifacts;
+
           const { subagents } = withSubagentResults(target.tool, part.output);
+
           if (subagents) target.tool.subagents = subagents;
         }
       }

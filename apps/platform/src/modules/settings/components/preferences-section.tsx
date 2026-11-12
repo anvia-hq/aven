@@ -50,6 +50,7 @@ export function PreferencesSection() {
             onCheckedChange={(checked) => {
               setSound(checked);
               setFinishedSound(checked);
+
               if (checked) playChime();
             }}
           />

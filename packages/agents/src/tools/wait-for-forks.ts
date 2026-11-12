@@ -38,6 +38,7 @@ export function createWaitForForksTool(
         const forks = await Promise.all([...new Set(ids)].map(look));
         const working = forks.filter((fork) => fork.running).length;
         const waited = seconds(clock.now() - started);
+
         if (working === 0 || clock.now() >= deadline) {
           const summary =
             working === 0
@@ -56,6 +57,7 @@ export function createWaitForForksTool(
             })),
           };
         }
+
         await clock.sleep(Math.min(POLL_MS, deadline - clock.now()), context?.abortSignal);
       }
     },

@@ -35,7 +35,9 @@ const threadOf = (branch: string) => branch.split("-")[0];
 
 function searchTitles(pulls: boolean, open: boolean) {
   if (pulls && open) return Array.from({ length: 12 }, (_, i) => `Open pull request ${12 - i}`);
+
   if (pulls) return ["Merged pull request", "Closed pull request"];
+
   return open ? ["Open issue two", "Open issue one"] : ["Closed issue"];
 }
 
@@ -55,22 +57,28 @@ Bun.serve({
   async fetch(request) {
     const url = new URL(request.url);
     const { pathname } = url;
+
     if (pathname === "/__reset" && request.method === "POST") {
       const test = testOf(url, request.headers);
       const repository = url.searchParams.get("repo");
       for (const key of pullRequests.keys()) {
         if (repository !== null && key !== repository) continue;
+
         const kept = test === null ? [] : pullsOf(key).filter((entry) => entry.test !== test);
+
         if (kept.length === 0) pullRequests.delete(key);
         else pullRequests.set(key, kept);
       }
       return Response.json({ reset: true });
     }
+
     const pulls = pathname.match(/^\/repos\/acme\/([\w.-]+)\/pulls$/);
+
     if (pulls) {
       const repository = `acme/${pulls[1]}`;
       const test = testOf(url, request.headers);
       const list = pullsOf(repository);
+
       if (request.method === "POST") {
         const { head = "", title = "A pull request" } = (await request
           .json()
@@ -95,10 +103,13 @@ Bun.serve({
         pullRequests.set(repository, [...list, { test: owner, pull: made }]);
         return Response.json(made, { status: 201 });
       }
+
       const visible = test === null ? list : list.filter((entry) => entry.test === test);
       return Response.json(visible.map((entry) => entry.pull).reverse());
     }
+
     if (pathname === "/health") return new Response("ok");
+
     if (pathname === "/login/oauth/authorize") {
       const state = new URL(request.url).searchParams.get("state") ?? "";
       const back = new URL("/api/github/callback", appUrl);
@@ -106,6 +117,7 @@ Bun.serve({
       back.searchParams.set("state", state);
       return Response.redirect(back.toString(), 302);
     }
+
     if (pathname === "/login/oauth/access_token") {
       return Response.json({
         access_token: "ghu_fake",
@@ -114,11 +126,15 @@ Bun.serve({
         refresh_token_expires_in: 15811200,
       });
     }
+
     if (pathname === "/user") return Response.json({ id: 42, login: "ada", name: "Ada" });
+
     if (pathname === "/user/installations") return Response.json({ installations: [{ id: 1 }] });
+
     if (pathname === "/installation/repositories") {
       return Response.json({ repositories: repositories.map(repo) });
     }
+
     if (/^\/app\/installations\/\d+$/.test(pathname)) {
       return Response.json({
         id: Number(pathname.split("/").pop()),
@@ -131,13 +147,17 @@ Bun.serve({
         },
       });
     }
+
     if (pathname.endsWith("/access_tokens")) {
       const expires = new Date(Date.now() + 60 * 60_000).toISOString();
       return Response.json({ token: "ghs_fake", expires_at: expires });
     }
+
     const contents = pathname.match(/^\/repos\/acme\/([\w.-]+)\/contents(?:\/(.*))?$/);
+
     if (contents && repositories.includes(contents[1]!)) {
       const folder = contents[2] ?? "";
+
       if (folder === "") {
         return Response.json([
           { name: "package.json", path: "package.json", type: "file" },
@@ -146,14 +166,18 @@ Bun.serve({
           { name: "docs", path: "docs", type: "dir" },
         ]);
       }
+
       if (folder === "src") {
         return Response.json([{ name: "index.ts", path: "src/index.ts", type: "file" }]);
       }
+
       if (folder === "package.json") {
         return Response.json({ name: "package.json", path: "package.json", type: "file" });
       }
     }
+
     const readme = pathname.match(/^\/repos\/acme\/([\w.-]+)\/readme$/)?.[1];
+
     if (readme && repositories.includes(readme) && readme !== "composer-app") {
       const text = `# ${readme}\n\nA **fine** project. Read [the guide](docs/guide.md).\n\n![logo](docs/logo.png)`;
       return Response.json({
@@ -163,14 +187,18 @@ Bun.serve({
         content: Buffer.from(text).toString("base64"),
       });
     }
+
     const sha = (n: number) =>
       `${String(n).padStart(2, "0")}abcdef0123456789abcdef0123456789abcdef`;
     const history = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits$/)?.[1];
+
     if (history && repositories.includes(history)) {
       const page = Number(new URL(request.url).searchParams.get("page") ?? "1");
       const parentsOf = (n: number) => {
         if (n === 12) return [11, 10];
+
         if (n === 11 || n === 10) return [9];
+
         return n === 1 ? [] : [n - 1];
       };
       const asked = new URL(request.url).searchParams;
@@ -188,12 +216,18 @@ Bun.serve({
       }));
       const wanted = commits.filter((entry, index) => {
         const number = 14 - index;
+
         if (asked.get("author") && !/ada/i.test(asked.get("author")!)) return false;
+
         if (asked.get("sha") === "feature/login" && number > 10) return false;
+
         if (asked.get("path") && !(asked.get("path") === "src/login.ts" && number % 2 === 0))
           return false;
+
         const since = asked.get("since");
+
         if (since && Date.parse(entry.commit.author.date) < Date.parse(since)) return false;
+
         return true;
       });
       return Response.json(wanted.slice((page - 1) * 10, page * 10), {
@@ -203,10 +237,14 @@ Bun.serve({
             : {},
       });
     }
+
     const opened = pathname.match(/^\/repos\/acme\/([\w.-]+)\/pulls\/(\d+)(\/files|\/reviews)?$/);
+
     if (opened && repositories.includes(opened[1]!)) {
       const number = Number(opened[2]);
+
       if (opened[3] === "/files") return Response.json(changedFiles);
+
       if (opened[3] === "/reviews") {
         return Response.json(
           number === 100
@@ -220,6 +258,7 @@ Bun.serve({
               ],
         );
       }
+
       return Response.json({
         number,
         title: `Open pull request ${12 - (100 - number)}`,
@@ -243,7 +282,9 @@ Bun.serve({
         requested_reviewers: number === 100 ? [{ login: "ada" }] : [],
       });
     }
+
     const checkRuns = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits\/[0-9a-f]+\/check-runs$/);
+
     if (checkRuns && repositories.includes(checkRuns[1]!)) {
       return Response.json({
         check_runs: [
@@ -252,7 +293,9 @@ Bun.serve({
         ],
       });
     }
+
     const one = pathname.match(/^\/repos\/acme\/([\w.-]+)\/commits\/([0-9a-f]{7,40})$/);
+
     if (one && repositories.includes(one[1]!)) {
       return Response.json({
         sha: one[2],
@@ -267,6 +310,7 @@ Bun.serve({
         files: changedFiles,
       });
     }
+
     if (pathname === "/search/issues") {
       const params = new URL(request.url).searchParams;
       const query = params.get("q") ?? "";
@@ -286,18 +330,26 @@ Bun.serve({
         .map((title, index) => ({ title, index }))
         .filter(({ title, index }) => {
           if (qualifier("author") && qualifier("author") !== "ada") return false;
+
           if (
             qualifier("review-requested") &&
             (qualifier("review-requested") !== "ada" || index > 2)
           )
             return false;
+
           if (qualifier("draft") === "true" && !(pulls && open && index === 0)) return false;
+
           if (qualifier("draft") === "false" && pulls && open && index === 0) return false;
+
           if (qualifier("label") && !(qualifier("label") === "bug" && index % 2 === 0))
             return false;
+
           if (qualifier("status") === "failure" && index % 2 === 0) return false;
+
           if (qualifier("status") === "success" && index % 2 === 1) return false;
+
           if (qualifier("review") === "approved" && index > 1) return false;
+
           return !words || title.toLowerCase().includes(words.replace(" in", "").trim());
         })
         .map(({ title, index }) => ({
@@ -314,17 +366,23 @@ Bun.serve({
             ? { merged_at: merged || (!open && index === 0) ? "2026-10-30T10:00:00Z" : null }
             : undefined,
         }));
+
       if (new URL(request.url).searchParams.get("order") === "asc") items = items.reverse();
+
       return Response.json({
         total_count: items.length,
         items: items.slice((page - 1) * 10, page * 10),
       });
     }
+
     const tags = pathname.match(/^\/repos\/acme\/([\w.-]+)\/tags$/)?.[1];
+
     if (tags && repositories.includes(tags)) {
       return Response.json([{ name: "v1.0", commit: { sha: sha(12) } }]);
     }
+
     const branches = pathname.match(/^\/repos\/acme\/([\w.-]+)\/branches$/)?.[1];
+
     if (branches && repositories.includes(branches)) {
       return Response.json([
         { name: "main", protected: true, commit: { sha: sha(14) } },
@@ -332,9 +390,11 @@ Bun.serve({
         { name: "old/spike", protected: false, commit: { sha: sha(2) } },
       ]);
     }
+
     const tip = pathname.match(
       /^\/repos\/acme\/([\w.-]+)\/commits\/(main|feature%2Flogin|old%2Fspike)$/,
     );
+
     if (tip && repositories.includes(tip[1]!)) {
       const number = { main: 14, "feature%2Flogin": 10, "old%2Fspike": 2 }[tip[2]!]!;
       return Response.json({
@@ -352,9 +412,11 @@ Bun.serve({
         parents: [],
       });
     }
+
     const compare = pathname.match(
       /^\/repos\/acme\/([\w.-]+)\/compare\/main\.\.\.(feature%2Flogin|old%2Fspike)$/,
     );
+
     if (compare && repositories.includes(compare[1]!)) {
       return Response.json(
         compare[2] === "old%2Fspike"
@@ -362,8 +424,11 @@ Bun.serve({
           : { ahead_by: 3, behind_by: 2 },
       );
     }
+
     const name = pathname.match(/^\/repos\/acme\/([\w.-]+)$/)?.[1];
+
     if (name && repositories.includes(name)) return Response.json(repo(name));
+
     return new Response("not found", { status: 404 });
   },
 });

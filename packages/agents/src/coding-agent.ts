@@ -34,6 +34,7 @@ type CodingAgentOptions = ModelSource & {
 
 export function createCodingAgent(options: CodingAgentOptions) {
   const tools = [...options.tools];
+
   if (options.webSearch) tools.push(createWebSearchTool({ apiKey: options.webSearch.apiKey }));
 
   if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());

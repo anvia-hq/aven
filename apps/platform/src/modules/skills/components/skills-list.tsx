@@ -22,6 +22,7 @@ function UploadSkill() {
 
   async function send(files: FileList | null) {
     if (!files || busy) return;
+
     setBusy(true);
     try {
       await upload([...files]);
@@ -32,7 +33,9 @@ function UploadSkill() {
 
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     setDragging(false);
+
     if (event.dataTransfer.files.length === 0) return;
+
     event.preventDefault();
     void send(event.dataTransfer.files);
   }
@@ -43,6 +46,7 @@ function UploadSkill() {
       data-dragging={dragging || undefined}
       onDragOver={(event) => {
         if (!event.dataTransfer.types.includes("Files")) return;
+
         event.preventDefault();
         setDragging(true);
       }}
@@ -122,7 +126,9 @@ function PersonalSkill({ skill }: { skill: Skill }) {
 
 export function SkillsList() {
   const { builtIn, personal, loaded } = useSkills();
+
   if (!loaded) return null;
+
   const replaced = new Set(personal.filter((skill) => skill.enabled).map((skill) => skill.name));
 
   return (

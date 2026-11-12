@@ -41,6 +41,7 @@ run("createBotChats (postgres)", async () => {
   afterAll(async () => {
     if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
     else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
+
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -105,7 +106,9 @@ run("createBotChats (postgres)", async () => {
     const seen: string[] = [];
     for await (const event of botChats.events(alice, mine!.id, controller.signal)) {
       if (event?.type === "snapshot") seen.push(...event.messages.map((message) => message.text));
+
       if (event?.type === "message") seen.push(event.message.text);
+
       if (seen.length === 2) controller.abort();
     }
     expect(seen).toEqual(["hello", "hi Alice"]);
@@ -602,7 +605,9 @@ run("createBotChats (postgres)", async () => {
     let spoke = false;
     const decide = (request: CompletionRequest) => {
       requests.push(JSON.stringify(request));
+
       if (!request.tools?.length) return [text("SUMMARY OF EARLIER TALK")];
+
       spoke = !spoke;
       return spoke ? [toolCall("send_message", { text: "ok" })] : [text("")];
     };

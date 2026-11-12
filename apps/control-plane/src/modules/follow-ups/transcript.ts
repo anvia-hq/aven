@@ -14,12 +14,16 @@ const textOf = (message: ChatMessage) =>
 
 export function followUpTranscript(messages: readonly ChatMessage[]) {
   const last = messages.at(-1);
+
   if (last?.role !== "assistant" || textOf(last) === "") return undefined;
+
   return messages
     .slice(-MESSAGES)
     .flatMap((message) => {
       const text = textOf(message);
+
       if (text === "") return [];
+
       return message.role === "user"
         ? [`User: ${spoken(text).slice(0, USER_CHARACTERS)}`]
         : [`Agent: ${text.slice(-AGENT_CHARACTERS)}`];

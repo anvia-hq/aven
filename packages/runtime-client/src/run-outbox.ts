@@ -38,7 +38,9 @@ export class RunOutbox {
 
   push(runId: string, make: (seq: number) => RuntimeToControlPlane, source?: Source) {
     const seq = this.#next.get(runId);
+
     if (seq === undefined) return null;
+
     this.#next.set(runId, seq + 1);
     const message = make(seq);
     this.#db
@@ -46,10 +48,12 @@ export class RunOutbox {
         "insert into outbox (run_id, seq, message, source, source_sequence) values (?, ?, ?, ?, ?)",
       )
       .run(runId, seq, JSON.stringify(message), source?.id ?? null, source?.sequence ?? null);
+
     if (seq > MAX_ENTRIES)
       this.#db
         .query("delete from outbox where run_id = ? and seq <= ?")
         .run(runId, seq - MAX_ENTRIES);
+
     return message;
   }
 
@@ -73,6 +77,7 @@ export class RunOutbox {
 
   attach(runId: string, after: number) {
     if (!this.#next.has(runId)) return [];
+
     this.#attached.add(runId);
     return this.#db
       .query<{ message: string }, [string, number]>(
@@ -96,8 +101,11 @@ export class RunOutbox {
 
 export function openRunDatabase(path: string) {
   if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });
+
   const db = new Database(path, { create: true });
+
   if (path !== ":memory:") chmodSync(path, 0o600);
+
   db.run("pragma journal_mode = wal");
   db.run("pragma synchronous = normal");
   return db;

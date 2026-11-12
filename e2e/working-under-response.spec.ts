@@ -51,12 +51,15 @@ test.describe("the working indicator while a reply streams", () => {
       (window as unknown as { __stop: boolean }).__stop = false;
       const frame = () => {
         const w = window as unknown as { __stop: boolean };
+
         if (w.__stop) return;
+
         const indicator = document.querySelector<HTMLElement>('[data-role="working"]');
         const assistants = document.querySelectorAll<HTMLElement>('[data-role="assistant"]');
         const last = assistants[assistants.length - 1];
         const scroller = indicator?.closest<HTMLElement>(".overflow-y-auto") ?? null;
         const lines = document.querySelectorAll('[data-role="assistant"] li').length;
+
         if (indicator) {
           const top = indicator.getBoundingClientRect().top;
           const bottom = last?.getBoundingClientRect().bottom;
@@ -70,6 +73,7 @@ test.describe("the working indicator while a reply streams", () => {
         } else {
           samples.push({ present: false, lines, gap: null, contentY: null });
         }
+
         requestAnimationFrame(frame);
       };
       requestAnimationFrame(frame);
@@ -134,7 +138,9 @@ test.describe("the working indicator while a reply streams", () => {
         const indicator = document.querySelector<HTMLElement>('[data-role="working"]');
         const all = document.querySelectorAll<HTMLElement>('[data-role="assistant"]');
         const last = all[all.length - 1];
+
         if (!indicator || !last) return;
+
         frames.push({
           present: true,
           top: indicator.getBoundingClientRect().top,

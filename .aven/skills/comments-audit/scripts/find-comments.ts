@@ -23,10 +23,13 @@ function commentsOf(file: string) {
     );
     for (const range of ranges) {
       if (seen.has(range.pos)) continue;
+
       seen.add(range.pos);
       const comment = text.slice(range.pos, range.end);
       const body = comment.replace(/^\/\/|^\/\*+|\*+\/$/g, "");
+
       if (DIRECTIVE.test(body)) continue;
+
       found.push({
         line: source.getLineAndCharacterOfPosition(range.pos).line + 1,
         text: comment.split("\n")[0]!,
@@ -36,7 +39,9 @@ function commentsOf(file: string) {
 
   const visit = (node: ts.Node) => {
     const children = node.getChildren(source);
+
     if (children.length === 0 && node.kind !== ts.SyntaxKind.JsxText) collect(node);
+
     children.forEach(visit);
   };
   visit(source);

@@ -13,6 +13,7 @@ function recordingStore(compaction = true) {
     append: async (options) => void used.push({ op: "append", scope: options.scope }),
     clear: async (options) => void used.push({ op: "clear", scope: options.scope }),
   };
+
   if (compaction) {
     Object.assign(store, {
       compaction: {
@@ -27,6 +28,7 @@ function recordingStore(compaction = true) {
       },
     });
   }
+
   return { store, used };
 }
 

@@ -16,7 +16,9 @@ export function useDeleteProject() {
     const deleted = await attempt("Could not delete the project", () =>
       api<{ deleted: true }>(`/projects/${project.id}`, { method: "DELETE" }),
     );
+
     if (!deleted) return;
+
     toast.add({ title: "Project deleted", description: project.name, type: "success" });
     void navigate({ to: "/projects" });
     await Promise.all([refreshProjects(), refreshThreads()]);

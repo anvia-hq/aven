@@ -71,6 +71,7 @@ describe("the default runtime agent's model retries", () => {
         fetch() {
           if (++attempts === 1)
             return Response.json({ error: { message: "try again" } }, { status: 503 });
+
           const chunk = (delta: Record<string, unknown>, finish: string | null) =>
             `data: ${JSON.stringify({
               id: "chatcmpl-retry",
@@ -129,7 +130,9 @@ describe("DurableRuns answering a question in the same process", () => {
     );
     const end = await asked.done;
     expect(end.type).toBe("interaction");
+
     if (end.type !== "interaction") return;
+
     const { interaction } = end.continuation as {
       interaction: { id: string; toolCallId: string };
     };
@@ -165,7 +168,9 @@ describe("DurableRuns after the process restarts", () => {
     );
     const end = await asked.done;
     expect(end.type).toBe("interaction");
+
     if (end.type !== "interaction") return;
+
     const { interaction } = end.continuation as {
       interaction: { id: string; toolCallId: string };
     };
@@ -272,7 +277,9 @@ describe("DurableRuns transcript turns", () => {
     );
     const end = await asked.done;
     expect(end.type).toBe("interaction");
+
     if (end.type !== "interaction") return;
+
     expect(end.messages.length).toBeGreaterThan(0);
     expect(before.transcriptTurn(asked.durableId, end)).toBe(0);
     await closed(before);

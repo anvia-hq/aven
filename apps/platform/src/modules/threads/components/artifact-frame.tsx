@@ -10,6 +10,7 @@ const SANDBOX = "allow-scripts";
 
 function Frame({ src, label, fill }: { src: string; label: string; fill?: boolean }) {
   const { frame, height, failed, attempt, retry } = useArtifactFrame();
+
   if (failed) {
     return (
       <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
@@ -23,6 +24,7 @@ function Frame({ src, label, fill }: { src: string; label: string; fill?: boolea
       </div>
     );
   }
+
   return (
     <iframe
       key={attempt}

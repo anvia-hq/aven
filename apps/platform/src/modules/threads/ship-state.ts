@@ -8,6 +8,7 @@ import type {
 
 const shipLabel = (latest: ThreadPullRequest | undefined): ShipLabel => {
   if (!latest) return "Ship";
+
   return latest.state === "open" ? "Update PR" : "New PR";
 };
 
@@ -16,18 +17,29 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
     facts;
   const [latest] = pullRequests;
   const busy = running || shipping;
+
   if (gate.kind === "checking") return { kind: "loading" };
+
   if (!changes.loaded) return { kind: "loading" };
+
   if (changes.problem) return { kind: "failed", reason: changes.problem };
+
   if (changes.available === false) return { kind: "none" };
+
   if (gate.kind === "unknown") return { kind: "blocked", label: shipLabel(latest) };
+
   if (gate.kind === "missing") {
     const command = gate.commands[0];
+
     if (!command) return { kind: "none" };
+
     return { kind: "set-up", command, skill: command.replace(/^\//, ""), disabled: busy };
   }
+
   if (connected === null) return { kind: "loading" };
+
   if (!connected) return { kind: "connect", appKey };
+
   if (changes.any) {
     return {
       kind: "ship",
@@ -37,13 +49,20 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
       canOpenNew: latest?.state === "open",
     };
   }
+
   if (latest) return { kind: "none" };
+
   if (!branch.loaded) return busy ? { kind: "none" } : { kind: "loading" };
+
   if (branch.problem) return { kind: "failed", reason: branch.problem };
+
   if (!branch.any) return { kind: "none" };
+
   if (!branchPulls.loaded) return { kind: "loading" };
+
   if (branchPulls.problem !== null || !branchPulls.known || branchPulls.any)
     return { kind: "none" };
+
   return { kind: "open", disabled: busy };
 }
 
@@ -54,7 +73,10 @@ export function connectionOf({
   account,
 }: ShipConnectionFacts): boolean | null {
   if (machine) return true;
+
   if (appKey === null) return checked ? false : null;
+
   if (account === null) return null;
+
   return account.data?.connected !== false;
 }

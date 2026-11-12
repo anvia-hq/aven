@@ -9,7 +9,9 @@ function setup(files: Record<string, Uint8Array>) {
   return createViewImageTool({
     readFile: async ({ path }) => {
       const bytes = files[path];
+
       if (!bytes) throw new Error(`File not found: ${path}`);
+
       return bytes;
     },
   });

@@ -5,6 +5,7 @@ export function messageBlocks(parts: MessagePart[]) {
   const result: Block[] = [];
   const group = (entry: ToolGroupEntry) => {
     const last = result.at(-1);
+
     if (last?.type === "tools") last.entries.push(entry);
     else result.push({ type: "tools", entries: [entry] });
   };
@@ -25,12 +26,16 @@ export function messageBlocks(parts: MessagePart[]) {
 
 export function foldedSteps(blocks: Block[]) {
   const answer = blocks.at(-1);
+
   if (answer?.type !== "text") return undefined;
+
   const before = blocks.slice(0, -1);
   const stays = (block: Block) =>
     block.type === "question" || block.type === "artifacts" || block.type === "fork";
   const kept = before.filter(stays);
   const steps = before.filter((block) => !stays(block));
+
   if (steps.length === 0) return undefined;
+
   return { steps, kept, answer };
 }

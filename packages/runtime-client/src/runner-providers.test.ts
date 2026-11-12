@@ -97,11 +97,17 @@ const toolsOf = (steps: Parameters<typeof scriptedModel>[0], seen?: string[][]) 
 
 const answerProvider: FakeControlPlaneOptions["answer"] = (message) => {
   if (message.method !== "bot.provider") return undefined;
+
   const { op } = message.params as { op: string };
+
   if (op === "remove") return null;
+
   if (op === "list") return [view];
+
   if (op === "models") return { models: ["gpt-5", "gpt-5-mini"] };
+
   if (op === "askKey") return { providerId, name: view.name };
+
   return view;
 };
 

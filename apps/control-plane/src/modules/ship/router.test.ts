@@ -91,8 +91,11 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
 
   const ship = (id: string, token: string | undefined, body?: object) => {
     const headers = new Headers();
+
     if (token) headers.set("authorization", `Bearer ${token}`);
+
     if (body) headers.set("content-type", "application/json");
+
     return fetch(`${base}/threads/${id}/ship`, {
       method: "POST",
       headers,
@@ -117,7 +120,9 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
   test("says whether the repository is set up to ship, to the thread's own organization", async () => {
     const readiness = (token: string | undefined) => {
       const headers = new Headers();
+
       if (token) headers.set("authorization", `Bearer ${token}`);
+
       return fetch(`${base}/threads/${thread.id}/ship`, { headers });
     };
 

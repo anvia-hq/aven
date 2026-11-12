@@ -32,8 +32,11 @@ export function useStartThread() {
       toast.add({ title: "Choose a project first", type: "error" });
       return false;
     }
+
     const thread = await createThread(projectId, titleOf(message));
+
     if (!thread) return false;
+
     rememberModelSelection(thread.id, selection);
     add(thread);
     handOverFirstPrompt(thread.id, message, selection);
