@@ -111,3 +111,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### Sign-in with GitHub (decision 0235)
 
 `auth/social.ts` (`socialProvidersOf`) gives Better Auth a `github` provider when `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` are both set, with the callback `<BETTER_AUTH_URL>/api/auth/callback/github`; `/platform/config` says `githubLogin`, and the sign-in and register pages show "Continue with GitHub" (`github-sign-in.tsx`, `use-github-sign-in.ts`). The registration hook runs for these accounts too, and signing in does not connect GitHub for runs (0044, 0192).
+
+### One control-plane replica (decision 0236)
+
+The control plane holds runner connections, runs, watched channels and run tokens in process memory, so it runs as one replica. More are by runtime affinity at the edge (a runner and the requests for its runtime go to one replica, hashed on the runtime id), not by replicas calling each other.
