@@ -37,16 +37,52 @@ export async function cloneRepositoryFolder(reposDir: string, repository: string
   return { path: await realpath(target) };
 }
 
-export async function refreshRepositoryFolder(folder: string, run: Git = git) {
+export async function fetchFolder(folder: string, run: Git = git) {
   const fetched = await run(["fetch", "--prune", "origin"], {
     cwd: folder,
     timeoutMs: FETCH_TIMEOUT_MS,
   }).catch(() => undefined);
+  return fetched?.code === 0;
+}
 
-  if (!fetched || fetched.code !== 0) return false;
+export async function refreshRepositoryFolder(folder: string, run: Git = git) {
+  if (!(await fetchFolder(folder, run))) return false;
 
   const merged = await run(["merge", "--ff-only", "@{upstream}"], { cwd: folder }).catch(
     () => undefined,
   );
   return merged?.code === 0;
+}
+
+const GITHUB_REFSPEC = "+refs/remotes/origin/*:refs/remotes/github/*";
+
+export async function startFromRemote(root: string, source: string, branch: string, run: Git) {
+  const remote = `refs/remotes/origin/${branch}`;
+  const known = await run(["rev-parse", "--verify", "-q", remote], { cwd: source });
+
+  if (known.code !== 0) return false;
+
+  const configured = await run(["config", "--get-all", "remote.origin.fetch"], { cwd: root });
+
+  if (!configured.stdout.split("\n").includes(GITHUB_REFSPEC)) {
+    await run(["config", "--add", "remote.origin.fetch", GITHUB_REFSPEC], { cwd: root });
+  }
+
+  const fetched = await run(["fetch", "origin", `+${remote}:refs/remotes/github/${branch}`], {
+    cwd: root,
+  });
+
+  if (fetched.code !== 0) return false;
+
+  const behind = await run(
+    ["merge-base", "--is-ancestor", "HEAD", `refs/remotes/github/${branch}`],
+    {
+      cwd: root,
+    },
+  );
+
+  if (behind.code !== 0) return false;
+
+  const moved = await run(["reset", "--hard", `refs/remotes/github/${branch}`], { cwd: root });
+  return moved.code === 0;
 }
