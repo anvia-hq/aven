@@ -21,7 +21,9 @@ test.describe("prompt composer", () => {
     await expect(
       page.getByRole("link", { name: "Add a provider to choose a model" }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Model and reasoning effort" }).click();
+    await expect(page.getByRole("option", { name: "Sonnet" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Back" })).toHaveCount(0);
   });
 
   test("the model and reasoning effort picked are sent with the message", async ({ page }) => {
