@@ -9,7 +9,14 @@ export const GUIDE = `# Using Aven from another harness
 
 Aven is a platform where coding agents run on the person's own machines (runners), in project folders. This server gives you the same API the Aven web app uses, as the person who made your access token, limited to the permissions they chose.
 
-## The three tools
+## The tools
+
+For the common work there are four tools, and the generic ones cover everything else.
+
+- \`aven_list_projects\`: the projects (folders on runners) with their ids.
+- \`aven_start_task\` \`{ projectId, prompt, title?, backend? }\`: makes a thread and gives the agent the task in one call. It answers with the thread's id.
+- \`aven_get_thread\` \`{ threadId }\`: whether the agent is still running (\`running\`) and the conversation so far. Poll it while \`running\` is true.
+- \`aven_stop_thread\` \`{ threadId }\`: stops the agent.
 
 - \`aven_workspaces\`: the workspaces (organizations) this person is in. Most routes work inside one workspace, so pass its \`organizationId\` to \`aven_call_api\`. It can be left out when the person has only one.
 - \`aven_search_api\` \`{ query? }\`: find routes. Every word of the query must appear in the route (\`threads messages\`, \`projects\`). Each route shows its \`tier\` and, for a route with a body, the body's JSON schema.
@@ -28,6 +35,8 @@ A route has a tier, and the token needs the matching permission:
 Some routes are never available through a token: sign-in, platform settings, runner connections, secrets, terminals and event streams. A call that sends a secret (a body with a token or password in it) is refused.
 
 ## The workflow people want most: give an agent a task
+
+Short form: \`aven_list_projects\`, then \`aven_start_task\`, then \`aven_get_thread\` until \`running\` is false. The same in routes:
 
 1. Find the project: \`GET /projects\`. A project is a folder on a runner, with an \`id\`, a name and the runner it lives on. To add one, \`POST /projects/folder\` \`{ runtimeId, path, name? }\` for a folder that is already on the runner, or \`POST /projects/repository\` \`{ runtimeId, repository, name? }\` to clone a repository onto it. \`GET /runtimes\` lists the runners and whether each is connected.
 2. Make a thread: \`POST /threads\` \`{ projectId, title?, backend? }\`. \`backend\` is \`native\` (a model key from Providers) or \`claude\` (the person's Claude subscription). The answer has the thread's \`id\`.

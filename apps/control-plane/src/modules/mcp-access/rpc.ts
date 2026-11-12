@@ -19,11 +19,78 @@ const PERMISSION_OF_TIER: Record<string, AccessPermission> = {
   confirm: "destructive",
 };
 
+const ORGANIZATION = {
+  type: "string",
+  description: "The workspace to act in. Leave out when there is only one.",
+};
+
+const NEEDS: Record<string, AccessPermission> = {
+  aven_list_projects: "read",
+  aven_get_thread: "read",
+  aven_start_task: "change",
+  aven_stop_thread: "change",
+};
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const TOOLS = [
   {
     name: "aven_workspaces",
     description: "List the Aven workspaces (organizations) the token's owner is in.",
     inputSchema: { type: "object", properties: {}, additionalProperties: false },
+  },
+  {
+    name: "aven_list_projects",
+    description:
+      "List the projects (folders on runners) in a workspace, with their ids. Start here to give an agent a task.",
+    inputSchema: {
+      type: "object",
+      properties: { organizationId: ORGANIZATION },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "aven_start_task",
+    description:
+      "Start an agent on a project: creates a thread and sends it the task. Returns the thread's id; the agent keeps working, so follow it with aven_get_thread until running is false.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "string", description: "A project's id from aven_list_projects" },
+        prompt: { type: "string", description: "The task, as you would tell a colleague" },
+        title: { type: "string", description: "A title for the thread" },
+        backend: {
+          type: "string",
+          enum: ["native", "claude"],
+          description:
+            "native uses a model key from Providers; claude uses the person's Claude subscription",
+        },
+        organizationId: ORGANIZATION,
+      },
+      required: ["projectId", "prompt"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "aven_get_thread",
+    description:
+      "Read a thread: whether the agent is still running and the conversation so far. Poll every few seconds while running is true.",
+    inputSchema: {
+      type: "object",
+      properties: { threadId: { type: "string" }, organizationId: ORGANIZATION },
+      required: ["threadId"],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "aven_stop_thread",
+    description: "Stop the agent working in a thread.",
+    inputSchema: {
+      type: "object",
+      properties: { threadId: { type: "string" }, organizationId: ORGANIZATION },
+      required: ["threadId"],
+      additionalProperties: false,
+    },
   },
   {
     name: "aven_search_api",
@@ -62,7 +129,7 @@ const RESOURCES = [
   {
     uri: GUIDE_URI,
     name: "How to use Aven",
-    description: "What Aven is, the three tools, the permissions, and how to give an agent a task.",
+    description: "What Aven is, the tools, the permissions, and how to give an agent a task.",
     mimeType: "text/markdown",
   },
   {
@@ -95,6 +162,41 @@ const text = (value: unknown, isError = false) => {
 };
 
 export function createMcpServer({ api, version }: McpServerOptions) {
+  async function route(
+    caller: McpCaller,
+    method: BotApiMethod,
+    rawPath: string,
+    body: unknown,
+    organizationId: unknown,
+  ): Promise<{ refusal: string } | { status: number; body: unknown }> {
+    const { path } = normalizePath(rawPath);
+    const tier = classify(method, path);
+
+    if (tier === "blocked") return { refusal: "This route is not available through a token" };
+
+    const needed = PERMISSION_OF_TIER[tier]!;
+
+    if (!caller.permissions.includes(needed)) {
+      return { refusal: `This token does not have the ${needed} permission` };
+    }
+
+    const call: BotApiParams = {
+      replyId: `mcp-${caller.tokenId}`,
+      op: "call",
+      method,
+      path: rawPath,
+      confirmed: true,
+    };
+
+    if (body !== undefined) call.body = body;
+
+    if (typeof organizationId === "string") call.organizationId = organizationId;
+
+    const answer = await api.answer({ userId: caller.userId, params: call, onPersonsWord: true });
+
+    return "status" in answer ? answer : { refusal: "The call did not answer" };
+  }
+
   async function callTool(caller: McpCaller, name: string, args: Record<string, unknown>) {
     const replyId = `mcp-${caller.tokenId}`;
 
@@ -135,32 +237,73 @@ export function createMcpServer({ api, version }: McpServerOptions) {
         return text("Pass a method (GET, POST, PUT, PATCH or DELETE) and a path", true);
       }
 
-      const { path } = normalizePath(args.path);
-      const tier = classify(method, path);
+      const done = await route(caller, method, args.path, args.body, args.organizationId);
 
-      if (tier === "blocked") return text("This route is not available through a token", true);
+      return "refusal" in done ? text(done.refusal, true) : text(done, done.status >= 400);
+    }
 
-      const needed = PERMISSION_OF_TIER[tier]!;
+    if (name === "aven_list_projects") {
+      const done = await route(caller, "GET", "/projects", undefined, args.organizationId);
 
-      if (!caller.permissions.includes(needed)) {
-        return text(`This token does not have the ${needed} permission`, true);
+      return "refusal" in done ? text(done.refusal, true) : text(done, done.status >= 400);
+    }
+
+    if (name === "aven_get_thread" || name === "aven_stop_thread") {
+      if (typeof args.threadId !== "string" || !UUID.test(args.threadId)) {
+        return text("Pass threadId, the thread's id", true);
       }
 
-      const call: BotApiParams = { replyId, op: "call", method, path: args.path, confirmed: true };
+      const done =
+        name === "aven_get_thread"
+          ? await route(caller, "GET", `/threads/${args.threadId}`, undefined, args.organizationId)
+          : await route(
+              caller,
+              "POST",
+              `/threads/${args.threadId}/cancel`,
+              undefined,
+              args.organizationId,
+            );
 
-      if (args.body !== undefined) call.body = args.body;
+      return "refusal" in done ? text(done.refusal, true) : text(done, done.status >= 400);
+    }
 
-      if (typeof args.organizationId === "string") call.organizationId = args.organizationId;
+    if (name === "aven_start_task") {
+      if (typeof args.projectId !== "string" || !UUID.test(args.projectId)) {
+        return text("Pass projectId, the project's id from aven_list_projects", true);
+      }
 
-      const answer = await api.answer({
-        userId: caller.userId,
-        params: call,
-        onPersonsWord: true,
-      });
+      if (typeof args.prompt !== "string" || args.prompt.trim() === "") {
+        return text("Pass prompt, the task for the agent", true);
+      }
 
-      if (!("status" in answer)) return text("The call did not answer", true);
+      const thread: Record<string, unknown> = { projectId: args.projectId };
 
-      return text(answer, answer.status >= 400);
+      if (typeof args.title === "string") thread.title = args.title;
+
+      if (typeof args.backend === "string") thread.backend = args.backend;
+
+      const created = await route(caller, "POST", "/threads", thread, args.organizationId);
+
+      if ("refusal" in created) return text(created.refusal, true);
+
+      const threadId = record(created.body).id;
+
+      if (created.status >= 400 || typeof threadId !== "string") return text(created, true);
+
+      const sent = await route(
+        caller,
+        "POST",
+        `/threads/${threadId}/messages`,
+        { prompt: args.prompt },
+        args.organizationId,
+      );
+
+      if ("refusal" in sent) return text({ threadId, started: false, reason: sent.refusal }, true);
+
+      return text(
+        { threadId, started: sent.status < 400, status: sent.status, body: sent.body },
+        sent.status >= 400,
+      );
     }
 
     return text(`There is no tool named ${name}`, true);
@@ -182,7 +325,14 @@ export function createMcpServer({ api, version }: McpServerOptions) {
 
     if (request.method === "ping") return ok(id, {});
 
-    if (request.method === "tools/list") return ok(id, { tools: TOOLS });
+    if (request.method === "tools/list") {
+      return ok(id, {
+        tools: TOOLS.filter((tool) => {
+          const needed = NEEDS[tool.name];
+          return !needed || caller.permissions.includes(needed);
+        }),
+      });
+    }
 
     if (request.method === "resources/list") return ok(id, { resources: RESOURCES });
 
