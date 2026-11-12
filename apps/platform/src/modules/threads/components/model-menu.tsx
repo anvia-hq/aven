@@ -33,7 +33,11 @@ export function ModelMenu({ model, agent }: Props) {
   const listing = choosing || (!provider && !using);
 
   const usingClaude = using?.backend === "claude";
-  const shownLevels = usingClaude ? [...CLAUDE_EFFORTS] : using ? [] : levels;
+  let shownLevels = levels;
+
+  if (usingClaude) shownLevels = [...CLAUDE_EFFORTS];
+  else if (using) shownLevels = [];
+
   const shownEffort = usingClaude ? (using.effort ?? CLAUDE_DEFAULT_EFFORT) : effort;
   const efforts = shownLevels.length > 1;
   const label = using ? agentLabel(using) : (modelLabel ?? "Provider default");

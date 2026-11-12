@@ -156,6 +156,7 @@ export class RemoteRuntime implements Runtime {
       if (codexLogin) message.codexLogin = codexLogin;
 
       if (codexModel) message.codexModel = codexModel;
+
       if (claudeEffort) message.claudeEffort = claudeEffort;
 
       return message;
@@ -224,6 +225,7 @@ export class RemoteRuntime implements Runtime {
         if (codexLogin) message.codexLogin = codexLogin;
 
         if (codexModel) message.codexModel = codexModel;
+
         if (claudeEffort) message.claudeEffort = claudeEffort;
 
         return message;
