@@ -1,6 +1,6 @@
 # A runner works on its machine, and the container sandbox is retired
 
-Status: accepted. Follows 0218, which made a runner able to work on its own machine and a project a folder on it. Supersedes the container sandbox (0008, 0009, 0010, 0012, 0014, 0016, 0037, 0038, 0072, 0095, 0113, 0127, 0128, 0166, 0169, 0171; 0211's macOS VM idea is dropped), the Desktop (0015, 0039; 0059 in part), the Browser (0199, 0203), environment snapshots (0043, 0197, 0201), the sandbox image and its release (0073's `aven-sandbox`), and the GitHub import (0013, 0074, 0123) as the way to make a project.
+Status: accepted. Follows 0218, which made a runner able to work on its own machine and a project a folder on it. Supersedes the container sandbox (0008, 0009, 0010, 0012, 0014, 0016, 0037, 0038, 0072, 0095, 0113, 0127, 0128, 0166, 0169, 0171; 0211's macOS VM idea is dropped), the Desktop (0015, 0039; 0059 in part), the Browser (0199, 0203), environment snapshots (0043, 0197, 0201), the sandbox image and its release (0073's `aven-sandbox`), and the GitHub import (0013, 0074, 0123) as the way to make a project. The `setup-env` skill it removed is back as a script with no snapshot: 0225.
 
 ## Context
 
