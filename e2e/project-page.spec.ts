@@ -1,17 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, registerUser } from "./helpers";
+import { addRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
 
 async function projectOf(page: Page, name: string) {
   await addRunner(page);
   await connectGithub(page);
-  const [installation] = await (await page.request.get("/api/github/installations")).json();
-  const [runtime] = await (await page.request.get("/api/runtimes")).json();
-  const response = await page.request.post("/api/projects", {
-    data: { installationId: installation.id, repository: `acme/${name}`, runtimeId: runtime.id },
-  });
-  expect(response.ok()).toBe(true);
-  return (await response.json()) as { id: string };
+  return seedGithubProject(page, name, "first");
 }
 
 test.describe("the project page", () => {
@@ -163,7 +157,7 @@ test.describe("the project page", () => {
     expect((await made.json()).runtimeId).toBe(secondId);
   });
 
-  test("deleting a project hides it, archives its threads and lets the repository be imported again", async ({
+  test("deleting a project hides it, archives its threads and lets the repository be added again", async ({
     page,
   }) => {
     await registerUser(page, "deleter", "Deleter Person");
@@ -204,17 +198,8 @@ test.describe("the project page", () => {
     });
     expect(sent.status()).toBe(409);
 
-    const [installation] = await (await page.request.get("/api/github/installations")).json();
-    const [runtime] = await (await page.request.get("/api/runtimes")).json();
-    const again = await page.request.post("/api/projects", {
-      data: {
-        installationId: installation.id,
-        repository: "acme/shiny-app",
-        runtimeId: runtime.id,
-      },
-    });
-    expect(again.ok()).toBe(true);
-    expect(((await again.json()) as { id: string }).id).not.toBe(project.id);
+    const again = await seedGithubProject(page, "shiny-app", "first");
+    expect(again.id).not.toBe(project.id);
   });
 
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
@@ -243,16 +228,7 @@ test.describe("the project page", () => {
   test("Start thread opens the new-thread page with this project chosen", async ({ page }) => {
     await registerUser(page, "repo", "Repo Person");
     await projectOf(page, "shiny-app");
-    const [installation] = await (await page.request.get("/api/github/installations")).json();
-    const [runtime] = await (await page.request.get("/api/runtimes")).json();
-    const docs = await page.request.post("/api/projects", {
-      data: {
-        installationId: installation.id,
-        repository: "acme/docs-site",
-        runtimeId: runtime.id,
-      },
-    });
-    const { id } = (await docs.json()) as { id: string };
+    const { id } = await seedGithubProject(page, "docs-site", "first");
 
     await page.goto(`/projects/${id}`);
     await page.getByRole("button", { name: "Start thread" }).click();

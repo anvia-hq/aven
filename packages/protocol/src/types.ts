@@ -478,6 +478,7 @@ export type RunnerSelfCallMethod =
   | "runner.update"
   | "folders.list"
   | "folders.create"
+  | "folders.clone"
   | "folders.files"
   | "folders.readme"
   | "folders.commits";
@@ -495,6 +496,10 @@ export type FoldersListResult = {
 export type FoldersCreateParams = { path: string; name: string };
 
 export type FoldersCreateResult = { path: string };
+
+export type FoldersCloneParams = { repository: string };
+
+export type FoldersCloneResult = { path: string };
 
 export type FoldersFilesParams = { folder: string; path?: string };
 

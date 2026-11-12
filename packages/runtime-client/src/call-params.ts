@@ -7,6 +7,7 @@ import type {
   DiffScope,
   FilesCallParams,
   FoldersCommitsParams,
+  FoldersCloneParams,
   FoldersCreateParams,
   FoldersFilesParams,
   FoldersListParams,
@@ -155,6 +156,16 @@ export function foldersCreateParams(params: unknown): FoldersCreateParams {
   if (typeof path !== "string" || typeof name !== "string") throw invalid();
 
   return { path, name };
+}
+
+export function foldersCloneParams(params: unknown): FoldersCloneParams {
+  const { repository } = asRecord(params);
+
+  if (typeof repository !== "string" || repository.length === 0 || repository.length > 500) {
+    throw invalid();
+  }
+
+  return { repository };
 }
 
 export function foldersFilesParams(params: unknown): FoldersFilesParams {

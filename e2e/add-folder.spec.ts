@@ -16,8 +16,8 @@ test.describe("adding a folder", () => {
     runner = started.child;
 
     await page.goto("/projects");
-    await page.getByRole("button", { name: "Add a folder" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add a folder" });
+    await page.getByRole("button", { name: "Add project" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a project" });
     await expect(dialog.getByRole("button", { name: "Add", exact: true })).toBeDisabled();
 
     await dialog.getByRole("button", { name: "code" }).dblclick();
@@ -37,6 +37,25 @@ test.describe("adding a folder", () => {
     await expect(page.getByRole("link", { name: /notes/ })).toBeVisible();
   });
 
+  test("clones a repository onto the computer and makes it a project", async ({ page }) => {
+    await registerUser(page, "repo", "Repo Person");
+    const started = await threadOnFakeRunner(page, { FAKE_DIRS: "/work/code" });
+    runner = started.child;
+
+    await page.goto("/projects");
+    await page.getByRole("button", { name: "Add project" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a project" });
+    await dialog.getByRole("tab", { name: "Repository" }).click();
+    const clone = dialog.getByRole("button", { name: "Clone and add" });
+    await expect(clone).toBeDisabled();
+
+    await dialog.getByLabel("Repository").fill("acme/storefront");
+    await clone.click();
+
+    await expect(page.getByText("Repository added")).toBeVisible();
+    await expect(page.getByRole("link", { name: /storefront/ })).toBeVisible();
+  });
+
   test("a folder project's page lists its files, shows its README and its commits", async ({
     page,
   }) => {
@@ -45,8 +64,8 @@ test.describe("adding a folder", () => {
     runner = started.child;
 
     await page.goto("/projects");
-    await page.getByRole("button", { name: "Add a folder" }).click();
-    const dialog = page.getByRole("dialog", { name: "Add a folder" });
+    await page.getByRole("button", { name: "Add project" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add a project" });
     await dialog.getByRole("button", { name: "code" }).dblclick();
     await dialog.getByRole("button", { name: "notes" }).click();
     await dialog.getByRole("button", { name: "Add", exact: true }).click();

@@ -1,4 +1,4 @@
-import type { useAddFolder } from "./hooks/use-add-folder";
+import type { useAddProject } from "./hooks/use-add-project";
 
 export type Project = {
   id: string;
@@ -49,19 +49,6 @@ export type GithubStatus = {
 
 export type GithubAccount = { connected: boolean; login: string | null; appKey: string };
 
-export type GithubInstallation = {
-  id: string;
-  accountLogin: string;
-};
-
-export type GithubRepo = {
-  id: number;
-  fullName: string;
-  private: boolean;
-  defaultBranch: string;
-  description: string | null;
-};
-
 export type RepoEntry = { name: string; path: string; type: "file" | "directory" };
 
 export type RepoReadme = { name: string; path: string; text: string; truncated: boolean };
@@ -95,7 +82,7 @@ export type TrackedItem = {
 
 export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };
 
-export type AddFolderState = ReturnType<typeof useAddFolder>;
+export type AddProjectState = ReturnType<typeof useAddProject>;
 
 export type OrbColors = readonly [string, string, string];
 

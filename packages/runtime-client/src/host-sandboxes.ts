@@ -12,6 +12,7 @@ import { DirectorySandbox } from "./directory-sandbox";
 import { fetchBranch } from "./fetch-branch";
 import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
+import { cloneRepositoryFolder, refreshRepositoryFolder } from "./repository-clone";
 import { ensureLocalExcludes } from "./local-excludes";
 import { envOf, withProjectEnv } from "./project-env";
 import { runtimeHome } from "./runtime-home";
@@ -37,6 +38,7 @@ export class HostSandboxes implements ThreadWorkspaces {
   #config: HostSandboxConfig;
   #home: string;
   #dirs: string[];
+  #reposDir: string;
   #roots = new Map<string, Promise<string>>();
   #sandboxes = new Map<string, DirectorySandbox>();
   #projectEnv = new Map<string, Readonly<Record<string, string>>>();
@@ -47,7 +49,11 @@ export class HostSandboxes implements ThreadWorkspaces {
     const home = runtimeHome(config.home);
     mkdirSync(home, { recursive: true });
     this.#home = realpathSync(home);
-    this.#dirs = (config.dirs ?? []).map((dir) => realpathSync(dir));
+    this.#reposDir = join(this.#home, "repos");
+    mkdirSync(this.#reposDir, { recursive: true });
+    const served = (config.dirs ?? []).map((dir) => realpathSync(dir));
+    const repos = realpathSync(this.#reposDir);
+    this.#dirs = served.includes(repos) ? served : [...served, repos];
     this.artifacts = new ArtifactStore(join(this.#home, "artifacts"));
     this.uploads = new UploadStore(join(this.#home, "uploads"), true);
     this.skills = new SkillStore(join(this.#home, "skills"), true);
@@ -62,6 +68,10 @@ export class HostSandboxes implements ThreadWorkspaces {
     }
 
     return new HostSandboxes(config);
+  }
+
+  cloneRepository(repository: string) {
+    return cloneRepositoryFolder(this.#reposDir, repository, this.#config.git ?? git);
   }
 
   get dirs() {
@@ -193,6 +203,8 @@ export class HostSandboxes implements ThreadWorkspaces {
     const root = await realpath(dir);
 
     if (await isCloned(root)) return root;
+
+    if (source.startsWith(this.#reposDir + sep)) await refreshRepositoryFolder(source, run);
 
     const parent = thread.forkOf ? this.#workspaceDir(thread.forkOf) : undefined;
 

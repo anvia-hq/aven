@@ -372,6 +372,8 @@ export type ThreadRef = {
 
 export type Fetched = { branch: string; commit: string; previous: string | null };
 
+export type RepositoryAddress = { url: string; host: string; owner: string; name: string };
+
 export type Git = (
   args: string[],
   options: { cwd: string; env?: Record<string, string>; timeoutMs?: number },
@@ -529,6 +531,7 @@ export type RunnerCallsContext = {
   machineProcesses: MachineProcessWatch;
   steer(params: SteerParams): Promise<SteerResult>;
   dirs?: string[];
+  clone?: (repository: string) => Promise<{ path: string }>;
 };
 
 export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
@@ -553,6 +556,7 @@ export type RuntimeOptions = {
   build?: string;
   host?: boolean;
   dirs?: string[];
+  clone?: (repository: string) => Promise<{ path: string }>;
   update?: (release: string | undefined) => void;
   createAgent?: CreateRuntimeAgent;
   createBotAgent?: CreateBotReplyAgent;

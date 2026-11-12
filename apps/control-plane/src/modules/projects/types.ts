@@ -1,4 +1,5 @@
 import type {
+  FoldersCloneResult,
   FoldersCommitsResult,
   FoldersFilesResult,
   FoldersReadmeResult,
@@ -8,4 +9,5 @@ export type ProjectFolders = {
   files: (runtimeId: string, folder: string, path: string) => Promise<FoldersFilesResult>;
   commits: (runtimeId: string, folder: string, page: number) => Promise<FoldersCommitsResult>;
   readme: (runtimeId: string, folder: string) => Promise<FoldersReadmeResult>;
+  clone: (runtimeId: string, repository: string) => Promise<FoldersCloneResult>;
 };

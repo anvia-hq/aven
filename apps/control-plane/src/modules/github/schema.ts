@@ -3,8 +3,6 @@ import { z } from "zod";
 const LOCAL_PATH = /^\/(?![/\\])[\w\-./?=&%#]*$/;
 export const isLocalPath = (path: string) => LOCAL_PATH.test(path);
 
-export const installationParams = z.object({ id: z.uuid() });
-
 export const callbackQuery = z.object({
   installation_id: z.coerce.number().int().positive().optional(),
   state: z.string().min(1).optional(),

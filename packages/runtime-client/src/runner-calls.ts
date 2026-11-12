@@ -4,6 +4,7 @@ import {
   computerCallParams,
   diffGetParams,
   filesCallParams,
+  foldersCloneParams,
   foldersCreateParams,
   foldersCommitsParams,
   foldersFilesParams,
@@ -41,6 +42,7 @@ export function createRunnerCalls({
   update,
   steer,
   dirs = [],
+  clone,
 }: RunnerCallsContext) {
   const machineCall = createMachineCalls({ sandbox, boxes, idle, machineProcesses });
 
@@ -144,6 +146,12 @@ export function createRunnerCalls({
     if (method === "folders.create") {
       const { path, name } = foldersCreateParams(params);
       return createFolder(dirs, path, name);
+    }
+
+    if (method === "folders.clone") {
+      if (!clone) throw new Error("This runner cannot clone a repository");
+
+      return clone(foldersCloneParams(params).repository);
     }
 
     if (method === "folders.files") {

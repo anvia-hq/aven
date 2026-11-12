@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import type { RuntimeHub } from "./hub";
 import type {
+  FoldersCloneResult,
   FoldersCommitsResult,
   FoldersCreateResult,
   FoldersFilesResult,
@@ -11,6 +12,7 @@ import type {
 } from "@aven/protocol/types";
 
 const CALL_MS = 15_000;
+const CLONE_MS = 11 * 60_000;
 
 const listed: z.ZodType<FoldersListResult> = z.object({
   path: z.string().nullable(),
@@ -19,6 +21,8 @@ const listed: z.ZodType<FoldersListResult> = z.object({
 });
 
 const created: z.ZodType<FoldersCreateResult> = z.object({ path: z.string() });
+
+const cloned: z.ZodType<FoldersCloneResult> = z.object({ path: z.string() });
 
 const files: z.ZodType<FoldersFilesResult> = z.object({
   entries: z.array(
@@ -54,17 +58,19 @@ async function ask<T>(
   method:
     | "folders.list"
     | "folders.create"
+    | "folders.clone"
     | "folders.files"
     | "folders.readme"
     | "folders.commits",
   params: object,
   shape: z.ZodType<T>,
+  waitMs = CALL_MS,
 ): Promise<T> {
   const runner = hub.get(runtimeId);
 
   if (!runner) throw new UnavailableError("The computer is offline");
 
-  const reply = await runner.call(method, params, CALL_MS).catch((error: unknown) => {
+  const reply = await runner.call(method, params, waitMs).catch((error: unknown) => {
     const reason = describeError(error);
 
     if (/unknown call/i.test(reason)) {
@@ -72,7 +78,7 @@ async function ask<T>(
     }
 
     if (
-      /does not serve|not on this machine|already exists|slash|empty|serves no|outside the folder|not in the folder/i.test(
+      /does not serve|not on this machine|already exists|could not clone|give the repository|slash|empty|serves no|outside the folder|not in the folder/i.test(
         reason,
       )
     ) {
@@ -90,6 +96,8 @@ export const runnerFolders = (hub: RuntimeHub) => ({
     ask(hub, runtimeId, "folders.list", { path }, listed),
   create: (runtimeId: string, path: string, name: string) =>
     ask(hub, runtimeId, "folders.create", { path, name }, created),
+  clone: (runtimeId: string, repository: string) =>
+    ask(hub, runtimeId, "folders.clone", { repository }, cloned, CLONE_MS),
   files: (runtimeId: string, folder: string, path: string) =>
     ask(hub, runtimeId, "folders.files", { folder, path }, files),
   commits: (runtimeId: string, folder: string, page: number) =>

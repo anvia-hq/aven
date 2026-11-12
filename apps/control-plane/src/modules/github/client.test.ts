@@ -56,7 +56,7 @@ describe("githubConfigFromEnv", () => {
   test("an unconfigured client refuses to talk to GitHub", async () => {
     const client = new GithubClient(null);
     expect(client.configured).toBe(false);
-    await expect(client.listRepos(1)).rejects.toBeInstanceOf(GithubNotConfiguredError);
+    await expect(client.folder(1, "acme/web", "")).rejects.toBeInstanceOf(GithubNotConfiguredError);
   });
 });
 
@@ -129,50 +129,6 @@ describe("GithubClient", () => {
     expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
       permissions: { contents: "read", metadata: "read" },
     });
-  });
-
-  test("lists repositories with the installation token", async () => {
-    const github = fakeGithub({
-      "POST /app/installations/7/access_tokens": {
-        token: "ghs_one",
-        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-      },
-      "GET /installation/repositories?per_page=100&page=1": {
-        repositories: [
-          {
-            id: 1,
-            full_name: "acme/web",
-            private: true,
-            default_branch: "main",
-            clone_url: "https://github.com/acme/web.git",
-            description: null,
-          },
-        ],
-      },
-    });
-    const client = new GithubClient(config, github.fetch);
-
-    expect(await client.listRepos(7)).toEqual([
-      {
-        id: 1,
-        fullName: "acme/web",
-        private: true,
-        defaultBranch: "main",
-        cloneUrl: "https://github.com/acme/web.git",
-        description: null,
-      },
-    ]);
-    expect(auth(github.calls.at(-1)!)).toBe("Bearer ghs_one");
-  });
-
-  test("a repository the installation cannot see is null, not an error", async () => {
-    const github = fakeGithub({
-      "POST /app/installations/7/access_tokens": {
-        token: "ghs_one",
-        expires_at: new Date(Date.now() + 3_600_000).toISOString(),
-      },
-    });
-    expect(await new GithubClient(config, github.fetch).repo(7, "acme/secret")).toBeNull();
   });
 
   describe("a repository's folders and README (decision 0082)", () => {

@@ -2,14 +2,7 @@ import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { githubAppSetup } from "./app-setup";
-import {
-  appCallbackQuery,
-  callbackQuery,
-  connectQuery,
-  installationParams,
-  manifestQuery,
-  userQuery,
-} from "./schema";
+import { appCallbackQuery, callbackQuery, connectQuery, manifestQuery, userQuery } from "./schema";
 import { githubService, InstallationNotAllowedError } from "./service";
 import { githubUserTokenService } from "./user-tokens";
 
@@ -71,11 +64,6 @@ export const githubRouter = (
       auth: true,
       org: true,
     })
-    .get(
-      "/installations/:id/repos",
-      ({ params, organizationId }) => service.repos(organizationId, params.id),
-      { auth: true, org: true, params: installationParams },
-    )
     .get(
       "/callback",
       async ({ query, organizationId, user, redirect }) => {

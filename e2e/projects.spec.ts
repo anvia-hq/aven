@@ -1,21 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, registerUser } from "./helpers";
+import { addRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
 
 async function importProject(page: Page, repository: string) {
-  const [installation] = (await (await page.request.get("/api/github/installations")).json()) as {
-    id: string;
-  }[];
-  const [runtime] = (await (await page.request.get("/api/runtimes")).json()) as { id: string }[];
-  const response = await page.request.post("/api/projects", {
-    data: {
-      installationId: installation!.id,
-      repository: `acme/${repository}`,
-      runtimeId: runtime!.id,
-    },
-  });
-  expect(response.ok()).toBe(true);
-  return (await response.json()) as { id: string; name: string };
+  return seedGithubProject(page, repository, "first");
 }
 
 async function startThread(page: Page, projectId: string, title: string) {

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
 
+import { git } from "./git-clone";
 import { HostSandboxes } from "./host-sandboxes";
 import { createRemoteRepo } from "./testing/remote-repo";
 
@@ -240,11 +241,36 @@ describe("a runner that works on this machine", () => {
       );
     });
 
-    test("lists the folders it serves", async () => {
+    test("a cloned repository is served, and a thread starts from what the remote has by then", async () => {
       const { dir } = await createRemoteRepo();
-      const { sandbox } = await runner([dir]);
+      const home = await mkdtemp(join(tmpdir(), "aven-host-"));
+      homes.push(home);
+      const sandbox = await HostSandboxes.start({
+        home,
+        git: (args, options) =>
+          git(
+            args.map((arg) => (arg === "https://github.com/acme/app.git" ? dir : arg)),
+            options,
+          ),
+      });
+      sandboxes.push(sandbox);
+      const { path } = await sandbox.cloneRepository("acme/app");
+      await writeFile(join(dir, "later.txt"), "newer");
+      await git(["add", "."], { cwd: dir });
+      await git(["commit", "-q", "-m", "later"], { cwd: dir });
 
-      expect(sandbox.dirs).toEqual([await realpath(dir)]);
+      await sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(path) });
+
+      expect(await readFile(join(sandbox.paths("t1").workspace, "later.txt"), "utf8")).toBe(
+        "newer",
+      );
+    });
+
+    test("lists the folders it serves, and its own folder for repositories", async () => {
+      const { dir } = await createRemoteRepo();
+      const { sandbox, home } = await runner([dir]);
+
+      expect(sandbox.dirs).toEqual([await realpath(dir), join(home, "repos")]);
     });
   });
 });

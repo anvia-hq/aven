@@ -499,6 +499,16 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
     return reply({ path: `${path}/${name}` });
   }
 
+  if (call.method === "folders.clone") {
+    const { repository } = call.params as { repository: string };
+    const name =
+      repository
+        .replace(/\.git$/, "")
+        .split("/")
+        .pop() ?? repository;
+    return reply({ path: `${config.self.dirs[0] ?? "/work/code"}/${name}` });
+  }
+
   if (call.method === "folders.files") {
     const { path } = call.params as { path?: string };
     const entries = path
