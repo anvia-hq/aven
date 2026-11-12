@@ -1,5 +1,9 @@
 actions:
-  - name: Set up
-    run: bash .aven/setup
-  - name: Start stack
-    run: bash .aven/stack
+  - name: Rebase
+    prompt: |
+      Update this branch from the default branch and fix any conflicts.
+      1. Commit or stash nothing that is not yours; leave other changes alone.
+      2. Fetch the base (git fetch origin main; for a folder project, fetch it from the folder's own GitHub remote) and run git rebase on it.
+      3. If there are conflicts, resolve them in code this branch touched, keeping both sides' intent. If one is in a place you cannot judge, stop and tell me instead of guessing.
+      4. After the rebase, run bun run typecheck, bun run lint and bun test apps packages (with the project's environment variables), and fix what the rebase broke.
+      5. Tell me what conflicted and how you resolved it. If the branch was already pushed, a rebase needs git push --force-with-lease: do it for this branch only (never main), and say that you did.
