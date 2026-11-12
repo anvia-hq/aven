@@ -6,6 +6,8 @@ import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
+test.use({ video: "on" });
+
 const API_PORT = 8220;
 const WEB_PORT = 5286;
 const API = `http://127.0.0.1:${API_PORT}`;
@@ -81,7 +83,6 @@ async function journalHas(home: string, text: string) {
 
 test.describe("a thread on the Claude backend", () => {
   test.describe.configure({ timeout: 120_000 });
-  test.use({ video: "on" });
 
   const databaseUrl = agentDatabaseUrl();
   const localToken = `avrt_${randomBytes(24).toString("hex")}`;
