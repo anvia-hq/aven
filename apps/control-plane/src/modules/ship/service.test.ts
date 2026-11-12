@@ -10,6 +10,7 @@ const threadId = "abcdef12-0000-4000-8000-000000000000";
 const project = {
   githubInstallationId: "inst-1",
   repoFullName: "acme/app",
+  directory: null as string | null,
   defaultBranch: "develop",
   pullRequests: [] as {
     number: number;
@@ -36,6 +37,7 @@ function setup(
     has?: string[];
     pullRequests?: (typeof project)["pullRequests"];
     installation?: string | null;
+    directory?: string | null;
     lifetime?: "persistent" | "ephemeral";
   } = {},
 ) {
@@ -54,6 +56,7 @@ function setup(
       ...project,
       githubInstallationId: options.installation === undefined ? "inst-1" : options.installation,
       pullRequests: options.pullRequests ?? [],
+      directory: options.directory ?? null,
       lifetime: options.lifetime ?? "persistent",
     }),
     userTokens: {
@@ -134,6 +137,15 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
 });
 
 describe("shipping a thread", () => {
+  test("a folder project's prompt says origin is the folder and how to push on to GitHub", async () => {
+    const { service, sent } = setup({ installation: null, directory: "/home/ada/app" });
+
+    await service.ship("org-1", "user-1", threadId);
+
+    expect(sent[0]!.prompt).toContain("origin here is that folder, not GitHub");
+    expect(sent[0]!.prompt).toContain("git -C /home/ada/app remote -v");
+  });
+
   test("a project with no GitHub app ships on a persistent runner without a GitHub check", async () => {
     const { service, sent, checked } = setup({ installation: null });
 

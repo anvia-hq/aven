@@ -15,6 +15,7 @@ type Context = {
   base: string;
   mode: ShipMode;
   pullRequests: PullRequest[];
+  folder?: string | null;
 };
 
 const quote = (title: string) => JSON.stringify(title.replace(/\s+/g, " ").trim().slice(0, 80));
@@ -65,6 +66,15 @@ function defaultPrompt(context: Context) {
   return `${mode === "new" ? "Ship the new work in this thread as its own pull request." : "Ship this thread's work as a pull request."}\n\n${numbered}`;
 }
 
+function folderNote({ folder, branch, base }: Context) {
+  if (!folder) return "";
+
+  return `This project is a folder on this machine, ${folder}, and origin here is that folder, not GitHub: git push origin HEAD only hands the branch to the folder. Asking you to ship also asks you to push it on from the folder to its own GitHub remote, which is outside /workspace. Find the remote with git -C ${folder} remote -v, fetch the base from it (git -C ${folder} fetch <remote> ${base}) before you rebase, push the branch you ship from the folder without forcing (git -C ${folder} push -u <remote> <branch>, where <branch> is ${branch} or one that starts with ${branch}-), and run gh from inside ${folder} (gh pr create --head <branch>).`;
+}
+
+const WATCH_NOTE =
+  "When a pull request is open, opened now or updated, do not stop at its URL: watch it until it can be merged. Start a background command with exec_command (background: true) that polls it with gh (gh pr checks, gh pr view --json mergeable,reviewDecision) and exits when the checks have finished, a check failed, the pull request was closed or merged, or it has a conflict, so this thread wakes when it ends. Then look at the pull request: read every review comment on its latest commit, including filtered ones; fix a failing check or a comment, push, and start watching again. It is mergeable when all checks pass, no comment is left unaddressed and it has no conflict: say so and give its URL. Never merge it yourself.";
+
 function whereNote(context: Context) {
   const { branch, base, pullRequests } = context;
   const lines = [
@@ -80,6 +90,12 @@ function whereNote(context: Context) {
       ),
     );
   }
+
+  const folder = folderNote(context);
+
+  if (folder) lines.push(folder);
+
+  lines.push(WATCH_NOTE);
 
   return lines.join("\n");
 }
