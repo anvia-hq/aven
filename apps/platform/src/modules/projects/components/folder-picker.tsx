@@ -61,6 +61,12 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
               className="h-9 w-full justify-start gap-2 rounded-none px-3 font-normal select-none aria-pressed:bg-primary/15 aria-pressed:shadow-[inset_2px_0_0_var(--color-primary)]"
               onClick={() => onChange(folder.path)}
               onDoubleClick={() => openFolder(folder.path)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter") return;
+
+                event.preventDefault();
+                openFolder(folder.path);
+              }}
             >
               <Folder className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{folder.name}</span>
