@@ -3,7 +3,7 @@ import { mkdirSync } from "node:fs";
 import { claudeExecutable } from "./claude-binary";
 import { claudeMcpTools } from "./claude-mcp";
 import { withoutRunnerSecrets } from "./runner-secrets";
-import type { ClaudeQuery, ClaudeSdkMessage } from "./types";
+import type { ClaudePromptItem, ClaudeQuery, ClaudeSdkMessage } from "./types";
 import type { RunEnvVar } from "@aven/protocol/types";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 
@@ -52,17 +52,45 @@ export function claudeProcessEnv(
   };
 }
 
-function userMessages(prompts: AsyncIterable<string>): AsyncIterable<{
+type UserBlock =
+  | { type: "text"; text: string }
+  | {
+      type: "image";
+      source: {
+        type: "base64";
+        media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+        data: string;
+      };
+    };
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+
+const imageType = (mediaType: string) => IMAGE_TYPES.find((type) => type === mediaType);
+
+function contentOf(item: ClaudePromptItem): string | UserBlock[] {
+  if (typeof item === "string") return item;
+
+  const blocks: UserBlock[] = [{ type: "text", text: item.text }];
+
+  for (const { mediaType, data } of item.images) {
+    const media_type = imageType(mediaType);
+
+    if (media_type) blocks.push({ type: "image", source: { type: "base64", media_type, data } });
+  }
+  return blocks.length === 1 ? item.text : blocks;
+}
+
+function userMessages(prompts: AsyncIterable<ClaudePromptItem>): AsyncIterable<{
   type: "user";
-  message: { role: "user"; content: string };
+  message: { role: "user"; content: string | UserBlock[] };
   parent_tool_use_id: null;
 }> {
   return {
     async *[Symbol.asyncIterator]() {
-      for await (const text of prompts) {
+      for await (const item of prompts) {
         yield {
           type: "user",
-          message: { role: "user", content: text },
+          message: { role: "user", content: contentOf(item) },
           parent_tool_use_id: null,
         };
       }

@@ -190,13 +190,16 @@ export function useThread(threadId: string) {
       const id = newSteerId();
       const dropSteer = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
       const dropPending = () => changePending((current) => withoutPending(current, id));
-      const steering = running && message.attachments.length === 0;
+      const steering = running;
 
       if (steering) {
-        changeSteers((current) => [
-          ...current,
-          { id, prompt: message.prompt, mentions: message.mentions },
-        ]);
+        const queued: QueuedSteer = { id, prompt: message.prompt, mentions: message.mentions };
+
+        if (message.attachments.length > 0) {
+          queued.attachments = pendingMessage(id, message).message.attachments;
+        }
+
+        changeSteers((current) => [...current, queued]);
       } else {
         changePending((current) => [...current, pendingMessage(id, message)]);
       }

@@ -7,14 +7,17 @@ import { markMentions } from "../mentions";
 import type { QueuedSteer, Viewer } from "../types";
 import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
+import { SentAttachments } from "./sent-attachments";
 
 export function QueuedMessage({
   message,
   viewer,
+  threadId,
   showAuthor = true,
 }: {
   message: QueuedSteer;
   viewer: Viewer;
+  threadId: string;
   showAuthor?: boolean;
 }) {
   if (systemNoteOf(message.prompt)?.kind === "process") return null;
@@ -32,11 +35,19 @@ export function QueuedMessage({
       data-queued
     >
       {!mine && showAuthor && <AuthorLabel name={name} />}
-      <div className="w-fit max-w-full rounded-lg bg-accent/60 px-3 py-2 opacity-70 [&_p]:whitespace-pre-line">
-        <Markdown components={{ code: mentionCode }}>
-          {markMentions(text, message.mentions)}
-        </Markdown>
-      </div>
+      {message.attachments?.length ? (
+        <SentAttachments
+          artifactsPath={`/api/threads/${threadId}/artifacts`}
+          attachments={message.attachments}
+        />
+      ) : null}
+      {text && (
+        <div className="w-fit max-w-full rounded-lg bg-accent/60 px-3 py-2 opacity-70 [&_p]:whitespace-pre-line">
+          <Markdown components={{ code: mentionCode }}>
+            {markMentions(text, message.mentions)}
+          </Markdown>
+        </div>
+      )}
       <p className="text-xs text-muted-foreground" role="status">
         Queued: the agent reads it at its next step
       </p>

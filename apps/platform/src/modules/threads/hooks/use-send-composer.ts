@@ -32,6 +32,7 @@ type Options = {
   attachments: ReturnType<typeof useAttachments>;
   selection: RunSelection;
   running: boolean;
+  filesWhileRunning?: boolean;
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
   onCompact?: (selection: RunSelection) => boolean | Promise<boolean>;
 };
@@ -41,6 +42,7 @@ export function useSendComposer({
   attachments,
   selection,
   running,
+  filesWhileRunning = false,
   onSubmit,
   onCompact,
 }: Options) {
@@ -49,7 +51,8 @@ export function useSendComposer({
   latest.current = composer;
   const hasText = composer.input.trim().length > 0;
   const hasContent = hasText || attachments.files.length > 0;
-  const canSend = (running ? hasText : hasContent) && !sending;
+  const textOnly = running && !filesWhileRunning;
+  const canSend = (textOnly ? hasText : hasContent) && !sending;
 
   async function submit() {
     if (!canSend) return;
@@ -86,11 +89,11 @@ export function useSendComposer({
     if (!steering) setSending(true);
 
     try {
-      const files = steering ? [] : await attachments.encode();
+      const files = textOnly ? [] : await attachments.encode();
       const sent = await onSubmit({ prompt, attachments: files, mentions }, selection);
 
       if (sent) {
-        if (!steering) attachments.clear();
+        if (!textOnly) attachments.clear();
       } else restore(draft, prompt);
     } catch (error) {
       restore(draft, prompt);

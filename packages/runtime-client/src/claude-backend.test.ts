@@ -103,6 +103,8 @@ const start = (runId: string, threadId: string, token?: string): RunMessage => {
 const ended = (reported: RuntimeToControlPlane[]) =>
   reported.find((message) => message.type === "run.end");
 
+const textOf = (item: string | { text: string }) => (typeof item === "string" ? item : item.text);
+
 describe("the Claude backend", () => {
   test("uses the token of the run it was given, and the next run's token on the next run", async () => {
     const { query, inputs } = queryOf();
@@ -183,11 +185,11 @@ describe("the Claude backend", () => {
       inputs.push(input);
       const iterator = input.prompt[Symbol.asyncIterator]();
       const first = await iterator.next();
-      prompts.push(first.done ? "" : first.value);
+      prompts.push(first.done ? "" : textOf(first.value));
       yield {
         type: "assistant",
         session_id: "sess-steer",
-        message: { content: [{ type: "text", text: first.done ? "" : first.value }] },
+        message: { content: [{ type: "text", text: first.done ? "" : textOf(first.value) }] },
       };
       await gate;
       yield { type: "result", subtype: "success", session_id: "sess-steer" };
@@ -195,7 +197,7 @@ describe("the Claude backend", () => {
 
       if (steered.done) return;
 
-      prompts.push(steered.value);
+      prompts.push(textOf(steered.value));
       yield {
         type: "assistant",
         session_id: "sess-steer",

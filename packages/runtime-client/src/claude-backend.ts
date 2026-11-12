@@ -19,7 +19,10 @@ import type {
   AskedQuestion,
   AskedRun,
   ClaudeQuery,
+  ClaudeImage,
+  ClaudePromptItem,
   ClaudeSteer,
+  ClaudeUserInput,
   ClaudeRunContext,
   ClaudeToolHost,
   DurableEnd,
@@ -52,6 +55,7 @@ type LiveRun = {
   close?(): void;
   promptPending: boolean;
   prompt: string;
+  images: ClaudeImage[];
 };
 
 type Parked = {
@@ -72,17 +76,17 @@ function gate(): Gate {
 }
 
 export class PromptQueue {
-  #pending: string[] = [];
-  #waiters: Array<(result: IteratorResult<string>) => void> = [];
+  #pending: ClaudePromptItem[] = [];
+  #waiters: Array<(result: IteratorResult<ClaudePromptItem>) => void> = [];
   #closed = false;
 
-  push(text: string) {
+  push(item: ClaudePromptItem) {
     if (this.#closed) return false;
 
     const waiter = this.#waiters.shift();
 
-    if (waiter) waiter({ value: text, done: false });
-    else this.#pending.push(text);
+    if (waiter) waiter({ value: item, done: false });
+    else this.#pending.push(item);
 
     return true;
   }
@@ -102,10 +106,10 @@ export class PromptQueue {
     for (const waiter of this.#waiters.splice(0)) waiter({ value: undefined, done: true });
   }
 
-  stream(): AsyncIterable<string> {
+  stream(): AsyncIterable<ClaudePromptItem> {
     return {
       [Symbol.asyncIterator]: () => ({
-        next: (): Promise<IteratorResult<string>> => {
+        next: (): Promise<IteratorResult<ClaudePromptItem>> => {
           const next = this.#pending.shift();
 
           if (next !== undefined) return Promise.resolve({ value: next, done: false });
@@ -154,10 +158,12 @@ export class ClaudeRuns implements AgentBackend {
     input: RunInput,
     onEvent: Emit,
   ): Promise<FollowedRun> {
+    const { text, images } = promptParts(prompt);
     return this.#open({
       runId,
       threadId,
-      prompt: promptText(prompt),
+      prompt: text,
+      images,
       context: input.claude,
       onEvent,
       durableId: `claude-${runId}`,
@@ -223,7 +229,8 @@ export class ClaudeRuns implements AgentBackend {
 
     if (!live || live.abort.signal.aborted || live.queue.closed) return Promise.resolve(false);
 
-    live.steers.push({ id: requestId, text: promptText(prompt) });
+    const { text, images } = promptParts(prompt);
+    live.steers.push({ id: requestId, text, images });
     return Promise.resolve(true);
   }
 
@@ -313,6 +320,7 @@ export class ClaudeRuns implements AgentBackend {
     runId: string;
     threadId: string;
     prompt: string;
+    images?: ClaudeImage[];
     context: ClaudeRunContext | undefined;
     onEvent: Emit;
     durableId?: string;
@@ -359,12 +367,15 @@ export class ClaudeRuns implements AgentBackend {
       onEvent: options.onEvent,
       promptPending: true,
       prompt: options.prompt.trim() || "Continue.",
+      images: options.images ?? [],
     };
     this.#byDurable.set(durableId, live);
     this.#byThread.set(options.threadId, live);
     options.onLive?.(live);
     const host = this.#host(live, context);
-    live.queue.push(live.prompt);
+    live.queue.push(
+      live.images.length > 0 ? { text: live.prompt, images: live.images } : live.prompt,
+    );
     let stream: ReturnType<ClaudeQuery>;
 
     try {
@@ -424,7 +435,10 @@ export class ClaudeRuns implements AgentBackend {
 
     for (const steer of taken) live.onEvent({ type: "steer_applied", id: steer.id });
 
-    return `${STEER_NOTE}\n\n${taken.map((steer) => steer.text).join("\n\n")}`;
+    return {
+      text: `${STEER_NOTE}\n\n${taken.map((steer) => steer.text).join("\n\n")}`,
+      images: taken.flatMap((steer) => steer.images),
+    };
   }
 
   #park(
@@ -578,7 +592,9 @@ export class ClaudeRuns implements AgentBackend {
           if (next.length > 0) {
             for (const steer of next) live.onEvent({ type: "steer_applied", id: steer.id });
 
-            live.queue.push(next.map((steer) => steer.text).join("\n\n"));
+            const text = next.map((steer) => steer.text).join("\n\n");
+            const images = next.flatMap((steer) => steer.images);
+            live.queue.push(images.length > 0 ? { text, images } : text);
           } else if (live.queue.empty) {
             live.queue.close();
           }
@@ -735,14 +751,27 @@ function assistantText(messages: readonly Message[]) {
 }
 
 function promptText(prompt: AgentPrompt) {
-  if (typeof prompt === "string") return prompt;
+  return promptParts(prompt).text;
+}
+
+function promptParts(prompt: AgentPrompt): ClaudeUserInput {
+  if (typeof prompt === "string") return { text: prompt, images: [] };
 
   const content = prompt.content;
 
-  if (typeof content === "string") return content;
+  if (typeof content === "string") return { text: content, images: [] };
 
-  return content
-    .map((part) => (part.type === "text" ? part.text : ""))
-    .filter((text) => text.length > 0)
-    .join("\n");
+  const images: ClaudeImage[] = [];
+  for (const part of content) {
+    if (part.type === "image" && part.image.type === "data" && part.mediaType) {
+      images.push({ mediaType: part.mediaType, data: String(part.image.data) });
+    }
+  }
+  return {
+    text: content
+      .map((part) => (part.type === "text" ? part.text : ""))
+      .filter((text) => text.length > 0)
+      .join("\n"),
+    images,
+  };
 }

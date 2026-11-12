@@ -181,6 +181,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           <PromptInput
                             threadId={thread.id}
                             running={running}
+                            filesWhileRunning={thread.agentBackend === "claude"}
                             onStop={cancel}
                             onCompact={compact}
                             claude={

@@ -252,11 +252,11 @@ export class RemoteRuntime implements Runtime {
       events: queue,
       result: result.promise,
       cancel: (reason) => this.hub.cancelRun(hostId, runId, reason),
-      steer: async ({ id, prompt, mentions }) =>
+      steer: async ({ id, prompt, mentions }, attachments) =>
         steerResult.parse(
           await connection.call(
             "run.steer",
-            { runId, steerId: id, prompt, mentions },
+            { runId, steerId: id, prompt, mentions, attachments },
             STEER_TIMEOUT_MS,
           ),
         ),

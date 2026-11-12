@@ -14,6 +14,7 @@ import type {
   FilesSearchParams,
   MachineCallParams,
   MessageMention,
+  RunAttachment,
   ProcessWatchParams,
   ActionRunParams,
   ProcessesCallParams,
@@ -106,14 +107,36 @@ export function computerCallParams(params: unknown): ComputerCallParams & { bot:
 }
 
 export function steerParams(params: unknown): SteerParams {
-  const { runId, steerId, prompt, mentions } = asRecord(params);
+  const { runId, steerId, prompt, mentions, attachments } = asRecord(params);
 
   if (typeof runId !== "string" || typeof steerId !== "string" || typeof prompt !== "string")
     throw invalid();
 
   if (mentions !== undefined && !Array.isArray(mentions)) throw invalid();
 
-  return { runId, steerId, prompt, mentions: mentions as MessageMention[] | undefined };
+  if (
+    attachments !== undefined &&
+    (!Array.isArray(attachments) ||
+      !attachments.every((file) => {
+        const { name, mediaType, size, data } = asRecord(file);
+        return (
+          typeof name === "string" &&
+          typeof mediaType === "string" &&
+          typeof size === "number" &&
+          typeof data === "string"
+        );
+      }))
+  ) {
+    throw invalid();
+  }
+
+  return {
+    runId,
+    steerId,
+    prompt,
+    mentions: mentions as MessageMention[] | undefined,
+    attachments: attachments as RunAttachment[] | undefined,
+  };
 }
 
 export function foldersListParams(params: unknown): FoldersListParams {

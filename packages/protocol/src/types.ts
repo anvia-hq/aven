@@ -211,6 +211,7 @@ export type QueuedSteer = {
   id: string;
   prompt: string;
   mentions?: MessageMention[];
+  attachments?: MessageAttachment[];
   senderId?: string;
 };
 

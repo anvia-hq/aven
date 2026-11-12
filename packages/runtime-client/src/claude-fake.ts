@@ -6,7 +6,9 @@ export const claudeFakeQuery: ClaudeQuery = (input) => {
   let stopped = false;
   const stream = (async function* () {
     const sessionId = "claude-fake-session";
-    for await (const text of input.prompt) {
+    for await (const item of input.prompt) {
+      const text = typeof item === "string" ? item : item.text;
+
       if (stopped || input.abortController.signal.aborted) return;
 
       if (text.trim() === "") continue;

@@ -57,7 +57,12 @@ describe("Aven tools on the Claude agent's MCP server", () => {
   });
 
   test("adds a message the person sent while the agent works to the next tool result", async () => {
-    const pending = ["Check out the branch first."];
+    const pending = [
+      {
+        text: "Check out the branch first.",
+        images: [{ mediaType: "image/png", data: "QUJDRA==" }],
+      },
+    ];
     const host: ClaudeToolHost = {
       catalog: [command],
       steered: () => pending.shift(),
@@ -65,6 +70,8 @@ describe("Aven tools on the Claude agent's MCP server", () => {
     const tool = (await claudeMcpTools(host)).find((item) => item.name === "exec_command");
     const first = JSON.stringify(await tool?.handler({ command: "pwd" }));
     expect(first).toContain("Check out the branch first.");
+    expect(first).toContain('"type":"image"');
+    expect(first).toContain("QUJDRA==");
     const second = JSON.stringify(await tool?.handler({ command: "pwd" }));
     expect(second).not.toContain("Check out");
   });
