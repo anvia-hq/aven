@@ -176,6 +176,9 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         return {
           call: async (method, params, timeoutMs) => {
             sent.push({ method, params, timeoutMs });
+            const op = (params as { op?: string } | undefined)?.op;
+            if (op === "paths") throw new Error("Unknown call machine.call");
+            if (op === "listFiles") throw new Error("Could not list files");
             return { path: "/home/aven/workspaces/t" };
           },
         };
@@ -212,6 +215,17 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const unknownOp = await ask(ws, received, "machine.call", { runId: "run-machine", op: "rm" });
     expect(unknownOp.ok).toBe(false);
     expect(sent).toHaveLength(1);
+
+    const stale = await ask(ws, received, "machine.call", { runId: "run-machine", op: "paths" });
+    expect(stale).toMatchObject({
+      ok: false,
+      error: "Update this computer's runner to use its tools",
+    });
+    const other = await ask(ws, received, "machine.call", {
+      runId: "run-machine",
+      op: "listFiles",
+    });
+    expect(other).toMatchObject({ ok: false, error: "Could not list files" });
   });
 
   test("a stop reaches the machine while its command is still running", async () => {
