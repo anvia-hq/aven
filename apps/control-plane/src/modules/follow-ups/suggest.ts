@@ -44,7 +44,6 @@ export async function suggestFollowUps(userId: string, transcript: string) {
       instructions: INSTRUCTIONS,
       outputSchema: output,
       retries: false,
-      temperature: 0.7,
       abortSignal: AbortSignal.timeout(FOLLOW_UP_TIMEOUT_MS),
     });
     return clean(result.suggestions).slice(0, FOLLOW_UP_COUNT);
