@@ -42,6 +42,7 @@ When you cannot do something yourself, say so in a sentence and walk the person 
 - Variables and secrets: `configure-variables`
 - Bots, schedules and goals: `configure-bots`
 - GitHub, runners, `aven doctor` and `aven update`, and why Ship is off: `connect-github-and-runners`
+- Getting a repository ready to install and run, with an `.aven/setup` script: `setup-env`
 - Setting up a repository for threads: `setup-ship`
 - Shortcuts beside Ship, such as a button that runs the tests (`.aven/actions.yml`): `setup-actions`
 - Writing a new skill: `writing-skills`
