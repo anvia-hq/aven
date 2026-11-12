@@ -6,6 +6,7 @@ import { git } from "./git-clone";
 import { hostGit } from "./host-git";
 import { refreshBase } from "./refresh-base";
 import { remoteBase } from "./remote-base";
+import { threadBranchFamily } from "./thread-branches";
 import { trackPushes } from "./track-pushes";
 import type { DiffScope, ThreadDiff } from "@aven/protocol/types";
 import type { Git } from "./types";
@@ -71,17 +72,34 @@ async function turnStart(root: string, run: Git) {
   return start.code === 0 ? start.stdout.trim() : null;
 }
 
-async function pushedTree(root: string, run: Git, configure: Git) {
+const PUSHED_COPIES = 5;
+
+async function pushedTrees(root: string, run: Git, configure: Git) {
   await trackPushes(root, configure);
   const branch = await run(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
 
-  if (branch.code !== 0) return null;
+  if (branch.code !== 0) return [];
 
-  const pushed = await run(
-    ["rev-parse", "--verify", "--quiet", `refs/remotes/origin/${branch.stdout.trim()}^{tree}`],
+  const name = branch.stdout.trim();
+  const family = threadBranchFamily(name);
+  const patterns = family
+    ? [`refs/remotes/origin/${family}`, `refs/remotes/origin/${family}-*`]
+    : [`refs/remotes/origin/${name}`];
+  const listed = await run(
+    [
+      "for-each-ref",
+      "--sort=-committerdate",
+      `--count=${PUSHED_COPIES}`,
+      "--format=%(objectname)",
+      ...patterns,
+    ],
     { cwd: root },
   );
-  return pushed.code === 0 ? pushed.stdout.trim() : null;
+  const commits = listed.stdout.split("\n").filter(Boolean);
+  const trees = await Promise.all(
+    commits.map((commit) => run(["rev-parse", `${commit}^{tree}`], { cwd: root })),
+  );
+  return [...new Set(trees.filter((tree) => tree.code === 0).map((tree) => tree.stdout.trim()))];
 }
 
 function cut(patch: string): ThreadDiff {
@@ -114,12 +132,11 @@ export async function threadDiff(
 
   if (scope === "all") return point;
 
-  const pushed = await pushedTree(root, host, run);
-
-  if (!pushed) return point;
-
-  const ahead = await patchBetween(root, pushed, now, host);
-  return point.patch.length < ahead.patch.length ? point : ahead;
+  const copies = await pushedTrees(root, host, run);
+  const ahead = await Promise.all(copies.map((tree) => patchBetween(root, tree, now, host)));
+  return [...ahead, point].reduce((nearest, next) =>
+    next.patch.length < nearest.patch.length ? next : nearest,
+  );
 }
 
 export async function currentBranch(root: string, run: Git = git) {
