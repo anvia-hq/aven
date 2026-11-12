@@ -1,40 +1,45 @@
 #!/usr/bin/env bash
-# Aven's development environment: Bun's dependencies, the PostgreSQL 17 the repository runs on
-# (deploy/docker-compose.yml: postgres:17-alpine), Chromium for the e2e suite, and a local .env.
-# Bun 1.4.4 is already in the image, as the Dockerfiles ask for (oven/bun:1.4.4).
-# The database server itself is started by .aven/resume, as the plain user, in each container.
+# Checks the machine and installs what a thread needs. Versions: Bun 1.4.4 (apps/*/Dockerfile:
+# oven/bun:1.4.4), PostgreSQL 17 (ci.yml and deploy/docker-compose.yml). No sudo, nothing deleted.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
-echo "Dependencies from bun.lock"
+export PATH="$HOME/.local/bin:$HOME/.local/share/mise/shims:$HOME/.bun/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+missing=0
+need() {
+  if command -v "$1" > /dev/null; then
+    echo "ok       $1 $("$1" --version 2>&1 | head -n 1)"
+  else
+    echo "missing  $1: $2"
+    missing=1
+  fi
+}
+
+need git "install git"
+need bun "curl -fsSL https://bun.sh/install | bash -s bun-v1.4.4"
+need docker "install Docker (needed for PostgreSQL 17, see .aven/stack)"
+[ "$missing" -eq 0 ] || { echo "Install what is missing above, then run this again."; exit 1; }
+
+want=1.4.4
+have=$(bun --version)
+[ "$have" = "$want" ] || echo "warn     bun $have, the Dockerfiles use $want (bun upgrade --version $want is not needed unless something breaks)"
+
+echo "step     dependencies"
 bun install --frozen-lockfile > /dev/null
 
-echo "PostgreSQL 17"
-sudo apt-get update -qq
-if ! sudo apt-get install -y --no-install-recommends postgresql-17 > /dev/null; then
-  # Debian's packages do not have it: PostgreSQL's own repository, for the same major version.
-  sudo apt-get install -y --no-install-recommends curl ca-certificates gnupg > /dev/null
-  curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc |
-    sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
-  echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo "$VERSION_CODENAME")-pgdg main" |
-    sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
-  sudo apt-get update -qq
-  sudo apt-get install -y --no-install-recommends postgresql-17 > /dev/null
-fi
+echo "step     chromium for e2e"
+bunx playwright install chromium > /dev/null 2>&1 || echo "warn     playwright chromium not installed; run: bunx playwright install chromium"
 
-echo "Chromium for the e2e suite"
-bunx playwright install chromium > /dev/null
-
-echo "Local .env"
 if [ ! -f .env ]; then
-  # The checkout is root's in the setup container, so the file is made and edited as root, then
-  # given back: sed -i writes a temporary file beside it, which needs the directory.
-  sudo cp .env.example .env
-  # Secrets the control plane needs. They are local to this snapshot, and .env is git-ignored.
-  sudo sed -i "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -base64 32)|" .env
-  sudo sed -i "s|^PROVIDER_ENCRYPTION_KEY=.*|PROVIDER_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
-  # A runner started from this checkout keeps its state here, apart from an installed Aven's.
-  sudo sed -i "s|^AVEN_RUNTIME_HOME=.*|AVEN_RUNTIME_HOME=$PWD/.aven/runtime|" .env
-  sudo chown "$(id -u):$(id -g)" .env
+  cp .env.example .env
+  sed -i.bak "s|^BETTER_AUTH_SECRET=.*|BETTER_AUTH_SECRET=$(openssl rand -base64 32)|" .env
+  sed -i.bak "s|^PROVIDER_ENCRYPTION_KEY=.*|PROVIDER_ENCRYPTION_KEY=$(openssl rand -base64 32)|" .env
+  rm -f .env.bak
+  echo "step     .env made from .env.example (local secrets generated)"
 fi
 
-echo "Done"
+for v in TAVILY_API_KEY OPENAI_API_KEY ANTHROPIC_API_KEY GEMINI_API_KEY; do
+  [ -n "${!v:-}" ] || echo "note     $v not set; optional, add it in Settings > Variables"
+done
+echo "done     next: bash .aven/stack for PostgreSQL"

@@ -1,0 +1,5 @@
+actions:
+  - name: Set up
+    run: bash .aven/setup
+  - name: Start stack
+    run: bash .aven/stack

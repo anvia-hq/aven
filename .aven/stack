@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Starts PostgreSQL 17 (postgres:17, as in ci.yml) in Docker on a per-thread port.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+
+offset=$(( $(pwd | cksum | cut -d' ' -f1) % 100 ))
+port=$((55400 + offset))
+name="aven-pg-$offset"
+
+if ! docker ps --format '{{.Names}}' | grep -qx "$name"; then
+  docker rm "$name" > /dev/null 2>&1 || true
+  docker run -d --name "$name" -p "127.0.0.1:$port:5432" \
+    -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=aven postgres:17 > /dev/null
+fi
+for _ in $(seq 1 30); do
+  docker exec "$name" pg_isready -U postgres -d aven > /dev/null 2>&1 && break
+  sleep 1
+done
+docker exec "$name" pg_isready -U postgres -d aven
+
+echo "DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven" > .env.local
+echo "ready    postgres 17 on localhost:$port (DATABASE_URL in .env.local)"
+echo "next     start the dev server as a process: bun run dev (control-plane 8000, platform 5173)"
