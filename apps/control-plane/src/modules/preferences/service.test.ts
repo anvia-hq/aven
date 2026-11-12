@@ -69,7 +69,21 @@ run("preferencesService (postgres)", async () => {
       enabled: true,
       providerId: "p1",
       modelId: "small",
+      serverModel: null,
     });
     expect(await preferencesService.timezone(alice)).toBe("Asia/Jakarta");
+  });
+
+  test("a server's small model is offered without its key", async () => {
+    process.env.SMALL_MODEL_API_KEY = "sk-server-secret";
+    process.env.SMALL_MODEL_ID = "small-1";
+    try {
+      const { followUps } = await preferencesService.get(alice);
+      expect(followUps.serverModel).toEqual({ provider: "anthropic", modelId: "small-1" });
+      expect(JSON.stringify(followUps)).not.toContain("sk-server-secret");
+    } finally {
+      delete process.env.SMALL_MODEL_API_KEY;
+      delete process.env.SMALL_MODEL_ID;
+    }
   });
 });

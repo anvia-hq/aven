@@ -16,6 +16,14 @@ export function SmallModelsSection() {
   const { providers, choices, loading, labelOf } = useModelChoices();
   const provider = providers.find((item) => item.id === settings?.providerId);
   const modelId = settings?.modelId ?? provider?.modelId ?? null;
+  const serverModel = settings?.serverModel ?? null;
+  const usesServerModel = serverModel !== null && !provider;
+
+  function modelLabel() {
+    if (provider && modelId) return labelOf(provider.id, modelId);
+
+    return usesServerModel ? "Provided by this server" : "Choose a model";
+  }
 
   return (
     <SettingsSection
@@ -29,11 +37,13 @@ export function SmallModelsSection() {
         <Switch
           aria-label="Follow-up suggestions"
           checked={settings?.enabled ?? false}
-          disabled={settings === null || providers.length === 0}
+          disabled={settings === null || (providers.length === 0 && serverModel === null)}
           onCheckedChange={(enabled) => {
             if (!settings) return;
 
-            const fallback = providers.find((item) => item.isDefault) ?? providers[0];
+            const fallback = serverModel
+              ? undefined
+              : (providers.find((item) => item.isDefault) ?? providers[0]);
             void save({
               enabled,
               providerId: settings.providerId ?? fallback?.id ?? null,
@@ -46,17 +56,19 @@ export function SmallModelsSection() {
         title="Model"
         description="Pick a small one: a Haiku-class or mini model is plenty."
       >
-        {providers.length === 0 ? (
+        {providers.length === 0 && serverModel === null && (
           <Link to="/settings/providers" className="text-sm text-muted-foreground underline">
             Add a provider first
           </Link>
-        ) : (
+        )}
+        {providers.length === 0 && serverModel !== null && (
+          <span className="text-sm text-muted-foreground">Provided by this server</span>
+        )}
+        {providers.length > 0 && (
           <Popover>
             <PopoverTrigger render={<Button variant="outline" size="sm" className="max-w-64" />}>
               {provider && <ProviderLogo kind={provider.kind} />}
-              <span className="truncate">
-                {provider && modelId ? labelOf(provider.id, modelId) : "Choose a model"}
-              </span>
+              <span className="truncate">{modelLabel()}</span>
               <ChevronRight />
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-3">
