@@ -196,7 +196,7 @@ export class DirectorySandbox implements SandboxRuntime {
     env?: Readonly<Record<string, string>>;
   }) {
     const proc = this.#spawn(options);
-    const id = `proc-${this.#processes.size + 1}`;
+    const id = `proc-${crypto.randomUUID().slice(0, 8)}`;
     const managed: Managed = {
       proc,
       stdout: [],
