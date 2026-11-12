@@ -1,10 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { useContinueAfterAuth } from "@/modules/auth/hooks/use-continue-after-auth";
 import { validateInvitationSearch } from "@/modules/auth/invitation-search";
 import { redirectIfSignedIn } from "@/modules/auth/redirect-if-signed-in";
 import { AuthShell } from "@/modules/auth/components/auth-shell";
 import { AuthForm } from "@/modules/auth/components/auth-form";
+import { GithubSignIn } from "@/modules/auth/components/github-sign-in";
 
 export const Route = createFileRoute("/login")({
   validateSearch: validateInvitationSearch,
@@ -16,6 +18,7 @@ function Login() {
   const search = Route.useSearch();
   const { invitation } = search;
   const onSuccess = useContinueAfterAuth(search);
+  const { config } = usePlatformConfig();
   return (
     <AuthShell
       title="Sign in to Aven"
@@ -34,6 +37,7 @@ function Login() {
       }
     >
       <AuthForm mode="sign-in" onSuccess={onSuccess} />
+      {config?.githubLogin && <GithubSignIn invitation={invitation} />}
     </AuthShell>
   );
 }

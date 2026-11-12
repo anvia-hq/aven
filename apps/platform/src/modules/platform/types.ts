@@ -1,5 +1,6 @@
 export type PlatformConfig = {
   registrationEnabled: boolean;
+  githubLogin: boolean;
   isOwner: boolean;
 };
 
