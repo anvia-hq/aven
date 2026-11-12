@@ -120,6 +120,7 @@ export class RunManager {
       codexModel,
       claudeToken,
       claudeModel,
+      claudeEffort,
     }: RunExtras = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -142,6 +143,7 @@ export class RunManager {
         codexModel,
         claudeToken,
         claudeModel,
+        claudeEffort,
       });
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
 
@@ -173,6 +175,7 @@ export class RunManager {
       codexModel,
       claudeToken,
       claudeModel,
+      claudeEffort,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -205,6 +208,7 @@ export class RunManager {
         codexModel,
         claudeToken,
         claudeModel,
+        claudeEffort,
       });
       await this.#begin(channel, handle, { type: "run_resume" }, () =>
         this.#continuations.clear(thread.id),

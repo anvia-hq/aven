@@ -1,3 +1,4 @@
+import { CLAUDE_DEFAULT_EFFORT } from "@aven/protocol/claude-models";
 import {
   ChatProvider,
   ComposerPrimitive,
@@ -24,7 +25,6 @@ import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
 import { AgentChip, PersonAvatar, PersonChip } from "./person-chip";
-import { ClaudeModelMenu } from "./claude-model-menu";
 import { CodexModelMenu } from "./codex-model-menu";
 import { ModelMenu } from "./model-menu";
 import { PendingAttachments } from "./pending-attachments";
@@ -110,7 +110,15 @@ function Composer({
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: agent?.choice ? { modelId: agent.choice.modelId } : model.selection,
+    selection: agent?.choice
+      ? {
+          modelId: agent.choice.modelId,
+          reasoningEffort:
+            agent.choice.backend === "claude"
+              ? (agent.choice.effort ?? CLAUDE_DEFAULT_EFFORT)
+              : undefined,
+        }
+      : model.selection,
     running,
     onSubmit,
     onCompact,
@@ -167,19 +175,14 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          {agent?.only && agent.choice?.backend === "claude" && (
-            <ClaudeModelMenu
-              modelId={agent.choice.modelId}
-              onChange={(modelId) => agent.onChange({ backend: "claude", modelId })}
-            />
-          )}
-          {agent?.only && agent.choice?.backend === "codex" && (
+          {agent?.only && agent.choice?.backend === "codex" ? (
             <CodexModelMenu
               modelId={agent.choice.modelId}
               onChange={(modelId) => agent.onChange({ backend: "codex", modelId })}
             />
+          ) : (
+            <ModelMenu model={model} agent={agent} />
           )}
-          {!agent?.only && <ModelMenu model={model} agent={agent} />}
           {running && (
             <Button
               size="icon-sm"

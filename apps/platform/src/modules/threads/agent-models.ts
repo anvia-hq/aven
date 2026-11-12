@@ -1,6 +1,6 @@
 import type { ProviderKind } from "@/modules/providers/types";
 
-import { CLAUDE_GROUP, CLAUDE_MODELS } from "./claude-models";
+import { CLAUDE_GROUP, CLAUDE_ITEMS, claudeTriggerLabel } from "./claude-models";
 import { CODEX_CHOICES, CODEX_GROUP } from "./codex-models";
 import type { AgentChoice } from "./types";
 
@@ -18,7 +18,7 @@ export const AGENT_GROUPS: readonly AgentGroup[] = [
     heading: CLAUDE_GROUP,
     name: "Claude",
     logo: "anthropic",
-    models: CLAUDE_MODELS,
+    models: CLAUDE_ITEMS,
   },
   { backend: "codex", heading: CODEX_GROUP, name: "Codex", logo: "openai", models: CODEX_CHOICES },
 ];
@@ -28,6 +28,8 @@ export function agentGroup(backend: AgentChoice["backend"]) {
 }
 
 export function agentLabel(choice: AgentChoice) {
+  if (choice.backend === "claude") return claudeTriggerLabel(choice.modelId);
+
   const group = agentGroup(choice.backend);
   const model = group?.models.find((item) => item.id === (choice.modelId ?? "default"));
 

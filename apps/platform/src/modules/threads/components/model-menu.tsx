@@ -1,3 +1,4 @@
+import { CLAUDE_DEFAULT_EFFORT, CLAUDE_EFFORTS } from "@aven/protocol/claude-models";
 import { ArrowLeft, ChevronRight } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -19,6 +20,7 @@ export function ModelMenu({ model, agent }: Props) {
     model;
   const [choosing, setChoosing] = useState(false);
   const using = agent?.choice ?? null;
+  const only = agent?.only ?? false;
 
   const addProvider = (
     <Link to="/settings/providers" className="text-xs text-muted-foreground underline">
@@ -28,15 +30,20 @@ export function ModelMenu({ model, agent }: Props) {
 
   if (!provider && !agent) return addProvider;
 
-  const listing = choosing || !provider;
+  const listing = choosing || (!provider && !using);
 
-  const efforts = levels.length > 1 && !using;
+  const usingClaude = using?.backend === "claude";
+  const shownLevels = usingClaude ? [...CLAUDE_EFFORTS] : using ? [] : levels;
+  const shownEffort = usingClaude ? (using.effort ?? CLAUDE_DEFAULT_EFFORT) : effort;
+  const efforts = shownLevels.length > 1;
   const label = using ? agentLabel(using) : (modelLabel ?? "Provider default");
   const kind = using ? agentGroup(using.backend)?.logo : provider?.kind;
+  const selectEffort = (next: string) =>
+    using ? agent?.onChange({ ...using, effort: next }) : model.selectEffort(next);
 
   return (
     <>
-      {!provider && addProvider}
+      {!provider && !only && addProvider}
       <Popover onOpenChange={(open) => !open && setChoosing(false)}>
         <PopoverTrigger
           render={
@@ -50,7 +57,7 @@ export function ModelMenu({ model, agent }: Props) {
         >
           {kind && <ProviderLogo kind={kind} />}
           <span className="truncate font-medium text-foreground">{label}</span>
-          {efforts && <span className="shrink-0">{effortName(effort)}</span>}
+          {efforts && <span className="shrink-0">{effortName(shownEffort)}</span>}
         </PopoverTrigger>
         <PopoverContent
           side="top"
@@ -60,7 +67,7 @@ export function ModelMenu({ model, agent }: Props) {
           {listing ? (
             <div className="flex flex-col gap-1 p-3 pb-0">
               <div className="flex items-center gap-2 pb-1">
-                {provider && (
+                {(provider || using) && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -73,8 +80,8 @@ export function ModelMenu({ model, agent }: Props) {
                 <span className="font-medium">Choose model</span>
               </div>
               <ModelChoiceList
-                providers={providers}
-                choices={choices}
+                providers={only ? [] : providers}
+                choices={only ? [] : choices}
                 loading={loadingModels}
                 selected={provider && !using ? { providerId: provider.id, modelId } : undefined}
                 onSelect={(choice) => {
@@ -93,6 +100,7 @@ export function ModelMenu({ model, agent }: Props) {
                       agent.onChange({
                         backend: group.backend,
                         modelId: id === "default" ? undefined : id,
+                        effort: using?.backend === group.backend ? using.effort : undefined,
                       });
                       setChoosing(false);
                     },
@@ -106,7 +114,9 @@ export function ModelMenu({ model, agent }: Props) {
                 <span className="text-xs tracking-wide text-muted-foreground uppercase">
                   {efforts ? "Reasoning" : "Model"}
                 </span>
-                {efforts && <span className="text-xl font-semibold">{effortName(effort)}</span>}
+                {efforts && (
+                  <span className="text-xl font-semibold">{effortName(shownEffort)}</span>
+                )}
               </div>
               <Button
                 variant="outline"
@@ -118,15 +128,20 @@ export function ModelMenu({ model, agent }: Props) {
                 <ChevronRight />
               </Button>
               {efforts && (
-                <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />
+                <EffortSlider levels={shownLevels} value={shownEffort} onChange={selectEffort} />
               )}
             </div>
           )}
-          <div className="border-t px-4 py-3 text-sm">
-            <Link to="/settings/providers" className="text-muted-foreground hover:text-foreground">
-              Manage models
-            </Link>
-          </div>
+          {!only && (
+            <div className="border-t px-4 py-3 text-sm">
+              <Link
+                to="/settings/providers"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Manage models
+              </Link>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
     </>

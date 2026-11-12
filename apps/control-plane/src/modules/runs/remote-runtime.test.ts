@@ -222,6 +222,7 @@ describe("a Claude run", () => {
       prompt: "go",
       claudeToken: token,
       claudeModel: "claude-opus-4-8",
+      claudeEffort: "max",
     });
     await claude.remote.resume({
       thread: { ...thread, agentBackend: "claude" },
@@ -229,6 +230,7 @@ describe("a Claude run", () => {
       response: {},
       claudeToken: token,
       claudeModel: "claude-sonnet-5",
+      claudeEffort: "low",
     });
     await native.remote.start({ thread, prompt: "go" });
 
@@ -239,12 +241,14 @@ describe("a Claude run", () => {
       backend: "claude",
       claudeToken: token,
       claudeModel: "claude-opus-4-8",
+      claudeEffort: "max",
     });
     expect(claude.posted[1]).toMatchObject({
       type: "run.resume",
       backend: "claude",
       claudeToken: token,
       claudeModel: "claude-sonnet-5",
+      claudeEffort: "low",
     });
     expect(claude.posted[0]).not.toHaveProperty("model");
     expect(JSON.stringify(native.posted[0])).not.toContain(token);

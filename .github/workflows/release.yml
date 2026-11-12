@@ -133,6 +133,8 @@ jobs:
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
+      - name: Check the Claude binary downloads and runs on this platform
+        run: AVEN_CLAUDE_DOWNLOAD_TEST=1 bun test packages/runtime-client/src/claude-binary.live.test.ts
       - name: Build and pack for every platform
         run: apps/cli/scripts/build-release.sh "$GITHUB_REF_NAME" dist/release
       - uses: actions/upload-artifact@v7

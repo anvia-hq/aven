@@ -224,6 +224,7 @@ export type ClaudeRunContext = {
   env: readonly RunEnvVar[];
   instructions?: string;
   model?: string;
+  effort?: string;
   compact?: boolean;
   questions?: boolean;
   children?: boolean;
@@ -268,12 +269,14 @@ export type ClaudeQueryInput = {
   token: string;
   cwd: string;
   configDir: string;
+  binaryDir: string;
   abortController: AbortController;
   tools: ClaudeToolHost;
   env: readonly RunEnvVar[];
   redact(text: string): string;
   instructions?: string;
   model?: string;
+  effort?: string;
   maxTurns?: number;
   resumeInterrupted?: boolean;
 };
@@ -490,6 +493,7 @@ export type RunRecord = {
   done?: boolean;
   backend?: string;
   claudeModel?: string;
+  claudeEffort?: string;
 };
 
 export type RunToolsInput = {
@@ -653,4 +657,17 @@ export type HostSandboxConfig = {
   home?: string;
   dirs?: string[];
   git?: Git;
+};
+
+export type ClaudeBinaryEntry = { package: string; version: string; integrity: string };
+
+export type ClaudeBinaryOptions = {
+  dir: string;
+  platform?: string;
+  arch?: string;
+  musl?: boolean;
+  manifest?: Record<string, ClaudeBinaryEntry>;
+  registry?: string;
+  fetchTarball?: typeof fetch;
+  bundled?: (entry: ClaudeBinaryEntry) => string | undefined;
 };

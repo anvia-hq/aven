@@ -135,3 +135,11 @@ The control plane holds runner connections, runs, watched channels and run token
 ### A thread can run on Codex with the person's ChatGPT login (decision 0245)
 
 Settings > Codex stores that login encrypted (`codex-setup`, `codex_logins`); the API returns only whether one is saved and the last four characters of the access token. A new thread starts on `codex` when a Codex model is chosen in the model menu (the last group, after the Claude one, decision 0244), and on `native` for any other model (`threads.agent_backend`). A Codex run is placed on the thread's own runtime, skips the model gateway, and the runner drives it with `CodexRuns`: the same sandbox tools, through a stdio MCP server named `aven`, with the access token only in that process's environment. Where Codex cannot do what the native agent does, the equivalent is in decision 0243.
+
+### Claude models and effort
+
+`@aven/protocol/claude-models` holds the Claude aliases, the model each resolves to, the effort levels and the default effort; a runtime-client test checks it against the SDK. The model menu lists them as "Sonnet 5.5" and so on and shows the effort slider; the chosen effort travels as `claudeEffort` on `run.start` and `run.resume` and reaches the SDK's `effort`. The system prompt sets `excludeDynamicSections` for cross-thread prompt caching. Decision 0245.
+
+### The Claude binary on a runner
+
+`runtime-client/src/claude-binary.ts` (`claudeExecutable`) gives the SDK its Claude Code program. It uses the package installed beside the SDK when there is one, and otherwise downloads the platform's package from npm into `<home>/claude-code/<version>/claude` on the first Claude thread, checks it against the sha512 in `claude-binary-manifest.ts` (tested against `bun.lock`), and passes the path as `pathToClaudeCodeExecutable`. Decision 0246.

@@ -113,6 +113,7 @@ export class RemoteRuntime implements Runtime {
     claudeModel,
     codexLogin,
     codexModel,
+    claudeEffort,
   }: StartRunInput): Promise<RuntimeRun> {
     const extras = {
       skills,
@@ -155,6 +156,7 @@ export class RemoteRuntime implements Runtime {
       if (codexLogin) message.codexLogin = codexLogin;
 
       if (codexModel) message.codexModel = codexModel;
+      if (claudeEffort) message.claudeEffort = claudeEffort;
 
       return message;
     });
@@ -177,6 +179,7 @@ export class RemoteRuntime implements Runtime {
     claudeModel,
     codexLogin,
     codexModel,
+    claudeEffort,
   }: ResumeRunInput): Promise<RuntimeRun> {
     const extras = {
       skills,
@@ -221,6 +224,7 @@ export class RemoteRuntime implements Runtime {
         if (codexLogin) message.codexLogin = codexLogin;
 
         if (codexModel) message.codexModel = codexModel;
+        if (claudeEffort) message.claudeEffort = claudeEffort;
 
         return message;
       },

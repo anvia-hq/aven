@@ -3,6 +3,7 @@ import { timing } from "@aven/runtime-client/timing";
 
 import { codexAccessToken, codexModelId } from "@aven/protocol/codex-login";
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
+import { claudeEffortOf } from "@aven/protocol/claude-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments } from "../../attachments";
 import { ConflictError, UnprocessableError } from "../../errors";
@@ -204,6 +205,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     const claudeToken = claude ? await claudeSetupService.requireFor(thread.createdBy) : undefined;
     const claudeModel = claude ? selection.modelId : undefined;
+    const claudeEffort = claude ? claudeEffortOf(selection.reasoningEffort) : undefined;
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
     clock.mark("sender");
@@ -215,6 +217,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       senderId: userId,
       claudeToken,
       claudeModel,
+      claudeEffort,
       ...sender,
       ...scoped,
       ...codex,
@@ -321,6 +324,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         claudeToken,
         claudeModel: claude ? selection.modelId : undefined,
         ...codex,
+        claudeEffort: claude ? claudeEffortOf(selection.reasoningEffort) : undefined,
       });
       await threadsService.reopen(thread);
     },
@@ -367,6 +371,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         claudeToken,
         claudeModel: claude ? selection.modelId : undefined,
         ...codex,
+        claudeEffort: claude ? claudeEffortOf(selection.reasoningEffort) : undefined,
       });
       await threadsService.reopen(thread);
     },

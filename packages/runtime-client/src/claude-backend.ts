@@ -82,6 +82,10 @@ export class PromptQueue {
     return true;
   }
 
+  get empty() {
+    return this.#pending.length === 0;
+  }
+
   close() {
     if (this.#closed) return;
 
@@ -359,12 +363,14 @@ export class ClaudeRuns implements AgentBackend {
         token: context.token,
         cwd,
         configDir: join(this.home, "claude", options.threadId),
+        binaryDir: join(this.home, "claude-code"),
         abortController: abort,
         tools: host,
         env: context.env,
         redact: context.redact,
         instructions: context.instructions,
         model: context.model,
+        effort: context.effort,
         maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
         resumeInterrupted: options.resumeInterrupted,
       });
@@ -543,6 +549,8 @@ export class ClaudeRuns implements AgentBackend {
         }
 
         this.#partial.set(live.durableId, live.turn.messages(""));
+
+        if (message.type === "result" && live.queue.empty) live.queue.close();
 
         if (live.abort.signal.aborted) break;
       }
