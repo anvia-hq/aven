@@ -96,7 +96,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 
 ### Other tools reach Aven over MCP with an access token (decision 0256)
 
-`POST /mcp` (`modules/mcp-access/endpoint.ts`, `rpc.ts`) answers JSON-RPC statelessly for a client that sends `Authorization: Bearer avn_...`. Tokens are made in Settings > MCP access (`/mcp-access`, `service.ts`; table `mcp_access_tokens`, hash and last four only) with permissions `read`, `change` and `destructive`, which are the bot gate's tiers (`confirm` is `destructive`). The tools `aven_workspaces`, `aven_search_api` and `aven_call_api` run through `bot-api` as the token's owner; `aven://guide` and `aven://permissions` are resources. `/mcp` and `/mcp-access` are blocked in the gate.
+`POST /mcp` (`modules/mcp-access/endpoint.ts`, `rpc.ts`) answers JSON-RPC statelessly for a client that sends `Authorization: Bearer avn_...`. Tokens are made in Settings > MCP access (`/mcp-access`, `service.ts`; table `mcp_access_tokens`, hash and last four only) with permissions `read`, `change` and `destructive`, which are the bot gate's tiers (`confirm` is `destructive`). The tools `aven_workspaces`, `aven_search_api`, `aven_call_api`, `aven_list_projects`, `aven_start_task`, `aven_get_thread` and `aven_stop_thread` run through `bot-api` as the token's owner; `aven://guide` and `aven://permissions` are resources. `/mcp` and `/mcp-access` are blocked in the gate.
 
 ### A persistent runner ships with its own GitHub login (decision 0229)
 
