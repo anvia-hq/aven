@@ -30,6 +30,7 @@ type ShipDeps = {
   ) => Promise<{
     githubInstallationId: string | null;
     repoFullName: string | null;
+    directory: string | null;
     defaultBranch: string | null;
     pullRequests: ThreadPullRequest[];
     lifetime: RuntimeLifetime;
@@ -139,6 +140,7 @@ export function createShipService(
         base: project.defaultBranch ?? "the repository's default branch",
         mode: shipMode(mode, project.pullRequests),
         pullRequests: project.pullRequests,
+        folder: project.directory,
       });
       await send(organizationId, userId, threadId, {
         prompt: wrapShipRequest(prompt),

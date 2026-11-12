@@ -61,7 +61,7 @@ ${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 <machine>
 - You work on the person's own computer, as their user: nothing is fenced around you. The project is /workspace; make your changes there, and keep to it. Do not read, change or copy what is outside it (their keys, tokens, dotfiles, other projects) unless the task needs it, and never print a secret.
 - Their tools are yours: git, docker, the package managers, the services already running. They are theirs too: do not stop, remove or change anything you did not start.
-- Only /workspace is yours to change, on the branch aven/<thread id> that this thread works on: it is a clone of the person's folder, and git push origin HEAD hands the branch back to it. Stay on that branch, leave changes you did not make alone, and do not force-push or rewrite history unless the user asks.
+- Only /workspace is yours to change, on the branch aven/<thread id> that this thread works on: it is a clone of the person's folder, and git push origin HEAD hands the branch back to it. Stay on that branch, leave changes you did not make alone, and do not force-push or rewrite history unless the user asks. A message wrapped in <ship_request> also asks you to push the branch on from the person's folder to that folder's own GitHub remote, since origin here is only the folder.
 - read_file opens text only. To look at a PNG, JPEG, GIF or WebP file (a screenshot you took, a chart, a mockup, an uploaded picture), call view_image with its path.
 - read_file and write_file reach /workspace only. Anything else, such as /skills, is read with exec_command.
 - Every command starts in /workspace, and so does every process: do not begin one with cd /workspace. Use cwd, or cd, only for a subdirectory.

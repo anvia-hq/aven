@@ -65,6 +65,28 @@ describe("the prompt a Ship sends", () => {
     expect(prompt).not.toContain("This ship");
   });
 
+  test("a folder project is told origin is its folder and how to push on from it", () => {
+    for (const file of [null, text("Open a PR.")]) {
+      const prompt = shipPrompt(file, { ...where, folder: "/home/ada/app" });
+
+      expect(prompt).toContain("/home/ada/app, and origin here is that folder, not GitHub");
+      expect(prompt).toContain("git -C /home/ada/app push -u <remote> <branch>");
+      expect(prompt).toContain("run gh from inside /home/ada/app");
+    }
+    expect(shipPrompt(null, where)).not.toContain("origin here is that folder");
+  });
+
+  test("an open pull request is watched in the background until it can be merged, and never merged", () => {
+    for (const file of [null, text("Open a PR.")]) {
+      const prompt = shipPrompt(file, where);
+
+      expect(prompt).toContain("background: true");
+      expect(prompt).toContain("so this thread wakes when it ends");
+      expect(prompt).toContain("including filtered ones");
+      expect(prompt).toContain("Never merge it yourself");
+    }
+  });
+
   test("is Aven's own when the file is empty", () => {
     expect(shipPrompt(text("  \n"), where)).toContain("gh pr create --draft");
   });
