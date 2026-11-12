@@ -1,5 +1,6 @@
 import { runCockpitCommand } from "../cockpit/commands";
 import { runMemoryCommand } from "../memory/commands";
+import { explainMachineCallError } from "./machine-call-error";
 import {
   parseAppendParams,
   parseBotNotesParams,
@@ -165,11 +166,9 @@ export async function answerRuntimeCall(
       runtimeId: run.thread.machine,
       threadId: run.thread.id,
     });
-    return machine.call(
-      "machine.call",
-      { threadId: run.thread.id, op, args },
-      machineCallTimeout(args),
-    );
+    return machine
+      .call("machine.call", { threadId: run.thread.id, op, args }, machineCallTimeout(args))
+      .catch(explainMachineCallError);
   }
   if (method !== "memory.append") throw new Error(`Unknown call: ${method satisfies never}`);
   const scope = {
