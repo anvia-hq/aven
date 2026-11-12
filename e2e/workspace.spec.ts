@@ -100,7 +100,7 @@ test.describe("settings", () => {
     await expect(page).toHaveURL(/\/threads$/);
   });
 
-  test("the profile name saves and the dark mode switch changes the theme", async ({ page }) => {
+  test("the profile name saves and the mode select changes the theme", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
     await page.goto("/settings/general");
     await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
@@ -111,7 +111,8 @@ test.describe("settings", () => {
     await expect(page.getByText("Renamed Person")).toBeVisible();
 
     await expect(page.locator("html")).toHaveClass(/dark/);
-    await page.getByRole("switch", { name: "Dark mode" }).click();
+    await page.getByRole("combobox", { name: "Mode" }).click();
+    await page.getByRole("option", { name: "Light", exact: true }).click();
     await expect(page.locator("html")).not.toHaveClass(/dark/);
   });
 

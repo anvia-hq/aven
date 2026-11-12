@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/button";
 import { Input } from "@/components/input";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
-import { shortTimeAgo, timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { FolderSection } from "@/modules/folders/components/folder-section";
 import { ThreadActionsMenu } from "@/modules/folders/components/thread-actions-menu";
@@ -49,22 +48,6 @@ function SidebarProjectTile({
 }) {
   if (!project) return <span className="size-5 shrink-0" aria-hidden />;
   return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
-}
-
-function UpdatedAt({ thread, yields = false }: { thread: Thread; yields?: boolean }) {
-  return (
-    <time
-      dateTime={thread.updatedAt}
-      title={timeAgo(thread.updatedAt, true)}
-      className={cn(
-        "pointer-events-none absolute inset-y-0 right-2 flex items-center justify-end text-xs whitespace-nowrap text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden",
-        yields &&
-          "group-hover/menu-item:opacity-0 group-has-focus-visible/menu-item:opacity-0 group-has-data-popup-open/menu-item:opacity-0 max-md:hidden",
-      )}
-    >
-      {shortTimeAgo(thread.updatedAt)}
-    </time>
-  );
 }
 
 function UnreadDot({ label = "Finished, not opened yet" }: { label?: string }) {
@@ -254,7 +237,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
-          className={cn("pr-9", nested && "pl-8")}
+          className={cn(nested && "pl-8")}
         >
           <SidebarProjectTile
             thread={thread}
@@ -275,7 +258,6 @@ export function SidebarThreads() {
           />
           <CrowdMark thread={thread} />
         </SidebarMenuButton>
-        <UpdatedAt thread={thread} yields />
         <ThreadActionsMenu
           title={thread.title}
           folders={folders}
@@ -289,7 +271,6 @@ export function SidebarThreads() {
   }
 
   function pairRow([left, right]: [Thread, Thread]) {
-    const latest = left.updatedAt > right.updatedAt ? left : right;
     return (
       <SidebarMenuItem key={`pair-${left.id}-${right.id}`} data-slot="split-pair">
         {mentioned.has(left.id) || mentioned.has(right.id) ? (
@@ -307,7 +288,6 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${left.id}` || pathname === `/threads/${right.id}`}
-          className="pr-11"
         >
           <span className="flex shrink-0 -space-x-1.5">
             {[left, right].map((thread) => (
@@ -323,7 +303,6 @@ export function SidebarThreads() {
             {left.title} + {right.title}
           </span>
         </SidebarMenuButton>
-        <UpdatedAt thread={latest} />
       </SidebarMenuItem>
     );
   }
@@ -431,7 +410,6 @@ export function SidebarThreads() {
                     />
                   }
                   isActive={pathname === `/threads/${thread.id}`}
-                  className="pr-11"
                 >
                   <SidebarProjectTile
                     thread={thread}
@@ -444,7 +422,6 @@ export function SidebarThreads() {
                   </span>
                   <CrowdMark thread={thread} />
                 </SidebarMenuButton>
-                <UpdatedAt thread={thread} />
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

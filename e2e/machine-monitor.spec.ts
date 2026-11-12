@@ -95,6 +95,60 @@ test.describe("machine monitor", () => {
     await expect(page).toHaveURL(/\/settings\/runtimes$/);
   });
 
+  test("the stack fans out as a motion, with the lower cards following the upper ones", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await registerUser(page, "motion", "Motion User");
+    await runner(page, "a-box", { FAKE_STATS: stats({}) });
+    await runner(page, "b-box", { FAKE_STATS: stats({}) });
+    await runner(page, "c-box", { FAKE_STATS: stats({}) });
+
+    await page.goto("/threads");
+    const rows = page.getByRole("list", { name: "Machines" }).locator("[data-slot=machine-row]");
+    await expect(rows).toHaveCount(3);
+    await page.mouse.move(800, 400);
+
+    const sampling = page.evaluate(
+      () =>
+        new Promise<{ at: number; y: number[]; glow: number }[]>((resolve) => {
+          const cards = [...document.querySelectorAll<HTMLElement>("[data-slot=machine-row]")];
+          const seen: { at: number; y: number[]; glow: number }[] = [];
+          const start = performance.now();
+          const tick = () => {
+            const at = performance.now() - start;
+            seen.push({
+              at,
+              y: cards.map((card) =>
+                parseFloat(getComputedStyle(card).translate.split(" ")[1] ?? "0"),
+              ),
+              glow: Number(getComputedStyle(cards[0]!, "::before").opacity),
+            });
+            if (at < 500) requestAnimationFrame(tick);
+            else resolve(seen);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+    await rows.nth(0).hover();
+    const seen = await sampling;
+
+    const between = (index: number) => {
+      const values = seen.map((frame) => frame.y[index]!);
+      const from = values[0]!;
+      const to = values.at(-1)!;
+      return values.filter((y) => Math.abs(y - from) > 1 && Math.abs(y - to) > 1);
+    };
+    expect(between(0).length).toBeGreaterThan(1);
+    expect(between(1).length).toBeGreaterThan(1);
+    const moved = (index: number) =>
+      seen.findIndex((frame) => Math.abs(frame.y[index]! - seen[0]!.y[index]!) > 1);
+    expect(moved(1)).toBeGreaterThanOrEqual(moved(0));
+    expect(seen[0]!.glow).toBe(0);
+    expect(seen.at(-1)!.glow).toBe(1);
+    expect(seen.some((frame) => frame.glow > 0 && frame.glow < 1)).toBe(true);
+  });
+
   test("the machines are a stack that fans out upward on hover and does not move the sidebar", async ({
     page,
   }) => {
