@@ -679,6 +679,7 @@ export type RuntimeToControlPlane =
       host?: boolean;
       dirs?: string[];
       backends?: string[];
+      guests?: string[];
     }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)

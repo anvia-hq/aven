@@ -277,6 +277,7 @@ run(
       const before = bodies.length;
 
       await manager.start(thread, "again", model, {
+        skills: [{ name: "notes", description: "Take notes.", digest: "1".repeat(64) }],
         attachments: [
           {
             name: "notes.txt",
@@ -294,6 +295,8 @@ run(
       expect(bodies[before]).not.toContain(`${uploads}/notes-`);
       expect(bodies[before]).not.toContain("/uploads/notes-");
       expect(toolResultOf(bodies[before + 1])).toContain("The computer is offline");
+      expect(bodies[before]).toContain("could not be loaded");
+      expect(bodies[before]).toContain("notes");
       machineRunner = startRuntime({
         url,
         token,

@@ -17,6 +17,7 @@ import { withPlacedUploads } from "./placed-uploads";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
+import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
@@ -46,6 +47,7 @@ type Live = {
   steers: { steerId: string; message: AgentPrompt }[];
   mcp?: ConnectedMcp;
   mcpGoing?: Promise<ConnectedMcp | undefined>;
+  skillsUnavailable?: string[];
 };
 
 type RunScope = {
@@ -131,8 +133,7 @@ export function createRunDriver(context: DriverContext) {
   sweeper.unref();
 
   async function connectMcp(run: Live, runId: string, threadId: string, secrets: RunSecrets) {
-    const asked = secrets.mcp ?? [];
-    const configs = run.machine ? asked.map((config) => ({ ...config, allowLocal: false })) : asked;
+    const configs = secrets.mcp ?? [];
     if (!configs.length) return undefined;
     await closeReleasedMcp(threadId);
     const key = mcpKey(configs);
@@ -146,7 +147,9 @@ export function createRunDriver(context: DriverContext) {
         mcpKeys.delete(threadId);
         await kept.close().catch(() => undefined);
       }
-      connected = await connectMcpServers(configs);
+      connected = run.machine
+        ? await connectMcpForMachine(configs, context.machineCall?.(threadId))
+        : await connectMcpServers(configs);
       mcpConnections.set(threadId, connected);
       mcpKeys.set(threadId, key);
     }
@@ -301,7 +304,18 @@ export function createRunDriver(context: DriverContext) {
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
     if (run.cancelReason) throw new Error(run.cancelReason);
-    if (!state.record.skillListing) run.save({ skillListing: await installSkills(state.record) });
+    if (!state.record.skillListing) {
+      try {
+        run.save({ skillListing: await installSkills(state.record) });
+      } catch (error) {
+        if (!run.machine) throw error;
+        run.skillsUnavailable = (state.record.skills ?? []).map(({ name }) => name);
+        console.warn(
+          `No skills for ${thread.id}, its computer is unreachable:`,
+          errorMessage(error),
+        );
+      }
+    }
     clock.mark("skills");
     const redact = secretRedactor(env);
     const noted = (tools: readonly AnyTool[]) =>
@@ -390,6 +404,7 @@ export function createRunDriver(context: DriverContext) {
                 attended: false,
                 tools,
                 skills,
+                skillsUnavailable: run.skillsUnavailable,
                 envNames,
                 paths: context.sandbox.paths?.(thread.id),
                 mcp: mcp?.note,
@@ -399,6 +414,7 @@ export function createRunDriver(context: DriverContext) {
               }).agent,
           }),
           skills,
+          skillsUnavailable: run.skillsUnavailable,
           envNames,
           mcp: mcp?.note,
           memory: state.record.memory,

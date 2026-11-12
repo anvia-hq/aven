@@ -100,6 +100,7 @@ export type CreateBotReplyAgent = (input: {
 export type BotRepliesContext = {
   sandbox: ThreadWorkspaces;
   machines?: ThreadWorkspaces;
+  machineCall?: (botId: string) => MachineCall;
   createAgent: CreateBotReplyAgent;
   send(message: RuntimeToControlPlane): boolean;
   call<M extends keyof RuntimeCalls>(
@@ -261,8 +262,11 @@ export type IdleReleaseContext = {
 
 export type ResolveHost = (host: string) => Promise<string[]>;
 
+export type ConnectedMcpServer = { id: string; name: string; tools: AnyTool[] };
+
 export type ConnectedMcp = {
   tools: AnyTool[];
+  servers: ConnectedMcpServer[];
   results: McpConnectResult[];
   note: McpNote;
   close(): Promise<void>;
@@ -286,6 +290,7 @@ export type CreateRuntimeAgent = (input: {
   attended: boolean;
   tools: readonly AnyTool[];
   skills?: readonly SkillListing[];
+  skillsUnavailable?: readonly string[];
   envNames?: readonly string[];
   paths?: SandboxPaths;
   mcp?: McpNote;
@@ -307,6 +312,7 @@ export type AgentBackendSet = {
 
 export type DriverContext = {
   backend(kind: string | undefined): Promise<AgentBackend>;
+  machineCall?: (threadId: string) => MachineCall;
   records: RunRecords;
   outbox: RunOutbox;
   sandbox: ThreadWorkspaces;

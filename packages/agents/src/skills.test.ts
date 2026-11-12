@@ -39,3 +39,18 @@ test("the instructions list each skill with its path, and say nothing without an
   expect(text).toContain("cat /skills/<name>/SKILL.md");
   expect(text).toContain("read_file only reaches /workspace");
 });
+
+test("skills that could not be loaded are named, with or without others", () => {
+  const listed = skillsInstructions(
+    [{ name: "good", description: "A good one.", path: "/skills/good/SKILL.md" }],
+    ["notes"],
+  );
+  expect(listed).toContain("- good: A good one.");
+  expect(listed).toContain("could not be loaded");
+  expect(listed).toContain("notes");
+
+  const none = skillsInstructions([], ["notes", "deploy"]);
+  expect(none).not.toContain("Available skills");
+  expect(none).toContain("notes, deploy");
+  expect(skillsInstructions([], [])).toBe("");
+});

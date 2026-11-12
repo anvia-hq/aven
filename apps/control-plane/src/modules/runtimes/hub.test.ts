@@ -13,7 +13,7 @@ import type { LatestRelease } from "./types";
 import { connectRouter } from "./connect";
 import { RuntimeHub } from "./hub";
 import { threadCockpit } from "../cockpit/commands";
-import { runtimesService } from "./service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
 const noReleases: LatestRelease = { get: async () => undefined };
@@ -226,6 +226,22 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       op: "listFiles",
     });
     expect(other).toMatchObject({ ok: false, error: "Could not list files" });
+
+    const servers = [
+      { id: crypto.randomUUID(), name: "Notes", url: "http://x/mcp", allowLocal: true },
+    ];
+    for (const op of ["mcp.connect", "mcp.call", "mcp.close"]) {
+      const relayed = await ask(ws, received, "machine.call", {
+        runId: "run-machine",
+        op,
+        args: { servers },
+      });
+      expect(relayed).toMatchObject({ ok: true });
+      expect(sent.at(-1)).toMatchObject({
+        method: "machine.call",
+        params: { threadId: onMachine.id, op, args: { servers } },
+      });
+    }
   });
 
   test("a stop reaches the machine while its command is still running", async () => {
@@ -1128,6 +1144,60 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       method: "process.watch",
       params: { threadId: waiting.id, phase: "suspend" },
     });
+  });
+
+  test("a machine's guest with no live run on the control plane is suspended when the machine connects", async () => {
+    await runtimesService.ensureLocal();
+    const machine = await runtimesService.create(owner.organizationId, owner.userId, {
+      name: "guest-machine",
+    });
+    const agentWs = await open(server.server?.port, runtimesService.localToken);
+    await until(() => hub.isOnline(LOCAL_RUNTIME_ID));
+    const live = {
+      id: crypto.randomUUID(),
+      organizationId: owner.organizationId,
+      machine: machine.runtime.id,
+    };
+    const stale = crypto.randomUUID();
+    const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
+    hub.get(LOCAL_RUNTIME_ID)!.startRun("run-guest", live, sink);
+    const heard: ControlPlaneToRuntime[] = [];
+    const machineWs = new WebSocket(`ws://localhost:${server.server?.port}/connect`, {
+      headers: { authorization: `Bearer ${machine.token}` },
+    } as unknown as string[]);
+    sockets.push(machineWs);
+    machineWs.addEventListener("message", (event) => {
+      if (typeof event.data !== "string") return;
+      const message = JSON.parse(event.data) as ControlPlaneToRuntime;
+      heard.push(message);
+      if (message.type === "call") {
+        machineWs.send(JSON.stringify({ type: "reply", id: message.id, ok: true, result: null }));
+      }
+    });
+    await new Promise<void>((resolve, reject) => {
+      machineWs.onopen = () => {
+        machineWs.send(
+          JSON.stringify({
+            type: "hello",
+            version: WIRE_VERSION,
+            runs: [],
+            guests: [live.id, stale],
+          }),
+        );
+        resolve();
+      };
+      machineWs.onerror = () => reject(new Error("connect failed"));
+    });
+
+    await until(() => heard.some((message) => message.type === "call"));
+    await Bun.sleep(50);
+    const watched = heard.filter((message) => message.type === "call");
+    expect(watched).toHaveLength(1);
+    expect(watched[0]).toMatchObject({
+      method: "process.watch",
+      params: { threadId: stale, phase: "suspend" },
+    });
+    agentWs.send(JSON.stringify({ type: "run.end", runId: "run-guest", seq: 1, outcome: "done" }));
   });
 
   test("revoking cuts a connected runtime off and fails its live runs", async () => {

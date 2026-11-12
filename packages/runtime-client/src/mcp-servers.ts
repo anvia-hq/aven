@@ -6,7 +6,7 @@ import { mcpSlug } from "@aven/protocol/mcp";
 import { refusePrivateHost } from "./mcp-address";
 import type { McpNote } from "@aven/agents/types";
 import type { McpConnectResult, RunMcpServer } from "@aven/protocol/types";
-import type { ConnectedMcp, ResolveHost } from "./types";
+import type { ConnectedMcp, ConnectedMcpServer, ResolveHost } from "./types";
 
 export const MCP_CONNECT_TIMEOUT_MS = 15_000;
 
@@ -69,6 +69,7 @@ export async function connectMcpServers(
 
   const clients: McpClient[] = [];
   const servers: McpServer[] = [];
+  const grouped: ConnectedMcpServer[] = [];
   const taken = new Map<string, string>();
   for (const connection of connections) {
     if (!connection) continue;
@@ -85,11 +86,13 @@ export async function connectMcpServers(
     for (const tool of server.tools) taken.set(tool.name, config.name);
     clients.push(client);
     servers.push(server);
+    grouped.push({ id: config.id, name: config.name, tools: server.tools.map(asLocalTool) });
     results.push({ id: config.id });
   }
 
   return {
-    tools: servers.flatMap((server) => server.tools.map(asLocalTool)),
+    tools: grouped.flatMap((server) => server.tools),
+    servers: grouped,
     results,
     note: {
       servers: servers.map((server) => ({ name: server.name, tools: server.tools.length })),

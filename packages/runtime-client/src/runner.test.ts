@@ -2057,6 +2057,31 @@ describe("startRuntime runs", () => {
     expect(made).toEqual(["run-run-1", "run-run-2"]);
   });
 
+  describe("a computer lent to an agent that runs elsewhere", () => {
+    test("is named in hello after a reconnect, until the control plane says the run is over", async () => {
+      const workspaces = directoryWorkspaces();
+      cleanups.push(() => workspaces.dispose());
+      const { plane, runtime } = connect({ sandbox: workspaces });
+      await runtime.ready;
+      await until(() => hellos(plane).length === 1);
+      expect(hellos(plane)[0]).not.toHaveProperty("guests");
+      const ask = async (id: string, method: string, params: object) => {
+        plane.send({ type: "call", id, method, params } as never);
+        await until(() => plane.received.some((m) => m.type === "reply" && m.id === id));
+      };
+
+      await ask("p", "machine.call", { threadId: "t1", op: "prepare", args: { thread: {} } });
+      plane.drop();
+      await until(() => hellos(plane).length === 2);
+      expect(hellos(plane)[1]).toMatchObject({ guests: ["t1"] });
+
+      await ask("s", "process.watch", { threadId: "t1", phase: "suspend" });
+      plane.drop();
+      await until(() => hellos(plane).length === 3);
+      expect(hellos(plane)[2]).not.toHaveProperty("guests");
+    });
+  });
+
   describe("when the connection drops", () => {
     test("a run keeps working, and the control plane gets what it missed when it asks", async () => {
       const { sandbox, up } = slowSandbox();

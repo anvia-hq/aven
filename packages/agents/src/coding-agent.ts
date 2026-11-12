@@ -24,6 +24,7 @@ type CodingAgentOptions = ModelSource & {
   id?: string;
   instructions?: string;
   skills?: readonly SkillListing[];
+  skillsUnavailable?: readonly string[];
   envNames?: readonly string[];
   mcp?: McpNote;
   forks?: boolean;
@@ -46,7 +47,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     instructions: forPaths(
       [
         options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
-        skillsInstructions(options.skills ?? []),
+        skillsInstructions(options.skills ?? [], options.skillsUnavailable),
         environmentInstructions(options.envNames ?? []),
         mcpInstructions(options.mcp),
         memoryInstructions(options.memory),
