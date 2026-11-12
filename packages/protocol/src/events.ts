@@ -3,6 +3,7 @@ import type {
   ContextUsage,
   MessageMention,
   MessagePart,
+  PlanLimit,
   QuestionAnswer,
   RunEvent,
   SubagentEvent,
@@ -51,6 +52,23 @@ export function applyUsage(
   return {
     totals: addUsage(usage?.totals ?? NO_USAGE, event.turn),
     context: event.context ?? usage?.context,
+    limits: usage?.limits,
+  };
+}
+
+export function mergeLimits(
+  current: readonly PlanLimit[] | undefined,
+  incoming: readonly PlanLimit[],
+): PlanLimit[] {
+  const windows = new Set(incoming.map((limit) => limit.window));
+  return [...(current ?? []).filter((limit) => !windows.has(limit.window)), ...incoming];
+}
+
+export function applyLimits(usage: ThreadUsage | null, limits: readonly PlanLimit[]): ThreadUsage {
+  return {
+    totals: usage?.totals ?? NO_USAGE,
+    context: usage?.context,
+    limits: mergeLimits(usage?.limits, limits),
   };
 }
 

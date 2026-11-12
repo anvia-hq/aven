@@ -266,6 +266,8 @@ export type ClaudeSdkMessage =
     }
   | { type: "user"; session_id?: string; message?: { content?: unknown } }
   | { type: "system"; session_id?: string }
+  | { type: "rate_limit_event"; session_id?: string; rate_limit_info?: unknown }
+  | { type: "plan_limits"; session_id?: string; usage?: unknown }
   | {
       type: "result";
       session_id?: string;

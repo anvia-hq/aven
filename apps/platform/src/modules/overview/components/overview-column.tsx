@@ -3,6 +3,7 @@ import type { Thread } from "@/modules/threads/types";
 import { BackgroundTasksCard } from "./background-tasks-card";
 import { ContextCard } from "./context-card";
 import { EnvironmentCard } from "./environment-card";
+import { LimitsCard } from "./limits-card";
 import { UsageCard } from "./usage-card";
 import type { ThreadUsage } from "@aven/protocol/types";
 
@@ -31,6 +32,7 @@ export function OverviewColumn({
         loading={!synced}
         onCompact={owned ? onCompact : undefined}
       />
+      {thread.agentBackend === "claude" && <LimitsCard limits={usage?.limits} />}
       <UsageCard totals={usage?.totals} loading={!synced} />
     </aside>
   );

@@ -146,10 +146,28 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
     };
     const query = sdk.query({ prompt: userMessages(input.prompt), options });
     closeQuery = () => query.close();
+    let planUsage: ClaudeSdkMessage | undefined;
+    void Promise.resolve()
+      .then(() =>
+        query.usage_EXPERIMENTAL_MAY_CHANGE_DO_NOT_RELY_ON_THIS_API_YET({ skipBehaviors: true }),
+      )
+      .then(
+        (usage) => {
+          planUsage = { type: "plan_limits", usage };
+        },
+        () => undefined,
+      );
+
     for await (const message of query) {
       const mapped = asSdkMessage(message);
 
       if (mapped) yield mapped;
+
+      if (planUsage) {
+        const ready = planUsage;
+        planUsage = undefined;
+        yield ready;
+      }
     }
   })();
   return Object.assign(stream, {
@@ -168,6 +186,7 @@ function asSdkMessage(message: unknown): ClaudeSdkMessage | undefined {
     record?.type === "user" ||
     record?.type === "result" ||
     record?.type === "system" ||
+    record?.type === "rate_limit_event" ||
     record?.type === "stream_event"
   ) {
     return message as ClaudeSdkMessage;

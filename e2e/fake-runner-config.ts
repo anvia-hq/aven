@@ -17,6 +17,7 @@ export const FAKE_RUNNER_SWITCHES = {
   runEnds: "FAKE_RUN_ENDS",
   runEndsAfterMs: "FAKE_RUN_ENDS_AFTER",
   runFails: "FAKE_RUN_FAILS",
+  limits: "FAKE_LIMITS",
   avenFiles: "FAKE_AVEN_FILES",
   branch: "FAKE_BRANCH",
   processes: "FAKE_PROCESSES",
@@ -86,8 +87,16 @@ function endingOf(env: FakeRunnerEnv): FakeRunEnding {
 }
 
 function runOf(env: FakeRunnerEnv): FakeRunnerRun {
-  const { subagents, streamWords, streamLines, streamEveryMs, secret, questions, runFails } =
-    FAKE_RUNNER_SWITCHES;
+  const {
+    subagents,
+    streamWords,
+    streamLines,
+    streamEveryMs,
+    secret,
+    questions,
+    runFails,
+    limits,
+  } = FAKE_RUNNER_SWITCHES;
 
   if (on(env, subagents)) return { kind: "subagents" };
 
@@ -105,7 +114,12 @@ function runOf(env: FakeRunnerEnv): FakeRunnerRun {
 
   if (asked) return { kind: "questions", count: asked === "2" ? 2 : 1 };
 
-  return { kind: "plain", ending: endingOf(env), failure: valueOf(env, runFails) };
+  return {
+    kind: "plain",
+    ending: endingOf(env),
+    failure: valueOf(env, runFails),
+    limits: valueOf(env, limits),
+  };
 }
 
 export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {

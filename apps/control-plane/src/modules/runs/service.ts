@@ -2,7 +2,13 @@ import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { messagesToChat } from "@aven/agents/projection";
 import { latestMessages, messagesBefore } from "@aven/protocol/message-window";
 import { usageFromHistory } from "@aven/agents/usage";
-import { applyEvent, applyUsage, withSenders, withWorkedTimes } from "@aven/protocol/events";
+import {
+  applyEvent,
+  applyLimits,
+  applyUsage,
+  withSenders,
+  withWorkedTimes,
+} from "@aven/protocol/events";
 
 import { withoutBytes } from "../../attachments";
 import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
@@ -249,7 +255,7 @@ export class RunManager {
     ])
       .then(([history, times, senders]) => {
         run.messages = withSenders(withWorkedTimes(messagesToChat(history), times), senders);
-        run.usage = usageFromHistory(history);
+        run.usage = { ...usageFromHistory(history), limits: run.usage.limits };
       })
       .then(prepare);
     run.ready = loaded.catch(() => undefined);
@@ -488,6 +494,8 @@ export class RunManager {
     }
 
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
+
+    if (event.type === "limits" && run) run.usage = applyLimits(run.usage, event.limits);
 
     for (const subscriber of channel.subscribers) subscriber(event);
   }

@@ -6,6 +6,7 @@ import {
   SHOW_ARTIFACT_TOOL_NAME,
 } from "@aven/protocol/events";
 
+import { limitFromRateLimitEvent, limitsFromUsage } from "./claude-limits";
 import type { ClaudeModelUsage, ClaudeSdkMessage, ClaudeUsage } from "./types";
 import type {
   QuestionPrompt,
@@ -123,6 +124,18 @@ export class ClaudeTurn {
     this.#remember(message.session_id);
 
     if (message.type === "system") return [];
+
+    if (message.type === "rate_limit_event") {
+      const limit = limitFromRateLimitEvent(message.rate_limit_info);
+
+      return limit ? [{ type: "limits", limits: [limit] }] : [];
+    }
+
+    if (message.type === "plan_limits") {
+      const limits = limitsFromUsage(message.usage);
+
+      return limits.length > 0 ? [{ type: "limits", limits }] : [];
+    }
 
     if (message.type === "stream_event") return this.#delta(message);
 
