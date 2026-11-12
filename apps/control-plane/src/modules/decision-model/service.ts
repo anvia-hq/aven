@@ -8,7 +8,7 @@ import { DEFAULT_MODEL } from "./jev";
 import { serverModelsService } from "../server-models/service";
 import { serverDecisionModel } from "./server-default";
 import type { SaveDecisionModelBody } from "./schema";
-import type { DecisionConfig, DecisionModelView } from "./types";
+import type { DecisionConfig, DecisionKind, DecisionModelView } from "./types";
 import type { DecisionModelRow } from "@aven/db/schema/types";
 
 serverDecisionModel(process.env);
@@ -20,7 +20,13 @@ const view = ({ kind, modelId, keyHint }: DecisionModelRow): DecisionModelView =
   source: "workspace",
 });
 
-const serverView = ({ kind, modelId }: DecisionConfig): DecisionModelView => ({
+const serverView = ({
+  kind,
+  modelId,
+}: {
+  kind: DecisionKind;
+  modelId: string;
+}): DecisionModelView => ({
   kind,
   modelId,
   keyHint: "",
@@ -41,8 +47,8 @@ export const decisionModelService = {
 
     if (row) return view(row);
 
-    const fallback = await serverModelsService.decision();
-    return fallback ? serverView(fallback) : null;
+    const { decision } = await serverModelsService.view();
+    return decision ? serverView(decision) : null;
   },
 
   async save(organizationId: string, { kind, modelId, apiKey }: SaveDecisionModelBody) {

@@ -11,8 +11,8 @@ import { checkTimezone, CronError, systemTimezone } from "../schedules/cron";
 serverSmallModel(process.env);
 
 async function serverModelView(): Promise<ServerSmallModelView | null> {
-  const model = await serverModelsService.small();
-  return model ? { provider: model.provider, modelId: model.modelId ?? "" } : null;
+  const { small } = await serverModelsService.view();
+  return small ? { provider: small.kind, modelId: small.modelId } : null;
 }
 
 export const preferencesService = {

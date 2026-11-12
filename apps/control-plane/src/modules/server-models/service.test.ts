@@ -9,7 +9,7 @@ const run =
 run("serverModelsService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { platformSettings } = await import("@aven/db/schema/platform-settings");
-  const { inArray } = await import("drizzle-orm");
+  const { eq, inArray } = await import("drizzle-orm");
 
   const clear = () =>
     db
@@ -81,6 +81,27 @@ run("serverModelsService (postgres)", async () => {
       serverModelsService.saveSmall({ kind: "openai", modelId: "m" }, env),
     ).rejects.toBeInstanceOf(ConflictError);
     await expect(serverModelsService.removeDecision(env)).rejects.toBeInstanceOf(ConflictError);
+    await serverModelsService.removeSmall({});
+  });
+
+  test("a saved key that cannot be read does not stop the view, only the use of the key", async () => {
+    await serverModelsService.saveSmall(
+      { kind: "anthropic", modelId: "claude-haiku-5-5", apiKey: "sk-ant-zzzz9876" },
+      {},
+    );
+    await db
+      .update(platformSettings)
+      .set({
+        value: JSON.stringify({
+          kind: "anthropic",
+          modelId: "claude-haiku-5-5",
+          apiKeyEncrypted: "broken",
+          keyHint: "9876",
+        }),
+      })
+      .where(eq(platformSettings.key, "server_small_model"));
+    expect((await serverModelsService.view({})).small?.modelId).toBe("claude-haiku-5-5");
+    await expect(serverModelsService.small({})).rejects.toBeDefined();
     await serverModelsService.removeSmall({});
   });
 });
