@@ -12,10 +12,12 @@ import {
   actionsService,
   shipService,
   threadMessages,
+  followUps,
   putAwayThread,
   threadContinuation,
 } from "./composition";
 import { errorsRouter } from "./errors";
+import { followUpsRouter } from "./modules/follow-ups/router";
 import { foreignOrigin } from "./origin-guard";
 import { trustedOrigins } from "./modules/auth/service";
 import { artifactsRouter } from "./modules/artifacts/router";
@@ -85,6 +87,7 @@ export const app = new Elysia()
   .use(mcpRouter)
   .use(memoryRouter)
   .use(terminalRouter(runtimeHub))
+  .use(followUpsRouter(followUps))
   .use(threadsRouter(runsService, threadMessages, putAwayThread, threadContinuation))
   .use(variablesRouter)
   .use(projectVariablesRouter)

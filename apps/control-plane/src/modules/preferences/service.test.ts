@@ -56,4 +56,20 @@ run("preferencesService (postgres)", async () => {
       await db.delete(users).where(eq(users.id, bea));
     }
   });
+
+  test("follow-up suggestions are off until a person turns them on, with their model, and keep the timezone", async () => {
+    expect((await preferencesService.followUps(alice)).enabled).toBe(false);
+    await preferencesService.setTimezone(alice, "Asia/Jakarta");
+    await preferencesService.setFollowUps(alice, {
+      enabled: true,
+      providerId: "p1",
+      modelId: "small",
+    });
+    expect(await preferencesService.followUps(alice)).toEqual({
+      enabled: true,
+      providerId: "p1",
+      modelId: "small",
+    });
+    expect(await preferencesService.timezone(alice)).toBe("Asia/Jakarta");
+  });
 });

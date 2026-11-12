@@ -14,12 +14,15 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { AnswerForm } from "@/modules/threads/components/answer-form";
 import { SharedNotice } from "@/modules/threads/components/shared-notice";
 import { ShipBar } from "@/modules/threads/components/ship-bar";
+import { FollowUpChips } from "@/modules/threads/components/follow-up-chips";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
 import { useElementHeight } from "@/modules/threads/hooks/use-element-height";
 import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
+import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
+import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
@@ -51,6 +54,8 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     cancel,
   } = useThread(threadId);
   useFirstPrompt(threadId, send);
+  const followUps = useFollowUps(threadId, loaded, running, messages);
+  const { selection } = useModelSelection(threadId);
   const { compacting, compact } = useCompactThread(threadId);
   const canCompact = owned && !running && !question;
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -151,15 +156,24 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           onSubmit={answer}
                         />
                       ) : (
-                        <PromptInput
-                          threadId={thread.id}
-                          running={running}
-                          onStop={cancel}
-                          onCompact={compact}
-                          placeholder="Reply to the agent…"
-                          onSubmit={send}
-                          tools={<ProjectInfo projectId={thread.projectId} />}
-                        />
+                        <>
+                          <FollowUpChips
+                            suggestions={followUps.suggestions}
+                            onPick={(prompt) => {
+                              followUps.clear();
+                              void send({ prompt, attachments: [], mentions: [] }, selection);
+                            }}
+                          />
+                          <PromptInput
+                            threadId={thread.id}
+                            running={running}
+                            onStop={cancel}
+                            onCompact={compact}
+                            placeholder="Reply to the agent…"
+                            onSubmit={send}
+                            tools={<ProjectInfo projectId={thread.projectId} />}
+                          />
+                        </>
                       ))}
                   </div>
                 </div>
