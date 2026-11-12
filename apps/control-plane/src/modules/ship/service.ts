@@ -6,13 +6,14 @@ import { createFilesService } from "../files/service";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { projectsService } from "../projects/service";
+import { runtimesService } from "../runtimes/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadsService } from "../threads/service";
 import { SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
 import type { ModelSelection } from "../providers/types";
 import type { ShipMode } from "./types";
 import type { ThreadPullRequest } from "../threads/types";
-import type { FileContent } from "@aven/protocol/types";
+import type { FileContent, RuntimeLifetime } from "@aven/protocol/types";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {
@@ -31,6 +32,7 @@ type ShipDeps = {
     repoFullName: string | null;
     defaultBranch: string | null;
     pullRequests: ThreadPullRequest[];
+    lifetime: RuntimeLifetime;
   }>;
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
   hasFile: (organizationId: string, threadId: string, path: string) => Promise<boolean>;
@@ -64,7 +66,11 @@ export function createShipService(
       const thread = await threadsService.require(organizationId, threadId);
       const project = await projectsService.get(organizationId, thread.projectId);
       if (!project) throw new ConflictError("This thread's project was deleted");
-      return { ...project, pullRequests: thread.pullRequests };
+      return {
+        ...project,
+        pullRequests: thread.pullRequests,
+        lifetime: await runtimesService.lifetimeOf(thread.runtimeId),
+      };
     });
   const readShipFile =
     deps.readShipFile ??
@@ -87,7 +93,12 @@ export function createShipService(
         hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
         project.githubInstallationId ? github.appKeyOf(project.githubInstallationId) : null,
       ]);
-      return { ready: ship, ship, appKey };
+      return {
+        ready: ship,
+        ship,
+        appKey,
+        machine: project.githubInstallationId === null && project.lifetime === "persistent",
+      };
     },
 
     async ship(
@@ -97,6 +108,10 @@ export function createShipService(
       { mode, ...selection }: ModelSelection & { mode?: "update" | "new" } = {},
     ) {
       const project = await load(organizationId, threadId);
+      if (!project.githubInstallationId && project.lifetime === "ephemeral")
+        throw new ConflictError(
+          "This runner is temporary and has no GitHub of its own: connect the project to GitHub to ship",
+        );
       if (project.githubInstallationId && project.repoFullName) {
         const connection = await userTokens.use(
           userId,

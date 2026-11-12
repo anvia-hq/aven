@@ -35,6 +35,8 @@ function setup(
     file?: () => Promise<FileContent | null>;
     has?: string[];
     pullRequests?: (typeof project)["pullRequests"];
+    installation?: string | null;
+    lifetime?: "persistent" | "ephemeral";
   } = {},
 ) {
   const { connected = true, approved = true, canPush = true } = options;
@@ -48,7 +50,12 @@ function setup(
   }[] = [];
   const checked: string[] = [];
   const service = createShipService({} as RuntimeHub, {
-    load: async () => ({ ...project, pullRequests: options.pullRequests ?? [] }),
+    load: async () => ({
+      ...project,
+      githubInstallationId: options.installation === undefined ? "inst-1" : options.installation,
+      pullRequests: options.pullRequests ?? [],
+      lifetime: options.lifetime ?? "persistent",
+    }),
     userTokens: {
       use: async (_userId, appKey) => {
         checked.push(`connection for ${appKey}`);
@@ -84,6 +91,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: true,
       ship: true,
       appKey: "app-1",
+      machine: false,
     });
 
     const neither = setup();
@@ -91,6 +99,20 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ready: false,
       ship: false,
       appKey: "app-1",
+      machine: false,
+    });
+  });
+
+  test("a project with no GitHub app ships with the runner's own login, if the runner is persistent", async () => {
+    const persistent = setup({ installation: null, has: [".aven/ship.md"] });
+    expect(await persistent.service.readiness("org-1", threadId)).toMatchObject({
+      ready: true,
+      machine: true,
+    });
+
+    const ephemeral = setup({ installation: null, lifetime: "ephemeral" });
+    expect(await ephemeral.service.readiness("org-1", threadId)).toMatchObject({
+      machine: false,
     });
   });
 
@@ -110,6 +132,22 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
 });
 
 describe("shipping a thread", () => {
+  test("a project with no GitHub app ships on a persistent runner without a GitHub check", async () => {
+    const { service, sent, checked } = setup({ installation: null });
+
+    await service.ship("org-1", "user-1", threadId);
+
+    expect(checked).toEqual([]);
+    expect(sent).toHaveLength(1);
+  });
+
+  test("a project with no GitHub app is refused on an ephemeral runner", async () => {
+    const { service, sent } = setup({ installation: null, lifetime: "ephemeral" });
+
+    await expect(service.ship("org-1", "user-1", threadId)).rejects.toThrow("temporary");
+    expect(sent).toEqual([]);
+  });
+
   test("sends the thread's agent the ship prompt, as the person who pressed the button", async () => {
     const { service, sent, checked } = setup();
 

@@ -1,0 +1,1 @@
+ALTER TABLE "runtimes" ADD COLUMN "lifetime" text DEFAULT 'persistent' NOT NULL;

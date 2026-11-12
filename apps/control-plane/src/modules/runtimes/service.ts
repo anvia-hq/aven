@@ -177,6 +177,14 @@ export const runtimesService = {
     return row?.provider;
   },
 
+  async lifetimeOf(id: string) {
+    const [row] = await db
+      .select({ lifetime: runtimes.lifetime })
+      .from(runtimes)
+      .where(eq(runtimes.id, id));
+    return row?.lifetime ?? "persistent";
+  },
+
   async touch(id: string) {
     await db.update(runtimes).set({ lastSeenAt: new Date() }).where(eq(runtimes.id, id));
   },
