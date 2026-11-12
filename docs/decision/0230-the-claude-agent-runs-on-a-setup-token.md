@@ -51,6 +51,10 @@ Each row is a native capability and how this backend provides it. A row marked e
 | Bot runs                          | A bot's own reply stays on the native bot agent: a bot has no setup token. A person's message on a Claude thread, including one a bot delivers into that thread, uses this backend.                                                                                                                                                         |
 | Continuing on another runner      | The thread keeps `agent_backend`, and a run is placed on the runtime that drives `claude`, the same rule as any other backend.                                                                                                                                                                                                              |
 
+## Tests
+
+`AVEN_CLAUDE_FAKE=1` on a runner selects `claudeFakeQuery` instead of the SDK. The stand-in answers one sentence and does not call Anthropic or repeat the setup token. The token is still required, still encrypted, and still handed to that runner. `e2e/claude-backend.spec.ts` saves a token in Settings, starts a Claude thread, and checks the reply. That spec records video. A runner that leaves the variable unset uses the SDK.
+
 ## License
 
 `@anthropic-ai/claude-agent-sdk` is published under Anthropic Commercial Terms, which ask more of Aven than MIT does. It is a dependency of `@aven/runtime-client` because this backend is that SDK. The rest of Aven stays MIT.

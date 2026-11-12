@@ -55,3 +55,7 @@ The pretend background processes of `FAKE_PROCESSES` are still one list for the 
 ## A control-plane agent
 
 The suite's control plane has `AVEN_LOCAL_RUNNER=off`, so a thread's run stays on its fake runner. `e2e/control-plane-agent.spec.ts` is the one that covers an agent on the control plane. It starts a control plane of its own with the built-in runner on, a real runner as the machine, and a scripted model (`e2e/agent-model.ts`, reached with `AVEN_ANTHROPIC_BASE_URL`), and drives the browser against a second preview of the platform the suite already built. It is not a fake-runner switch. The other tests do not start those processes.
+
+## A Claude backend
+
+`e2e/claude-backend.spec.ts` covers a person saving a Claude setup token, starting a thread on the Claude backend, and seeing that thread's run answer. It starts the same kind of private control plane and machine runner. The machine is started with `AVEN_CLAUDE_FAKE=1`, so its Claude query is the local stand-in in `packages/runtime-client/src/claude-fake.ts` and never loads the Claude Agent SDK or calls Anthropic. The spec records video (`video: "on"`). CI uploads `test-results/**/video.webm` as `playwright-claude-video-<shard>` on every e2e job, including a green one.

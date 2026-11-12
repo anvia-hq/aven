@@ -1,6 +1,8 @@
 import { ClaudeRuns } from "./claude-backend";
+import { claudeFakeQuery } from "./claude-fake";
+import { claudeSdkQuery } from "./claude-sdk";
 import { DurableRuns } from "./durable-runs";
-import type { AgentBackend, AgentBackendSet } from "./types";
+import type { AgentBackend, AgentBackendSet, ClaudeQuery } from "./types";
 
 const NATIVE = "native";
 const CLAUDE = "claude";
@@ -20,13 +22,19 @@ export function backendFor(
   return Promise.reject(new Error(`This runner does not drive ${label}`));
 }
 
+export function claudeQueryForProcess(
+  env: Record<string, string | undefined> = process.env,
+): ClaudeQuery {
+  return env.AVEN_CLAUDE_FAKE === "1" ? claudeFakeQuery : claudeSdkQuery;
+}
+
 export function openAgentBackends(
   journalPath: string,
   keepAgents: ReadonlySet<string>,
 ): AgentBackendSet {
   const native = DurableRuns.open(journalPath, keepAgents);
   native.catch(() => undefined);
-  const claude = Promise.resolve(ClaudeRuns.open(journalPath));
+  const claude = Promise.resolve(ClaudeRuns.open(journalPath, claudeQueryForProcess()));
   const installed = new Map<string, Promise<AgentBackend>>([
     [NATIVE, native],
     [CLAUDE, claude],
