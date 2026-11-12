@@ -444,6 +444,10 @@ describe("Claude runs with the same preparation as native", () => {
     const ready = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let steered = () => {};
+    const steerSent = new Promise<void>((resolve) => {
+      steered = resolve;
+    });
     const query: ClaudeQuery = async function* (input) {
       seen.push(input);
       const iterator = input.prompt[Symbol.asyncIterator]();
@@ -476,9 +480,10 @@ describe("Claude runs with the same preparation as native", () => {
         type: "user",
         message: { content: [{ type: "tool_result", tool_use_id: "art", content: "shown" }] },
       };
-      const next = iterator.next();
       release();
-      const second = await next;
+      await steerSent;
+      yield { type: "result", subtype: "success", session_id: "sess-rich" };
+      const second = await iterator.next();
 
       if (!second.done) prompts.push(String(second.value));
 
@@ -610,6 +615,7 @@ describe("Claude runs with the same preparation as native", () => {
         prompt: "[process] Process p1 (bun test) ended with exit code 0 after 1s.",
       }),
     ).toEqual({ status: "queued" });
+    steered();
     await running;
     const names = seen[0]?.tools.catalog?.map((tool) => tool.name) ?? [];
     expect(names).toEqual(

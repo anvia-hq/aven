@@ -19,6 +19,7 @@ import type {
   AskedQuestion,
   AskedRun,
   ClaudeQuery,
+  ClaudeSteer,
   ClaudeRunContext,
   ClaudeToolHost,
   DurableEnd,
@@ -28,6 +29,9 @@ import type {
   GoalSpec,
   RunInput,
 } from "./types";
+
+const STEER_NOTE =
+  "The person sent this while you were working. Read it now and change course if it asks you to:";
 
 type Gate = {
   promise: Promise<DurableEnd>;
@@ -42,6 +46,7 @@ type LiveRun = {
   abort: AbortController;
   turn: ClaudeTurn;
   queue: PromptQueue;
+  steers: ClaudeSteer[];
   gate: Gate;
   onEvent: Emit;
   close?(): void;
@@ -80,6 +85,10 @@ export class PromptQueue {
     else this.#pending.push(text);
 
     return true;
+  }
+
+  get closed() {
+    return this.#closed;
   }
 
   get empty() {
@@ -209,12 +218,13 @@ export class ClaudeRuns implements AgentBackend {
     });
   }
 
-  steer(durableId: string, prompt: AgentPrompt) {
+  steer(durableId: string, prompt: AgentPrompt, requestId: string) {
     const live = this.#byDurable.get(durableId);
 
-    if (!live || live.abort.signal.aborted) return Promise.resolve(false);
+    if (!live || live.abort.signal.aborted || live.queue.closed) return Promise.resolve(false);
 
-    return Promise.resolve(live.queue.push(promptText(prompt)));
+    live.steers.push({ id: requestId, text: promptText(prompt) });
+    return Promise.resolve(true);
   }
 
   startGoal(spec: GoalSpec): Promise<FollowedGoal> {
@@ -344,6 +354,7 @@ export class ClaudeRuns implements AgentBackend {
       abort,
       turn: new ClaudeTurn(context.redact),
       queue: new PromptQueue(),
+      steers: [],
       gate: gate(),
       onEvent: options.onEvent,
       promptPending: true,
@@ -391,6 +402,7 @@ export class ClaudeRuns implements AgentBackend {
   #host(live: LiveRun, context: ClaudeRunContext): ClaudeToolHost {
     const host: ClaudeToolHost = {
       ...context.tools,
+      steered: () => this.#readSteers(live),
       questions: context.questions !== false && context.tools.questions !== false,
       signal: live.abort.signal,
       shown: (artifacts) => live.turn.queueArtifacts(artifacts),
@@ -403,6 +415,16 @@ export class ClaudeRuns implements AgentBackend {
     }
 
     return host;
+  }
+
+  #readSteers(live: LiveRun) {
+    const taken = live.steers.splice(0);
+
+    if (taken.length === 0) return undefined;
+
+    for (const steer of taken) live.onEvent({ type: "steer_applied", id: steer.id });
+
+    return `${STEER_NOTE}\n\n${taken.map((steer) => steer.text).join("\n\n")}`;
   }
 
   #park(
@@ -550,7 +572,17 @@ export class ClaudeRuns implements AgentBackend {
 
         this.#partial.set(live.durableId, live.turn.messages(""));
 
-        if (message.type === "result" && live.queue.empty) live.queue.close();
+        if (message.type === "result") {
+          const next = live.steers.splice(0);
+
+          if (next.length > 0) {
+            for (const steer of next) live.onEvent({ type: "steer_applied", id: steer.id });
+
+            live.queue.push(next.map((steer) => steer.text).join("\n\n"));
+          } else if (live.queue.empty) {
+            live.queue.close();
+          }
+        }
 
         if (live.abort.signal.aborted) break;
       }

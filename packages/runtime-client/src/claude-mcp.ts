@@ -187,7 +187,8 @@ export async function claudeMcpTools(host: ClaudeToolHost): Promise<ClaudeMcpToo
   const answer = (name: string) => async (args: unknown) => {
     const text = await callAvenTool(name, args, host);
     const failed = text.startsWith("The ") && text.includes("could not");
-    return textResult(text, failed);
+    const steered = host.steered?.();
+    return textResult(steered ? `${text}\n\n${steered}` : text, failed);
   };
   const tools: ClaudeMcpTool[] = [];
 

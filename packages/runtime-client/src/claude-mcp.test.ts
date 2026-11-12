@@ -2,7 +2,7 @@ import { createTool } from "@anvia/core";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
-import { callAvenTool } from "./claude-mcp";
+import { callAvenTool, claudeMcpTools } from "./claude-mcp";
 import type { ClaudeToolHost } from "./types";
 
 const command = createTool({
@@ -54,6 +54,19 @@ describe("Aven tools on the Claude agent's MCP server", () => {
     expect(
       await callAvenTool("exec_command", { command: "pwd" }, { catalog: [command] }),
     ).toContain("pwd");
+  });
+
+  test("adds a message the person sent while the agent works to the next tool result", async () => {
+    const pending = ["Check out the branch first."];
+    const host: ClaudeToolHost = {
+      catalog: [command],
+      steered: () => pending.shift(),
+    };
+    const tool = (await claudeMcpTools(host)).find((item) => item.name === "exec_command");
+    const first = JSON.stringify(await tool?.handler({ command: "pwd" }));
+    expect(first).toContain("Check out the branch first.");
+    const second = JSON.stringify(await tool?.handler({ command: "pwd" }));
+    expect(second).not.toContain("Check out");
   });
 
   test("shows an artifact the tool saved", async () => {
