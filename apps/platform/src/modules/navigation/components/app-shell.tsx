@@ -21,6 +21,7 @@ import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CenterRailLink } from "@/modules/center/components/center-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
+import { BetaCard } from "@/modules/notices/components/beta-card";
 import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
@@ -115,6 +116,7 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
+            <BetaCard />
             <MachineMonitor />
             <div className="flex items-center gap-1 md:hidden">
               <Button

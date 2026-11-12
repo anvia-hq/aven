@@ -84,6 +84,8 @@ The agent engine, built on `@anvia/core` (docs index: https://docs.anvia.dev/llm
 
 Settings > General > Small models holds a per-person switch and model for follow-up suggestions (`preferences` module, `user_settings`). When a reply settles, the thread page calls `POST /threads/:id/follow-ups` (`modules/follow-ups`), which asks that model for one to three short replies and shows them as buttons in the Ship row, between the Ship and diff buttons and Actions (`components/follow-up-chips.tsx`, `hooks/use-follow-ups.ts`); a button that does not fit is clipped and made `inert` (`hooks/use-fully-visible.ts`), and a thread the person only drives, which has no Ship row, shows them above the input. Pressing one sends it. The model is told never to suggest merging or opening a pull request: Ship does that. A finished `fork_thread` call renders as `components/fork-card.tsx` in the parent's transcript.
 
+`user_settings.dismissed_notices` holds the ids of the notices a person dismissed (`beta`); `GET /preferences` returns them as `dismissedNotices` and `POST /preferences/notices/:id/dismiss` adds one, refusing an id it does not know. The sidebar's beta card (`apps/platform/src/modules/notices`) shows until its id is there. Decision 0248.
+
 ### A bot's computer is on a runner of its choice (decision 0227)
 
 `bots.runtime_id` (null: the built-in runner, or `AVEN_BOT_RUNNER`) is set in the bot's settings under Computer and checked by `requireUsableRuntime`. `RemoteBotReplier` and the bot's computer and artifact routes use the bot's runner; the folder is `<runner home>/bots/<id>`, moved from `workspaces/<id>` on first use (`HostSandboxes`, `ThreadRef.bot`).
