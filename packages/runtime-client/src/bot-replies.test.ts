@@ -1259,4 +1259,19 @@ describe("BotReplies", () => {
       { type: "bot.end", replyId: "r1", error: "The connection to the control plane dropped" },
     ]);
   });
+
+  test("a bot reply stays on the native bot agent and is not given a ChatGPT login", async () => {
+    const login = "chatgpt-access-token-value-1842";
+    let seen = "";
+    const run = harness((input) => {
+      seen = JSON.stringify(input);
+      return agentThat([text("hi")])(input);
+    });
+    run.replies.start({ ...message, prompt: `hello ${login}` });
+    await run.until();
+
+    expect(seen).not.toContain("CODEX_ACCESS_TOKEN");
+    expect(seen).not.toContain("codexLogin");
+    expect(JSON.stringify(run.sent)).not.toContain("CODEX_ACCESS_TOKEN");
+  });
 });

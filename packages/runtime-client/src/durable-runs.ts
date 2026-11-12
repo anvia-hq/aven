@@ -105,6 +105,12 @@ const INTERRUPTED =
 
 const MODEL_RETRY = { maxAttempts: 5, initialDelayMs: 1_000, maxDelayMs: 30_000 };
 
+function nativeAgent(input: RunInput) {
+  if (!input.agent) throw new Error("This run has no native agent");
+
+  return input.agent;
+}
+
 export class DurableRuns implements AgentBackend {
   readonly kind = "native";
   #runtime: DurableRuntime;
@@ -204,15 +210,16 @@ export class DurableRuns implements AgentBackend {
     input: RunInput,
     onEvent: Emit,
   ) {
+    const agent = nativeAgent(input);
     this.#register(input);
     try {
       const run = await this.#runtime.submit(
-        { agentId: input.agent.id, sessionId: threadId, requestId: runId, prompt },
+        { agentId: agent.id, sessionId: threadId, requestId: runId, prompt },
         { enqueue: true },
       );
       return this.#follow(run, input, onEvent);
     } catch (error) {
-      this.#runtime.unregisterAgent(input.agent.id);
+      this.#runtime.unregisterAgent(agent.id);
       throw error;
     }
   }
@@ -273,7 +280,7 @@ export class DurableRuns implements AgentBackend {
     const run = await this.#runtime.getRun(durableId);
     const followed = this.#follow(run, input, onEvent, { after });
     followed.done.catch(() => undefined);
-    await this.#revive([input.agent.id]);
+    await this.#revive([nativeAgent(input).id]);
     return followed;
   }
 
@@ -357,16 +364,17 @@ export class DurableRuns implements AgentBackend {
   }
 
   #register(input: RunInput) {
+    const agent = nativeAgent(input);
     this.#runtime.registerAgents([
       {
-        agent: input.agent,
+        agent,
         version: AGENT_VERSION,
         stream: true,
         toolConcurrency: TOOL_CONCURRENCY,
         modelRetry: MODEL_RETRY,
         compaction: input.compaction,
         toolRecovery: Object.fromEntries(
-          input.agent.tools
+          agent.tools
             .filter((tool) => SAFE_TOOLS.has(tool.name))
             .map((tool) => [tool.name, "safe" as const]),
         ),
@@ -384,7 +392,7 @@ export class DurableRuns implements AgentBackend {
     onEvent: Emit,
     options: FollowOptions = {},
   ): FollowedRun {
-    const { agentId = input.agent.id, after, keepAgent } = options;
+    const { agentId = nativeAgent(input).id, after, keepAgent } = options;
     const mapper = createDurableEventMapper({ contextWindow: input.contextWindow });
 
     if (after) this.#replay(run.id, after, mapper);

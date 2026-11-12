@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
-import { backendFor } from "./agent-backends";
+import { backendFor, openAgentBackends } from "./agent-backends";
+import { codexFakeQuery, codexQueryForProcess } from "./codex-fake";
+import { journalPath } from "./testing/journal-path";
 import type { AgentBackend } from "./types";
 
 const installedBackend = (kind: string) => Promise.resolve({ kind } as unknown as AgentBackend);
@@ -31,5 +33,24 @@ describe("backendFor (decision 0220)", () => {
     await expect(backendFor(installed, "")).rejects.toThrow(
       "This runner does not drive that agent backend",
     );
+  });
+
+  test("a runner offers native and Codex", async () => {
+    const opened = openAgentBackends(journalPath(), new Set());
+    expect(opened.offered).toEqual(["native", "codex"]);
+    expect((await opened.get("codex")).kind).toBe("codex");
+    expect((await opened.get("native")).kind).toBe("native");
+    await opened.close();
+  });
+
+  test("AVEN_CODEX_FAKE selects the fake Codex query", () => {
+    const previous = process.env.AVEN_CODEX_FAKE;
+    process.env.AVEN_CODEX_FAKE = "1";
+    expect(codexQueryForProcess()).toBe(codexFakeQuery);
+    process.env.AVEN_CODEX_FAKE = "0";
+    expect(codexQueryForProcess()).not.toBe(codexFakeQuery);
+
+    if (previous === undefined) delete process.env.AVEN_CODEX_FAKE;
+    else process.env.AVEN_CODEX_FAKE = previous;
   });
 });

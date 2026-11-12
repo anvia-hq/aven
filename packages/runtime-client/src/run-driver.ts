@@ -1,4 +1,4 @@
-import type { AgentPrompt, AnyTool, Message } from "@anvia/core";
+import { createQuestionTool, type AgentPrompt, type AnyTool, type Message } from "@anvia/core";
 import {
   parseAgentContinuation,
   parseAgentInteractionResponse,
@@ -8,7 +8,12 @@ import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { errorMessage } from "@aven/agents/values";
 
+import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
+import { createSecretRequestTool } from "@aven/agents/tools/request-secret";
+import { createWebSearchTool } from "@aven/agents/tools/web-search";
+
 import { keepAttachments, promptOf } from "./attachments";
+import { codexInstructions } from "./codex-instructions";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
@@ -19,7 +24,13 @@ import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
-import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
+import type {
+  RunMcpServer,
+  RunSecrets,
+  RunThreadInfo,
+  RunWebSearch,
+  SteerResult,
+} from "@aven/protocol/types";
 import type {
   AgentBackend,
   ConnectedMcp,
@@ -29,6 +40,7 @@ import type {
   FollowedGoal,
   FollowedRun,
   GoalEnd,
+  CodexInstructionExtras,
   RunInput,
   RunMessage,
   RunRecord,
@@ -240,6 +252,7 @@ export function createRunDriver(context: DriverContext) {
     initial: RunRecord,
     state: { record: RunRecord },
     run: Live,
+    secrets: RunSecrets,
     clock: Timing,
     backend: AgentBackend,
   ): Promise<RunScope> {
@@ -255,10 +268,20 @@ export function createRunDriver(context: DriverContext) {
         return state.record;
       },
       save: run.save,
-      build: (id) => ({
-        ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
-        contextWindow: model?.contextWindow,
-      }),
+      build: (id) =>
+        backend.kind === "codex"
+          ? codexRunInput({ secrets, compact: true, attended: false, tools: [] })
+          : {
+              ...context.createAgent({
+                thread,
+                id,
+                attended: false,
+                tools: [],
+                model,
+                compact: true,
+              }),
+              contextWindow: model?.contextWindow,
+            },
       ...reporting(initial, state, run),
     };
   }
@@ -274,7 +297,7 @@ export function createRunDriver(context: DriverContext) {
     const { env } = secrets;
     const { runId, thread, model } = initial;
 
-    if (initial.compact) return compactionScope(initial, state, run, clock, backend);
+    if (initial.compact) return compactionScope(initial, state, run, secrets, clock, backend);
 
     const repoAccess = () => context.call("repo.access", { runId });
     const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
@@ -382,66 +405,96 @@ export function createRunDriver(context: DriverContext) {
         const skills = state.record.skillListing;
         const envNames = env?.map(({ name }) => name);
         const forking = attended && !thread.forkOf;
+        const paths = context.sandbox.paths?.(thread.id);
+        const listed = toolsForRun({
+          sandbox: context.sandbox,
+          thread,
+          tools: noted(box.tools),
+          computer,
+          current,
+          mcp: mcp && {
+            tools: mcp.tools,
+            current: () => mcpConnections.get(thread.id)?.tools,
+          },
+          attended,
+          repoAccess,
+          defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
+          memory:
+            state.record.memory &&
+            (async (command) => {
+              const answer = await context.call("memory.notes", {
+                runId,
+                command: redact ? redact(command) : command,
+              });
+              return redact ? redact(answer) : answer;
+            }),
+          cockpit:
+            state.record.cockpit &&
+            (async (command) => {
+              const answer = await context.call("cockpit.read", { runId, command });
+              return redact ? redact(answer) : answer;
+            }),
+          forks: forking
+            ? createForkHost({
+                runId,
+                thread,
+                sandbox: context.sandbox,
+                call: context.call,
+                redact,
+              })
+            : undefined,
+          emit: (event) => forward(event),
+          createSubagent:
+            backend.kind === "codex"
+              ? () => {
+                  throw new Error("A Codex subagent is started by the Codex backend");
+                }
+              : ({ type, id: subagentId, tools }) =>
+                  context.createAgent({
+                    thread,
+                    id: `${id}-${subagentId}`,
+                    attended: false,
+                    tools,
+                    skills,
+                    skillsUnavailable: run.skillsUnavailable,
+                    envNames,
+                    paths,
+                    mcp: mcp?.note,
+                    webSearch: state.record.webSearch,
+                    model,
+                    role: type,
+                  }).agent,
+        });
+
+        if (backend.kind === "codex") {
+          return codexRunInput({
+            secrets,
+            compact: false,
+            attended,
+            tools: listed,
+            webSearch: state.record.webSearch,
+            images: (state.record.attachments ?? []).flatMap((file) =>
+              file.image && file.path.includes("/") ? [file.path] : [],
+            ),
+            extras: {
+              skills,
+              skillsUnavailable: run.skillsUnavailable,
+              envNames,
+              mcp: mcp?.note,
+              memory: state.record.memory,
+              forks: forking,
+              paths,
+            },
+          });
+        }
+
         const { agent, compaction } = context.createAgent({
           thread,
           id,
           attended,
           forks: forking,
-          paths: context.sandbox.paths?.(thread.id),
-          tools: toolsForRun({
-            sandbox: context.sandbox,
-            thread,
-            tools: noted(box.tools),
-            computer,
-            current,
-            mcp: mcp && {
-              tools: mcp.tools,
-              current: () => mcpConnections.get(thread.id)?.tools,
-            },
-            attended,
-            repoAccess,
-            defineGoal: (goal) => activeRun(thread.id)?.save({ goal }),
-            memory:
-              state.record.memory &&
-              (async (command) => {
-                const answer = await context.call("memory.notes", {
-                  runId,
-                  command: redact ? redact(command) : command,
-                });
-                return redact ? redact(answer) : answer;
-              }),
-            cockpit:
-              state.record.cockpit &&
-              (async (command) => {
-                const answer = await context.call("cockpit.read", { runId, command });
-                return redact ? redact(answer) : answer;
-              }),
-            forks: forking
-              ? createForkHost({
-                  runId,
-                  thread,
-                  sandbox: context.sandbox,
-                  call: context.call,
-                  redact,
-                })
-              : undefined,
-            emit: (event) => forward(event),
-            createSubagent: ({ type, id: subagentId, tools }) =>
-              context.createAgent({
-                thread,
-                id: `${id}-${subagentId}`,
-                attended: false,
-                tools,
-                skills,
-                skillsUnavailable: run.skillsUnavailable,
-                envNames,
-                paths: context.sandbox.paths?.(thread.id),
-                mcp: mcp?.note,
-                webSearch: state.record.webSearch,
-                model,
-                role: type,
-              }).agent,
-          }),
+          paths,
+          tools: listed,
           skills,
           skillsUnavailable: run.skillsUnavailable,
           envNames,
@@ -733,6 +786,47 @@ export function createRunDriver(context: DriverContext) {
 
     forget(runId: string) {
       records.delete(runId);
+    },
+  };
+}
+
+function codexRunInput({
+  secrets,
+  compact,
+  attended,
+  tools,
+  webSearch,
+  images,
+  extras = {},
+}: {
+  secrets: RunSecrets;
+  compact: boolean;
+  attended: boolean;
+  tools: readonly AnyTool[];
+  webSearch?: RunWebSearch;
+  images?: readonly string[];
+  extras?: CodexInstructionExtras;
+}): RunInput {
+  const questions = attended && !compact;
+  const listed = [...tools];
+
+  if (questions) listed.push(createQuestionTool(), createSecretRequestTool());
+
+  if (webSearch && !compact) listed.push(createWebSearchTool({ apiKey: webSearch.apiKey }));
+
+  return {
+    codex: {
+      login: secrets.codexLogin ?? "",
+      model: secrets.codexModel,
+      instructions: codexInstructions({ questions, maxTurns: CODING_MAX_TURNS, ...extras }),
+      tools: listed,
+      redact: secretRedactor(secrets.env),
+      compact,
+      questions,
+      children: !compact,
+      rememberSession: attended || compact,
+      images,
+      extras,
     },
   };
 }

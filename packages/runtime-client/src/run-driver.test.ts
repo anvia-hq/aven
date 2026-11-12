@@ -40,8 +40,9 @@ const until = async (condition: () => boolean) => {
   expect(condition()).toBe(true);
 };
 
-function fakeBackend() {
+function fakeBackend(kind = "native") {
   const calls: { method: string; id: string }[] = [];
+  const inputs: unknown[] = [];
   const pending = new Map<string, (end: DurableEnd) => void>();
   let parked: { runId: string; agentId: string } | undefined;
   const followed = (id: string): FollowedRun => {
@@ -53,11 +54,12 @@ function fakeBackend() {
     };
   };
   const backend: AgentBackend = {
-    kind: "native",
+    kind: kind as AgentBackend["kind"],
     asked: async () => parked,
-    async start(runId) {
+    async start(runId, _threadId, _prompt, input) {
       const run = followed(runId);
       calls.push({ method: "start", id: runId });
+      inputs.push(input);
       return run;
     },
     async rejoin(durableId) {
@@ -87,6 +89,7 @@ function fakeBackend() {
   return {
     backend,
     calls,
+    inputs,
     park(run: { runId: string; agentId: string }) {
       parked = run;
     },
@@ -96,7 +99,11 @@ function fakeBackend() {
   };
 }
 
-function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
+function harness(
+  native: Promise<AgentBackend>,
+  other?: Promise<AgentBackend>,
+  codex?: Promise<AgentBackend>,
+) {
   const db = openRunDatabase(journalPath());
   const records = new RunRecords(db);
   const outbox = new RunOutbox(db);
@@ -106,6 +113,8 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
   const installed = new Map<string, Promise<AgentBackend>>([["native", native]]);
 
   if (other) installed.set("other", other);
+
+  if (codex) installed.set("codex", codex);
 
   const sandbox: ThreadWorkspaces = {
     async acquire(threadRef) {
@@ -263,5 +272,36 @@ describe("the run driver chooses the thread's backend (decision 0220)", () => {
 
     expect(native.calls).toEqual([{ method: "rejoin", id: "durable-old" }]);
     expect(other.calls).toEqual([{ method: "rejoin", id: "durable-named" }]);
+  });
+
+  test("a Codex run is built without a native agent, and the login stays out of the record", async () => {
+    const native = fakeBackend();
+    const codex = fakeBackend("codex");
+    const { driver, records, made } = harness(
+      Promise.resolve(native.backend),
+      undefined,
+      Promise.resolve(codex.backend),
+    );
+    const login = "eyJhbGciOiJub25lIn0.payload.signature";
+    const running = driver.start({
+      type: "run.start",
+      runId: "run-1",
+      thread,
+      prompt: "hi",
+      backend: "codex",
+      codexLogin: login,
+      codexModel: "gpt-5.4",
+    } as RunMessage);
+    await until(() => codex.calls.some((call) => call.method === "start"));
+
+    expect(made).toEqual([]);
+    expect(native.calls).toEqual([]);
+    expect(JSON.stringify(records.get("run-1"))).not.toContain(login);
+    expect(codex.inputs[0]).toMatchObject({
+      codex: { login, model: "gpt-5.4" },
+    });
+    expect(codex.inputs[0]).not.toHaveProperty("agent");
+    codex.finish("run-1");
+    await running;
   });
 });

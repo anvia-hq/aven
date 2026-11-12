@@ -181,10 +181,35 @@ export type GoalJournal = {
 
 export type Emit = (event: RunEvent, source?: Source) => void;
 
+export type CodexInstructionExtras = {
+  skills?: readonly SkillListing[];
+  skillsUnavailable?: readonly string[];
+  envNames?: readonly string[];
+  mcp?: McpNote;
+  memory?: RunMemory;
+  forks?: boolean;
+  paths?: SandboxPaths;
+};
+
+export type CodexRunContext = {
+  login: string;
+  model?: string;
+  instructions: string;
+  tools: readonly AnyTool[];
+  redact?: <T>(value: T) => T;
+  compact?: boolean;
+  questions?: boolean;
+  children?: boolean;
+  rememberSession?: boolean;
+  images?: readonly string[];
+  extras?: CodexInstructionExtras;
+};
+
 export type RunInput = {
-  agent: Agent<unknown>;
+  agent?: Agent<unknown>;
   compaction?: DurableAgentRegistration["compaction"];
   contextWindow?: number;
+  codex?: CodexRunContext;
 };
 
 export type ToolConcurrencyProbe = (registration: DurableAgentRegistration) => void;
