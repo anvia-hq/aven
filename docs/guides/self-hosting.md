@@ -78,7 +78,10 @@ backup before updating (below) if you may want to go back.
 
 ## Backup and restore
 
-Everything lives in one Postgres database. Back it up with:
+Two things hold a server's data, and a backup needs both.
+
+**The database.** Your projects, threads, transcripts, settings and keys are in one Postgres
+database. Back it up with:
 
 ```sh
 docker compose --project-directory ~/.aven/server -f ~/.aven/server/docker-compose.yml \
@@ -87,8 +90,27 @@ docker compose --project-directory ~/.aven/server -f ~/.aven/server/docker-compo
 
 and restore into an empty database with `psql -U aven -d <database> < aven-backup.sql` run the same
 way. Keep `~/.aven/server/.env` with it: the encryption key in it is what makes the stored provider
-keys, variables and GitHub App readable. `aven stop` and `aven update` keep the database;
-`aven uninstall --purge` deletes it.
+keys, variables and GitHub App readable.
+
+**The agent's memory of each thread.** The agent runs in the server's built-in runner, and what it
+remembers of a thread (the model's own history, which is more than the transcript you read) is in
+that runner's home, `~/.aven/runtime` (or `AVEN_RUNTIME_HOME`): `runs.db` and `runs.db.state`.
+Restore a database without them and every thread keeps its transcript, but its agent starts
+the next message with no memory of the earlier ones. The files are SQLite and change while the
+runner works, so stop the runner first and copy them all:
+
+```sh
+aven runner stop
+cp -a ~/.aven/runtime/runs.db* /path/to/backup/
+aven runner start
+```
+
+The working folders of threads (`~/.aven/runtime/workspaces`, and the same folder on each other
+runner) are copies of your repositories plus whatever the agent has not yet pushed: back them up too
+if you would lose work without them.
+
+`aven stop` and `aven update` keep the database and the runner's home; `aven uninstall --purge`
+deletes them.
 
 ## Security
 

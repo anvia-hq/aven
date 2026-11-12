@@ -88,4 +88,40 @@ describe("telling a machine to watch the processes an agent started there", () =
     await t.watch.hello("machine");
     expect(t.sent).toEqual([{ threadId: "thread-1", phase: "settle" }]);
   });
+
+  test("a runner that does not know the call is left alone until it reconnects", async () => {
+    const { sent, watch, failWith } = calls();
+    failWith(new Error("Unknown call: process.watch"));
+    await watch.ended("machine", "t1", "response");
+    failWith(undefined);
+
+    await watch.ended("machine", "t2", "response");
+    expect(sent).toEqual([]);
+
+    await watch.hello("machine");
+    await watch.ended("machine", "t3", "response");
+    expect(sent).toEqual([{ threadId: "t3", phase: "settle" }]);
+  });
+
+  test("a machine that reports guests the control plane has no run for has them suspended", async () => {
+    const { sent, watch } = calls();
+    const running = new Set(["live"]);
+
+    await watch.hello("machine", ["live", "stale", "unknown"], (threadId) =>
+      threadId === "unknown" ? undefined : running.has(threadId),
+    );
+
+    expect(sent).toEqual([{ threadId: "stale", phase: "suspend" }]);
+  });
+
+  test("a guest whose end is already waiting gets that end, not a second one", async () => {
+    const { sent, watch, offline, online } = calls();
+    offline();
+    await watch.ended("machine", "gone", "response");
+    online();
+
+    await watch.hello("machine", ["gone"], () => false);
+
+    expect(sent).toEqual([{ threadId: "gone", phase: "settle" }]);
+  });
 });

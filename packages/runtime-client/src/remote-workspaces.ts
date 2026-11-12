@@ -35,6 +35,10 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
   constructor(private callFor: (threadId: string) => MachineCall) {}
 
+  call(threadId: string) {
+    return this.callFor(threadId);
+  }
+
   readonly uploads = {
     save: async (threadId: string, name: string, bytes: Uint8Array) => {
       const data = bytes.toBase64();
@@ -156,20 +160,12 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   readonly skills = {
     install: async (threadId: string, skills: readonly RunSkill[], fetch: FetchSkill) => {
       const call = this.callFor(threadId);
-      try {
-        const first = (await call("skills.install", { skills })) as InstallAnswer;
-        if (!("missing" in first)) return first.listings;
-        const archives: Record<string, string> = {};
-        for (const digest of first.missing) archives[digest] = (await fetch(digest)).toBase64();
-        const second = (await call("skills.install", { skills, archives })) as InstallAnswer;
-        return "listings" in second ? second.listings : [];
-      } catch (error) {
-        console.warn(
-          `No skills for ${threadId}, its computer is unreachable:`,
-          errorMessage(error),
-        );
-        return [];
-      }
+      const first = (await call("skills.install", { skills })) as InstallAnswer;
+      if (!("missing" in first)) return first.listings;
+      const archives: Record<string, string> = {};
+      for (const digest of first.missing) archives[digest] = (await fetch(digest)).toBase64();
+      const second = (await call("skills.install", { skills, archives })) as InstallAnswer;
+      return "listings" in second ? second.listings : [];
     },
   };
 

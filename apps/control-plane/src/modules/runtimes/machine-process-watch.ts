@@ -10,6 +10,7 @@ type WatchCaller = Pick<RuntimeConnection, "call">;
 
 export class MachineProcessWatch {
   #pending = new Map<string, Map<string, Phase>>();
+  #old = new Set<string>();
   #tail = new Map<string, Promise<void>>();
 
   constructor(private caller: (runtimeId: string) => WatchCaller | undefined) {}
@@ -20,11 +21,18 @@ export class MachineProcessWatch {
     return this.#enqueue(machineId, () => this.#deliver(machineId, threadId, phase));
   }
 
-  hello(machineId: string) {
+  hello(
+    machineId: string,
+    guests: readonly string[] = [],
+    live: (threadId: string) => boolean | undefined = () => undefined,
+  ) {
+    this.#old.delete(machineId);
     return this.#enqueue(machineId, async () => {
-      const pending = this.#pending.get(machineId);
+      const pending = this.#pending.get(machineId) ?? new Map<string, Phase>();
       this.#pending.delete(machineId);
-      if (!pending) return;
+      for (const threadId of guests) {
+        if (!pending.has(threadId) && live(threadId) === false) pending.set(threadId, "suspend");
+      }
       for (const [threadId, phase] of pending) await this.#deliver(machineId, threadId, phase);
     });
   }
@@ -45,6 +53,7 @@ export class MachineProcessWatch {
   }
 
   async #deliver(machineId: string, threadId: string, phase: Phase) {
+    if (this.#old.has(machineId)) return;
     const connection = this.caller(machineId);
     if (!connection) {
       this.#keep(machineId, threadId, phase);
@@ -55,6 +64,13 @@ export class MachineProcessWatch {
     } catch (error) {
       if (!this.caller(machineId)) {
         this.#keep(machineId, threadId, phase);
+        return;
+      }
+      if (/unknown call/i.test(describeError(error))) {
+        this.#old.add(machineId);
+        console.warn(
+          `Runtime ${machineId} cannot watch the processes of a thread that runs elsewhere: its runner needs updating.`,
+        );
         return;
       }
       console.warn(`Could not ${phase} the process watch for ${threadId}:`, describeError(error));

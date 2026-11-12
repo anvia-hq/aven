@@ -10,6 +10,7 @@ import { keepAttachments } from "./attachments";
 import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
 import { connectMcpServers } from "./mcp-servers";
+import { connectMcpForMachine } from "./machine-mcp";
 import { remoteBotMemory } from "./remote-bot-memory";
 import type { SendMessage } from "@aven/agents/tools/types";
 import type {
@@ -169,7 +170,12 @@ export class BotReplies {
     const { signal } = abort;
     let mcp: ConnectedMcp | undefined;
     try {
-      mcp = await this.#connectMcp(replyId, servers, Boolean(this.#live.get(replyId)?.machine));
+      mcp = await this.#connectMcp(
+        replyId,
+        bot.id,
+        servers,
+        Boolean(this.#live.get(replyId)?.machine),
+      );
       const agent = await this.#agentFor(
         replyId,
         { bot, prompt, model, skills: skills ?? [], memory, cockpit },
@@ -200,10 +206,16 @@ export class BotReplies {
     return machines;
   }
 
-  async #connectMcp(replyId: string, servers: BotReplyMessage["mcp"], onMachine: boolean) {
+  async #connectMcp(
+    replyId: string,
+    botId: string,
+    servers: BotReplyMessage["mcp"],
+    onMachine: boolean,
+  ) {
     if (!servers?.length) return undefined;
-    const asked = onMachine ? servers.map((server) => ({ ...server, allowLocal: false })) : servers;
-    const connected = await connectMcpServers(asked);
+    const connected = onMachine
+      ? await connectMcpForMachine(servers, this.#context.machineCall?.(botId))
+      : await connectMcpServers(servers);
     this.#context
       .call("bot.mcp", { replyId, op: "report", results: connected.results })
       .catch((error: unknown) => {
@@ -234,7 +246,13 @@ export class BotReplies {
     if (!store) return [];
     const fetch = async (digest: string) =>
       Uint8Array.fromBase64((await this.#context.call("bot.skill", { replyId, digest })).data);
-    return store.install(botId, skills, fetch);
+    try {
+      return await store.install(botId, skills, fetch);
+    } catch (error) {
+      if (!this.replyOnMachine(botId)) throw error;
+      console.warn(`No skills for ${botId}, its computer is unreachable:`, errorMessage(error));
+      return [];
+    }
   }
 
   async #agentFor(

@@ -37,6 +37,9 @@ export const MACHINE_OPS = [
   "git.fetch",
   "turn.mark",
   "fork.take",
+  "mcp.connect",
+  "mcp.call",
+  "mcp.close",
 ] as const;
 export const ARTIFACT_MEDIA_TYPES = [
   "image/png",

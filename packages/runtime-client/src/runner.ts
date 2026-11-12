@@ -39,6 +39,7 @@ export const defaultCreateAgent =
     attended,
     tools,
     skills,
+    skillsUnavailable,
     envNames,
     paths,
     mcp,
@@ -77,6 +78,7 @@ export const defaultCreateAgent =
       contextWindow: model.contextWindow,
       tools,
       skills,
+      skillsUnavailable,
       envNames,
       paths,
       mcp,
@@ -180,6 +182,7 @@ export function startRuntime(options: RuntimeOptions) {
   const bots: BotReplies = new BotReplies({
     sandbox: options.sandbox,
     machines: botMachines,
+    machineCall: (botId) => botMachines.call(botId),
     createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),
     send,
     call,
@@ -202,6 +205,7 @@ export function startRuntime(options: RuntimeOptions) {
 
   const driver = createRunDriver({
     backend: (kind) => backends.get(kind),
+    machineCall: (threadId) => machines.call(threadId),
     records,
     outbox,
     sandbox: placed,
@@ -323,6 +327,7 @@ export function startRuntime(options: RuntimeOptions) {
         host: options.host ? true : undefined,
         dirs: options.dirs?.length ? options.dirs : undefined,
         backends: [...backends.offered],
+        guests: guestRuns.size ? [...guestRuns] : undefined,
       });
       resend();
       connected.resolve();

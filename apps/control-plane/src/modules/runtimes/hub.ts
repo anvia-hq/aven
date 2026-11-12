@@ -5,7 +5,7 @@ import { describeError, UnavailableError } from "../../errors";
 import { MachineProcessWatch } from "./machine-process-watch";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
-import { runtimesService } from "./service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import { ViewerStreams } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
 import type { CockpitCaller } from "../cockpit/types";
@@ -193,6 +193,12 @@ export class RuntimeConnection {
     this.#runs.delete(runId);
   }
 
+  hasRunOnMachine(machineId: string, threadId: string) {
+    return [...this.#runs.values()].some(
+      (run) => run.thread.machine === machineId && run.thread.id === threadId,
+    );
+  }
+
   async receive(raw: string) {
     const message = parseRuntimeFrame(raw);
     if (!message) return;
@@ -205,6 +211,7 @@ export class RuntimeConnection {
         message.host,
         message.dirs,
         message.backends,
+        message.guests,
       );
     if (!this.#ready) return;
     await this.#dispatch(message);
@@ -223,6 +230,7 @@ export class RuntimeConnection {
     host: boolean | undefined,
     dirs: string[] | undefined,
     backends: string[] | undefined,
+    guests: string[] | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
@@ -233,7 +241,9 @@ export class RuntimeConnection {
       void runtimesService.setHost(this.runtimeId, host === true);
       void runtimesService.setDirectories(this.runtimeId, dirs ?? []);
       this.hub.reclaim(this, runs);
-      void this.hub.machineWatches.hello(this.runtimeId);
+      void this.hub.machineWatches.hello(this.runtimeId, guests, (threadId) =>
+        this.hub.runsOnMachine(this.runtimeId, threadId),
+      );
       return;
     }
     this.close(
@@ -426,6 +436,14 @@ export class RuntimeHub {
       void this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
       run.sink.lost(new Error("The runtime restarted"));
     }
+  }
+
+  runsOnMachine(machineId: string, threadId: string) {
+    const agents = this.#connections.get(LOCAL_RUNTIME_ID);
+    if (!agents) return undefined;
+    if (agents.hasRunOnMachine(machineId, threadId)) return true;
+    const held = this.#held.get(LOCAL_RUNTIME_ID)?.runs.values() ?? [];
+    return [...held].some((run) => run.thread.machine === machineId && run.thread.id === threadId);
   }
 
   cancelRun(runtimeId: string, runId: string, reason: string) {

@@ -1,11 +1,19 @@
 import { asRecord } from "@aven/agents/values";
 import type { SandboxExecOptions, SandboxRuntime } from "@anvia/sandbox";
-import type { MachineCallParams, RepoAccess, RunEnvVar, RunSkill } from "@aven/protocol/types";
+import type {
+  MachineCallParams,
+  RepoAccess,
+  RunEnvVar,
+  RunMcpServer,
+  RunSkill,
+} from "@aven/protocol/types";
 
+import { normalizeToolResultOutput } from "@anvia/core/tool";
 import { fetchBranch } from "./fetch-branch";
+import { connectMcpServers } from "./mcp-servers";
 import { takeFork } from "./take-fork";
 import { markTurn } from "./thread-diff";
-import type { MachineCallsContext, ThreadRef } from "./types";
+import type { ConnectedMcp, MachineCallsContext, ThreadRef } from "./types";
 
 const bytesOf = (data: unknown) => {
   if (typeof data !== "string") throw new Error("Invalid parameters");
@@ -15,6 +23,26 @@ const bytesOf = (data: unknown) => {
 const textOf = (value: unknown) => {
   if (typeof value !== "string") throw new Error("Invalid parameters");
   return value;
+};
+
+const MCP_SERVERS_MAX = 50;
+
+const mcpServersOf = (value: unknown): RunMcpServer[] => {
+  if (!Array.isArray(value) || value.length > MCP_SERVERS_MAX)
+    throw new Error("Invalid parameters");
+  return value.map((entry) => {
+    const { id, name, url, headers, allowLocal } = asRecord(entry);
+    if (typeof id !== "string" || typeof name !== "string" || typeof url !== "string") {
+      throw new Error("Invalid parameters");
+    }
+    return {
+      id,
+      name,
+      url,
+      headers: asRecord(headers) as Record<string, string>,
+      allowLocal: allowLocal === true,
+    };
+  });
 };
 
 const OPERATION_ID_MAX = 512;
@@ -37,6 +65,46 @@ export function createMachineCalls({
 }: MachineCallsContext) {
   const running = new Map<string, AbortController>();
   const stopped = new Set<string>();
+  const mcps = new Map<string, { key: string; connected: ConnectedMcp }>();
+
+  async function closeMcp(threadId: string) {
+    const kept = mcps.get(threadId);
+    mcps.delete(threadId);
+    await kept?.connected.close().catch(() => undefined);
+  }
+
+  async function connectMcp(threadId: string, args: Record<string, unknown>) {
+    const servers = mcpServersOf(args.servers);
+    const key = JSON.stringify(servers);
+    const kept = mcps.get(threadId);
+    let connected = kept?.connected;
+    if (!kept || kept.key !== key || kept.connected.results.some((result) => result.error)) {
+      await closeMcp(threadId);
+      connected = await connectMcpServers(servers);
+      mcps.set(threadId, { key, connected });
+    }
+    const { results, note, servers: groups } = connected!;
+    return {
+      results,
+      note,
+      servers: await Promise.all(
+        groups.map(async ({ id, name, tools }) => ({
+          id,
+          name,
+          tools: await Promise.all(
+            tools.map(async (tool) => ({ name: tool.name, definition: await tool.definition("") })),
+          ),
+        })),
+      ),
+    };
+  }
+
+  async function callMcp(threadId: string, args: Record<string, unknown>) {
+    const name = textOf(args.tool);
+    const tool = mcps.get(threadId)?.connected.tools.find((candidate) => candidate.name === name);
+    if (!tool) throw new Error("This thread's MCP servers are not connected on this computer");
+    return normalizeToolResultOutput(await tool.call(args.input as never));
+  }
 
   function rememberStop(key: string) {
     stopped.add(key);
@@ -118,11 +186,20 @@ export function createMachineCalls({
       case "paths":
         return sandbox.paths?.(threadId) ?? null;
       case "release":
+        await closeMcp(threadId);
         await idle.releaseNow(threadId);
         return null;
       case "putAway":
+        await closeMcp(threadId);
         await idle.releaseNow(threadId);
         await sandbox.putAway?.(threadId);
+        return null;
+      case "mcp.connect":
+        return connectMcp(threadId, args);
+      case "mcp.call":
+        return callMcp(threadId, args);
+      case "mcp.close":
+        await closeMcp(threadId);
         return null;
       case "setProjectEnv":
         sandbox.setProjectEnv?.(threadId, args.env as RunEnvVar[] | undefined);
