@@ -10,7 +10,7 @@ const DEFAULT = "default";
 export function BotRuntimeRow({ bot }: { bot: Bot }) {
   const { runtimes } = useRuntimes();
   const { update } = useBots();
-  const choices = runtimes.filter((runtime) => runtime.isControlPlane || runtime.host);
+  const choices = runtimes;
   const labels: Record<string, string> = { [DEFAULT]: "Default" };
   for (const runtime of choices) labels[runtime.id] = runtime.name;
 
