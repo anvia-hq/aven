@@ -435,6 +435,13 @@
       "when": 1794455615169,
       "tag": "0061_unusual_mikhail_rasputin",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1794484595213,
+      "tag": "0062_confused_rattler",
+      "breakpoints": true
     }
   ]
 }

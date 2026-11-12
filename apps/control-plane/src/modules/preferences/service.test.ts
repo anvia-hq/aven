@@ -30,6 +30,13 @@ run("preferencesService (postgres)", async () => {
     expect((await preferencesService.get(alice)).timezone).toBe("America/New_York");
   });
 
+  test("a dismissed notice is kept once, per person", async () => {
+    expect((await preferencesService.get(alice)).dismissedNotices).toEqual([]);
+    await preferencesService.dismissNotice(alice, "beta");
+    await preferencesService.dismissNotice(alice, "beta");
+    expect((await preferencesService.get(alice)).dismissedNotices).toEqual(["beta"]);
+  });
+
   test("a name that is not a timezone is refused, and the choice stays", async () => {
     await preferencesService.setTimezone(alice, "Europe/Paris");
     await expect(preferencesService.setTimezone(alice, "Mars/Olympus")).rejects.toBeInstanceOf(
