@@ -7,7 +7,12 @@ import { api, postJson } from "@/lib/api";
 import { platformConfigAtom } from "../atoms/platform-config-atom";
 import type { PlatformConfig } from "../types";
 
-const FALLBACK: PlatformConfig = { registrationEnabled: true, githubLogin: false, isOwner: false };
+const FALLBACK: PlatformConfig = {
+  registrationEnabled: true,
+  githubLogin: false,
+  emailLogin: true,
+  isOwner: false,
+};
 
 let inflight: Promise<PlatformConfig> | undefined;
 

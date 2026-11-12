@@ -115,3 +115,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### One control-plane replica (decision 0236)
 
 The control plane holds runner connections, runs, watched channels and run tokens in process memory, so it runs as one replica. More are by runtime affinity at the edge (a runner and the requests for its runtime go to one replica, hashed on the runtime id), not by replicas calling each other.
+
+### Email sign-in off (decision 0239)
+
+`auth/email-login.ts` (`emailLoginOf`) reads `AVEN_EMAIL_LOGIN`: `off` disables Better Auth's `emailAndPassword` and refuses to start without GitHub sign-in. `/platform/config` says `emailLogin`, and the sign-in and register pages show the email form only when it is on.
