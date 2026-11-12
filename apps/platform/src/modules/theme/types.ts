@@ -26,13 +26,23 @@ export type Palette =
   | "oceanic"
   | "horizon"
   | "zenburn"
-  | "synthwave";
+  | "synthwave"
+  | "codex"
+  | "claude"
+  | "devin"
+  | "t3";
+
+export type PaletteFont = {
+  family: string;
+  googleQuery?: string;
+};
 
 export type PaletteOption = {
   id: Palette;
   label: string;
   light: string;
   dark: string;
+  heading?: PaletteFont;
 };
 
 export const THEME_STORAGE_KEY = "theme";
@@ -79,6 +89,37 @@ export const PALETTES: PaletteOption[] = [
   { id: "horizon", label: "Horizon", light: "#e95378", dark: "#e95378" },
   { id: "zenburn", label: "Zenburn", light: "#5b7ea0", dark: "#8cd0d3" },
   { id: "synthwave", label: "Synthwave", light: "#c026d3", dark: "#ff7edb" },
+  { id: "codex", label: "Codex", light: "#0d0d0d", dark: "#ffffff" },
+  {
+    id: "claude",
+    label: "Claude",
+    light: "#b5552f",
+    dark: "#d97757",
+    heading: {
+      family: '"Source Serif 4", "Iowan Old Style", Georgia, serif',
+      googleQuery: "family=Source+Serif+4:opsz,wght@8..60,400;8..60,600",
+    },
+  },
+  {
+    id: "devin",
+    label: "Devin",
+    light: "#005fcc",
+    dark: "#4d8dff",
+    heading: {
+      family: '"Inter", system-ui, sans-serif',
+      googleQuery: "family=Inter:wght@400;500;600",
+    },
+  },
+  {
+    id: "t3",
+    label: "T3",
+    light: "#7c3aed",
+    dark: "#a78bfa",
+    heading: {
+      family: '"Geist", system-ui, sans-serif',
+      googleQuery: "family=Geist:wght@400;500;600",
+    },
+  },
 ];
 
 export type SansFont = "system" | "inter" | "ibm-plex-sans" | "source-sans-3" | "geist";

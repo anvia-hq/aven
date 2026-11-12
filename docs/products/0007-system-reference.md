@@ -17,8 +17,8 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 - Colors use semantic tokens from `src/index.css` (`bg-background`, `text-muted-foreground`, `bg-primary`, ...), never raw palette colors. See `docs/rules/0004-color-tokens.md`.
 - Icons: `@mynaui/icons-react` only (no lucide). After `shadcn add`, convert any `lucide-react` imports; mapping in `docs/rules/0003-ui-primitives-base-ui.md`.
 - Layout state (sidebar width, thread panel sizes, whether the overview is open) is kept in localStorage through `src/hooks/use-local-storage.ts`; decision 0017.
-- Dark mode is the default; theme state lives in `src/modules/theme` (`useTheme`, `ModePicker`: light, dark or system, decision 0224).
-- Text is the system font (`--font-sans` in `src/index.css`, decision 0110) and code Geist Mono, bundled from `@fontsource-variable` (decision 0099).
+- Dark mode is the default; theme state lives in `src/modules/theme` (`useTheme`, `ModePicker`: light, dark or system, decision 0224): the palette (`PalettePicker`, `data-theme` on `<html>`) is Mint, 21 well-known color schemes, or one of the themes of Codex, Claude, Devin and T3, which may also lend `h1` to `h4` a face of their own (`--heading-font`, decision 0257).
+- Text is the system font (`--font-sans` in `src/index.css`, decision 0110), headings the palette's face or that font (`--heading-font`) and code Geist Mono, bundled from `@fontsource-variable` (decision 0099).
 - `src/components/` (vendored shadcn) is excluded from lint and formatting rules do not apply to hand edits there; prefer re-running the shadcn CLI over editing.
 - Non-feature singletons (auth client, api fetch helper) go in `src/lib/`.
 - Never edit `src/routeTree.gen.ts` (generated).
