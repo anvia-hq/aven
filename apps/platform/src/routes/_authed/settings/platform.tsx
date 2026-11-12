@@ -3,6 +3,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { SettingsPage } from "@/components/settings-section";
 import { api } from "@/lib/api";
 import { GithubSection } from "@/modules/platform/components/github-section";
+import { ServerModelsSection } from "@/modules/platform/components/server-models-section";
 import { RegistrationSection } from "@/modules/platform/components/registration-section";
 import type { PlatformConfig } from "@/modules/platform/types";
 
@@ -19,6 +20,7 @@ function Platform() {
   return (
     <SettingsPage title="Platform" description="Settings for the whole installation.">
       <RegistrationSection />
+      <ServerModelsSection />
       <GithubSection />
     </SettingsPage>
   );

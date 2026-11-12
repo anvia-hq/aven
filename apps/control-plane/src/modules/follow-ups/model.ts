@@ -1,7 +1,7 @@
 import type { ModelConfig } from "@aven/agents/types";
 
 import { resolveModel } from "../providers/resolve-model";
-import { serverSmallModel } from "../providers/server-small-model";
+import { serverModelsService } from "../server-models/service";
 import type { ModelSelection } from "../providers/types";
 import type { FollowUpSettings } from "../preferences/types";
 
@@ -10,7 +10,7 @@ export async function followUpModel(
   settings: FollowUpSettings,
   env: Record<string, string | undefined> = process.env,
 ): Promise<ModelConfig | null> {
-  if (!settings.providerId) return serverSmallModel(env);
+  if (!settings.providerId) return serverModelsService.small(env);
 
   const selection: ModelSelection = { providerId: settings.providerId };
 

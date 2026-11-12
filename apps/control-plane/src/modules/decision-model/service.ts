@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { UnprocessableError } from "../../errors";
 import { DEFAULT_MODEL } from "./jev";
+import { serverModelsService } from "../server-models/service";
 import { serverDecisionModel } from "./server-default";
 import type { SaveDecisionModelBody } from "./schema";
 import type { DecisionConfig, DecisionModelView } from "./types";
@@ -40,7 +41,7 @@ export const decisionModelService = {
 
     if (row) return view(row);
 
-    const fallback = serverDecisionModel(process.env);
+    const fallback = await serverModelsService.decision();
     return fallback ? serverView(fallback) : null;
   },
 
@@ -77,7 +78,7 @@ export const decisionModelService = {
   async config(organizationId: string): Promise<DecisionConfig | null> {
     const row = await rowOf(organizationId);
 
-    if (!row) return serverDecisionModel(process.env);
+    if (!row) return serverModelsService.decision();
 
     const apiKey = decryptOrUnavailable(row.apiKeyEncrypted, {
       logged: `Could not decrypt the decision model key of workspace ${organizationId}:`,

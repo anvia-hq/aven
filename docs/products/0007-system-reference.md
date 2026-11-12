@@ -127,3 +127,7 @@ The control plane holds runner connections, runs, watched channels and run token
 ### A server's small model for follow-ups (decision 0241)
 
 `providers/server-small-model.ts` (`serverSmallModel`) reads `SMALL_MODEL_API_KEY`, `_PROVIDER` and `_ID`. `follow-ups/model.ts` (`followUpModel`) uses it when a person has no provider of their own, and `preferences` returns `followUps.serverModel` (provider and model, never the key), which the Small models settings show as "Provided by this server".
+
+### Server defaults in the UI
+
+`server-models/service.ts` (`serverModelsService`) resolves the server's default decision model and small model: the environment first (`serverDecisionModel`, `serverSmallModel`), then a value saved in `platform_settings` under `server_decision_model` and `server_small_model`, key encrypted. `decisionModelService`, `followUpModel` and `preferencesService` call it, so a change applies without a restart. `server-models/router.ts` (`/platform/server-models`, owners only) reads the view (provider, model, key hint, `source` of `env` or `platform`) and saves or removes each default; changes are refused while the environment sets it. Settings > Platform shows it as "Server defaults" (`ServerModelsSection`). Decision 0242.
