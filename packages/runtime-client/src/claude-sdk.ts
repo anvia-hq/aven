@@ -24,7 +24,10 @@ export const CLAUDE_DISALLOWED_TOOLS = [
   "AskUserQuestion",
 ];
 
-const BLOCKED_ENV = new Set(["CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CONFIG_DIR"]);
+const BLOCKED_ENV_PREFIXES = ["ANTHROPIC_", "CLAUDE_"];
+
+const isBlockedEnv = (name: string) =>
+  BLOCKED_ENV_PREFIXES.some((prefix) => name.toUpperCase().startsWith(prefix));
 
 export function claudeProcessEnv(
   project: readonly RunEnvVar[],
@@ -35,7 +38,7 @@ export function claudeProcessEnv(
 ): Record<string, string> {
   const fromProject: Record<string, string> = {};
   for (const { name, value } of project) {
-    if (!BLOCKED_ENV.has(name)) fromProject[name] = value;
+    if (!isBlockedEnv(name)) fromProject[name] = value;
   }
   return {
     ...withoutRunnerSecrets(inherited),
@@ -96,6 +99,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
       persistSession: true,
       mcpServers: { aven: server },
       allowedTools: own.map((item) => `mcp__aven__${item.name}`),
+      tools: [] as string[],
       disallowedTools: CLAUDE_DISALLOWED_TOOLS,
       env: claudeProcessEnv(input.env, input.token, input.configDir, process.env, extra),
       systemPrompt: { type: "preset" as const, preset: "claude_code" as const, append },

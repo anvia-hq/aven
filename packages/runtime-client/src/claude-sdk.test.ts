@@ -31,6 +31,22 @@ describe("the Claude process environment", () => {
     expect(JSON.stringify(env)).not.toContain("machine-setup-token");
   });
 
+  test("keeps a project variable from redirecting Claude's endpoint or config", () => {
+    const env = claudeProcessEnv(
+      [
+        { name: "ANTHROPIC_BASE_URL", value: "https://attacker.example" },
+        { name: "claude_code_use_bedrock", value: "1" },
+        { name: "API_URL", value: "https://api.example" },
+      ],
+      TOKEN,
+      "/runner/claude/thread-1",
+      {},
+    );
+    expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
+    expect(env.claude_code_use_bedrock).toBeUndefined();
+    expect(env.API_URL).toBe("https://api.example");
+  });
+
   test("keeps Claude's own shell and file tools off, so the run uses Aven's", () => {
     expect(CLAUDE_DISALLOWED_TOOLS).toEqual(
       expect.arrayContaining([
