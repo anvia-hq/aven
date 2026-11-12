@@ -303,7 +303,12 @@ test.describe("sharing a thread", () => {
 
       await setDecisionModel(page);
       expect(await (await page.request.get("/api/decision-model")).json()).toEqual({
-        decisionModel: { kind: "jev-openrouter", modelId: "typesafe/jev-1.13", keyHint: "0000" },
+        decisionModel: {
+          kind: "jev-openrouter",
+          modelId: "typesafe/jev-1.13",
+          keyHint: "0000",
+          source: "workspace",
+        },
       });
       await page.reload();
       await share.click();

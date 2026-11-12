@@ -24,4 +24,11 @@ export type FollowUpDecider = (input: { transcript: string }) => Promise<number 
 
 export type AddressingModel = DecisionModel<unknown>;
 
-export type DecisionModelView = { kind: DecisionKind; modelId: string; keyHint: string };
+export type DecisionModelSource = "workspace" | "server";
+
+export type DecisionModelView = {
+  kind: DecisionKind;
+  modelId: string;
+  keyHint: string;
+  source: DecisionModelSource;
+};

@@ -12,8 +12,20 @@ import { useDecisionModel } from "../hooks/use-decision-model";
 import { DECISION_KINDS } from "../kinds";
 import type { DecisionKind, DecisionModel } from "../types";
 
-function explanation(isSet: boolean, canChange: boolean) {
-  if (isSet) return "Multiplayer threads use it.";
+function titleOf(model: DecisionModel | null) {
+  if (!model) return "Not set";
+
+  return model.source === "server" ? "Provided by this server" : "Set";
+}
+
+function explanation(model: DecisionModel | null, canChange: boolean) {
+  if (model?.source === "server") {
+    return canChange
+      ? "Multiplayer threads use it. Set one of your own to use your key instead."
+      : "Multiplayer threads use it.";
+  }
+
+  if (model) return "Multiplayer threads use it.";
 
   const needed = "Needed before anyone can turn multiplayer on.";
   return canChange
@@ -103,6 +115,7 @@ function Form({
 export function DecisionModelSection() {
   const { decisionModel, loaded, failed, save, remove } = useDecisionModel();
   const canChange = useCanChangeDecisionModel();
+  const own = decisionModel?.source === "workspace" ? decisionModel : null;
 
   if (failed) return <p className="py-6 text-sm text-muted-foreground">{failed}</p>;
 
@@ -114,8 +127,8 @@ export function DecisionModelSection() {
       description="Reads each message in a multiplayer thread and decides whether it is for the agent or for a teammate."
     >
       <SettingsRow
-        title={decisionModel ? "Set" : "Not set"}
-        description={explanation(decisionModel !== null, canChange)}
+        title={titleOf(decisionModel)}
+        description={explanation(decisionModel, canChange)}
       >
         {decisionModel && !canChange && (
           <span className="text-xs text-muted-foreground">
@@ -127,12 +140,8 @@ export function DecisionModelSection() {
       {canChange && (
         <div className="pt-4">
           <Form
-            key={
-              decisionModel
-                ? `${decisionModel.kind}:${decisionModel.modelId}:${decisionModel.keyHint}`
-                : "none"
-            }
-            current={decisionModel}
+            key={own ? `${own.kind}:${own.modelId}:${own.keyHint}` : "none"}
+            current={own}
             onSave={save}
             onRemove={remove}
           />

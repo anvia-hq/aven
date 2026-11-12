@@ -5,14 +5,25 @@ import { eq } from "drizzle-orm";
 import { decryptOrUnavailable, encryptSecret } from "../../crypto";
 import { UnprocessableError } from "../../errors";
 import { DEFAULT_MODEL } from "./jev";
+import { serverDecisionModel } from "./server-default";
 import type { SaveDecisionModelBody } from "./schema";
 import type { DecisionConfig, DecisionModelView } from "./types";
 import type { DecisionModelRow } from "@aven/db/schema/types";
+
+serverDecisionModel(process.env);
 
 const view = ({ kind, modelId, keyHint }: DecisionModelRow): DecisionModelView => ({
   kind,
   modelId,
   keyHint,
+  source: "workspace",
+});
+
+const serverView = ({ kind, modelId }: DecisionConfig): DecisionModelView => ({
+  kind,
+  modelId,
+  keyHint: "",
+  source: "server",
 });
 
 async function rowOf(organizationId: string) {
@@ -26,7 +37,11 @@ async function rowOf(organizationId: string) {
 export const decisionModelService = {
   async get(organizationId: string) {
     const row = await rowOf(organizationId);
-    return row ? view(row) : null;
+
+    if (row) return view(row);
+
+    const fallback = serverDecisionModel(process.env);
+    return fallback ? serverView(fallback) : null;
   },
 
   async save(organizationId: string, { kind, modelId, apiKey }: SaveDecisionModelBody) {
@@ -62,7 +77,7 @@ export const decisionModelService = {
   async config(organizationId: string): Promise<DecisionConfig | null> {
     const row = await rowOf(organizationId);
 
-    if (!row) return null;
+    if (!row) return serverDecisionModel(process.env);
 
     const apiKey = decryptOrUnavailable(row.apiKeyEncrypted, {
       logged: `Could not decrypt the decision model key of workspace ${organizationId}:`,
