@@ -2,13 +2,50 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
-const palettes = ["Mint", "Catppuccin", "Tokyo Night", "GitHub", "One Dark", "Solarized"];
+const palettes = [
+  "Mint",
+  "Catppuccin",
+  "Tokyo Night",
+  "GitHub",
+  "One Dark",
+  "Solarized",
+  "Nord",
+  "Dracula",
+  "Gruvbox",
+  "Rosé Pine",
+  "Monokai",
+  "Ayu",
+  "Material",
+  "Everforest",
+  "Night Owl",
+  "Palenight",
+  "Kanagawa",
+  "Oceanic",
+  "Horizon",
+  "Zenburn",
+  "Synthwave",
+];
 const ids: Record<string, string> = {
   Catppuccin: "catppuccin",
   "Tokyo Night": "tokyo-night",
   GitHub: "github",
   "One Dark": "one-dark",
   Solarized: "solarized",
+  Nord: "nord",
+  Dracula: "dracula",
+  Gruvbox: "gruvbox",
+  "Rosé Pine": "rose-pine",
+  Monokai: "monokai",
+  Ayu: "ayu",
+  Material: "material",
+  Everforest: "everforest",
+  "Night Owl": "night-owl",
+  Palenight: "palenight",
+  Kanagawa: "kanagawa",
+  Oceanic: "oceanic",
+  Horizon: "horizon",
+  Zenburn: "zenburn",
+  Synthwave: "synthwave",
 };
 
 async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {

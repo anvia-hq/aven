@@ -5,7 +5,28 @@ export type ThemeOption = {
   label: string;
 };
 
-export type Palette = "mint" | "catppuccin" | "tokyo-night" | "github" | "one-dark" | "solarized";
+export type Palette =
+  | "mint"
+  | "catppuccin"
+  | "tokyo-night"
+  | "github"
+  | "one-dark"
+  | "solarized"
+  | "nord"
+  | "dracula"
+  | "gruvbox"
+  | "rose-pine"
+  | "monokai"
+  | "ayu"
+  | "material"
+  | "everforest"
+  | "night-owl"
+  | "palenight"
+  | "kanagawa"
+  | "oceanic"
+  | "horizon"
+  | "zenburn"
+  | "synthwave";
 
 export type PaletteOption = {
   id: Palette;
@@ -27,12 +48,37 @@ export const PALETTE_STORAGE_KEY = "palette";
 export const DEFAULT_PALETTE: Palette = "mint";
 
 export const PALETTES: PaletteOption[] = [
-  { id: "mint", label: "Mint", light: "oklch(0.22 0.01 160)", dark: "oklch(0.93 0.006 160)" },
+  {
+    id: "mint",
+    label: "Mint",
+    light: "oklch(0.22 0.01 160)",
+    dark: "oklch(0.93 0.006 160)",
+  },
   { id: "catppuccin", label: "Catppuccin", light: "#1e66f5", dark: "#89b4fa" },
-  { id: "tokyo-night", label: "Tokyo Night", light: "#2e7de9", dark: "#7aa2f7" },
+  {
+    id: "tokyo-night",
+    label: "Tokyo Night",
+    light: "#2e7de9",
+    dark: "#7aa2f7",
+  },
   { id: "github", label: "GitHub", light: "#0969da", dark: "#58a6ff" },
   { id: "one-dark", label: "One Dark", light: "#4078f2", dark: "#61afef" },
   { id: "solarized", label: "Solarized", light: "#268bd2", dark: "#268bd2" },
+  { id: "nord", label: "Nord", light: "#5e81ac", dark: "#88c0d0" },
+  { id: "dracula", label: "Dracula", light: "#7c3aed", dark: "#bd93f9" },
+  { id: "gruvbox", label: "Gruvbox", light: "#076678", dark: "#83a598" },
+  { id: "rose-pine", label: "Rosé Pine", light: "#286983", dark: "#9ccfd8" },
+  { id: "monokai", label: "Monokai", light: "#c4265e", dark: "#a6e22e" },
+  { id: "ayu", label: "Ayu", light: "#399ee6", dark: "#e6b450" },
+  { id: "material", label: "Material", light: "#6182b8", dark: "#82aaff" },
+  { id: "everforest", label: "Everforest", light: "#3a94c5", dark: "#a7c080" },
+  { id: "night-owl", label: "Night Owl", light: "#4876d6", dark: "#82aaff" },
+  { id: "palenight", label: "Palenight", light: "#7c4dff", dark: "#82aaff" },
+  { id: "kanagawa", label: "Kanagawa", light: "#4d699b", dark: "#7e9cd8" },
+  { id: "oceanic", label: "Oceanic", light: "#3b7dbf", dark: "#6699cc" },
+  { id: "horizon", label: "Horizon", light: "#e95378", dark: "#e95378" },
+  { id: "zenburn", label: "Zenburn", light: "#5b7ea0", dark: "#8cd0d3" },
+  { id: "synthwave", label: "Synthwave", light: "#c026d3", dark: "#ff7edb" },
 ];
 
 export type SansFont = "system" | "inter" | "ibm-plex-sans" | "source-sans-3" | "geist";
