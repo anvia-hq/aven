@@ -30,7 +30,7 @@ test("a process in a later sandbox is not mistaken for one an earlier sandbox le
   let running = true;
   const watch = new ProcessEndWatch({
     box: () => ({ processes }) as never,
-    send: (message) => void sent.push(message),
+    send: (message) => sent.push(message) > 0,
     hasRun: () => running,
     stopped: () => false,
     pollMs: 20,
