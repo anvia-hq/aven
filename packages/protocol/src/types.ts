@@ -607,6 +607,7 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       claudeToken?: string;
       claudeModel?: string;
+      claudeEffort?: string;
     }
   | {
       type: "run.resume";
@@ -626,6 +627,7 @@ export type ControlPlaneToRuntime =
       backend?: AgentBackendKind;
       claudeToken?: string;
       claudeModel?: string;
+      claudeEffort?: string;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {
@@ -1031,3 +1033,5 @@ export type BotThreadDetail = BotThreadView & {
 };
 
 export type ContinuationPatch = "attached" | "none" | "unavailable";
+
+export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";

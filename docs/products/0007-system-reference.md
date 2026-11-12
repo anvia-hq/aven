@@ -131,3 +131,7 @@ The control plane holds runner connections, runs, watched channels and run token
 ### Server defaults in the UI
 
 `server-models/service.ts` (`serverModelsService`) resolves the server's default decision model and small model: the environment first (`serverDecisionModel`, `serverSmallModel`), then a value saved in `platform_settings` under `server_decision_model` and `server_small_model`, key encrypted. `decisionModelService`, `followUpModel` and `preferencesService` call it, so a change applies without a restart. `server-models/router.ts` (`/platform/server-models`, owners only) reads the view (provider, model, key hint, `source` of `env` or `platform`) and saves or removes each default; changes are refused while the environment sets it. Settings > Platform shows it as "Server defaults" (`ServerModelsSection`). Decision 0243.
+
+### Claude models and effort
+
+`@aven/protocol/claude-models` holds the Claude aliases, the model each resolves to, the effort levels and the default effort; a runtime-client test checks it against the SDK. The model menu lists them as "Sonnet 5.5" and so on and shows the effort slider; the chosen effort travels as `claudeEffort` on `run.start` and `run.resume` and reaches the SDK's `effort`. The system prompt sets `excludeDynamicSections` for cross-thread prompt caching. Decision 0245.

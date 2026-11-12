@@ -111,6 +111,7 @@ export class RemoteRuntime implements Runtime {
     model,
     claudeToken,
     claudeModel,
+    claudeEffort,
   }: StartRunInput): Promise<RuntimeRun> {
     const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
     return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
@@ -139,6 +140,8 @@ export class RemoteRuntime implements Runtime {
 
       if (claudeModel) message.claudeModel = claudeModel;
 
+      if (claudeEffort) message.claudeEffort = claudeEffort;
+
       return message;
     });
   }
@@ -158,6 +161,7 @@ export class RemoteRuntime implements Runtime {
     model,
     claudeToken,
     claudeModel,
+    claudeEffort,
   }: ResumeRunInput): Promise<RuntimeRun> {
     const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
     return this.#launch(
@@ -187,6 +191,8 @@ export class RemoteRuntime implements Runtime {
         if (claudeToken) message.claudeToken = claudeToken;
 
         if (claudeModel) message.claudeModel = claudeModel;
+
+        if (claudeEffort) message.claudeEffort = claudeEffort;
 
         return message;
       },

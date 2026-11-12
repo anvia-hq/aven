@@ -1,3 +1,4 @@
+import { CLAUDE_DEFAULT_EFFORT, CLAUDE_EFFORTS } from "@aven/protocol/claude-models";
 import { ArrowLeft, ChevronRight } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -7,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 
-import { CLAUDE_GROUP, CLAUDE_MODELS, claudeModelLabel } from "../claude-models";
+import { CLAUDE_GROUP, CLAUDE_ITEMS, claudeTriggerLabel } from "../claude-models";
 import type { useModelSelection } from "../hooks/use-model-selection";
 import type { ClaudeControl } from "../types";
 import { EffortSlider, effortName } from "./effort-slider";
@@ -18,6 +19,7 @@ export function ModelMenu({ model, claude }: Props) {
   const { providers, provider, modelId, modelLabel, choices, loadingModels, levels, effort } =
     model;
   const [choosing, setChoosing] = useState(false);
+  const only = claude?.only ?? false;
   const usingClaude = claude?.choice != null;
 
   const addProvider = (
@@ -28,15 +30,18 @@ export function ModelMenu({ model, claude }: Props) {
 
   if (!provider && !claude) return addProvider;
 
-  const listing = choosing || !provider;
-
-  const efforts = levels.length > 1 && !usingClaude;
-  const label = usingClaude ? claudeModelLabel(claude.choice?.modelId) : modelLabel;
+  const listing = choosing || (!provider && !usingClaude);
+  const shownLevels = usingClaude ? [...CLAUDE_EFFORTS] : levels;
+  const shownEffort = usingClaude ? (claude.choice?.effort ?? CLAUDE_DEFAULT_EFFORT) : effort;
+  const efforts = shownLevels.length > 1;
+  const label = usingClaude ? claudeTriggerLabel(claude.choice?.modelId) : modelLabel;
   const kind = usingClaude ? "anthropic" : provider?.kind;
+  const selectEffort = (next: string) =>
+    usingClaude ? claude.onChange({ ...claude.choice, effort: next }) : model.selectEffort(next);
 
   return (
     <>
-      {!provider && addProvider}
+      {!provider && !only && addProvider}
       <Popover onOpenChange={(open) => !open && setChoosing(false)}>
         <PopoverTrigger
           render={
@@ -50,9 +55,9 @@ export function ModelMenu({ model, claude }: Props) {
         >
           {kind && <ProviderLogo kind={kind} />}
           <span className="truncate font-medium text-foreground">
-            {usingClaude ? `Claude ${label}` : (label ?? "Provider default")}
+            {label ?? "Provider default"}
           </span>
-          {efforts && <span className="shrink-0">{effortName(effort)}</span>}
+          {efforts && <span className="shrink-0">{effortName(shownEffort)}</span>}
         </PopoverTrigger>
         <PopoverContent
           side="top"
@@ -62,7 +67,7 @@ export function ModelMenu({ model, claude }: Props) {
           {listing ? (
             <div className="flex flex-col gap-1 p-3 pb-0">
               <div className="flex items-center gap-2 pb-1">
-                {provider && (
+                {(provider || usingClaude) && (
                   <Button
                     variant="ghost"
                     size="icon-sm"
@@ -75,8 +80,8 @@ export function ModelMenu({ model, claude }: Props) {
                 <span className="font-medium">Choose model</span>
               </div>
               <ModelChoiceList
-                providers={providers}
-                choices={choices}
+                providers={only ? [] : providers}
+                choices={only ? [] : choices}
                 loading={loadingModels}
                 selected={
                   provider && !usingClaude ? { providerId: provider.id, modelId } : undefined
@@ -89,10 +94,13 @@ export function ModelMenu({ model, claude }: Props) {
                 extra={
                   claude && {
                     heading: CLAUDE_GROUP,
-                    items: CLAUDE_MODELS,
+                    items: CLAUDE_ITEMS,
                     selected: usingClaude ? (claude.choice?.modelId ?? "default") : null,
                     onSelect: (id) => {
-                      claude.onChange({ modelId: id === "default" ? undefined : id });
+                      claude.onChange({
+                        modelId: id === "default" ? undefined : id,
+                        effort: claude.choice?.effort,
+                      });
                       setChoosing(false);
                     },
                   }
@@ -105,7 +113,9 @@ export function ModelMenu({ model, claude }: Props) {
                 <span className="text-xs tracking-wide text-muted-foreground uppercase">
                   {efforts ? "Reasoning" : "Model"}
                 </span>
-                {efforts && <span className="text-xl font-semibold">{effortName(effort)}</span>}
+                {efforts && (
+                  <span className="text-xl font-semibold">{effortName(shownEffort)}</span>
+                )}
               </div>
               <Button
                 variant="outline"
@@ -113,21 +123,24 @@ export function ModelMenu({ model, claude }: Props) {
                 onClick={() => setChoosing(true)}
               >
                 {kind && <ProviderLogo kind={kind} />}
-                <span className="truncate">
-                  {usingClaude ? `Claude ${label}` : (label ?? "Provider default")}
-                </span>
+                <span className="truncate">{label ?? "Provider default"}</span>
                 <ChevronRight />
               </Button>
               {efforts && (
-                <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />
+                <EffortSlider levels={shownLevels} value={shownEffort} onChange={selectEffort} />
               )}
             </div>
           )}
-          <div className="border-t px-4 py-3 text-sm">
-            <Link to="/settings/providers" className="text-muted-foreground hover:text-foreground">
-              Manage models
-            </Link>
-          </div>
+          {!only && (
+            <div className="border-t px-4 py-3 text-sm">
+              <Link
+                to="/settings/providers"
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Manage models
+              </Link>
+            </div>
+          )}
         </PopoverContent>
       </Popover>
     </>

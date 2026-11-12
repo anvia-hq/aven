@@ -365,6 +365,7 @@ export class ClaudeRuns implements AgentBackend {
         redact: context.redact,
         instructions: context.instructions,
         model: context.model,
+        effort: context.effort,
         maxTurns: options.maxTurns ?? CODING_MAX_TURNS,
         resumeInterrupted: options.resumeInterrupted,
       });

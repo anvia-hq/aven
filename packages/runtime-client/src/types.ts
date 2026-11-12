@@ -224,6 +224,7 @@ export type ClaudeRunContext = {
   env: readonly RunEnvVar[];
   instructions?: string;
   model?: string;
+  effort?: string;
   compact?: boolean;
   questions?: boolean;
   children?: boolean;
@@ -274,6 +275,7 @@ export type ClaudeQueryInput = {
   redact(text: string): string;
   instructions?: string;
   model?: string;
+  effort?: string;
   maxTurns?: number;
   resumeInterrupted?: boolean;
 };
@@ -465,6 +467,7 @@ export type RunRecord = {
   done?: boolean;
   backend?: string;
   claudeModel?: string;
+  claudeEffort?: string;
 };
 
 export type RunToolsInput = {

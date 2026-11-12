@@ -1,12 +1,14 @@
-export const CLAUDE_MODELS = [
-  { id: "default", label: "Default" },
-  { id: "sonnet", label: "Sonnet" },
-  { id: "opus", label: "Opus" },
-  { id: "fable", label: "Fable" },
-] as const;
+import { CLAUDE_MODELS, claudeNameOf, claudeVersionOf } from "@aven/protocol/claude-models";
 
 export const CLAUDE_GROUP = "Claude subscription · Agent SDK";
 
-export function claudeModelLabel(modelId: string | undefined) {
-  return CLAUDE_MODELS.find((model) => model.id === (modelId ?? "default"))?.label ?? modelId;
+export const CLAUDE_ITEMS = CLAUDE_MODELS.map((model) => ({
+  id: model.id,
+  label: model.isDefault
+    ? `Default · ${model.family} ${claudeVersionOf(model.resolved)}`
+    : `${model.family} ${claudeVersionOf(model.resolved)}`,
+}));
+
+export function claudeTriggerLabel(modelId: string | undefined) {
+  return `Claude ${claudeNameOf(modelId)}`;
 }

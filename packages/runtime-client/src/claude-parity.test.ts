@@ -576,6 +576,7 @@ describe("Claude runs with the same preparation as native", () => {
       backend: "claude",
       claudeToken: TOKEN,
       claudeModel: "claude-opus-4-8",
+      claudeEffort: "high",
       attachments: [
         {
           name: "notes.txt",
@@ -629,6 +630,7 @@ describe("Claude runs with the same preparation as native", () => {
       ]),
     );
     expect(seen[0]?.model).toBe("claude-opus-4-8");
+    expect(seen[0]?.effort).toBe("high");
     expect(seen[0]?.env).toEqual([{ name: "API_URL", value: "https://example.test" }]);
     expect(seen[0]?.tools.webSearch).toEqual({ apiKey: "tvly-test" });
     expect(seen[0]?.instructions).toContain("review");

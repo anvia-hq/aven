@@ -290,6 +290,7 @@ export function createRunDriver(context: DriverContext) {
             questions: false,
             children: false,
             model: state.record.claudeModel,
+            effort: state.record.claudeEffort,
             instructions: "Compact this conversation and reply with one short note that you did.",
           },
         };
@@ -532,6 +533,7 @@ export function createRunDriver(context: DriverContext) {
             env: env ?? [],
             instructions: parts.filter((part) => part.length > 0).join("\n\n"),
             model: state.record.claudeModel,
+            effort: state.record.claudeEffort,
             questions: attended,
             tools: {
               catalog: tools,
@@ -751,6 +753,7 @@ export function createRunDriver(context: DriverContext) {
         thread: message.thread,
         model: message.model,
         claudeModel: message.claudeModel,
+        claudeEffort: message.claudeEffort,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
         compact: message.type === "run.start" ? message.compact : undefined,
