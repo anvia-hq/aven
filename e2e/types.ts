@@ -10,6 +10,7 @@ export type FakeRunnerSwitch =
   | "FAKE_STREAM_MS"
   | "FAKE_RUN_ENDS"
   | "FAKE_RUN_ENDS_AFTER"
+  | "FAKE_DIFF_LINES"
   | "FAKE_RUN_FAILS"
   | "FAKE_AVEN_FILES"
   | "FAKE_BRANCH"
@@ -40,6 +41,7 @@ export type FakeRunnerSelf = {
   canUpdate: boolean;
   stats: string | undefined;
   dirs: string[];
+  diffLines: number;
   updateBusyReason: string | undefined;
 };
 

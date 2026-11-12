@@ -28,6 +28,7 @@ export const FAKE_RUNNER_SWITCHES = {
   canUpdate: "FAKE_CAN_UPDATE",
   stats: "FAKE_STATS",
   dirs: "FAKE_DIRS",
+  diffLines: "FAKE_DIFF_LINES",
 } as const satisfies Record<string, FakeRunnerSwitch>;
 
 const DECLARED = new Set<string>(Object.values(FAKE_RUNNER_SWITCHES));
@@ -114,6 +115,7 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
     canUpdate,
     stats,
     dirs,
+    diffLines,
     updateBusy,
     steerAppliesAfterMs,
     steerRefuses,
@@ -130,6 +132,7 @@ export function readFakeRunnerConfig(env: FakeRunnerEnv): FakeRunnerConfig {
       canUpdate: on(env, canUpdate),
       stats: valueOf(env, stats),
       dirs: (valueOf(env, dirs) ?? "").split(":").filter(Boolean),
+      diffLines: countOf(env, diffLines, 0),
       updateBusyReason: valueOf(env, updateBusy),
     },
     steering: {

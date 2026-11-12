@@ -45,7 +45,7 @@ function Gutter({ number }: { number?: number }) {
   );
 }
 
-function UnifiedRow({ row, colour }: { row: DiffRow; colour: Colour }) {
+export function UnifiedRow({ row, colour }: { row: DiffRow; colour: Colour }) {
   return (
     <div className={cn("flex", tint[row.kind])}>
       <Gutter number={row.oldNo} />
@@ -60,7 +60,7 @@ function UnifiedRow({ row, colour }: { row: DiffRow; colour: Colour }) {
   );
 }
 
-function Side({ row, number, colour }: { row?: DiffRow; number?: number; colour: Colour }) {
+export function Side({ row, number, colour }: { row?: DiffRow; number?: number; colour: Colour }) {
   return (
     <div className={cn("flex min-w-0", row && tint[row.kind], !row && "bg-muted/30")}>
       <Gutter number={number} />
@@ -74,7 +74,7 @@ function Side({ row, number, colour }: { row?: DiffRow; number?: number; colour:
   );
 }
 
-function HunkHeader({ hunk }: { hunk: DiffHunk }) {
+export function HunkHeader({ hunk }: { hunk: DiffHunk }) {
   return (
     <div className="truncate bg-muted/50 px-3 py-0.5 text-muted-foreground">{hunk.header}</div>
   );
