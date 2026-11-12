@@ -12,7 +12,12 @@ import { DirectorySandbox } from "./directory-sandbox";
 import { fetchBranch } from "./fetch-branch";
 import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
-import { cloneRepositoryFolder, refreshRepositoryFolder } from "./repository-clone";
+import {
+  cloneRepositoryFolder,
+  fetchFolder,
+  refreshRepositoryFolder,
+  startFromRemote,
+} from "./repository-clone";
 import { ensureLocalExcludes } from "./local-excludes";
 import { envOf, withProjectEnv } from "./project-env";
 import { runtimeHome } from "./runtime-home";
@@ -205,6 +210,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     if (await isCloned(root)) return root;
 
     if (source.startsWith(this.#reposDir + sep)) await refreshRepositoryFolder(source, run);
+    else await fetchFolder(source, run);
 
     const parent = thread.forkOf ? this.#workspaceDir(thread.forkOf) : undefined;
 
@@ -223,6 +229,7 @@ export class HostSandboxes implements ThreadWorkspaces {
         { cloneUrl: source, defaultBranch: branch.stdout.trim(), token: "local" },
         run,
       );
+      await startFromRemote(root, source, branch.stdout.trim(), run).catch(() => false);
     }
 
     await ensureLocalExcludes(root).catch((error: unknown) => {

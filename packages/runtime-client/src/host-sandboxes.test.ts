@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
+import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { git } from "./git-clone";
 import { HostSandboxes } from "./host-sandboxes";
@@ -263,6 +265,30 @@ describe("a runner that works on this machine", () => {
 
       expect(await readFile(join(sandbox.paths("t1").workspace, "later.txt"), "utf8")).toBe(
         "newer",
+      );
+    });
+
+    test("a folder the person keeps is fetched, not changed, and a thread starts from what its remote has", async () => {
+      const { dir: remote } = await createRemoteRepo();
+      const mine = await mkdtemp(join(tmpdir(), "aven-mine-"));
+      homes.push(mine);
+      await git(["clone", "-q", remote, mine], { cwd: tmpdir() });
+      await writeFile(join(remote, "later.txt"), "newer");
+      await git(["add", "."], { cwd: remote });
+      await git(["commit", "-q", "-m", "later"], { cwd: remote });
+      const { sandbox } = await runner([mine]);
+
+      await sandbox.acquire({ id: "t1" }, undefined, { folder: folderOf(mine) });
+
+      const workspace = sandbox.paths("t1").workspace;
+      expect(await readFile(join(workspace, "later.txt"), "utf8")).toBe("newer");
+      expect((await git(["branch", "--show-current"], { cwd: workspace })).stdout.trim()).toBe(
+        threadBranch("t1"),
+      );
+      expect((await git(["rev-parse", "github/main"], { cwd: workspace })).code).toBe(0);
+      expect(existsSync(join(mine, "later.txt"))).toBe(false);
+      expect((await git(["rev-parse", "main"], { cwd: mine })).stdout).not.toBe(
+        (await git(["rev-parse", "origin/main"], { cwd: mine })).stdout,
       );
     });
 
