@@ -6,7 +6,7 @@ import { GithubMark } from "./brand-icons";
 
 const PULL_REQUEST_URL = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 
-function ExternalLink({
+export function ExternalLink({
   node: _node,
   children,
   ...props

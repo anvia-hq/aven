@@ -20,7 +20,7 @@ export const sendMessageSchema = z.object({
     .min(1)
     .max(2000)
     .describe(
-      "One message, as you would text it: short, one thought. Light markdown (bold, a short list) is shown as such; use it only when it helps.",
+      "One message, as you would text it: short, one thought. Light markdown (bold, a short list) is shown as such; use it only when it helps. Start each list item on its own line with a hyphen, never a bullet character. Write another bot as @Name and it is shown as that bot.",
     ),
 });
 

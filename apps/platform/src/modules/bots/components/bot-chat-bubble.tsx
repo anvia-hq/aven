@@ -1,9 +1,11 @@
 import { Bubble, BubbleContent } from "@/components/bubble";
-import { Markdown } from "@/components/markdown";
+import { ExternalLink, Markdown } from "@/components/markdown";
 import { MessageContent } from "@/components/message";
 import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 
+import { botIdOfHref, linkBotMentions } from "../mentions";
 import type { Bot, BotChatMessage } from "../types";
+import { BotMentionChip } from "./bot-mention-chip";
 import { MentionedText } from "./mentioned-text";
 
 export const isPersons = (message: BotChatMessage) => message.role === "user";
@@ -41,7 +43,23 @@ export function BotChatBubble({
             className="*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_3%)]! dark:*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_7%)]!"
           >
             <BubbleContent className="rounded-2xl">
-              <Markdown>{message.text}</Markdown>
+              <Markdown
+                components={{
+                  a: ({ node: _node, href, children, ...props }) => {
+                    const mentioned = bots.find((bot) => bot.id === botIdOfHref(href));
+
+                    return mentioned ? (
+                      <BotMentionChip bot={mentioned} />
+                    ) : (
+                      <ExternalLink href={href} {...props}>
+                        {children}
+                      </ExternalLink>
+                    );
+                  },
+                }}
+              >
+                {linkBotMentions(message.text, bots)}
+              </Markdown>
             </BubbleContent>
           </Bubble>
         ))}
