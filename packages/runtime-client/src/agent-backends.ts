@@ -1,7 +1,9 @@
+import { ClaudeRuns } from "./claude-backend";
 import { DurableRuns } from "./durable-runs";
 import type { AgentBackend, AgentBackendSet } from "./types";
 
 const NATIVE = "native";
+const CLAUDE = "claude";
 
 const BACKEND_NAME = /^[a-z][a-z0-9-]{0,39}$/;
 
@@ -24,13 +26,20 @@ export function openAgentBackends(
 ): AgentBackendSet {
   const native = DurableRuns.open(journalPath, keepAgents);
   native.catch(() => undefined);
-  const installed = new Map<string, Promise<AgentBackend>>([[NATIVE, native]]);
+  const claude = Promise.resolve(ClaudeRuns.open(journalPath));
+  const installed = new Map<string, Promise<AgentBackend>>([
+    [NATIVE, native],
+    [CLAUDE, claude],
+  ]);
   return {
-    offered: [NATIVE],
+    offered: [NATIVE, CLAUDE],
     get: (kind) => backendFor(installed, kind),
     async close() {
-      const opened = await native.catch(() => undefined);
-      await opened?.close().catch(() => undefined);
+      const opened = await Promise.all([
+        native.catch(() => undefined),
+        claude.catch(() => undefined),
+      ]);
+      await Promise.all(opened.map((backend) => backend?.close().catch(() => undefined)));
     },
   };
 }

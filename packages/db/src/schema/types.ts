@@ -3,6 +3,7 @@ import type { botGoals } from "./bot-goals";
 import type { botSchedules } from "./bot-schedules";
 import type { botThreads } from "./bot-threads";
 import type { bots } from "./bots";
+import type { claudeSetupTokens } from "./claude-setup-tokens";
 import type { cockpitInboxItems } from "./cockpit-inbox-items";
 import type { cockpitNotes } from "./cockpit-notes";
 import type { cockpitTags } from "./cockpit-tags";
@@ -38,6 +39,8 @@ export type BotScheduleRow = typeof botSchedules.$inferSelect;
 export type BotThreadRow = typeof botThreads.$inferSelect;
 
 export type BotRow = typeof bots.$inferSelect;
+
+export type ClaudeSetupTokenRow = typeof claudeSetupTokens.$inferSelect;
 
 export type CockpitInboxItemRow = typeof cockpitInboxItems.$inferSelect;
 

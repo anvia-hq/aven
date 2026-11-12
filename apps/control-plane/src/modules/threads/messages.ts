@@ -2,8 +2,10 @@ import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
 import { timing } from "@aven/runtime-client/timing";
 
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
+import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments } from "../../attachments";
-import { ConflictError } from "../../errors";
+import { ConflictError, UnprocessableError } from "../../errors";
+import { claudeSetupService } from "../claude-setup/service";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
@@ -174,10 +176,13 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
     const attachments = prepareAttachments(files);
-    const model = await resolveModel(driverId ?? ownerId, selection);
+    const claude = thread.agentBackend === "claude";
+    const model = claude ? undefined : await resolveModel(driverId ?? ownerId, selection);
 
-    if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    if (!claude && model && attachments.some((file) => file.image)) await assertSeesImages(model);
 
+    const claudeToken = claude ? await claudeSetupService.requireFor(thread.createdBy) : undefined;
+    const claudeModel = claude ? selection.modelId : undefined;
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
     clock.mark("sender");
@@ -187,6 +192,8 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       attachments,
       mentions,
       senderId: userId,
+      claudeToken,
+      claudeModel,
       ...sender,
       ...scoped,
     });
@@ -212,6 +219,10 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     }
 
     if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
+
+    if (!backendSupports(thread.agentBackend, "steering")) {
+      throw new ConflictError(backendRefusal(thread.agentBackend, "steering"));
+    }
 
     const message = {
       id: steerId ?? crypto.randomUUID(),
@@ -270,8 +281,20 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
       if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
-      const model = await resolveModel(userId, selection);
-      await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
+      if (!backendSupports(thread.agentBackend, "compaction")) {
+        throw new UnprocessableError(backendRefusal(thread.agentBackend, "compaction"));
+      }
+
+      const claude = thread.agentBackend === "claude";
+      const model = claude ? undefined : await resolveModel(userId, selection);
+      const claudeToken = claude
+        ? await claudeSetupService.requireFor(thread.createdBy)
+        : undefined;
+      await runs.start(thread, COMPACT_PROMPT, model, {
+        compact: true,
+        claudeToken,
+        claudeModel: claude ? selection.modelId : undefined,
+      });
       await threadsService.reopen(thread);
     },
 
@@ -291,7 +314,11 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
 
-      const model = await resolveModel(driverId ?? ownerId, selection);
+      const claude = thread.agentBackend === "claude";
+      const model = claude ? undefined : await resolveModel(driverId ?? ownerId, selection);
+      const claudeToken = claude
+        ? await claudeSetupService.requireFor(thread.createdBy)
+        : undefined;
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,
@@ -303,7 +330,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         skip: skipSecrets,
       });
       const scoped = await threadExtras(organizationId, thread, ownerId, true, driverId);
-      await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
+      await runs.answer(thread, continuation, kept, model, {
+        ...sender,
+        ...scoped,
+        claudeToken,
+        claudeModel: claude ? selection.modelId : undefined,
+      });
       await threadsService.reopen(thread);
     },
   };

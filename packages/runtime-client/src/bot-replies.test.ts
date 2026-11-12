@@ -164,6 +164,18 @@ function harness(
 }
 
 describe("BotReplies", () => {
+  test("a reply is the bot agent, and it is not given a Claude setup token", async () => {
+    let sawToken = false;
+    const run = harness((input) => {
+      sawToken = JSON.stringify(input).includes("CLAUDE_CODE_OAUTH_TOKEN");
+      return agentThat([text("hi")])(input);
+    });
+    run.replies.start(message);
+    await run.until();
+    expect(sawToken).toBe(false);
+    expect(run.sent.some((frame) => frame.type === "bot.end")).toBe(true);
+  });
+
   describe("the person's skills (decision 0081)", () => {
     const root = mkdtemp(join(tmpdir(), "aven-bot-skills-"));
     afterAll(async () => rm(await root, { recursive: true, force: true }));

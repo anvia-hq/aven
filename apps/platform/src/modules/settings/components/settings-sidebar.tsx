@@ -1,6 +1,7 @@
 import {
   BookOpen,
   ChatDots,
+  Code,
   Cog,
   Github,
   Key,
@@ -31,6 +32,7 @@ const groups = [
       { to: "/settings/general", label: "General", icon: Cog },
       { to: "/settings/profile", label: "Profile", icon: UserCircle },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
+      { to: "/settings/claude", label: "Claude", icon: Code },
       { to: "/settings/bots", label: "Bots", icon: ChatDots },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
       { to: "/settings/mcp", label: "MCP servers", icon: Puzzle },

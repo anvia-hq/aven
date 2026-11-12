@@ -109,7 +109,11 @@ export function createThreadForks({
     const fork = await threadsService.create(
       parent.organizationId,
       userId,
-      { projectId: parent.projectId, title: title ?? threadTitleFrom(task) },
+      {
+        projectId: parent.projectId,
+        title: title ?? threadTitleFrom(task),
+        backend: parent.agentBackend,
+      },
       { parentThreadId: parent.id, runtimeId: parent.runtimeId },
     );
     const prompt = forkPrompt(

@@ -29,6 +29,7 @@ import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
+import { Route as AuthedSettingsClaudeRouteImport } from './routes/_authed/settings/claude'
 import { Route as AuthedSettingsDecisionModelRouteImport } from './routes/_authed/settings/decision-model'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
@@ -147,6 +148,11 @@ const AuthedSettingsBotsRoute = AuthedSettingsBotsRouteImport.update({
   path: '/bots',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsClaudeRoute = AuthedSettingsClaudeRouteImport.update({
+  id: '/claude',
+  path: '/claude',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsDecisionModelRoute =
   AuthedSettingsDecisionModelRouteImport.update({
     id: '/decision-model',
@@ -259,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
+  '/settings/claude': typeof AuthedSettingsClaudeRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -293,6 +300,7 @@ export interface FileRoutesByTo {
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
+  '/settings/claude': typeof AuthedSettingsClaudeRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
+  '/_authed/settings/claude': typeof AuthedSettingsClaudeRoute
   '/_authed/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
+    | '/settings/claude'
     | '/settings/decision-model'
     | '/settings/environment-variables'
     | '/settings/general'
@@ -408,6 +418,7 @@ export interface FileRouteTypes {
     | '/cockpit/tags'
     | '/cockpit/tasks'
     | '/settings/bots'
+    | '/settings/claude'
     | '/settings/decision-model'
     | '/settings/environment-variables'
     | '/settings/general'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
     | '/_authed/settings/bots'
+    | '/_authed/settings/claude'
     | '/_authed/settings/decision-model'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/general'
@@ -620,6 +632,13 @@ declare module '@tanstack/react-router' {
       path: '/bots'
       fullPath: '/settings/bots'
       preLoaderRoute: typeof AuthedSettingsBotsRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/claude': {
+      id: '/_authed/settings/claude'
+      path: '/claude'
+      fullPath: '/settings/claude'
+      preLoaderRoute: typeof AuthedSettingsClaudeRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/settings/decision-model': {
@@ -817,6 +836,7 @@ const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
 
 interface AuthedSettingsRouteChildren {
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
+  AuthedSettingsClaudeRoute: typeof AuthedSettingsClaudeRoute
   AuthedSettingsDecisionModelRoute: typeof AuthedSettingsDecisionModelRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
@@ -836,6 +856,7 @@ interface AuthedSettingsRouteChildren {
 
 const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
+  AuthedSettingsClaudeRoute: AuthedSettingsClaudeRoute,
   AuthedSettingsDecisionModelRoute: AuthedSettingsDecisionModelRoute,
   AuthedSettingsEnvironmentVariablesRoute:
     AuthedSettingsEnvironmentVariablesRoute,
