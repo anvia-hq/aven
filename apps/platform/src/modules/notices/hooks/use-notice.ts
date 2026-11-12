@@ -20,12 +20,17 @@ registerUserState(() => {
 });
 
 function load() {
-  loading ??= api<{ dismissedNotices: string[] }>("/preferences")
-    .then((preferences) => change(new Set(preferences.dismissedNotices)))
+  if (loading) return loading;
+
+  const request: Promise<void> = api<{ dismissedNotices: string[] }>("/preferences")
+    .then((preferences) => {
+      if (loading === request) change(new Set(preferences.dismissedNotices));
+    })
     .catch(() => {
-      loading = null;
+      if (loading === request) loading = null;
     });
-  return loading;
+  loading = request;
+  return request;
 }
 
 const subscribe = (listener: () => void) => {
