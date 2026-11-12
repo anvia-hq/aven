@@ -1,7 +1,7 @@
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 
-import type { KeptAttachment, SandboxPaths } from "@aven/agents/types";
+import type { KeptAttachment, SandboxPaths, SentExtras } from "@aven/agents/types";
 import type { RunAttachment } from "@aven/protocol/types";
 import type { RunRecord, ThreadWorkspaces } from "./types";
 
@@ -31,15 +31,29 @@ export async function promptOf(
   stores: Stores,
   paths?: SandboxPaths,
 ): Promise<AgentPrompt> {
-  const attachments = await placedAttachments(stores, record.thread.id, record.attachments ?? []);
   const { mentions, skillListing: skills } = record;
+  return promptWith(record.prompt ?? "", record.thread.id, record.attachments ?? [], stores, {
+    mentions,
+    skills,
+    paths,
+  });
+}
+
+export async function promptWith(
+  prompt: string,
+  threadId: string,
+  kept: readonly KeptAttachment[],
+  stores: Stores,
+  extras: Pick<SentExtras, "mentions" | "skills" | "paths">,
+): Promise<AgentPrompt> {
+  const attachments = await placedAttachments(stores, threadId, kept);
   const images = new Map<string, string>();
   for (const { image } of attachments) {
-    const content = image && (await stores.artifacts?.read(record.thread.id, image));
+    const content = image && (await stores.artifacts?.read(threadId, image));
 
     if (image && content) images.set(image, content.data);
   }
-  return sentPrompt(record.prompt ?? "", { attachments, images, mentions, skills, paths });
+  return sentPrompt(prompt, { attachments, images, ...extras });
 }
 
 async function placedAttachments(

@@ -99,7 +99,7 @@ export type RuntimeRun = {
   events: AsyncIterable<RunEvent>;
   result: Promise<RunResult>;
   cancel(reason: string): void;
-  steer(message: QueuedSteer): Promise<SteerResult>;
+  steer(message: QueuedSteer, files?: RunAttachment[]): Promise<SteerResult>;
 };
 
 export interface Runtime {

@@ -32,6 +32,7 @@ type Props = {
   onSubmit: (message: OutgoingMessage, selection: RunSelection) => boolean | Promise<boolean>;
   placeholder?: string;
   running?: boolean;
+  filesWhileRunning?: boolean;
   onStop?: () => void;
   onCompact?: (selection: RunSelection) => boolean | Promise<boolean>;
   autoFocus?: boolean;
@@ -92,6 +93,7 @@ function Composer({
   onSubmit,
   placeholder = "Ask anything about the codebase…",
   running = false,
+  filesWhileRunning = false,
   onStop,
   onCompact,
   autoFocus,
@@ -116,6 +118,7 @@ function Composer({
         }
       : model.selection,
     running,
+    filesWhileRunning,
     onSubmit,
     onCompact,
   });
@@ -162,9 +165,9 @@ function Composer({
       <div className="flex items-center gap-2 pt-2">
         <AttachButton
           onPick={attachments.add}
-          disabled={running}
+          disabled={running && !filesWhileRunning}
           title={
-            running
+            running && !filesWhileRunning
               ? "Files can be sent when the agent is not working"
               : "Attach files: images are shown to the model, every file is copied into the sandbox"
           }

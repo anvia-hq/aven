@@ -151,6 +151,46 @@ test.describe("steering a running agent", () => {
     await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
   });
 
+  test("on the Claude agent a picture goes with the steering message, and is shown while it waits", async ({
+    page,
+  }) => {
+    await registerUser(page, "strc", "Claude Steer");
+    const saved = await page.request.put("/api/claude-setup-token", {
+      data: { token: "sk-ant-oat01-e2e-steer-picture-9f3a" },
+    });
+    expect(saved.ok(), await saved.text()).toBe(true);
+    const { child, threadId } = await threadOnFakeRunner(
+      page,
+      { FAKE_RUN_ENDS_AFTER: "120000", FAKE_STEER_APPLIES_AFTER: "60000" },
+      "claude",
+    );
+    runner = child;
+    await page.goto(`/threads/${threadId}`);
+    const began = await page.request.post(`/api/threads/${threadId}/messages`, {
+      data: { prompt: "build it" },
+    });
+    expect(began.ok(), await began.text()).toBe(true);
+    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Attach files" })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "shot.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    await prompt.click();
+    await page.keyboard.type("I mean this screen");
+    await page.keyboard.press("Enter");
+
+    const queued = page.locator("[data-queued]");
+    await expect(queued).toContainText("I mean this screen");
+    await expect(queued.getByRole("img")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toHaveCount(0);
+  });
+
   test("files cannot go with it: attaching is off while the agent works", async ({ page }) => {
     await runningThread(page);
     await expect(page.getByRole("button", { name: "Attach files" })).toBeDisabled();

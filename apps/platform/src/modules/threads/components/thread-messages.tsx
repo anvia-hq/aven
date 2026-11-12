@@ -110,7 +110,12 @@ export function ThreadMessages({
             ))}
             {queued.map(({ steer, space, first }) => (
               <div key={steer.id} className={space}>
-                <QueuedMessage message={steer} viewer={viewer} showAuthor={first} />
+                <QueuedMessage
+                  message={steer}
+                  viewer={viewer}
+                  threadId={threadId}
+                  showAuthor={first}
+                />
               </div>
             ))}
             <div className={cn(working.space, "empty:hidden")}>

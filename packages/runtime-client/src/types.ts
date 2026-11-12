@@ -10,6 +10,7 @@ import type {
   MachineOp,
   McpConnectResult,
   MessageMention,
+  RunAttachment,
   ProcessLogs,
   ProcessView,
   RepoAccess,
@@ -125,6 +126,7 @@ export type SteerParams = {
   steerId: string;
   prompt: string;
   mentions?: MessageMention[];
+  attachments?: RunAttachment[];
 };
 
 export type ControlPlaneCallsContext = {
@@ -191,11 +193,15 @@ export type ClaudeQuestion = {
   questions: QuestionPrompt[];
 };
 
+export type ClaudeToolContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string };
+
 export type ClaudeMcpTool = {
   name: string;
   description: string;
   shape: Record<string, z.ZodType>;
-  handler(args: unknown): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }>;
+  handler(args: unknown): Promise<{ content: ClaudeToolContent[]; isError?: boolean }>;
 };
 
 export type ClaudeToolHost = {
@@ -214,7 +220,7 @@ export type ClaudeToolHost = {
   onPark?(question: ClaudeQuestion): Promise<string>;
   runSubagent?: RunSubagent;
   shown?(artifacts: ToolArtifact[]): void;
-  steered?(): string | undefined;
+  steered?(): ClaudeSteered | undefined;
 };
 
 export type ClaudeRunContext = {
@@ -231,7 +237,15 @@ export type ClaudeRunContext = {
   children?: boolean;
 };
 
-export type ClaudeSteer = { id: string; text: string };
+export type ClaudeImage = { mediaType: string; data: string };
+
+export type ClaudeUserInput = { text: string; images: ClaudeImage[] };
+
+export type ClaudePromptItem = string | ClaudeUserInput;
+
+export type ClaudeSteered = ClaudeUserInput;
+
+export type ClaudeSteer = { id: string; text: string; images: ClaudeImage[] };
 
 export type ClaudeModelUsage = { contextWindow?: number };
 
@@ -271,7 +285,7 @@ export type ClaudeSdkMessage =
     };
 
 export type ClaudeQueryInput = {
-  prompt: AsyncIterable<string>;
+  prompt: AsyncIterable<ClaudePromptItem>;
   sessionId?: string;
   token: string;
   cwd: string;

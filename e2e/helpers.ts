@@ -70,7 +70,11 @@ export function tempRuntimeHome() {
   return mkdtempSync(join(tmpdir(), "aven-e2e-runner-"));
 }
 
-export async function threadOnFakeRunner(page: Page, env: Record<string, string> = {}) {
+export async function threadOnFakeRunner(
+  page: Page,
+  env: Record<string, string> = {},
+  backend?: "claude",
+) {
   const created = await page.request.post("/api/runtimes", { data: { name: "fake runner" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
   const child = spawn("bun", ["e2e/fake-runner.ts"], {
@@ -101,7 +105,9 @@ export async function threadOnFakeRunner(page: Page, env: Record<string, string>
   await connectGithub(page);
   await importRepository(page, "shiny-app");
   const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
-  const made = await page.request.post("/api/threads", { data: { projectId: projects[0]!.id } });
+  const made = await page.request.post("/api/threads", {
+    data: backend ? { projectId: projects[0]!.id, backend } : { projectId: projects[0]!.id },
+  });
   const thread = (await made.json()) as { id: string };
   return { child, events, threadId: thread.id };
 }

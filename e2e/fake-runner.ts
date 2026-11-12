@@ -91,6 +91,7 @@ ws.onopen = () => {
     type: "hello",
     version: WIRE_VERSION,
     runs: [],
+    backends: ["native", "claude"],
     build: config.self.build,
     canUpdate: config.self.canUpdate ? true : undefined,
     host: config.self.dirs.length > 0 ? true : undefined,

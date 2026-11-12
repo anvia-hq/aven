@@ -4,7 +4,7 @@ import { timing } from "@aven/runtime-client/timing";
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { claudeEffortOf } from "@aven/protocol/claude-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
-import { prepareAttachments } from "../../attachments";
+import { prepareAttachments, withoutBytes } from "../../attachments";
 import { ConflictError, UnprocessableError } from "../../errors";
 import { claudeSetupService } from "../claude-setup/service";
 import { githubService } from "../github/service";
@@ -24,6 +24,7 @@ import { addressingDecider, jevModel } from "../decision-model/jev";
 import { threadMentionsService } from "./mentions";
 import { createAddressingGate, recentOf, recentSenders } from "./addressing-gate";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
+import type { QueuedSteer } from "@aven/protocol/types";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
 import { threadsService } from "./service";
 import type { RunIdentity } from "../workload-identity/types";
@@ -217,23 +218,29 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
-    if (attachments.length > 0) {
+    if (attachments.length > 0 && thread.agentBackend !== "claude") {
       throw new ConflictError("Files can be sent when the agent is not working");
     }
 
-    if (prompt.length === 0) throw new ConflictError("Write a message to send to the agent");
+    if (prompt.length === 0 && attachments.length === 0) {
+      throw new ConflictError("Write a message to send to the agent");
+    }
 
     if (!backendSupports(thread.agentBackend, "steering")) {
       throw new ConflictError(backendRefusal(thread.agentBackend, "steering"));
     }
 
-    const message = {
+    const files = prepareAttachments(attachments);
+    const message: QueuedSteer = {
       id: steerId ?? crypto.randomUUID(),
       prompt: said(prompt),
       mentions,
       senderId: userId,
     };
-    const queued = (await runs.steer(thread, message)) === "queued";
+
+    if (files.length > 0) message.attachments = files.map(withoutBytes);
+
+    const queued = (await runs.steer(thread, message, files)) === "queued";
 
     if (queued) await threadsService.reopen(thread);
 

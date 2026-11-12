@@ -16,7 +16,7 @@ import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
 import { errorMessage } from "@aven/agents/values";
 
-import { keepAttachments, promptOf } from "./attachments";
+import { keepAttachments, promptOf, promptWith } from "./attachments";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
@@ -790,7 +790,13 @@ export function createRunDriver(context: DriverContext) {
       return execute(record, undefined, secrets ?? {});
     },
 
-    async steer({ runId, steerId, prompt, mentions }: SteerParams): Promise<SteerResult> {
+    async steer({
+      runId,
+      steerId,
+      prompt,
+      mentions,
+      attachments,
+    }: SteerParams): Promise<SteerResult> {
       const run = live.get(runId);
       const record = records.get(runId);
 
@@ -813,11 +819,16 @@ export function createRunDriver(context: DriverContext) {
         };
       }
 
-      const message = sentPrompt(prompt, {
-        mentions,
-        skills: record.skillListing,
-        paths: context.sandbox.paths?.(record.thread.id),
-      });
+      const paths = context.sandbox.paths?.(record.thread.id);
+      const message = attachments?.length
+        ? await promptWith(
+            prompt,
+            record.thread.id,
+            await keepAttachments(context.sandbox, record.thread.id, attachments),
+            context.sandbox,
+            { mentions, skills: record.skillListing, paths },
+          )
+        : sentPrompt(prompt, { mentions, skills: record.skillListing, paths });
 
       if (record.phase === "goal") {
         const taken = (await run.goal?.steer(message, steerId)) ?? false;

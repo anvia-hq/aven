@@ -181,6 +181,8 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts: [{ type: "text", text: event.prompt }],
       };
 
+      if (event.attachments?.length) user.attachments = event.attachments;
+
       if (event.mentions?.length) user.mentions = event.mentions;
 
       if (event.senderId) user.senderId = event.senderId;

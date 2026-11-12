@@ -6,7 +6,13 @@ import { QUESTION_TOOL_NAME, SECRET_TOOL_NAME, SPAWN_AGENT_TOOL_NAME } from "@av
 import type { QuestionPrompt, ToolArtifact } from "@aven/protocol/types";
 import { z } from "zod";
 
-import type { ClaudeMcpTool, ClaudeQuestion, ClaudeToolHost } from "./types";
+import type {
+  ClaudeImage,
+  ClaudeMcpTool,
+  ClaudeQuestion,
+  ClaudeToolContent,
+  ClaudeToolHost,
+} from "./types";
 
 const choice = z.object({
   label: z.string().trim().min(1),
@@ -148,9 +154,16 @@ const questionShape = {
     .describe("The questions to put on the person's screen."),
 };
 
-function textResult(text: string, isError = false) {
-  const result: { content: { type: "text"; text: string }[]; isError?: boolean } = {
-    content: [{ type: "text", text }],
+function textResult(text: string, isError = false, images: ClaudeImage[] = []) {
+  const result: { content: ClaudeToolContent[]; isError?: boolean } = {
+    content: [
+      { type: "text", text },
+      ...images.map(({ mediaType, data }) => ({
+        type: "image" as const,
+        data,
+        mimeType: mediaType,
+      })),
+    ],
   };
 
   if (isError) result.isError = true;
@@ -188,7 +201,7 @@ export async function claudeMcpTools(host: ClaudeToolHost): Promise<ClaudeMcpToo
     const text = await callAvenTool(name, args, host);
     const failed = text.startsWith("The ") && text.includes("could not");
     const steered = host.steered?.();
-    return textResult(steered ? `${text}\n\n${steered}` : text, failed);
+    return textResult(steered ? `${text}\n\n${steered.text}` : text, failed, steered?.images);
   };
   const tools: ClaudeMcpTool[] = [];
 

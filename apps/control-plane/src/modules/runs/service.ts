@@ -25,6 +25,7 @@ import type {
   ChatMessage,
   QuestionAnswer,
   QueuedSteer,
+  RunAttachment,
   RunEvent,
   ThreadUsage,
 } from "@aven/protocol/types";
@@ -280,7 +281,11 @@ export class RunManager {
     return true;
   }
 
-  async steer(thread: RunThread, message: QueuedSteer): Promise<"queued" | "ended"> {
+  async steer(
+    thread: RunThread,
+    message: QueuedSteer,
+    files?: RunAttachment[],
+  ): Promise<"queued" | "ended"> {
     const channel = this.#channels.get(thread.id);
 
     if (!channel) return "ended";
@@ -297,11 +302,7 @@ export class RunManager {
     this.#emit(channel, { type: "steer_queued", ...message });
     let result: Awaited<ReturnType<RuntimeRun["steer"]>>;
     try {
-      result = await run.handle.steer({
-        id: message.id,
-        prompt: message.prompt,
-        mentions: message.mentions,
-      });
+      result = await run.handle.steer(message, files);
     } catch (error) {
       this.#reject(channel, run, message.id);
       console.warn(`Could not hand a message to the run of thread ${thread.id}:`, error);
