@@ -99,3 +99,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 ### A ship reaches GitHub from the folder and watches the pull request (decision 0231)
 
 `shipPrompt` (`modules/ship/prompt.ts`) adds, after Aven's default or a repository's `.aven/ship.md`, a note that a folder project's `origin` is its folder (`folder` from `projects.directory`) and how to push on from it, and a note to watch the opened pull request with a background command until it is mergeable, never merging it. The coding instructions say a `<ship_request>` asks for that push.
+
+### Unshipped is the nearer of the pushed copy and the default branch (decision 0232)
+
+`threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.
