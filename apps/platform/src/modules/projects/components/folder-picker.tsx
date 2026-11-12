@@ -8,6 +8,8 @@ import { Skeleton } from "@/components/skeleton";
 
 import { useFolderBrowser } from "../hooks/use-folder-browser";
 
+const skeletonWidths = ["40%", "55%", "32%", "48%", "60%"];
+
 type Props = {
   runtimeId: string;
   path: string;
@@ -15,9 +17,15 @@ type Props = {
 };
 
 export function FolderPicker({ runtimeId, path, onChange }: Props) {
-  const { listing, creating, createFolder } = useFolderBrowser(runtimeId, path, onChange);
+  const [browsing, setBrowsing] = useState("");
+  const { listing, creating, createFolder } = useFolderBrowser(runtimeId, browsing, openFolder);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
+
+  function openFolder(next: string) {
+    setBrowsing(next);
+    onChange(next);
+  }
 
   async function submitName() {
     if (await createFolder(name)) {
@@ -27,21 +35,32 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
   }
 
   const shown = listing?.data ?? null;
-  let body = <Skeleton className="h-40 w-full" />;
+  let body = (
+    <div className="flex flex-col" aria-busy="true">
+      {skeletonWidths.map((width) => (
+        <div key={width} className="flex h-9 items-center gap-2 px-3">
+          <Skeleton className="size-4" />
+          <Skeleton className="h-3" style={{ width }} />
+        </div>
+      ))}
+    </div>
+  );
 
   if (listing?.error) body = <PanelNotice>{listing.error}</PanelNotice>;
   else if (shown && shown.folders.length === 0) {
     body = <PanelNotice>No folders in here. Add this one, or make a new one.</PanelNotice>;
   } else if (shown) {
     body = (
-      <ul className="flex max-h-56 flex-col overflow-y-auto">
+      <ul className="flex flex-col">
         {shown.folders.map((folder) => (
           <li key={folder.path}>
             <Button
               type="button"
               variant="ghost"
-              className="w-full justify-start gap-2 px-2 font-normal"
+              aria-pressed={folder.path === path}
+              className="h-9 w-full justify-start gap-2 rounded-none px-3 font-normal select-none aria-pressed:bg-primary/15 aria-pressed:shadow-[inset_2px_0_0_var(--color-primary)]"
               onClick={() => onChange(folder.path)}
+              onDoubleClick={() => openFolder(folder.path)}
             >
               <Folder className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{folder.name}</span>
@@ -61,20 +80,20 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
           variant="ghost"
           size="icon-sm"
           aria-label="Up one folder"
-          disabled={!path}
-          onClick={() => onChange(shown?.parent ?? "")}
+          disabled={!browsing}
+          onClick={() => openFolder(shown?.parent ?? "")}
         >
           <ArrowUp />
         </Button>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={path}>
-          {path || "Folders this computer serves"}
+        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={browsing}>
+          {browsing || "Folders this computer serves"}
         </span>
         <Button
           type="button"
           variant="ghost"
           size="icon-sm"
           aria-label="New folder"
-          disabled={!path}
+          disabled={!browsing}
           onClick={() => setNaming(true)}
         >
           <FolderPlus />
@@ -108,7 +127,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
           </Button>
         </div>
       )}
-      <div className="rounded-md border">{body}</div>
+      <div className="h-56 overflow-y-auto rounded-md border">{body}</div>
     </div>
   );
 }
