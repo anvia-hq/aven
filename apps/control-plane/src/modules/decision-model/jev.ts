@@ -2,7 +2,7 @@ import { choice, decide } from "@anvia/core/decision";
 import { JevClient } from "@anvia/jev";
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 
-import type { AddressingDecider, AddressingModel, DecisionConfig } from "./types";
+import type { AddressingDecider, AddressingModel, DecisionConfig, FollowUpDecider } from "./types";
 
 export const OPENROUTER_BASE = "https://openrouter.ai/api";
 export const DECISION_TIMEOUT_MS = 3000;
@@ -37,6 +37,18 @@ export function jevModel({ kind, modelId, apiKey }: DecisionConfig): AddressingM
   return new JevClient({ client: sdk }).decisionModel({ modelId });
 }
 
+const FOLLOW_UP_QUESTIONS = {
+  nextStep: choice({
+    instructions:
+      "Read the end of a conversation between a person and an AI coding agent. Decide whether the person is likely to answer the agent's last message with one of a few predictable replies, so that suggested reply buttons would save them typing.",
+    options: {
+      suggest:
+        "The agent proposed a plan, offered options, asked what to do next, asked for a decision, or finished work the person would verify, continue or refine.",
+      skip: "The agent answered a plain question, confirmed something, gave a status, or the conversation has reached a natural end, so nothing predictable follows.",
+    },
+  }),
+};
+
 const QUESTIONS = {
   addressee: choice({
     instructions:
@@ -66,6 +78,27 @@ export function addressingDecider(
       return { toPerson: answers.addressee.probabilities?.person ?? 0 };
     } catch (error) {
       console.error("The decision model could not tell who a message is for:", error);
+      return null;
+    }
+  };
+}
+
+export function followUpDecider(
+  model: AddressingModel,
+  timeoutMs = DECISION_TIMEOUT_MS,
+): FollowUpDecider {
+  return async ({ transcript }) => {
+    try {
+      const { answers } = await decide({
+        model,
+        state: { transcript },
+        questions: FOLLOW_UP_QUESTIONS,
+        abortSignal: AbortSignal.timeout(timeoutMs),
+        retries: false,
+      });
+      return answers.nextStep.probabilities?.suggest ?? null;
+    } catch (error) {
+      console.error("The decision model could not tell whether to suggest replies:", error);
       return null;
     }
   };

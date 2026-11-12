@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import type { AddressingModel } from "./types";
-import { addressingDecider } from "./jev";
+import { addressingDecider, followUpDecider } from "./jev";
 
 const input = {
   message: "@[Randy](user:u-2) did you deploy?",
@@ -75,6 +75,42 @@ describe("asking the decision model who a message is for (decision 0191)", () =>
     try {
       expect(await addressingDecider(failing)(input)).toBeNull();
       expect(await addressingDecider(modelAnswering(0, 200), 20)(input)).toBeNull();
+    } finally {
+      console.error = quiet;
+    }
+  });
+});
+
+describe("asking the decision model whether to suggest replies", () => {
+  const model = (suggest: number | null): AddressingModel => ({
+    ...modelAnswering(0),
+    async decision() {
+      if (suggest === null) throw new Error("down");
+
+      return {
+        answers: {
+          nextStep: {
+            type: "choice",
+            choice: suggest >= 0.5 ? "suggest" : "skip",
+            probabilities: { suggest, skip: 1 - suggest },
+            confidence: Math.max(suggest, 1 - suggest),
+          },
+        },
+        rawResponse: null,
+      } as never;
+    },
+  });
+
+  test("its suggest share is the score", async () => {
+    expect(await followUpDecider(model(0.8))({ transcript: "Agent: Which one?" })).toBe(0.8);
+    expect(await followUpDecider(model(0.1))({ transcript: "Agent: Done." })).toBe(0.1);
+  });
+
+  test("a model that fails answers nothing, so the caller falls back", async () => {
+    const quiet = console.error;
+    console.error = () => undefined;
+    try {
+      expect(await followUpDecider(model(null))({ transcript: "x" })).toBeNull();
     } finally {
       console.error = quiet;
     }
