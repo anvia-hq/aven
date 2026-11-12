@@ -203,13 +203,11 @@ test.describe("a thread on the Claude backend", () => {
     const project = JSON.parse(addedText) as { id: string };
 
     await page.goto(`${WEB}/settings/claude`);
-    await page.getByLabel("Claude setup token").fill(TOKEN);
+    const tokenField = page.getByRole("textbox", { name: "Claude setup token" });
+    await tokenField.fill(TOKEN);
     await page.getByRole("button", { name: "Save" }).click();
     await expect(page.getByText("Claude setup token saved")).toBeVisible();
-    await expect(page.getByLabel("Claude setup token")).toHaveAttribute(
-      "placeholder",
-      "Saved, ending in 9f3a",
-    );
+    await expect(tokenField).toHaveAttribute("placeholder", "Saved, ending in 9f3a");
     await expect(page.getByText(TOKEN)).toHaveCount(0);
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
