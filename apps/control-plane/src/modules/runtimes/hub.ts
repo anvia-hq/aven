@@ -423,7 +423,7 @@ export class RuntimeHub {
       }
     }
     for (const run of runs.values()) {
-      this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
+      void this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
       run.sink.lost(new Error("The runtime restarted"));
     }
   }
@@ -444,7 +444,7 @@ export class RuntimeHub {
     clearTimeout(held.timer);
     this.#held.delete(runtimeId);
     for (const run of held.runs.values()) {
-      this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
+      void this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
       run.sink.lost(new Error(message));
     }
   }
