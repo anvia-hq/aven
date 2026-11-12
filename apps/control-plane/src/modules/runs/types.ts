@@ -48,6 +48,8 @@ export type RunExtras = Pick<
   | "compact"
   | "memory"
   | "cockpit"
+  | "codexLogin"
+  | "codexModel"
 > & { senderId?: string };
 
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
@@ -67,6 +69,8 @@ export type StartRunInput = {
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;
+  codexLogin?: string;
+  codexModel?: string;
 };
 
 export type ResumeRunInput = {
@@ -82,6 +86,8 @@ export type ResumeRunInput = {
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;
+  codexLogin?: string;
+  codexModel?: string;
 };
 
 export type RunResult = { type: RunOutcome; continuation?: unknown };

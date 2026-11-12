@@ -116,6 +116,8 @@ export class RunManager {
       memory,
       cockpit,
       senderId,
+      codexLogin,
+      codexModel,
     }: RunExtras = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -134,6 +136,8 @@ export class RunManager {
         memory,
         cockpit,
         model: model ?? undefined,
+        codexLogin,
+        codexModel,
       });
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
 
@@ -161,6 +165,8 @@ export class RunManager {
       webSearch,
       memory,
       cockpit,
+      codexLogin,
+      codexModel,
     }: Omit<RunExtras, "attachments" | "mentions"> = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
@@ -189,6 +195,8 @@ export class RunManager {
         memory,
         cockpit,
         model: model ?? undefined,
+        codexLogin,
+        codexModel,
       });
       await this.#begin(channel, handle, { type: "run_resume" }, () =>
         this.#continuations.clear(thread.id),

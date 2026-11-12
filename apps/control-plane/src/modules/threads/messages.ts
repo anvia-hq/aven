@@ -1,6 +1,7 @@
 import { COMPACT_PROMPT } from "@aven/agents/compaction-agent";
 import { timing } from "@aven/runtime-client/timing";
 
+import { codexModelId } from "@aven/protocol/codex-login";
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { prepareAttachments } from "../../attachments";
 import { ConflictError } from "../../errors";
@@ -16,6 +17,7 @@ import { projectsService } from "../projects/service";
 import { skillsService } from "../skills/service";
 import { usersService } from "../users/service";
 import { variablesService } from "../variables/service";
+import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { addressingDecider, jevModel } from "../decision-model/jev";
 import { threadMentionsService } from "./mentions";
@@ -25,6 +27,19 @@ import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema"
 import { threadsService } from "./service";
 import type { RunIdentity } from "../workload-identity/types";
 import type { Acting, AddressingGate } from "./types";
+
+async function codexFor(
+  thread: { agentBackend: string },
+  ownerId: string,
+  selection: { modelId?: string },
+) {
+  if (thread.agentBackend !== "codex") return {};
+
+  return {
+    codexLogin: await codexSetupService.requireFor(ownerId),
+    codexModel: codexModelId(selection.modelId),
+  };
+}
 
 const defaultGate = createAddressingGate({
   configOf: (organizationId) => decisionModelService.config(organizationId),
@@ -174,9 +189,10 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
     const attachments = prepareAttachments(files);
-    const model = await resolveModel(driverId ?? ownerId, selection);
+    const codex = await codexFor(thread, ownerId, selection);
+    const model = codex.codexLogin ? null : await resolveModel(driverId ?? ownerId, selection);
 
-    if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    if (!codex.codexLogin && attachments.some((file) => file.image)) await assertSeesImages(model);
 
     clock.mark("model");
     const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
@@ -189,6 +205,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       senderId: userId,
       ...sender,
       ...scoped,
+      ...codex,
     });
     clock.mark("started");
     await threadsService.reopen(thread);
@@ -270,8 +287,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
       if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
-      const model = await resolveModel(userId, selection);
-      await runs.start(thread, COMPACT_PROMPT, model, { compact: true });
+      const codex = await codexFor(thread, thread.createdBy, selection);
+      const model = codex.codexLogin ? null : await resolveModel(userId, selection);
+      await runs.start(thread, COMPACT_PROMPT, model, { compact: true, ...codex });
       await threadsService.reopen(thread);
     },
 
@@ -291,7 +309,8 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
 
-      const model = await resolveModel(driverId ?? ownerId, selection);
+      const codex = await codexFor(thread, ownerId, selection);
+      const model = codex.codexLogin ? null : await resolveModel(driverId ?? ownerId, selection);
       const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,
@@ -303,7 +322,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         skip: skipSecrets,
       });
       const scoped = await threadExtras(organizationId, thread, ownerId, true, driverId);
-      await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped });
+      await runs.answer(thread, continuation, kept, model, { ...sender, ...scoped, ...codex });
       await threadsService.reopen(thread);
     },
   };

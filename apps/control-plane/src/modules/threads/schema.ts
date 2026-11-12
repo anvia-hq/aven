@@ -1,6 +1,7 @@
 import { MAX_SKILL_NAME, SKILL_NAME } from "@aven/agents/skills";
 import { DRIVING_DAYS_MAX } from "@aven/protocol/drivers";
 import { ATTACHMENT_LIMITS, MENTION_LIMIT, mentionToken } from "@aven/protocol/events";
+import { AGENT_BACKENDS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 import { attachmentBody } from "../../attachments";
@@ -12,6 +13,7 @@ export const messagesBeforeQuery = z.object({ before: z.coerce.number().int().mi
 export const createThreadBody = z.object({
   projectId: z.uuid(),
   title: z.string().trim().min(1).max(200).optional(),
+  backend: z.enum(AGENT_BACKENDS).optional(),
 });
 
 export const updateThreadBody = z

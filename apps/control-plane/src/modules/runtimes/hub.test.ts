@@ -1002,6 +1002,8 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     };
 
     expect((await said()).offers("native")).toBe(true);
+    expect((await said()).offers("codex")).toBe(false);
+    expect((await said(["native", "codex"])).offers("codex")).toBe(true);
     expect((await said(["native", "not-yet-known"])).offers("native")).toBe(true);
     expect((await said(["not-yet-known"])).offers("native")).toBe(false);
   });

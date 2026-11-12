@@ -7,6 +7,7 @@ import type { cockpitInboxItems } from "./cockpit-inbox-items";
 import type { cockpitNotes } from "./cockpit-notes";
 import type { cockpitTags } from "./cockpit-tags";
 import type { cockpitTasks } from "./cockpit-tasks";
+import type { codexLogins } from "./codex-logins";
 import type { decisionModels } from "./decision-models";
 import type { environmentVariables } from "./environment-variables";
 import type { githubApps } from "./github-apps";
@@ -46,6 +47,8 @@ export type CockpitNoteRow = typeof cockpitNotes.$inferSelect;
 export type CockpitTagRow = typeof cockpitTags.$inferSelect;
 
 export type CockpitTaskRow = typeof cockpitTasks.$inferSelect;
+
+export type CodexLoginRow = typeof codexLogins.$inferSelect;
 
 export type EnvironmentVariableRow = typeof environmentVariables.$inferSelect;
 

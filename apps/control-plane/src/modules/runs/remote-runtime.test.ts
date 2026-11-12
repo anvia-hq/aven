@@ -246,6 +246,26 @@ describe("where a run's agent runs (decision 0222)", () => {
     expect(cancelled).toEqual([thread.runtimeId]);
   });
 
+  test("a Codex run stays on the thread's runtime and is not given a gateway token", async () => {
+    const { posted, asked, issued, remote } = runtime({ backends: ["native", "codex"] });
+    await remote.start({
+      thread: { ...thread, agentBackend: "codex" },
+      prompt: "go",
+      codexLogin: "login-value",
+      codexModel: "gpt-5.4",
+    } as never);
+
+    expect(asked).toEqual([thread.runtimeId]);
+    expect(issued).toEqual([]);
+    expect(posted[0]).toMatchObject({
+      type: "run.start",
+      backend: "codex",
+      codexLogin: "login-value",
+      codexModel: "gpt-5.4",
+    });
+    expect(posted[0]).not.toHaveProperty("model");
+  });
+
   test("a thread on the control plane's own runtime runs there, naming no machine", async () => {
     const { posted, remote } = runtime();
     await remote.start({

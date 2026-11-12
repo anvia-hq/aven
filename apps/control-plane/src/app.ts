@@ -36,6 +36,7 @@ import { preferencesRouter } from "./modules/preferences/router";
 import { avatarsRouter } from "./modules/avatars/router";
 import { profileRouter } from "./modules/profile/router";
 import { projectsRouter } from "./modules/projects/router";
+import { codexSetupRouter } from "./modules/codex-setup/router";
 import { decisionModelRouter } from "./modules/decision-model/router";
 import { providersRouter } from "./modules/providers/router";
 import { runnerFolders } from "./modules/runtimes/folders";
@@ -76,6 +77,7 @@ export const app = new Elysia()
   .use(projectsRouter(putAwayThread, runnerFolders(runtimeHub)))
   .use(providersRouter)
   .use(decisionModelRouter)
+  .use(codexSetupRouter)
   .use(runtimesRouter(runtimeHub))
   .use(schedulesRouter)
   .use(skillsRouter)

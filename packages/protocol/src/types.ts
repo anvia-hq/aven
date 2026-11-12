@@ -569,6 +569,8 @@ export type RunSecrets = {
   github?: RunGithub;
   identity?: RunIdentityCredential;
   mcp?: RunMcpServer[];
+  codexLogin?: string;
+  codexModel?: string;
 };
 
 export type BotReplyInfo = {
@@ -604,6 +606,8 @@ export type ControlPlaneToRuntime =
       cockpit?: CockpitAccess;
       model?: RunModel;
       backend?: AgentBackendKind;
+      codexLogin?: string;
+      codexModel?: string;
     }
   | {
       type: "run.resume";
@@ -621,6 +625,8 @@ export type ControlPlaneToRuntime =
       cockpit?: CockpitAccess;
       model?: RunModel;
       backend?: AgentBackendKind;
+      codexLogin?: string;
+      codexModel?: string;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {

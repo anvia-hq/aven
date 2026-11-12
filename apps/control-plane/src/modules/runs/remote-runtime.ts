@@ -108,15 +108,13 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
+    codexLogin,
+    codexModel,
   }: StartRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit };
-    return this.#launch(
-      thread,
-      model,
-      extras,
-      undefined,
-      (runId, runModel, credential, placed) => ({
-        type: "run.start",
+    const extras = { skills, mcp, identity, memory, cockpit, github, env, codexLogin, codexModel };
+    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
+      const start = {
+        type: "run.start" as const,
         runId,
         thread: placed,
         prompt,
@@ -131,10 +129,15 @@ export class RemoteRuntime implements Runtime {
         webSearch,
         memory: memory?.index,
         cockpit: cockpit?.access,
-        model: runModel,
         backend: threadBackend(thread),
-      }),
-    );
+        codexLogin,
+        codexModel,
+      };
+
+      if (runModel) return { ...start, model: runModel };
+
+      return start;
+    });
   }
 
   async resume({
@@ -150,30 +153,39 @@ export class RemoteRuntime implements Runtime {
     memory,
     cockpit,
     model,
+    codexLogin,
+    codexModel,
   }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit };
+    const extras = { skills, mcp, identity, memory, cockpit, github, env, codexLogin, codexModel };
     return this.#launch(
       thread,
       model,
       extras,
       askedBy(continuation),
-      (runId, runModel, credential, placed) => ({
-        type: "run.resume",
-        runId,
-        thread: placed,
-        continuation,
-        response,
-        skills: skills?.length ? skills : undefined,
-        mcp: mcp?.length ? mcp : undefined,
-        github,
-        env: env?.length ? env : undefined,
-        identity: credential,
-        webSearch,
-        memory: memory?.index,
-        cockpit: cockpit?.access,
-        model: runModel,
-        backend: threadBackend(thread),
-      }),
+      (runId, runModel, credential, placed) => {
+        const resume = {
+          type: "run.resume" as const,
+          runId,
+          thread: placed,
+          continuation,
+          response,
+          skills: skills?.length ? skills : undefined,
+          mcp: mcp?.length ? mcp : undefined,
+          github,
+          env: env?.length ? env : undefined,
+          identity: credential,
+          webSearch,
+          memory: memory?.index,
+          cockpit: cockpit?.access,
+          backend: threadBackend(thread),
+          codexLogin,
+          codexModel,
+        };
+
+        if (runModel) return { ...resume, model: runModel };
+
+        return resume;
+      },
     );
   }
 
@@ -188,11 +200,24 @@ export class RemoteRuntime implements Runtime {
       cockpit,
       github,
       env,
-    }: Pick<StartRunInput, "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env">,
+      codexLogin,
+      codexModel,
+    }: Pick<
+      StartRunInput,
+      | "skills"
+      | "mcp"
+      | "identity"
+      | "memory"
+      | "cockpit"
+      | "github"
+      | "env"
+      | "codexLogin"
+      | "codexModel"
+    >,
     tokenOf: string | undefined,
     message: (
       runId: string,
-      runModel: RunModel,
+      runModel: RunModel | undefined,
       credential: RunIdentityCredential | undefined,
       placed: RunThreadInfo,
     ) => ControlPlaneToRuntime,
@@ -200,7 +225,10 @@ export class RemoteRuntime implements Runtime {
     const { connection, hostId, machine } = await this.#placementFor(thread);
     const placed = forkable(thread, machine);
     const runId = crypto.randomUUID();
-    const runModel = this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
+    const codex = threadBackend(thread) === "codex";
+    const runModel = codex
+      ? undefined
+      : this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
@@ -219,6 +247,8 @@ export class RemoteRuntime implements Runtime {
         env: env?.length ? env : undefined,
         identity: credential,
         mcp: mcp?.length ? mcp : undefined,
+        codexLogin,
+        codexModel,
       },
     );
     this.#post(connection, runId, message(runId, runModel, credential, placed));

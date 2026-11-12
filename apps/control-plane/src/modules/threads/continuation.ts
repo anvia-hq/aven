@@ -62,7 +62,7 @@ export function createThreadContinuation({
       const created = await threadsService.create(
         viewer.organizationId,
         viewer.userId,
-        { projectId: old.projectId, title: old.title },
+        { projectId: old.projectId, title: old.title, backend: old.agentBackend },
         { runtimeId },
       );
       const prompt = continuationPrompt({
