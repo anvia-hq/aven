@@ -12,8 +12,11 @@ export function BetaCard() {
   return (
     <section
       aria-label="Beta notice"
-      style={{ backgroundImage: "url(/beta-waves.jpg)" }}
-      className="relative flex flex-col gap-1 overflow-hidden rounded-xl bg-cover bg-center p-3 text-white [text-shadow:0_1px_3px_rgb(0_0_0/0.55)] ring-1 ring-foreground/10 group-data-[collapsible=icon]:hidden"
+      style={{
+        backgroundImage:
+          "linear-gradient(to right, rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.25)), url(/beta-waves.jpg)",
+      }}
+      className="relative flex flex-col gap-1 overflow-hidden rounded-xl bg-cover bg-center p-3 text-white ring-1 ring-foreground/10 group-data-[collapsible=icon]:hidden"
     >
       <div className="flex items-center justify-between gap-2">
         <span className="font-mono text-sm font-semibold tracking-wide uppercase">Beta</span>
@@ -27,7 +30,7 @@ export function BetaCard() {
           <X className="size-3.5" />
         </Button>
       </div>
-      <p className="text-xs leading-snug text-white/85">
+      <p className="text-xs leading-snug font-medium text-white">
         Things change often and some parts are rough.
       </p>
     </section>
