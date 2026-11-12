@@ -4,14 +4,15 @@ import { eq } from "drizzle-orm";
 
 import { UnprocessableError } from "../../errors";
 import { serverSmallModel } from "../providers/server-small-model";
+import { serverModelsService } from "../server-models/service";
 import type { FollowUpSettings, FollowUpView, ServerSmallModelView } from "./types";
 import { checkTimezone, CronError, systemTimezone } from "../schedules/cron";
 
 serverSmallModel(process.env);
 
-function serverModelView(): ServerSmallModelView | null {
-  const model = serverSmallModel(process.env);
-  return model ? { provider: model.provider, modelId: model.modelId ?? "" } : null;
+async function serverModelView(): Promise<ServerSmallModelView | null> {
+  const { small } = await serverModelsService.view();
+  return small ? { provider: small.kind, modelId: small.modelId } : null;
 }
 
 export const preferencesService = {
@@ -29,7 +30,7 @@ export const preferencesService = {
         enabled: row?.followUpsEnabled ?? false,
         providerId: row?.followUpsProviderId ?? null,
         modelId: row?.followUpsModelId ?? null,
-        serverModel: serverModelView(),
+        serverModel: await serverModelView(),
       } satisfies FollowUpView,
     };
   },
@@ -48,7 +49,7 @@ export const preferencesService = {
       .insert(userSettings)
       .values({ userId, ...values })
       .onConflictDoUpdate({ target: userSettings.userId, set: values });
-    return { ...followUps, serverModel: serverModelView() } satisfies FollowUpView;
+    return { ...followUps, serverModel: await serverModelView() } satisfies FollowUpView;
   },
 
   async setDefaultTimezone(userId: string, timezone: string) {
