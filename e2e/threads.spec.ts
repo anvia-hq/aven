@@ -55,21 +55,18 @@ test.describe("threads", () => {
 
     const item = page.locator("[data-slot=sidebar-menu-item]", { hasText: "archive me" });
     const more = item.getByRole("button", { name: "Options for archive me" });
-    const time = item.locator("time");
     await page.mouse.move(800, 400);
-    await expect(time).toHaveText("now");
+    await expect(item).toBeVisible();
+    await expect(item.locator("time")).toHaveCount(0);
     await expect(more).toHaveCSS("opacity", "0");
     await item.getByRole("link").click();
     await page.mouse.move(800, 400);
     await expect(more).toHaveCSS("opacity", "0");
-    await expect(time).toHaveCSS("opacity", "1");
     await item.hover();
     await expect(more).toHaveCSS("opacity", "1");
-    await expect(time).toHaveCSS("opacity", "0");
     await more.click();
     await page.mouse.move(800, 400);
     await expect(more).toHaveCSS("opacity", "1");
-    await expect(time).toHaveCSS("opacity", "0");
     await page.getByRole("menuitem", { name: "Archive" }).click();
 
     await expect(page).toHaveURL(/\/threads$/);
