@@ -4,8 +4,7 @@ import type { SkillListing } from "@aven/agents/types";
 import type { TakenChanges } from "@aven/agents/tools/types";
 
 import { extname } from "node:path";
-import { UPLOADS_DIR } from "@aven/agents/attachments";
-import { errorMessage } from "@aven/agents/values";
+import { asRecord, errorMessage } from "@aven/agents/values";
 import { ARTIFACT_EXTENSIONS } from "@aven/protocol/runtime-wire";
 import type { ArtifactContent } from "@aven/protocol/types";
 import { envOf, withProjectEnv } from "./project-env";
@@ -31,6 +30,8 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   #images = new Map<string, Map<string, ArtifactContent>>();
   #waiting = new Map<string, Waiting[]>();
   #delivering = new Map<string, Promise<void>>();
+  #placed = new Map<string, Map<string, string>>();
+  #pending = new Map<string, string[]>();
 
   constructor(private callFor: (threadId: string) => MachineCall) {}
 
@@ -47,9 +48,13 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
           `Keeping ${waiting} for ${threadId} until its computer is reached:`,
           errorMessage(error),
         );
-        return `${this.#paths.get(threadId)?.uploads ?? UPLOADS_DIR}/${waiting}`;
+        return waiting;
       }
     },
+    settle: (threadId: string) => this.#settle(threadId),
+    placed: (threadId: string, name: string) => this.#placed.get(threadId)?.get(name),
+    claim: (threadId: string, name: string) => this.#claim(threadId, name),
+    placedNote: (threadId: string) => this.#placedNote(threadId),
   };
 
   readonly artifacts = {
@@ -94,14 +99,51 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     });
   }
 
+  async #settle(threadId: string) {
+    if (!this.#waiting.get(threadId)?.length) return;
+    await this.#deliver(threadId, this.callFor(threadId)).catch(() => undefined);
+  }
+
   async #drain(threadId: string, call: MachineCall) {
     const waiting = this.#waiting.get(threadId);
     while (waiting?.length) {
       const next = waiting[0]!;
-      await call(next.op, next.args);
+      const result = await call(next.op, next.args);
+      if (next.op === "uploads.save") this.#placedUpload(threadId, result);
       waiting.shift();
     }
     this.#waiting.delete(threadId);
+  }
+
+  #placedUpload(threadId: string, result: unknown) {
+    const path = asRecord(result).path;
+    if (typeof path !== "string" || path.length === 0) return;
+    const name = path.slice(Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1);
+    if (!name) return;
+    const placed = this.#placed.get(threadId) ?? new Map<string, string>();
+    placed.set(name, path);
+    this.#placed.set(threadId, placed);
+    const pending = this.#pending.get(threadId) ?? [];
+    pending.push(path);
+    this.#pending.set(threadId, pending);
+  }
+
+  #claim(threadId: string, name: string) {
+    const path = this.#placed.get(threadId)?.get(name);
+    if (!path) return;
+    const pending = this.#pending.get(threadId);
+    if (!pending) return;
+    const left = pending.filter((item) => item !== path);
+    if (left.length === 0) this.#pending.delete(threadId);
+    else this.#pending.set(threadId, left);
+  }
+
+  #placedNote(threadId: string) {
+    const pending = this.#pending.get(threadId);
+    if (!pending?.length) return;
+    this.#pending.delete(threadId);
+    if (pending.length === 1) return `An attached file is now on the computer at ${pending[0]}.`;
+    return `Attached files are now on the computer:\n${pending.map((path) => `- ${path}`).join("\n")}`;
   }
 
   #flush(threadId: string, call: MachineCall) {
@@ -146,10 +188,12 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     const start = () =>
       (preparing ??= (async () => {
         const { id: _id, machine: _machine, ...rest } = thread;
+        const directory = folder ? await folder() : null;
+        const access = !directory && repo ? await repo() : undefined;
         const prepared = (await call("prepare", {
           thread: rest,
-          repo: repo ? await repo() : undefined,
-          folder: folder ? await folder() : null,
+          repo: access,
+          folder: directory,
         })) as { paths: SandboxPaths | null };
         if (prepared.paths) this.#paths.set(thread.id, prepared.paths);
         await this.#deliver(thread.id, raw);
@@ -205,6 +249,8 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   async release(threadId: string) {
     this.#env.delete(threadId);
     this.#images.delete(threadId);
+    this.#placed.delete(threadId);
+    this.#pending.delete(threadId);
   }
 
   async dispose() {
@@ -212,6 +258,8 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
     this.#env.clear();
     this.#images.clear();
     this.#waiting.clear();
+    this.#placed.clear();
+    this.#pending.clear();
   }
 }
 

@@ -566,6 +566,7 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
       updateBusyReason ? { status: "busy", reason: updateBusyReason } : { status: "started" },
     );
   }
+  if (call.method === "process.watch") return reply(null);
   if (call.method === "sandbox.release") {
     const { threadId } = call.params as { threadId: string };
     event({ type: "sandbox.release", threadId });

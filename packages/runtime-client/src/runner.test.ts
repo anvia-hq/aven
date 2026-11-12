@@ -1009,6 +1009,58 @@ describe("startRuntime", () => {
     });
   });
 
+  test("a run whose computer is another machine does not watch processes on this runner", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const plane = fakeControlPlane({
+      answer: (message) => {
+        if (message.method !== "machine.call") return undefined;
+        const { op } = message.params as { op: string };
+        if (op === "listProcesses") {
+          return [
+            {
+              id: "p1",
+              command: "sh",
+              args: ["-c", "bun test"],
+              status: "exited",
+              exitCode: 0,
+              startedAt: new Date().toISOString(),
+              endedAt: new Date().toISOString(),
+            },
+          ];
+        }
+        if (op === "readProcessLogs") {
+          return {
+            stdout: btoa("7 pass"),
+            stderr: btoa(""),
+            stdoutTruncated: false,
+            stderrTruncated: false,
+          };
+        }
+        return null;
+      },
+    });
+    const runtime = startRuntime({
+      url: plane.url,
+      token: "t",
+      journalPath: journalPath(),
+      sandbox,
+      createAgent: reply(),
+      processPollMs: 20,
+    });
+    cleanups.push(() => runtime.stop(), plane.stop);
+    await runtime.ready;
+    plane.send({
+      type: "run.start",
+      runId: "run-machine",
+      thread: { ...thread, machine: "machine-1" },
+      prompt: "hi",
+    });
+    await until(() => plane.received.some((message) => message.type === "run.end"));
+    await Bun.sleep(80);
+    expect(plane.received.some((message) => message.type === "process.ended")).toBe(false);
+  });
+
   test("a run that starts while the idle check is asking keeps the sandbox", async () => {
     const { sandbox, up, released } = slowSandbox();
     up();
@@ -1063,6 +1115,39 @@ describe("startRuntime runs", () => {
         ? [message.params as { turn: number; messages: { role: string }[] }]
         : [],
     );
+
+  test("drives the backend the run names, and native when it names none (decision 0220)", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    let made = 0;
+    const { plane, runtime } = connect({
+      sandbox,
+      createAgent: (input) => {
+        made += 1;
+        return reply()(input);
+      },
+    });
+    await runtime.ready;
+    await until(() => hellos(plane).length === 1);
+    expect(hellos(plane)[0]).toMatchObject({ backends: ["native"] });
+
+    plane.send(runStart);
+    await until(() => ended(plane).length === 1);
+    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
+
+    plane.send({ ...runStart, runId: "run-2", backend: "native" });
+    await until(() => ended(plane).length === 2);
+    expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
+
+    const before = made;
+    plane.send({ ...runStart, runId: "run-3", backend: "other" });
+    await until(() => ended(plane).length === 3);
+    expect(ended(plane)[2]).toMatchObject({
+      outcome: "error",
+      error: "This runner does not drive the other agent backend",
+    });
+    expect(made).toBe(before);
+  });
 
   test("a run reports its progress as events and hands its messages home", async () => {
     const { sandbox, up } = slowSandbox();

@@ -1,5 +1,6 @@
 import { runCockpitCommand } from "../cockpit/commands";
 import { runMemoryCommand } from "../memory/commands";
+import { explainMachineCallError } from "./machine-call-error";
 import {
   parseAppendParams,
   parseBotNotesParams,
@@ -47,11 +48,13 @@ async function answerMachineCall(
   const place =
     "replyId" in relay ? replyPlace(relay.replyId, findBotReply) : runPlace(params, findRun);
   const machine = await machines.reach(place);
-  return machine.call(
-    "machine.call",
-    { threadId: place.threadId, op: relay.op, args: relay.args },
-    machineCallTimeout(relay.args),
-  );
+  return machine
+    .call(
+      "machine.call",
+      { threadId: place.threadId, op: relay.op, args: relay.args },
+      machineCallTimeout(relay.args),
+    )
+    .catch(explainMachineCallError);
 }
 
 function replyPlace(replyId: string, findBotReply: RuntimeCallContext["findBotReply"]) {

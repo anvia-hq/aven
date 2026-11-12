@@ -2,6 +2,7 @@ import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
 
+import { groupFailureNotice } from "../tool-failure";
 import type { ToolGroupEntry, ToolPart } from "../types";
 import { ReasoningBlock } from "./reasoning-block";
 import { ToolCall } from "./tool-call";
@@ -85,6 +86,7 @@ export function ToolGroup({
 }) {
   const tools = entries.flatMap((entry) => (entry.type === "tool" ? [entry.tool] : []));
   const running = tools.some((tool) => tool.status === "running");
+  const notice = groupFailureNotice(tools);
   const thinking = (index: number) => live && index === entries.length - 1;
 
   if (tools.length === 0) {
@@ -99,6 +101,8 @@ export function ToolGroup({
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
       <CollapsibleTrigger className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-muted-foreground hover:bg-muted/50">
         <span className={cn("min-w-0 flex-1 truncate font-medium", running && "shimmer")}>
+          {notice && <span className="font-normal text-destructive">{notice}</span>}
+          {notice && " · "}
           {summarize(tools)}
         </span>
       </CollapsibleTrigger>
