@@ -16,7 +16,7 @@ export function PanelToggle({ label, icon: Icon, open, onToggle }: Props) {
     <Button
       variant="ghost"
       size="icon-sm"
-      className={cn("size-8 md:size-7", open && "bg-accent")}
+      className={cn("size-8 transition-none md:size-7", open && "bg-accent")}
       aria-label={label}
       aria-pressed={open}
       onClick={onToggle}
