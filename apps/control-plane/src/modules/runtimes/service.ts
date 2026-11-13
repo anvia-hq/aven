@@ -68,7 +68,10 @@ const ownedBy = (organizationId: string, ownerId: string, id: string) =>
 const sameToken = (a: string, b: string) =>
   timingSafeEqual(Buffer.from(hashToken(a)), Buffer.from(hashToken(b)));
 
-const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => runtime;
+const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => ({
+  ...runtime,
+  githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
+});
 
 export const runtimesService = {
   localToken,
