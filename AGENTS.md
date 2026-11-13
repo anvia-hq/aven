@@ -9,7 +9,7 @@ Bun workspace monorepo (TypeScript, ESM).
 ```
 apps/              control-plane (API), platform (web), runtime (runner), cli (`aven`)
 clients/           Native clients (macos, ios: Swift, no TypeScript)
-packages/          Shared internal packages: db, agents, protocol, runtime-client, server-kit, github, ui
+packages/          Shared internal packages: db, agents, protocol, agent-backend, claude, runtime-client, server-kit, github, ui
 docs/              Project knowledge (see docs/README.md)
 deploy/            Self-hosting: compose file, env template
 ```
