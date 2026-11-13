@@ -13,6 +13,7 @@ import { createControlPlaneCalls } from "./control-plane-calls";
 import { cpuSampler, readHostStats } from "./host-stats";
 import { IdleRelease } from "./idle-release";
 import { createMachineProcessWatch } from "./machine-process-watch";
+import { PortTunnels } from "./port-tunnels";
 import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
 import { machineCallWait } from "./machine-call-wait";
 import { PlacedWorkspaces } from "./placed-workspaces";
@@ -139,6 +140,7 @@ export function startRuntime(options: RuntimeOptions) {
   };
 
   const terminals = new TerminalSessions(options.sandbox, viewerLink);
+  const ports = new PortTunnels(viewerLink);
 
   const sendOrWarn = (message: RuntimeToControlPlane) => {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
@@ -294,6 +296,12 @@ export function startRuntime(options: RuntimeOptions) {
       case "terminal.close":
         terminals.close(message.viewerId);
         return;
+      case "port.open":
+        void ports.open(message.viewerId, message.port);
+        return;
+      case "port.close":
+        ports.close(message.viewerId);
+        return;
       case "call":
         await answer(message.id, () => callOf(message.method, message.params));
         return;
@@ -354,6 +362,7 @@ export function startRuntime(options: RuntimeOptions) {
         if (!frame) return;
 
         if (terminals.has(frame.viewerId)) terminals.write(frame.viewerId, frame.payload);
+        else if (ports.has(frame.viewerId)) ports.write(frame.viewerId, frame.payload);
 
         return;
       }
@@ -372,6 +381,7 @@ export function startRuntime(options: RuntimeOptions) {
     ws.onclose = (event) => {
       clearInterval(statsTimer);
       terminals.closeAll();
+      ports.closeAll();
       bots.abortAll("The connection to the control plane dropped");
 
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
@@ -398,6 +408,7 @@ export function startRuntime(options: RuntimeOptions) {
       idle.cancelAll();
       processEnds.cancelAll();
       terminals.closeAll();
+      ports.closeAll();
       bots.abortAll("The runner is stopping");
       socket?.close();
       await idle.settled();

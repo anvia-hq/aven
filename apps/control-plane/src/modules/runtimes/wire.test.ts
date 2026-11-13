@@ -492,3 +492,20 @@ describe("host stats", () => {
     expect(parseRuntimeFrame(JSON.stringify({ type: "host.stats" }))).toBeNull();
   });
 });
+
+describe("a preview's port from a runtime", () => {
+  test("says when it opened, and why it closed", () => {
+    expect(parseRuntimeFrame(JSON.stringify({ type: "port.opened", viewerId: "v1" }))).toEqual({
+      type: "port.opened",
+      viewerId: "v1",
+    });
+    expect(
+      parseRuntimeFrame(JSON.stringify({ type: "port.closed", viewerId: "v1", reason: "gone" })),
+    ).toEqual({ type: "port.closed", viewerId: "v1", reason: "gone" });
+  });
+
+  test("needs a viewer and a reason", () => {
+    expect(parseRuntimeFrame(JSON.stringify({ type: "port.opened" }))).toBeNull();
+    expect(parseRuntimeFrame(JSON.stringify({ type: "port.closed", viewerId: "v1" }))).toBeNull();
+  });
+});

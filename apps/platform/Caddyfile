@@ -3,6 +3,13 @@
 # WebSockets on its own, which the desktop, the terminal and remote runners use.
 #
 # AVEN_SITE_ADDRESS is ":80" for plain HTTP, or a domain, for which Caddy gets a certificate.
+#
+# A runner's ports are served on their own hosts (decision 0237), with AVEN_PREVIEW_DOMAIN set: give Caddy a
+# wildcard certificate and route that domain to the server's preview listener, which picks the runner and the
+# port from Host. Uncomment and name the domain:
+# *.preview.example.com {
+# 	reverse_proxy {$AVEN_UPSTREAM:server:8001}
+# }
 {$AVEN_SITE_ADDRESS::80} {
 	encode zstd gzip
 

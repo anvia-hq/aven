@@ -4,6 +4,7 @@ import {
   botApi,
   botChats,
   botRuntimeId,
+  previews,
   runsService,
   runtimeHub,
   actionsService,
@@ -39,6 +40,7 @@ import { platformRouter } from "./modules/platform/router";
 import { serverModelsRouter } from "./modules/server-models/router";
 import { foldersRouter } from "./modules/folders/router";
 import { preferencesRouter } from "./modules/preferences/router";
+import { previewRouter } from "./modules/preview/router";
 import { avatarsRouter } from "./modules/avatars/router";
 import { profileRouter } from "./modules/profile/router";
 import { projectsRouter } from "./modules/projects/router";
@@ -89,6 +91,7 @@ export const app = new Elysia()
   .use(providersRouter)
   .use(decisionModelRouter)
   .use(runtimesRouter(runtimeHub))
+  .use(previewRouter(previews))
   .use(schedulesRouter)
   .use(skillsRouter)
   .use(mcpRouter)

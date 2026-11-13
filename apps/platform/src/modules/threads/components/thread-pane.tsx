@@ -65,8 +65,9 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const canCompact = owned && !running && !question && supportsCompaction;
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
-  const { overview, diff, files, terminal } = panels;
-  const sideOpen = !split && (diff.open || files.open || (owned && terminal.open));
+  const { overview, diff, files, terminal, preview } = panels;
+  const sideOpen =
+    !split && (diff.open || files.open || (owned && (terminal.open || preview.open)));
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({
@@ -206,6 +207,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
               <ResizablePanel id="side" defaultSize="50" minSize="25">
                 <ThreadSidePanels
                   threadId={thread.id}
+                  runtimeId={thread.runtimeId}
                   running={running}
                   panels={panels}
                   owned={owned}

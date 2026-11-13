@@ -4,14 +4,15 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
+import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
+
+export { LOCAL_RUNTIME_ID };
 
 const TOKEN_PREFIX = "avrt_";
 
 const LOCAL_RUNNER_OFF = "off";
-
-export const LOCAL_RUNTIME_ID = "00000000-0000-4000-8000-000000000001";
 
 const TOKEN_RULE = `${TOKEN_PREFIX} prefix and at least 32 characters`;
 
