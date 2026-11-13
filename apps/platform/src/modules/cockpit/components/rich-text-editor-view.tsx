@@ -27,7 +27,7 @@ const isEmpty = (blocks: Block[]) =>
     (blocks[0]!.content as unknown[] | undefined)?.length === 0 &&
     blocks[0]!.children.length === 0);
 
-export default function RichTextEditorView({
+export function RichTextEditorView({
   value,
   onChange,
   editable = true,

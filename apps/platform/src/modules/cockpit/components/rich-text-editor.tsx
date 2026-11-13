@@ -2,7 +2,9 @@ import { lazy, Suspense } from "react";
 
 import type { RichTextEditorProps } from "./rich-text-editor-view";
 
-const View = lazy(() => import("./rich-text-editor-view"));
+const View = lazy(() =>
+  import("./rich-text-editor-view").then((module) => ({ default: module.RichTextEditorView })),
+);
 
 export function RichTextEditor(props: RichTextEditorProps) {
   return (
