@@ -5,8 +5,8 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
 import { backendFor } from "./agent-backends";
-import { callAvenTool } from "./claude-mcp";
-import { ClaudeRuns } from "./claude-backend";
+import { callAvenTool } from "@aven/claude/claude-mcp";
+import { ClaudeRuns } from "@aven/claude/claude-backend";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";

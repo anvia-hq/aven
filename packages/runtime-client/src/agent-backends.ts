@@ -1,6 +1,6 @@
-import { ClaudeRuns } from "./claude-backend";
-import { claudeFakeQuery } from "./claude-fake";
-import { claudeSdkQuery } from "./claude-sdk";
+import { ClaudeRuns } from "@aven/claude/claude-backend";
+import { claudeFakeQuery } from "@aven/claude/claude-fake";
+import { claudeSdkQuery } from "@aven/claude/claude-sdk";
 import { DurableRuns } from "./durable-runs";
 import type { AgentBackend, AgentBackendSet, ClaudeQuery } from "@aven/agent-backend/types";
 

@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { claudeQueryForProcess } from "./agent-backends";
-import { CLAUDE_FAKE_REPLY, claudeFakeQuery } from "./claude-fake";
-import { claudeSdkQuery } from "./claude-sdk";
+import { CLAUDE_FAKE_REPLY, claudeFakeQuery } from "@aven/claude/claude-fake";
+import { claudeSdkQuery } from "@aven/claude/claude-sdk";
 import type { ClaudeQueryInput, ClaudeSdkMessage } from "@aven/agent-backend/types";
 
 const TOKEN = "setup-token-for-the-fake-0001";

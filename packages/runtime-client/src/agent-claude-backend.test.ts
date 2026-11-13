@@ -3,7 +3,7 @@ import { describe, expect, test } from "bun:test";
 import { CLAUDE_TOKEN_MISSING } from "@aven/protocol/runtime-wire";
 
 import { backendFor, openAgentBackends } from "./agent-backends";
-import { ClaudeRuns } from "./claude-backend";
+import { ClaudeRuns } from "@aven/claude/claude-backend";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
