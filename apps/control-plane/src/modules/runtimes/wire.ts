@@ -99,6 +99,13 @@ const toolArtifact = z.object({
   caption: z.string().max(500).optional(),
 });
 
+const sentArtifact = z.object({
+  name: z.string().regex(ARTIFACT_NAME),
+  mediaType: z.enum(ARTIFACT_MEDIA_TYPES),
+  title: z.string().trim().min(1).max(120).optional(),
+  size: z.int().nonnegative().optional(),
+});
+
 const subagentTool = z.object({
   id: z.string(),
   name: z.string(),
@@ -255,6 +262,7 @@ const frame = z.discriminatedUnion("type", [
     replyId: z.string().min(1),
     text: z.string().min(1).max(BOT_SAY_MAX),
     quote: z.string().trim().regex(BOT_MESSAGE_ID).optional(),
+    files: z.array(sentArtifact).max(MAX_ARTIFACTS_PER_CALL).optional(),
   }),
   z.object({
     type: z.literal("bot.end"),

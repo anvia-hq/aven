@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { artifactType, videoType } from "./artifact-type";
+import { artifactType, documentType, videoType } from "./artifact-type";
 
 const bytes = (...parts: (number[] | string)[]) =>
   new Uint8Array(
@@ -34,5 +34,20 @@ describe("artifactType", () => {
   test("still knows the images", () => {
     expect(artifactType(bytes([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))).toBe("image/png");
     expect(artifactType(bytes("plain text"))).toBeNull();
+  });
+});
+
+describe("documentType", () => {
+  test("knows a PDF by its header whatever it is called", () => {
+    expect(documentType(bytes("%PDF-1.7\n"), "report.bin")).toBe("application/pdf");
+  });
+
+  test("takes the type of text from its extension and refuses what is not text", () => {
+    expect(documentType(bytes("# Title"), "notes.md")).toBe("text/markdown");
+    expect(documentType(bytes("a,b"), "table.CSV")).toBe("text/csv");
+    expect(documentType(bytes("hello"), "a.txt")).toBe("text/plain");
+    expect(documentType(bytes("hello"), "a.exe")).toBeNull();
+    expect(documentType(bytes("a", [0], "b"), "a.txt")).toBeNull();
+    expect(documentType(new Uint8Array([0xff, 0xfe, 0xfd]), "a.txt")).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
+import type { AttachmentUpload } from "@/modules/threads/types";
 import type { faces } from "./avatar";
-import type { Bot, BotChatMessage } from "@aven/protocol/types";
+import type { Bot, BotChatMessage, ToolArtifact } from "@aven/protocol/types";
 
 export type {
   Bot,
@@ -59,3 +60,22 @@ export type MentionPart =
   | { type: "text"; text: string }
   | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> }
   | { type: "thread"; id: string; title: string };
+
+export type BotChatState = {
+  messages: BotChatMessage[];
+  typing: boolean;
+  activity: string | null;
+  error: string | null;
+  send: (text: string, files?: AttachmentUpload[], quote?: string) => Promise<boolean>;
+};
+
+export type ArtifactKind = "pdf" | "markdown" | "csv" | "text" | "page" | "image" | "video";
+
+export type ArtifactFile = ToolArtifact & { title: string; messageId: string };
+
+export type ArtifactGroup = { title: string; versions: ArtifactFile[] };
+
+export type ArtifactTextState =
+  | { status: "loading" }
+  | { status: "failed" }
+  | { status: "ready"; text: string };

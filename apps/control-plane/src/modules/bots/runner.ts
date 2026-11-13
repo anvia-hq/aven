@@ -308,8 +308,11 @@ export class BotRunner {
       peer,
       questions,
       attachments,
+      artifacts,
       quote,
-    }: Pick<BotChatMessage, "peer" | "questions" | "attachments"> & { quote?: BotChatQuote } = {},
+    }: Pick<BotChatMessage, "peer" | "questions" | "attachments" | "artifacts"> & {
+      quote?: BotChatQuote;
+    } = {},
   ) {
     const message: BotChatMessage = {
       id:
@@ -325,6 +328,8 @@ export class BotRunner {
     if (questions) message.questions = questions;
 
     if (attachments?.length) message.attachments = attachments;
+
+    if (artifacts?.length) message.artifacts = artifacts;
 
     if (quote) message.quote = quote;
 
@@ -393,9 +398,10 @@ export class BotRunner {
     try {
       await this.#replier.answer({
         ...input,
-        say: (text, quoteId) =>
+        say: (text, quoteId, files) =>
           this.#say(channel, "bot", text, {
             quote: quoteId ? this.#quotedOf(channel, quoteId) : undefined,
+            artifacts: files,
           }),
         ask: (questions) =>
           this.#say(channel, "bot", questions.map((question) => question.text).join("\n"), {

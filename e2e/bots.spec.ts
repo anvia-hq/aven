@@ -90,6 +90,54 @@ test.describe("bots", () => {
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
   });
 
+  test("a bot sends a file with its message, the chat shows a card, and opening it fills a side panel that survives a reload, with a version for each time it is sent again", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-file", "File Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const box = page.getByRole("textbox", { name: "Message" });
+    await box.fill("send the report");
+    await box.press("Enter");
+
+    const card = page.locator('[data-role="artifact-card"]');
+    await expect(card).toHaveCount(1);
+    await expect(card).toContainText("Weekly report");
+    await expect(page.locator('[data-role="artifact-panel"]')).toHaveCount(0);
+
+    await card.click();
+    const panel = page.locator('[data-role="artifact-panel"]');
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText("All good in version 1.")).toBeVisible();
+    await expect(page).toHaveURL(/artifact=/);
+
+    await page.reload();
+    await expect(page.locator('[data-role="artifact-panel"]')).toBeVisible();
+    await expect(page.getByText("All good in version 1.")).toBeVisible();
+
+    await page.getByRole("textbox", { name: "Message" }).fill("update the report");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(card).toHaveCount(2);
+    await card.last().click();
+    await expect(page.getByText("All good in version 2.")).toBeVisible();
+    const versions = page.getByRole("combobox", { name: "Version" });
+    await expect(versions).toHaveValue(/\.md$/);
+    await expect(versions.locator("option")).toHaveCount(2);
+
+    await page.getByRole("button", { name: "Close file" }).click();
+    await expect(page.locator('[data-role="artifact-panel"]')).toHaveCount(0);
+    await expect(page).not.toHaveURL(/artifact=/);
+  });
+
   test("a bot quotes the message it answers and reacts to it, and the person quotes one too", async ({
     page,
   }) => {

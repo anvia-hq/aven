@@ -112,7 +112,13 @@ export type ScheduleHost = {
 export type SendMessage = (
   message: SendMessageInput,
   context: { abortSignal?: AbortSignal },
-) => Promise<string>;
+) => Promise<string | SentWithFiles>;
+
+export type SentWithFiles = {
+  sent: string;
+  artifacts: ToolArtifact[];
+  failed: { path: string; error: string }[];
+};
 
 export type ReactToMessage = (message: { messageId: string; emoji: string }) => Promise<string>;
 

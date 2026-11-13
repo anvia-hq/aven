@@ -8,10 +8,12 @@ import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 
 import { cn } from "cn";
 
+import { titleOf } from "../artifacts";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
 import type { Bot, BotChatMessage, BotChatQuote } from "../types";
 import { BotMentionChip } from "./bot-mention-chip";
+import { ArtifactCard } from "./artifact-card";
 import { MentionedText } from "./mentioned-text";
 
 export const isPersons = (message: BotChatMessage) => message.role === "user";
@@ -22,6 +24,8 @@ export function BotChatBubble({
   message,
   bots,
   onQuote,
+  onOpenArtifact,
+  openArtifact,
   joined,
 }: {
   botId: string;
@@ -29,6 +33,8 @@ export function BotChatBubble({
   message: BotChatMessage;
   bots: readonly Bot[];
   onQuote: (message: BotChatMessage) => void;
+  onOpenArtifact: (name: string) => void;
+  openArtifact: string | undefined;
   joined?: { above: boolean; below: boolean };
 }) {
   const mine = isPersons(message);
@@ -106,6 +112,18 @@ export function BotChatBubble({
             {actions}
           </Bubble>
         ))}
+      {message.artifacts?.length ? (
+        <div className="flex flex-col items-start gap-1.5">
+          {message.artifacts.map((artifact) => (
+            <ArtifactCard
+              key={artifact.name}
+              artifact={{ ...artifact, title: titleOf(artifact), messageId: message.id }}
+              active={openArtifact === artifact.name}
+              onOpen={() => onOpenArtifact(artifact.name)}
+            />
+          ))}
+        </div>
+      ) : null}
       {message.reactions?.length ? (
         <div data-slot="reactions" className="flex flex-wrap gap-1">
           {message.reactions.map((emoji) => (

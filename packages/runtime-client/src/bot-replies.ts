@@ -1,6 +1,7 @@
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 import { createBotAgent } from "@aven/agents/bot-agent";
+import { keepFiles } from "@aven/agents/bot-files";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
 import { botNote, MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
@@ -306,18 +307,43 @@ export class BotReplies {
 
       if (reply) reply.spoke = true;
     };
-    const send: SendMessage = async ({ to, text, quote }, { abortSignal }) => {
+    const send: SendMessage = async ({ to, text, quote, files }, { abortSignal }) => {
       if (to !== USER_HANDLE) {
+        if (files?.length) throw new Error("Files can only be sent to the person");
+
         const sent = await call("bot.send", { replyId, to, text });
         spoke();
         return `Sent to ${sent.name} (${sent.handle}).`;
       }
 
+      const shown = files?.length
+        ? await keepFiles(
+            {
+              readFile: (options) => {
+                if (!box.runtime) throw new Error("Your computer cannot send files");
+
+                return box.runtime.readFile(options);
+              },
+              save: (bytes, mediaType) => {
+                if (!sandbox.artifacts) throw new Error("This runner keeps no files");
+
+                return sandbox.artifacts.save(bot.id, bytes, mediaType);
+              },
+            },
+            files,
+            abortSignal,
+          )
+        : undefined;
+
+      if (shown && shown.kept.length === 0) throw new Error(shown.failed[0]!.error);
+
       await this.#pause(typingDelay(text), abortSignal);
 
-      if (post({ type: "bot.say", replyId, text, quote })) {
+      if (post({ type: "bot.say", replyId, text, quote, files: shown?.kept })) {
         spoke();
-        return "Sent to the person.";
+        return shown
+          ? { sent: "Sent to the person.", artifacts: shown.kept, failed: shown.failed }
+          : "Sent to the person.";
       }
 
       const lost = new Error("The connection to the control plane dropped");

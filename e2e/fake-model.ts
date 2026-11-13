@@ -152,6 +152,9 @@ const SAID_AFTER: Record<string, string> = {
   archive_thread: "Archived the thread",
 };
 
+const heardNow = (messages: ChatMessage[]) =>
+  heardOf(messages.findLast((message) => message.role === "user")?.content);
+
 const THREAD_PROMPT = "Fix the e2e build";
 
 type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?: string } }[] };
@@ -220,6 +223,18 @@ Bun.serve({
         }
       }
 
+      if (
+        calledTool(call, "exec_command") &&
+        /(send|update) the report/i.test(heardNow(body.messages))
+      ) {
+        const version = /update the report/i.test(heardNow(body.messages)) ? 2 : 1;
+        const file = toolCall("call_2", "send_message", {
+          text: `Here is the report, version ${version}`,
+          files: [{ path: "report.md", title: "Weekly report" }],
+        });
+        return reply({ content: null, tool_calls: [file] }, "tool_calls");
+      }
+
       const said = Object.entries(SAID_AFTER).find(([tool]) => calledTool(call, tool))?.[1];
 
       if (!said) return reply({ content: "ok" }, "stop");
@@ -228,6 +243,14 @@ Bun.serve({
     }
 
     const heard = heardOf(last?.content);
+
+    if (/(send|update) the report/i.test(heard)) {
+      const version = /update the report/i.test(heard) ? 2 : 1;
+      const write = toolCall("call_1", "exec_command", {
+        command: `printf '# Weekly report\n\nAll good in version ${version}.' > report.md`,
+      });
+      return reply({ content: null, tool_calls: [write] }, "tool_calls");
+    }
 
     if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
       return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");

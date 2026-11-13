@@ -48,6 +48,7 @@ export type BotChatMessage = {
   role: "user" | "bot";
   text: string;
   attachments?: MessageAttachment[];
+  artifacts?: ToolArtifact[];
   peer?: BotChatPeer;
   questions?: BotQuestion[];
   quote?: BotChatQuote;
@@ -158,7 +159,13 @@ export type QuestionPrompt = {
 
 export type QuestionAnswer = { questionId: string; value: string };
 
-export type ToolArtifact = { name: string; mediaType: string; caption?: string };
+export type ToolArtifact = {
+  name: string;
+  mediaType: string;
+  caption?: string;
+  title?: string;
+  size?: number;
+};
 
 export type SubagentPart = {
   index: number;
@@ -736,7 +743,7 @@ export type RuntimeToControlPlane =
       continuation?: unknown;
     }
   | { type: "call"; id: string; method: CallMethod; params: unknown }
-  | { type: "bot.say"; replyId: string; text: string; quote?: string }
+  | { type: "bot.say"; replyId: string; text: string; quote?: string; files?: ToolArtifact[] }
   | { type: "bot.end"; replyId: string; error?: string }
   | { type: "bot.activity"; replyId: string; label: string | null }
   | { type: "terminal.opened"; viewerId: string }
