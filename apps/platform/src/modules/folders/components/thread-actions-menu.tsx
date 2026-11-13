@@ -52,14 +52,16 @@ export function ThreadActionsMenu({
             Move to folder
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-52">
-            {folders
-              .filter((folder) => !isTempId(folder.id))
-              .map((folder) => (
-                <DropdownMenuItem key={folder.id} onClick={() => onMove(folder.id)}>
-                  <span className="min-w-0 flex-1 truncate">{folder.name}</span>
-                  {folder.id === currentFolderId && <Check />}
-                </DropdownMenuItem>
-              ))}
+            {folders.flatMap((folder) =>
+              isTempId(folder.id)
+                ? []
+                : [
+                    <DropdownMenuItem key={folder.id} onClick={() => onMove(folder.id)}>
+                      <span className="min-w-0 flex-1 truncate">{folder.name}</span>
+                      {folder.id === currentFolderId && <Check />}
+                    </DropdownMenuItem>,
+                  ],
+            )}
             {folders.length > 0 && <DropdownMenuSeparator />}
             <DropdownMenuItem onClick={onNewFolder}>
               <FolderPlus />

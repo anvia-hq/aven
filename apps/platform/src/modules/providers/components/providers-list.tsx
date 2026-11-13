@@ -76,7 +76,7 @@ export function ProvidersList() {
     label: MANY.has(kind) ? "Add" : "Set up",
   });
   const rows: Row[] = [
-    ...available.filter((kind) => kind !== "openai-compatible").map(kindRow),
+    ...available.flatMap((kind) => (kind !== "openai-compatible" ? [kindRow(kind)] : [])),
     ...presets.map((preset): Row => ({
       key: preset.id,
       kind: "openai-compatible",
@@ -85,7 +85,7 @@ export function ProvidersList() {
       description: preset.description,
       label: "Set up",
     })),
-    ...available.filter((kind) => kind === "openai-compatible").map(kindRow),
+    ...available.flatMap((kind) => (kind === "openai-compatible" ? [kindRow(kind)] : [])),
   ];
 
   return (

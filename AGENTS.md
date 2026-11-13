@@ -24,7 +24,7 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
-bun test apps packages # unit tests; the Postgres ones need `createdb aven` and DATABASE_URL
+bun test apps packages tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
 bun run test:macos     # AvenKit's Swift tests
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
@@ -43,6 +43,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **Internal packages** are `@aven/<name>`, `"workspace:*"`, shipped as TS source with no build step. Apps never import from another app; shared code goes in `packages/`.
 - **Dependencies** go in the workspace that uses them, not the root. Ask before adding a heavy or new one. Patched ones live in `patches/`.
 - **Secrets and config.** Never commit secrets or `.env`. Every variable is also listed in `.env.example` with a safe placeholder.
+- **Our own lint rules** are in `tooling/oxlint/rules/` (one file and one test each, `aven/<name>` in `.oxlintrc.json`; decisions 0149 and 0281). Beyond no comments, no barrel files and `padded-if`: no `Reflect.get`/`Reflect.apply`, no `.filter().map()` chains (use `flatMap`), no `as unknown as T` in source, no `type X = unknown`, no module mocking, and no copying the accumulator in `reduce`.
 - **Never edit generated files:** `apps/platform/src/routeTree.gen.ts`, and migrations in `packages/db/drizzle/` (generate them).
 
 ## By area

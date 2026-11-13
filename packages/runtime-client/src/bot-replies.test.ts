@@ -371,11 +371,13 @@ describe("BotReplies", () => {
     };
 
     const appended = (calls: unknown[]) =>
-      calls
-        .filter((call) => (call as { method: string }).method === "bot.memory")
-        .map((call) => (call as { params: { op: string; messages?: unknown[] } }).params)
-        .filter((params) => params.op === "append")
-        .flatMap((params) => params.messages ?? []) as {
+      calls.flatMap((call) => {
+        const { method, params } = call as {
+          method: string;
+          params: { op: string; messages?: unknown[] };
+        };
+        return method === "bot.memory" && params.op === "append" ? (params.messages ?? []) : [];
+      }) as {
         role: string;
         content: { type: string; text?: string; mediaType?: string }[];
         metadata?: { prompt?: string; attachments?: unknown[] };

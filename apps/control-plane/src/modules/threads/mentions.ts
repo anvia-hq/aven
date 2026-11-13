@@ -8,9 +8,7 @@ import { personMentions } from "./addressing";
 
 export const threadMentionsService = {
   async record(threadId: string, authorId: string, text: string) {
-    const wanted = personMentions(text)
-      .map(({ id }) => id)
-      .filter((id) => id !== authorId);
+    const wanted = personMentions(text).flatMap(({ id }) => (id === authorId ? [] : [id]));
 
     if (wanted.length === 0) return;
 

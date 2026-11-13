@@ -38,10 +38,7 @@ export function useHeldList<T extends { id: string }>(items: T[], ms: number): H
   });
   previous.current = shown;
 
-  const leavingKey = shown
-    .filter((entry) => entry.leaving)
-    .map((entry) => entry.item.id)
-    .join();
+  const leavingKey = shown.flatMap((entry) => (entry.leaving ? [entry.item.id] : [])).join();
   const liveKey = items.map((item) => item.id).join();
 
   useEffect(() => {

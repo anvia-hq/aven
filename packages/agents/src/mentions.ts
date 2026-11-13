@@ -13,7 +13,7 @@ export function mentionNote(
   paths: SandboxPaths = SANDBOX_PATHS,
 ): string | undefined {
   const of = (type: MessageMention["type"]) =>
-    unique(mentions.filter((mention) => mention.type === type).map(({ name }) => name));
+    unique(mentions.flatMap((mention) => (mention.type === type ? [mention.name] : [])));
   const files = of("file");
   const asked = of("skill");
   const sections: string[] = [];

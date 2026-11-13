@@ -56,9 +56,9 @@ export function useBotMentions(selfId: string) {
         allowSpaces: true,
         items: ({ query }) => {
           const wanted = query.trim().toLowerCase();
-          const botItems = others.current
-            .filter((bot) => bot.name.toLowerCase().includes(wanted))
-            .map(itemOf);
+          const botItems = others.current.flatMap((bot) =>
+            bot.name.toLowerCase().includes(wanted) ? [itemOf(bot)] : [],
+          );
           const threadItems = mine.current
             .filter(
               (thread) => thread.state === "open" && thread.title.toLowerCase().includes(wanted),

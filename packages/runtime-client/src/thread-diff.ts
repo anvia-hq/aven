@@ -108,7 +108,7 @@ async function pushedTrees(root: string, run: Git, configure: Git) {
   const trees = await Promise.all(
     commits.map((commit) => run(["rev-parse", `${commit}^{tree}`], { cwd: root })),
   );
-  return [...new Set(trees.filter((tree) => tree.code === 0).map((tree) => tree.stdout.trim()))];
+  return [...new Set(trees.flatMap((tree) => (tree.code === 0 ? [tree.stdout.trim()] : [])))];
 }
 
 function cut(patch: string): ThreadDiff {

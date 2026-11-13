@@ -82,7 +82,9 @@ export function settlePending(pending: PendingMessage[], event: RunEvent): Pendi
     case "steer_rejected":
       return withoutPending(pending, event.id);
     case "snapshot": {
-      const sent = event.messages.filter((message) => message.role === "user").map(textOf);
+      const sent = event.messages.flatMap((message) =>
+        message.role === "user" ? [textOf(message)] : [],
+      );
       const recent = sent.slice(Math.max(0, sent.length - pending.length));
       return pending.filter(({ message }) => !recent.some((text) => sameRequest(message, text)));
     }

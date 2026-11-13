@@ -29,7 +29,7 @@ export function createDurableEventMapper(
 
         if (typeof delta.type !== "string" || !DELTAS.has(delta.type)) return { events: [] };
 
-        const projected = projectStreamEvent(delta as unknown as AgentStreamEvent);
+        const projected = projectStreamEvent(delta as AgentStreamEvent);
 
         if (projected?.type === "tool_start") announced.add(projected.tool.id);
 
@@ -43,7 +43,7 @@ export function createDurableEventMapper(
           announced.add(call.toolCallId);
           return [{ type: "tool_start" as const, tool: projectToolCall(call) }];
         });
-        const usage = asRecord(result.usage) as unknown as Usage;
+        const usage = asRecord(result.usage) as Usage;
 
         if (typeof usage.inputTokens === "number") {
           const { contextWindow } = options;
@@ -74,7 +74,7 @@ export function createDurableEventMapper(
 
         announced.add(call.toolCallId);
         return {
-          events: [{ type: "tool_start", tool: projectToolCall(call as unknown as ToolCallPart) }],
+          events: [{ type: "tool_start", tool: projectToolCall(call as ToolCallPart) }],
         };
       }
       case "tool_completed": {

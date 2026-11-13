@@ -378,9 +378,9 @@ export class DurableRuns implements AgentBackend {
         modelRetry: MODEL_RETRY,
         compaction: input.compaction,
         toolRecovery: Object.fromEntries(
-          agent.tools
-            .filter((tool) => SAFE_TOOLS.has(tool.name))
-            .map((tool) => [tool.name, "safe" as const]),
+          agent.tools.flatMap((tool) =>
+            SAFE_TOOLS.has(tool.name) ? [[tool.name, "safe" as const]] : [],
+          ),
         ),
       },
     ]);

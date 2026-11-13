@@ -1,0 +1,42 @@
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
+const PLUGIN = resolve(import.meta.dir, "../aven-plugin.mjs");
+const OXLINT = resolve(import.meta.dir, "../../../node_modules/.bin/oxlint");
+
+const run = (ruleName, code, filename, fix) => {
+  const dir = mkdtempSync(join(tmpdir(), "aven-oxlint-"));
+
+  try {
+    writeFileSync(
+      join(dir, ".oxlintrc.json"),
+      JSON.stringify({
+        categories: { correctness: "off" },
+        jsPlugins: [PLUGIN],
+        rules: { [`aven/${ruleName}`]: "error" },
+      }),
+    );
+    writeFileSync(join(dir, filename), code);
+
+    const args = ["-c", ".oxlintrc.json", "--format", "json"];
+
+    if (fix) args.push("--fix");
+
+    const result = Bun.spawnSync([OXLINT, ...args, filename], { cwd: dir });
+    const parsed = JSON.parse(result.stdout.toString());
+
+    return {
+      messages: parsed.diagnostics.map((diagnostic) => diagnostic.message),
+      output: readFileSync(join(dir, filename), "utf8"),
+    };
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+};
+
+export const lint = (ruleName, code, filename = "fixture.ts") =>
+  run(ruleName, code, filename, false).messages;
+
+export const lintFix = (ruleName, code, filename = "fixture.ts") =>
+  run(ruleName, code, filename, true).output;

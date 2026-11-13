@@ -33,7 +33,7 @@ function usedBy(tag: CockpitTag) {
     [tag.tasks, "task", "tasks"],
     [tag.notes, "note", "notes"],
   ] as const;
-  const used = parts.filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  const used = parts.flatMap(([n, one, many]) => (n > 0 ? [`${n} ${n === 1 ? one : many}`] : []));
   return used.length > 0 ? used.join(" · ") : "Not used yet";
 }
 

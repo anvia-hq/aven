@@ -264,7 +264,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     let armed = false;
     const flaky = new Proxy(store, {
       get: (target, key) => {
-        if (key !== "load") return Reflect.get(target, key, target);
+        if (key !== "load") return target[key as keyof typeof target];
 
         return async (...args: Parameters<typeof target.load>) => {
           if (armed) {

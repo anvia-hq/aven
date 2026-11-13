@@ -129,7 +129,7 @@ export function SkillsList() {
 
   if (!loaded) return null;
 
-  const replaced = new Set(personal.filter((skill) => skill.enabled).map((skill) => skill.name));
+  const replaced = new Set(personal.flatMap((skill) => (skill.enabled ? [skill.name] : [])));
 
   return (
     <>

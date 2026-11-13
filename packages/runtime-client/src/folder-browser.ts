@@ -44,8 +44,9 @@ export async function listFolders(
   const real = await servedPath(dirs, path);
   const names = await readdir(real, { withFileTypes: true });
   const children = names
-    .filter((child) => child.isDirectory() && !child.name.startsWith("."))
-    .map((child) => join(real, child.name))
+    .flatMap((child) =>
+      child.isDirectory() && !child.name.startsWith(".") ? [join(real, child.name)] : [],
+    )
     .sort((a, b) => a.localeCompare(b));
   const up = dirname(real);
   return {

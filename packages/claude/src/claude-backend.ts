@@ -679,9 +679,7 @@ export class ClaudeRuns implements AgentBackend {
 
   #note(onEvent: Emit, text: string): FollowedRun {
     onEvent({ type: "text", delta: text });
-    const messages = [
-      { role: "assistant", content: [{ type: "text", text }] },
-    ] as unknown as Message[];
+    const messages = [{ role: "assistant", content: [{ type: "text", text }] }] as Message[];
     return {
       durableId: `claude-note-${crypto.randomUUID()}`,
       done: Promise.resolve({ type: "response", messages }),
@@ -745,8 +743,7 @@ function assistantText(messages: readonly Message[]) {
   if (typeof last.content === "string") return last.content;
 
   return last.content
-    .map((part) => (part.type === "text" ? part.text : ""))
-    .filter((text) => text.length > 0)
+    .flatMap((part) => (part.type === "text" && part.text.length > 0 ? [part.text] : []))
     .join("\n");
 }
 
@@ -769,8 +766,7 @@ function promptParts(prompt: AgentPrompt): ClaudeUserInput {
   }
   return {
     text: content
-      .map((part) => (part.type === "text" ? part.text : ""))
-      .filter((text) => text.length > 0)
+      .flatMap((part) => (part.type === "text" && part.text.length > 0 ? [part.text] : []))
       .join("\n"),
     images,
   };

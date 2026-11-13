@@ -89,14 +89,14 @@ export function combineMcp(here: ConnectedMcp, machine: ConnectedMcp): Connected
     kept.push(server);
   }
   const dropped = new Set(
-    machine.servers.filter((server) => clashed.has(server.id)).map((server) => server.name),
+    machine.servers.flatMap((server) => (clashed.has(server.id) ? [server.name] : [])),
   );
   const failed = [
     ...here.note.failed,
     ...machine.note.failed,
-    ...machine.servers
-      .filter((server) => clashed.has(server.id))
-      .map((server) => ({ name: server.name, reason: clashed.get(server.id)! })),
+    ...machine.servers.flatMap((server) =>
+      clashed.has(server.id) ? [{ name: server.name, reason: clashed.get(server.id)! }] : [],
+    ),
   ];
   const servers = [...here.servers, ...kept];
   return {
@@ -126,9 +126,9 @@ export async function connectMcpForMachine(
   call: MachineCall | undefined,
 ): Promise<ConnectedMcp> {
   const onMachine = call ? configs.filter((config) => config.allowLocal) : [];
-  const here = configs
-    .filter((config) => !onMachine.includes(config))
-    .map((config) => ({ ...config, allowLocal: false }));
+  const here = configs.flatMap((config) =>
+    onMachine.includes(config) ? [] : [{ ...config, allowLocal: false }],
+  );
   const [local, machine] = await Promise.all([
     connectMcpServers(here),
     call && onMachine.length ? connectMachineMcp(onMachine, call) : undefined,

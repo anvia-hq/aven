@@ -20,7 +20,7 @@ export function withProjectEnv(sandbox: SandboxRuntime, current: () => Env | und
           target[property](merged(options));
       }
 
-      const value = Reflect.get(target, property, target);
+      const value = target[property as keyof typeof target];
       return typeof value === "function" ? value.bind(target) : value;
     },
   });

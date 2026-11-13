@@ -43,9 +43,9 @@ export function rowStates(rows: readonly VariableRow[], secret: boolean): RowSta
 }
 
 export function rowsToSave(states: readonly RowState[]): ParsedEntry[] {
-  return states
-    .filter((state) => !state.skipped)
-    .map(({ row }) => ({ name: row.name.trim(), value: row.value }));
+  return states.flatMap(({ skipped, row }) =>
+    skipped ? [] : [{ name: row.name.trim(), value: row.value }],
+  );
 }
 
 export const canSaveRows = (states: readonly RowState[]) => {

@@ -13,12 +13,16 @@ export function useMentionPeople(threadId: string | undefined): MentionPerson[] 
 
   if (!thread || !isDriving(thread.drivingUntil)) return [];
 
-  return (organization?.members ?? [])
-    .filter((member) => member.user.id !== session?.user.id)
-    .map(({ user }) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image ?? null,
-    }));
+  return (organization?.members ?? []).flatMap(({ user }) =>
+    user.id === session?.user.id
+      ? []
+      : [
+          {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image ?? null,
+          },
+        ],
+  );
 }

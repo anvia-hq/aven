@@ -64,7 +64,7 @@ async function download(entry: ClaudeBinaryEntry, target: string, options: Claud
       failure = error;
     });
     try {
-      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+      for await (const chunk of response.body as AsyncIterable<Uint8Array>) {
         if (failure) throw failure;
 
         hash.update(chunk);

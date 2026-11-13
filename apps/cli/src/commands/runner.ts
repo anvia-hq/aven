@@ -47,11 +47,10 @@ async function storedSettings() {
 }
 
 function folders(value: string | undefined) {
-  const dirs = (value ?? "")
-    .split(delimiter)
-    .map((dir) => dir.trim())
-    .filter(Boolean)
-    .map((dir) => resolve(dir));
+  const dirs = (value ?? "").split(delimiter).flatMap((dir) => {
+    const trimmed = dir.trim();
+    return trimmed ? [resolve(trimmed)] : [];
+  });
 
   if (dirs.length === 0) return [homedir()];
 

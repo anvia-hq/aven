@@ -147,7 +147,7 @@ run("providersService (postgres)", async () => {
     });
     expect(second.hasKey).toBe(false);
     const rows = await providersService.list(alice);
-    expect(rows.filter((row) => row.isDefault).map((row) => row.id)).toEqual([second.id]);
+    expect(rows.flatMap((row) => (row.isDefault ? [row.id] : []))).toEqual([second.id]);
     expect((await resolveModel(alice))?.provider).toBe("openai-compatible");
 
     const [first] = rows;

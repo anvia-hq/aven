@@ -23,17 +23,15 @@ export const recentSenders = (messages: readonly ChatMessage[]) => [
 ];
 
 export function recentOf(messages: readonly ChatMessage[], names: ReadonlyMap<string, string>) {
-  return messages
-    .slice(-RECENT_MESSAGES)
-    .map(({ role, parts, senderId }) => {
-      const written = parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("");
-      const author =
-        role === "user"
-          ? (senderId && names.get(senderId)) || parseDriverPrompt(written).driver || UNKNOWN_AUTHOR
-          : AGENT_AUTHOR;
-      return { author, text: spoken(written).slice(0, RECENT_CHARACTERS) };
-    })
-    .filter(({ text }) => text.length > 0);
+  return messages.slice(-RECENT_MESSAGES).flatMap(({ role, parts, senderId }) => {
+    const written = parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("");
+    const author =
+      role === "user"
+        ? (senderId && names.get(senderId)) || parseDriverPrompt(written).driver || UNKNOWN_AUTHOR
+        : AGENT_AUTHOR;
+    const text = spoken(written).slice(0, RECENT_CHARACTERS);
+    return text.length > 0 ? [{ author, text }] : [];
+  });
 }
 
 type Deps = {
@@ -60,9 +58,9 @@ export function createAddressingGate({ configOf, deciderFor }: Deps): Addressing
           author,
           owner,
           ...names,
-          ...recent
-            .map((message) => message.author)
-            .filter((name) => name !== AGENT_AUTHOR && name !== UNKNOWN_AUTHOR),
+          ...recent.flatMap(({ author: name }) =>
+            name !== AGENT_AUTHOR && name !== UNKNOWN_AUTHOR ? [name] : [],
+          ),
         ]),
       ],
       recent,

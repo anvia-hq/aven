@@ -19,7 +19,12 @@ const output = z.object({
 });
 
 export const clean = (suggestions: readonly string[]) => [
-  ...new Set(suggestions.map((text) => text.trim()).filter(Boolean)),
+  ...new Set(
+    suggestions.flatMap((text) => {
+      const trimmed = text.trim();
+      return trimmed ? [trimmed] : [];
+    }),
+  ),
 ];
 
 export async function suggestFollowUps(userId: string, transcript: string) {

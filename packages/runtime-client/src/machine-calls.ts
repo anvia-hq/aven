@@ -188,9 +188,7 @@ export function createMachineCalls({
     if (key) options.abortSignal = controller.signal;
 
     try {
-      const result = await (
-        await runtimeOf(threadId)
-      ).exec(options as unknown as SandboxExecOptions);
+      const result = await (await runtimeOf(threadId)).exec(options as SandboxExecOptions);
       return { ...result, stdout: result.stdout.toBase64(), stderr: result.stderr.toBase64() };
     } finally {
       if (key) running.delete(key);
@@ -258,9 +256,7 @@ export function createMachineCalls({
       case "startProcess": {
         const runtime = await runtimeOf(threadId);
         await machineProcesses.begin(threadId);
-        return runtime.startProcess(
-          args as unknown as Parameters<SandboxRuntime["startProcess"]>[0],
-        );
+        return runtime.startProcess(args as Parameters<SandboxRuntime["startProcess"]>[0]);
       }
       case "listProcesses":
         return (await runtimeOf(threadId)).listProcesses();
