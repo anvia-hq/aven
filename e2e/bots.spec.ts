@@ -49,6 +49,26 @@ test.describe("bots", () => {
     expect(first.bottomLeft).toBeLessThan(first.topLeft);
   });
 
+  test("the main bot greets its person by itself once it exists, and the greeting is its model's words", async ({
+    page,
+  }) => {
+    await registerUser(page, "greet", "Greet Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(page.getByText("You were just created")).toHaveCount(0);
+  });
+
   test("the main bot is under the logo, and it answers in several messages", async ({ page }) => {
     await registerUser(page, "bot", "Bot Person");
     const provider = await page.request.post("/api/providers", {
@@ -64,7 +84,8 @@ test.describe("bots", () => {
     await page.getByRole("link", { name: "Bot", exact: true }).click();
     await expect(page).toHaveURL(/\/bot$/);
     await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
-    await expect(page.getByText("Say hello to Aven.")).toBeVisible();
+    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
 
     await page.getByRole("textbox", { name: "Message" }).fill("hello bot");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
