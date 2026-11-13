@@ -105,3 +105,9 @@ test("a request to pull from GitHub is fetched through the folder's own remote, 
   expect(section).toContain("merge FETCH_HEAD");
   expect(section).toContain("Do not change the folder itself");
 });
+
+test("the agent is told its GitHub identity is the one its commands already use, and not to change it", () => {
+  const section = codingInstructions(200).split("<machine>")[1]!.split("</machine>")[0]!;
+  expect(section).toContain("GH_TOKEN is set for the run");
+  expect(section).toContain("never run gh auth login");
+});
