@@ -1,8 +1,9 @@
 import { Fragment, type ReactNode } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
-import { PanelEnter } from "@/components/panel-enter";
+import { PANEL_EXIT_MS, PanelEnter } from "@/components/panel-enter";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { useHeldList } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { threadComputer } from "@/modules/computer/computer";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
@@ -67,17 +68,19 @@ export function ThreadSidePanels({
     });
   }
 
+  const shown = useHeldList(sidePanels, PANEL_EXIT_MS);
+
   return (
     <ResizablePanelGroup
       orientation="vertical"
       defaultLayout={side.defaultLayout}
       onLayoutChanged={side.onLayoutChanged}
     >
-      {sidePanels.map((panel, index) => (
+      {shown.map(({ item: panel, leaving }, index) => (
         <Fragment key={panel.id}>
           {index > 0 && <ResizableHandle className={handleClassName} />}
           <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
-            <PanelEnter>{panel.node}</PanelEnter>
+            <PanelEnter leaving={leaving}>{panel.node}</PanelEnter>
           </ResizablePanel>
         </Fragment>
       ))}

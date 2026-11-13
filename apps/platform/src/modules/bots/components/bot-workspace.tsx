@@ -1,7 +1,8 @@
 import { useDefaultLayout } from "react-resizable-panels";
 
-import { PanelEnter } from "@/components/panel-enter";
+import { PANEL_EXIT_MS, PanelEnter } from "@/components/panel-enter";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { useHeldValue } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
@@ -20,7 +21,8 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
   useDefaultTimezone();
   const chat = useBotChat(bot.id);
   const { artifact, show } = useOpenArtifact();
-  const found = findArtifact(artifactGroups(chat.messages), artifact);
+  const live = findArtifact(artifactGroups(chat.messages), artifact);
+  const { shown: found, leaving } = useHeldValue(live, PANEL_EXIT_MS);
   const panelIds = found ? ["conversation", "artifact"] : ["conversation"];
   const layout = useDefaultLayout({
     id: "aven.bot.artifact.panels",
@@ -28,7 +30,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
     storage: safeStorage,
   });
   const panel = found && (
-    <PanelEnter>
+    <PanelEnter leaving={leaving}>
       <ArtifactPanel
         botId={bot.id}
         group={found.group}
