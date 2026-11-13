@@ -13,7 +13,7 @@ index 1111111..2222222 100644
 Binary files a/assets/logo.png and b/assets/logo.png differ
 `;
 
-const shipButton = (page: Page) => page.getByRole("button", { name: "Ship", exact: true });
+const shipButton = (page: Page) => page.getByRole("button", { name: "Open PR", exact: true });
 const setUpButton = (page: Page) => page.getByRole("button", { name: "Set up shipping" });
 const connectButton = (page: Page) => page.getByRole("button", { name: "Connect GitHub to ship" });
 const changesBadge = (page: Page) => page.getByTitle("Changes not shipped yet");
