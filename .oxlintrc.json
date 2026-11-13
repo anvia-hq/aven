@@ -16,7 +16,9 @@
   "rules": {
     "aven/no-comments": "error",
     "aven/no-conditional-spread": "error",
+    "aven/no-atom-import": "error",
     "aven/no-barrel-file": "error",
+    "aven/no-base-ui-outside-ui": "error",
     "aven/no-native-primitives": "error",
     "aven/padded-if": "error",
     "eqeqeq": ["error", "smart"],
