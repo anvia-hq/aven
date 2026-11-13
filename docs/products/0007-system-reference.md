@@ -118,6 +118,10 @@ Settings > Webhooks (`/webhooks`, `modules/webhooks`) keeps a person's `bot_webh
 
 A host runner reads the login `gh` is signed in as on its machine (`github-login.ts`, `gh api user`, five seconds) and sends it in `hello.github` (`login` is null when `gh` is signed out or missing); `RuntimeConnection.github` holds it. `GET /threads/:id/ship` returns it as `runnerGithub` (null when the runner is offline or did not say) and the ship bar shows `GithubIdentityChip` ("GitHub: this machine (@login)" or "this machine, not signed in"). Nothing about which GitHub a run uses has changed yet: no sandbox signs `gh` in with the person's token on a host runner, so the machine's login is what runs.
 
+### A runner's GitHub mode (decision 0276, stage 2)
+
+`runtimes.github_mode` (`machine` by default, or `person`; `RUNTIME_GITHUB_MODES`) says whose GitHub the runs on a runner act as. `PATCH /runtimes/:id/github` changes it (the runner's owner, an owner or an admin; the built-in runner needs a platform owner) and a temporary runner is always `person` (`githubModeOf`). `senderExtras` (`threads/messages.ts`) sends a run the sender's GitHub token only on a `person` runner, using the project's app or `PLATFORM_APP` when the project has none; on a `machine` runner it sends none. `GET /threads/:id/ship` returns `githubMode`, and for a project with no app on a `person` runner `appKey` is `platform` and shipping needs the person's connection. Settings > Runtimes shows the mode on each row and lets its owner change it, and the ship bar's note says "your account" in `person` mode. A host runner does not yet sign `gh` in with the token (stage 3).
+
 ### A pull in a thread fetches GitHub through the folder (decision 0273)
 
 The `<machine>` section of the coding instructions (`instruction.ts`) tells the agent that a request to pull, update, sync or fetch from main, upstream or GitHub is fetched from the folder's own GitHub address (`git -C <folder> remote get-url origin`) into `/workspace` and merged from `FETCH_HEAD`, without changing the folder.

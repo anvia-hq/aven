@@ -7,8 +7,10 @@ import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "../../attachments";
 import { ConflictError, UnprocessableError } from "../../errors";
 import { claudeSetupService } from "../claude-setup/service";
+import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
+import { runtimesService } from "../runtimes/service";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { webSearchForRun } from "../runs/web-search";
@@ -57,15 +59,21 @@ async function runIdentity(
   return identity;
 }
 
-async function senderExtras(userId: string, installationRowId: string | null, driverId?: string) {
+async function senderExtras(
+  userId: string,
+  installationRowId: string | null,
+  runtimeId: string,
+  driverId?: string,
+) {
   const skills = await skillsService.forRun(userId);
   const mcp = driverId === undefined ? await mcpService.forRun(userId, "threads") : [];
-  const github = installationRowId
-    ? await githubUserTokenService.forRun(
-        driverId ?? userId,
-        await githubService.appKeyOf(installationRowId),
-      )
-    : undefined;
+  const github =
+    (await runtimesService.githubModeOf(runtimeId)) === "person"
+      ? await githubUserTokenService.forRun(
+          driverId ?? userId,
+          installationRowId ? await githubService.appKeyOf(installationRowId) : PLATFORM_APP,
+        )
+      : undefined;
   return { skills, mcp, github };
 }
 
@@ -187,7 +195,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     const claudeModel = claude ? selection.modelId : undefined;
     const claudeEffort = claude ? claudeEffortOf(selection.reasoningEffort) : undefined;
     clock.mark("model");
-    const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
+    const sender = await senderExtras(
+      ownerId,
+      project.githubInstallationId,
+      thread.runtimeId,
+      driverId,
+    );
     clock.mark("sender");
     const scoped = await threadExtras(organizationId, thread, ownerId, onPersonsWord, driverId);
     clock.mark("thread extras");
@@ -330,7 +343,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       const claudeToken = claude
         ? await claudeSetupService.requireFor(thread.createdBy)
         : undefined;
-      const sender = await senderExtras(ownerId, project.githubInstallationId, driverId);
+      const sender = await senderExtras(
+        ownerId,
+        project.githubInstallationId,
+        thread.runtimeId,
+        driverId,
+      );
       const kept = await keepSecretAnswers({
         organizationId,
         userId: ownerId,

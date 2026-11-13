@@ -68,6 +68,8 @@ export const RUNTIME_PROVIDERS = ["manual"] as const;
 
 export const RUNTIME_LIFETIMES = ["persistent", "ephemeral"] as const;
 
+export const RUNTIME_GITHUB_MODES = ["machine", "person"] as const;
+
 export const MACHINE_OPS = [
   "prepare",
   "workspace",

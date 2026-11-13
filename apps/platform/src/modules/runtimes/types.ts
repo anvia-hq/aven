@@ -1,3 +1,5 @@
+import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
+
 export type RuntimeStats = {
   cores: number;
   cpuPercent: number | null;
@@ -15,6 +17,8 @@ export type Runtime = {
   ownerId: string | null;
   host: boolean;
   shared: boolean;
+  githubMode: RuntimeGithubMode;
+  github: RunnerGithub | null;
   directories: string[];
   tokenHint: string;
   online: boolean;

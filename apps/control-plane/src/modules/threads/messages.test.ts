@@ -163,19 +163,36 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   const githubOf = (extras: Record<string, unknown>) =>
     extras.github as { token: string; login: string } | undefined;
 
-  test("a teammate's run signs in to GitHub as the teammate, never as the creator", async () => {
+  test("a teammate's run on a runner in person mode signs in to GitHub as the teammate, never as the creator", async () => {
+    const mode = spyOn(runtimesService, "githubModeOf").mockResolvedValue("person");
+    try {
+      const thread = await driven();
+      await connectGithub(userId, "creator", 1);
+      started.length = 0;
+      await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
+      expect(githubOf(started[0]!.extras)).toBeUndefined();
+
+      await connectGithub(mateId, "mate", 2);
+      await messages(false).send(orgA, mateId, thread.id, { prompt: "two" });
+      expect(githubOf(started[1]!.extras)).toMatchObject({ token: "ghu_mate", login: "mate" });
+
+      await messages(false).send(orgA, userId, thread.id, { prompt: "three" });
+      expect(githubOf(started[2]!.extras)).toMatchObject({
+        token: "ghu_creator",
+        login: "creator",
+      });
+    } finally {
+      mode.mockRestore();
+    }
+  });
+
+  test("a run on a runner in machine mode is sent no GitHub token, whoever sent it", async () => {
     const thread = await driven();
-    await connectGithub(userId, "creator", 1);
     started.length = 0;
     await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
+    await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
     expect(githubOf(started[0]!.extras)).toBeUndefined();
-
-    await connectGithub(mateId, "mate", 2);
-    await messages(false).send(orgA, mateId, thread.id, { prompt: "two" });
-    expect(githubOf(started[1]!.extras)).toMatchObject({ token: "ghu_mate", login: "mate" });
-
-    await messages(false).send(orgA, userId, thread.id, { prompt: "three" });
-    expect(githubOf(started[2]!.extras)).toMatchObject({ token: "ghu_creator", login: "creator" });
+    expect(githubOf(started[1]!.extras)).toBeUndefined();
   });
 
   test("a teammate's run looks up the teammate's providers and the creator's the creator's", async () => {

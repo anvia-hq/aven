@@ -1,5 +1,5 @@
 import { useRequest } from "@/hooks/use-request";
-import type { RunnerGithub } from "@aven/protocol/types";
+import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 import type { ShipGate } from "../types";
 
 type Readiness = {
@@ -7,6 +7,7 @@ type Readiness = {
   ship: boolean;
   appKey: string | null;
   machine: boolean;
+  githubMode: RuntimeGithubMode;
   runnerGithub: RunnerGithub | null;
 };
 
@@ -14,6 +15,7 @@ type Shipping = {
   gate: ShipGate;
   appKey: string | null;
   machine: boolean;
+  githubMode: RuntimeGithubMode;
   runnerGithub: RunnerGithub | null;
 };
 
@@ -24,18 +26,30 @@ export function useShipReadiness(threadId: string, running: boolean): Shipping {
   });
 
   if (answer === null)
-    return { gate: { kind: "checking" }, appKey: null, machine: false, runnerGithub: null };
+    return {
+      gate: { kind: "checking" },
+      appKey: null,
+      machine: false,
+      githubMode: "machine",
+      runnerGithub: null,
+    };
 
   if (answer.error !== null)
-    return { gate: { kind: "unknown" }, appKey: null, machine: false, runnerGithub: null };
+    return {
+      gate: { kind: "unknown" },
+      appKey: null,
+      machine: false,
+      githubMode: "machine",
+      runnerGithub: null,
+    };
 
-  const { ready, ship, appKey, machine, runnerGithub } = answer.data;
+  const { ready, ship, appKey, machine, githubMode, runnerGithub } = answer.data;
 
-  if (ready) return { gate: { kind: "ready" }, appKey, machine, runnerGithub };
+  if (ready) return { gate: { kind: "ready" }, appKey, machine, githubMode, runnerGithub };
 
   const commands: string[] = [];
 
   if (!ship) commands.push("/setup-ship");
 
-  return { gate: { kind: "missing", commands }, appKey, machine, runnerGithub };
+  return { gate: { kind: "missing", commands }, appKey, machine, githubMode, runnerGithub };
 }

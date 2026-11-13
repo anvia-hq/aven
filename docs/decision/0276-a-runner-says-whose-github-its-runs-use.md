@@ -1,6 +1,6 @@
 # 0276: A runner says whose GitHub its runs use
 
-Status: proposed; stage 1 of the rollout is built. Supersedes the identity parts of 0044 and 0229 once built; narrows 0192 to runners in person mode. Nothing here is built yet.
+Status: proposed; stages 1 and 2 of the rollout are built. Supersedes the identity parts of 0044 and 0229 once built; narrows 0192 to runners in person mode. Nothing here is built yet.
 
 ## Context
 

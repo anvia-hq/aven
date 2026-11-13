@@ -1,6 +1,16 @@
-import type { RunnerGithub } from "@aven/protocol/types";
+import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 
-export function githubIdentityNote(runnerGithub: RunnerGithub | null) {
+export function githubIdentityNote(
+  runnerGithub: RunnerGithub | null,
+  githubMode: RuntimeGithubMode = "machine",
+) {
+  if (githubMode === "person")
+    return {
+      label: "GitHub: your account",
+      detail:
+        "Runs on this runner use the GitHub account you connected, not the machine's own login.",
+    };
+
   if (!runnerGithub) return null;
 
   if (runnerGithub.login === null)

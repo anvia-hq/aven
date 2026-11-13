@@ -12,6 +12,7 @@ import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config"
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import { updatingAtom } from "../atoms/updating-atom";
 import { isUpdating as isStillUpdating, UPDATE_WAIT_MS, updateEnd } from "../updating";
+import type { RuntimeGithubMode } from "@aven/protocol/types";
 import type { CreatedRuntime, Runtime } from "../types";
 
 const runtimesStore = createListStore<Runtime>({
@@ -67,6 +68,13 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
       postJson<Runtime>(`/runtimes/${runtime.id}`, { name }, "PATCH"),
     );
     return renamed !== null;
+  }
+
+  async function setGithubMode(runtime: Runtime, githubMode: RuntimeGithubMode) {
+    const changed = await change("Could not change which GitHub the runner uses", () =>
+      postJson<Runtime>(`/runtimes/${runtime.id}/github`, { githubMode }, "PATCH"),
+    );
+    return changed !== null;
   }
 
   async function revoke(runtime: Runtime) {
@@ -132,6 +140,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     create,
     rotate,
     rename,
+    setGithubMode,
     canRename,
     revoke,
     canUpdate,

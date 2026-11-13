@@ -15,6 +15,12 @@ describe("what the ship bar says about the runner's GitHub", () => {
     expect(note?.detail).toContain("git may still push");
   });
 
+  test("says it is the person's own account when the runner is in person mode, whatever the machine has", () => {
+    const note = githubIdentityNote({ login: "indrazm" }, "person");
+    expect(note?.label).toBe("GitHub: your account");
+    expect(githubIdentityNote(null, "person")?.label).toBe("GitHub: your account");
+  });
+
   test("says nothing when the runner is offline or did not report", () => {
     expect(githubIdentityNote(null)).toBeNull();
   });

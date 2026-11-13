@@ -32,7 +32,7 @@ export function ShipBar({
   split = false,
   suggestions,
 }: Props) {
-  const { action, ship, setUp, retry, runnerGithub } = useShipAction(
+  const { action, ship, setUp, retry, githubMode, runnerGithub } = useShipAction(
     thread,
     unshipped,
     showShip,
@@ -58,7 +58,7 @@ export function ShipBar({
         />
         <PullRequestChip pullRequests={thread.pullRequests} />
         {!split && <ChangesBadge diff={unshipped} onOpen={showChanges} />}
-        <GithubIdentityChip runnerGithub={runnerGithub} />
+        <GithubIdentityChip runnerGithub={runnerGithub} githubMode={githubMode} />
       </div>
       {suggestions}
       <div className="ml-auto flex shrink-0 items-center gap-2">
