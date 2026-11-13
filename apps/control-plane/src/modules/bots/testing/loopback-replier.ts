@@ -30,7 +30,7 @@ export function loopbackReplier(options: {
           },
           createAgent: options.createAgent,
           send: (frame) => {
-            if (frame.type === "bot.say") say(frame.text);
+            if (frame.type === "bot.say") say(frame.text, frame.quote);
 
             if (frame.type === "bot.end") {
               if (frame.error) reject(new Error(frame.error));
@@ -39,7 +39,10 @@ export function loopbackReplier(options: {
 
             return true;
           },
-          call: async (_method, params) => memory(params as BotMemoryParams),
+          call: async (method, params) =>
+            method === "bot.react"
+              ? { messageId: (params as { messageId: string }).messageId }
+              : memory(params as BotMemoryParams),
           boxes: new Map(),
           starting: async () => undefined,
           finished: () => undefined,

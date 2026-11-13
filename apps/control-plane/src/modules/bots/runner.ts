@@ -2,22 +2,27 @@ import type { MemoryStore } from "@anvia/core";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
 import {
   applyBotEvent,
-  botMessageId,
+  BOT_REACTIONS_MAX,
+  incomingMessageId,
+  botMessagePrompt,
   botNote,
   botPrompt,
   isTyping,
   personPrompt,
+  sentMessageId,
 } from "@aven/protocol/bots";
 
 import { withoutBytes } from "../../attachments";
-import { ConflictError, describeError, UnavailableError } from "../../errors";
+import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
 import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
 import type {
   Bot,
   BotChatMessage,
   BotChatPeer,
+  BotChatQuote,
   BotEvent,
+  BotReacted,
   RunAttachment,
 } from "@aven/protocol/types";
 
@@ -25,7 +30,11 @@ const PING_MS = 5_000;
 
 const MAX_PENDING = 5;
 
-type ReplyRequest = Omit<BotReplyInput, "say" | "ask" | "signal">;
+type ReplyRequest = Omit<BotReplyInput, "say" | "ask" | "react" | "signal" | "prompt">;
+
+type AnswerRequest = ReplyRequest & { prompt: string };
+
+type Shown = Pick<BotChatMessage, "text" | "peer" | "attachments"> & { quoteId?: string };
 
 type Channel = {
   botId: string;
@@ -58,16 +67,17 @@ export class BotRunner {
     text: string,
     model: ModelConfig,
     attachments: RunAttachment[] = [],
+    quoteId?: string,
   ) {
     await this.#enqueue({
       bot,
       userId,
       model,
-      prompt: personPrompt(text),
+      body: personPrompt(text),
       attachments,
       hops: 0,
       onPersonsWord: true,
-      shown: { text, attachments: attachments.map(withoutBytes) },
+      shown: { text, attachments: attachments.map(withoutBytes), quoteId },
     });
   }
 
@@ -77,7 +87,7 @@ export class BotRunner {
       bot,
       userId,
       model,
-      prompt: botPrompt(from.handle, text),
+      body: botPrompt(from.handle, text),
       hops,
       onPersonsWord: relaysPersonsWord,
       shown: { text, peer: { ...peer, direction: "from" } },
@@ -96,7 +106,7 @@ export class BotRunner {
       bot,
       userId,
       model,
-      prompt: botNote(note),
+      body: botNote(note),
       hops,
       onPersonsWord: false,
       aboutThread,
@@ -110,12 +120,8 @@ export class BotRunner {
     if (channel) this.#say(channel, role, text, { peer });
   }
 
-  async #enqueue(
-    input: ReplyRequest & {
-      shown: Pick<BotChatMessage, "text" | "peer" | "attachments"> | null;
-    },
-  ) {
-    const { shown, ...reply } = input;
+  async #enqueue(input: ReplyRequest & { body: string; shown: Shown | null }) {
+    const { shown, body, ...reply } = input;
     this.#replier.ready(reply.model, reply.bot);
     const channel = await this.#open(reply.bot.id, reply.userId);
 
@@ -123,15 +129,31 @@ export class BotRunner {
       throw new ConflictError("The bot has a lot to answer already; give it a moment");
     }
 
+    const id = incomingMessageId(
+      channel.messages.filter((message) => message.role === "user").length,
+    );
+    const quoted = shown?.quoteId ? this.#quotedOf(channel, shown.quoteId) : undefined;
+
+    if (shown?.quoteId && !quoted) {
+      throw new UnprocessableError("That message is not in this chat, so it cannot be quoted");
+    }
+
     this.#channels.set(reply.bot.id, channel);
 
-    if (shown) this.#say(channel, "user", shown.text, shown);
+    if (shown) {
+      this.#say(channel, "user", shown.text, {
+        peer: shown.peer,
+        attachments: shown.attachments,
+        quote: quoted,
+      });
+    }
 
     channel.pending += 1;
 
     if (channel.pending === 1) this.#emit(channel, { type: "typing", typing: true });
 
-    channel.tail = channel.tail.then(() => this.#reply(reply, channel));
+    const prompt = shown ? botMessagePrompt(id, body, quoted) : body;
+    channel.tail = channel.tail.then(() => this.#reply({ ...reply, prompt }, channel));
   }
 
   async *events(
@@ -279,9 +301,17 @@ export class BotRunner {
       peer,
       questions,
       attachments,
-    }: Pick<BotChatMessage, "peer" | "questions" | "attachments"> = {},
+      quote,
+    }: Pick<BotChatMessage, "peer" | "questions" | "attachments"> & { quote?: BotChatQuote } = {},
   ) {
-    const message: BotChatMessage = { id: botMessageId(channel.messages.length), role, text };
+    const message: BotChatMessage = {
+      id:
+        role === "user"
+          ? incomingMessageId(channel.messages.filter((each) => each.role === "user").length)
+          : sentMessageId(channel.messages.filter((each) => each.role === "bot").length),
+      role,
+      text,
+    };
 
     if (peer) message.peer = peer;
 
@@ -289,7 +319,40 @@ export class BotRunner {
 
     if (attachments?.length) message.attachments = attachments;
 
+    if (quote) message.quote = quote;
+
     this.#emit(channel, { type: "message", message });
+  }
+
+  #quotedOf(channel: Channel, id: string): BotChatQuote | undefined {
+    const quoted = channel.messages.find((message) => message.id === id);
+
+    if (!quoted) return undefined;
+
+    return quoted.peer
+      ? { id: quoted.id, role: quoted.role, text: quoted.text, peer: quoted.peer }
+      : { id: quoted.id, role: quoted.role, text: quoted.text };
+  }
+
+  #react(channel: Channel, messageId: string, emoji: string): BotReacted {
+    const target = channel.messages.find((message) => message.id === messageId);
+
+    if (!target) {
+      throw new UnprocessableError(
+        `There is no message ${messageId} in this chat; react by its id`,
+      );
+    }
+
+    const reactions = target.reactions ?? [];
+
+    if (reactions.includes(emoji)) return { messageId };
+
+    if (reactions.length >= BOT_REACTIONS_MAX) {
+      throw new UnprocessableError(`That message has ${BOT_REACTIONS_MAX} reactions already`);
+    }
+
+    this.#emit(channel, { type: "reaction", messageId, emoji });
+    return { messageId };
   }
 
   #emit(channel: Channel, event: BotEvent) {
@@ -303,7 +366,7 @@ export class BotRunner {
     }
   }
 
-  async #afterReply(input: ReplyRequest, channel: Channel, ok: boolean) {
+  async #afterReply(input: AnswerRequest, channel: Channel, ok: boolean) {
     if (!this.#settled || channel.pending !== 1 || this.#shutdown.signal.aborted) return;
 
     const { bot, userId, prompt } = input;
@@ -312,17 +375,21 @@ export class BotRunner {
     });
   }
 
-  async #reply(input: ReplyRequest, channel: Channel) {
+  async #reply(input: AnswerRequest, channel: Channel) {
     const { bot } = input;
     let ok = false;
     try {
       await this.#replier.answer({
         ...input,
-        say: (text) => this.#say(channel, "bot", text),
+        say: (text, quoteId) =>
+          this.#say(channel, "bot", text, {
+            quote: quoteId ? this.#quotedOf(channel, quoteId) : undefined,
+          }),
         ask: (questions) =>
           this.#say(channel, "bot", questions.map((question) => question.text).join("\n"), {
             questions,
           }),
+        react: (messageId, emoji) => this.#react(channel, messageId, emoji),
         signal: this.#shutdown.signal,
       });
       ok = true;

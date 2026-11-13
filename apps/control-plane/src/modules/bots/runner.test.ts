@@ -6,7 +6,7 @@ import { botMessagesToChat } from "@aven/agents/bot-projection";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { parseBotPrompt } from "@aven/protocol/bots";
 
-import { ConflictError, UnavailableError } from "../../errors";
+import { ConflictError, UnavailableError, UnprocessableError } from "../../errors";
 import { BotRunner } from "./runner";
 import { inProcessReplier } from "./testing/in-process-replier";
 import type { BotReplier, BotReplyInput, CreateBotAgent } from "./types";
@@ -49,7 +49,7 @@ function fakeStore(): MemoryStore {
 
 function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAgent {
   let next = 0;
-  return ({ bot, send, memory }) =>
+  return ({ bot, send, react, memory }) =>
     createBotAgent({
       model: scriptedModel(replies[next++] ?? []),
       id: bot.id,
@@ -58,6 +58,7 @@ function scripts(...replies: Parameters<typeof scriptedModel>[0][]): CreateBotAg
       peers: [],
       instruction: bot.instruction,
       send,
+      react,
       memory,
     });
 }
@@ -183,7 +184,7 @@ describe("BotRunner", () => {
     await client.done;
 
     expect(answered[0]?.prompt).not.toBe(words);
-    expect(parseBotPrompt(answered[0]!.prompt)).toEqual({ text: words });
+    expect(parseBotPrompt(answered[0]!.prompt)).toEqual({ id: "m-0", text: words });
     expect(answered[0]?.onPersonsWord).toBe(true);
     expect(client.events.find((event) => event.type === "message")).toMatchObject({
       message: { role: "user", text: words },
@@ -407,7 +408,10 @@ describe("BotRunner", () => {
       const settled: { prompt: string; ok: boolean; idle: boolean }[] = [];
       const runner: BotRunner = new BotRunner({
         store: fakeStore(),
-        replier: { ready: () => undefined, answer: ({ prompt }) => answer(prompt) },
+        replier: {
+          ready: () => undefined,
+          answer: ({ prompt }) => answer(parseBotPrompt(prompt).text),
+        },
         settled: async ({ botId, prompt, ok }) => {
           settled.push({ prompt, ok, idle: runner.isIdle(botId) });
         },
@@ -420,7 +424,7 @@ describe("BotRunner", () => {
       await runner.send(bot, USER, "hello", model);
       await until(() => settled.length === 1);
 
-      expect(settled).toEqual([{ prompt: "hello", ok: true, idle: false }]);
+      expect(settled).toEqual([{ prompt: "[m-0] hello", ok: true, idle: false }]);
       await until(() => runner.isIdle(bot.id));
     });
 
@@ -436,7 +440,7 @@ describe("BotRunner", () => {
       gate.resolve();
       await until(() => settled.length === 1);
 
-      expect(settled).toEqual([{ prompt: "second", ok: false, idle: false }]);
+      expect(settled).toEqual([{ prompt: "[m-1] second", ok: false, idle: false }]);
     });
 
     test("is not told when the reply ended because the control plane is shutting down", async () => {
@@ -769,6 +773,138 @@ describe("BotRunner", () => {
       expect(other.told).toEqual([[]]);
       gate.resolve();
       await other.stop();
+    });
+  });
+
+  describe("quoting and reacting (decision 0258)", () => {
+    test("a message that answers another shows it above, and the bot is told which one", async () => {
+      const answered: BotReplyInput[] = [];
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: { ready: () => undefined, answer: async (input) => void answered.push(input) },
+      });
+      const client = await watch(
+        runner,
+        (events) =>
+          events.filter((event) => event.type === "message" && event.message.role === "user")
+            .length === 2,
+      );
+      await runner.send(bot, USER, "what is the plan?", model);
+      await runner.send(bot, USER, "and tomorrow?", model, [], "m-0");
+      await client.done;
+      const messages = client.events.flatMap((event) =>
+        event.type === "message" ? [event.message] : [],
+      );
+
+      expect(messages[1]).toEqual({
+        id: "m-1",
+        role: "user",
+        text: "and tomorrow?",
+        quote: { id: "m-0", role: "user", text: "what is the plan?" },
+      });
+      expect(parseBotPrompt(answered[1]!.prompt)).toEqual({
+        id: "m-1",
+        quoted: "m-0",
+        text: "and tomorrow?",
+      });
+    });
+
+    test("a quote of a message that is not here is refused, so nothing is quoted by mistake", async () => {
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: { ready: () => undefined, answer: async () => undefined },
+      });
+      await expect(runner.send(bot, USER, "hi", model, [], "m-9")).rejects.toBeInstanceOf(
+        UnprocessableError,
+      );
+    });
+
+    test("the bot's message answers one above it, and its reaction shows on the message it is about", async () => {
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: {
+          ready: () => undefined,
+          answer: async ({ say, react }) => {
+            react("m-0", "👍");
+            say("on it", "m-0");
+          },
+        },
+      });
+      const client = await watch(runner, stopped);
+      await runner.send(bot, USER, "do it", model);
+      await client.done;
+
+      expect(client.events).toContainEqual({ type: "reaction", messageId: "m-0", emoji: "👍" });
+      expect(client.events).toContainEqual({
+        type: "message",
+        message: {
+          id: "b-0",
+          role: "bot",
+          text: "on it",
+          quote: { id: "m-0", role: "user", text: "do it" },
+        },
+      });
+    });
+
+    test("a reaction to a message that is not here is refused, and the bot is told why", async () => {
+      let refused: unknown;
+      const runner = new BotRunner({
+        store: fakeStore(),
+        replier: {
+          ready: () => undefined,
+          answer: async ({ react }) => {
+            try {
+              react("m-9", "👍");
+            } catch (error) {
+              refused = error;
+            }
+          },
+        },
+      });
+      const client = await watch(runner, stopped);
+      await runner.send(bot, USER, "do it", model);
+      await client.done;
+
+      expect(refused).toBeInstanceOf(UnprocessableError);
+      expect((refused as Error).message).toContain("m-9");
+    });
+
+    test("a chat reloaded from memory shows the quotes and reactions the bot left", async () => {
+      const store = fakeStore();
+      const runner = runnerWith({
+        store,
+        createAgent: scripts([
+          [
+            toolCall("react_to_message", { messageId: "m-0", emoji: "🎉" }),
+            toolCall("send_message", { text: "on it", quote: "m-0" }),
+          ],
+        ]),
+      });
+      const client = await watch(runner, stopped);
+      await runner.send(bot, USER, "do it", model);
+      await client.done;
+      const again = await watch(
+        new BotRunner({
+          store,
+          replier: { ready: () => undefined, answer: async () => undefined },
+        }),
+      );
+      const snapshot = again.events[0];
+
+      expect(snapshot).toMatchObject({
+        type: "snapshot",
+        messages: [
+          { id: "m-0", role: "user", text: "do it", reactions: ["🎉"] },
+          {
+            id: "b-0",
+            role: "bot",
+            text: "on it",
+            quote: { id: "m-0", role: "user", text: "do it" },
+          },
+        ],
+      });
+      again.close();
+      await again.done;
     });
   });
 });

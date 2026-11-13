@@ -35,12 +35,34 @@ export function freeBotHandle(handle: string, taken: ReadonlySet<string>) {
 export const BOT_QUESTIONS_MAX = 4;
 export const BOT_CHOICES_MAX = 5;
 
+export const BOT_REACTIONS_MAX = 6;
+export const BOT_REACTION_MAX = 32;
+
+export const BOT_MESSAGE_ID = /^[mb]-\d+$/;
+
+const QUOTED_MAX = 300;
+
 const FROM_BOT = /^\[from ([a-z0-9][a-z0-9-]*)\] ([\s\S]*)$/;
 const NOTE = /^\[note\] ([\s\S]*)$/;
+const MESSAGE_ID = /^\[([mb]-\d+)\] /;
+const REPLYING_TO = /^\[replying to ([mb]-\d+)\] ([^\n]*)\n/;
 
 export const botPrompt = (fromHandle: string, text: string) => `[from ${fromHandle}] ${text}`;
 
 export const botNote = (text: string) => `[note] ${text}`;
+
+const singleLine = (text: string) => text.replace(/\s+/g, " ").trim().slice(0, QUOTED_MAX);
+
+export const botMessagePrompt = (
+  id: string,
+  prompt: string,
+  quote?: { id: string; text: string },
+) => `[${id}] ${quote ? `[replying to ${quote.id}] ${singleLine(quote.text)}\n` : ""}${prompt}`;
+
+export const isBotReaction = (emoji: string) => {
+  const segments = [...new Intl.Segmenter().segment(emoji)];
+  return segments.length === 1 && /\p{Extended_Pictographic}/u.test(emoji);
+};
 
 const PERSON_MARK = "\u200B";
 
@@ -49,7 +71,42 @@ export const personPrompt = (text: string) => {
   return from === undefined && !note ? text : `${PERSON_MARK}${text}`;
 };
 
-export function parseBotPrompt(prompt: string): { from?: string; note?: boolean; text: string } {
+export type ParsedBotPrompt = {
+  id?: string;
+  quoted?: string;
+  from?: string;
+  note?: boolean;
+  text: string;
+};
+
+export function parseBotPrompt(prompt: string): ParsedBotPrompt {
+  let rest = prompt;
+  let id: string | undefined;
+  let quoted: string | undefined;
+
+  const tagged = MESSAGE_ID.exec(rest);
+
+  if (tagged) {
+    id = tagged[1]!;
+    rest = rest.slice(tagged[0].length);
+    const reply = REPLYING_TO.exec(rest);
+
+    if (reply) {
+      quoted = reply[1]!;
+      rest = rest.slice(reply[0].length);
+    }
+  }
+
+  const parsed = parsedPrompt(rest);
+
+  if (id) parsed.id = id;
+
+  if (quoted) parsed.quoted = quoted;
+
+  return parsed;
+}
+
+function parsedPrompt(prompt: string): ParsedBotPrompt {
   const bot = FROM_BOT.exec(prompt);
 
   if (bot) return { from: bot[1]!, text: bot[2]! };
@@ -65,12 +122,25 @@ export const BOT_MAX_HOPS = 8;
 
 export const BOT_MESSAGES_PER_REPLY = 10;
 
-export const botMessageId = (index: number) => `m-${index}`;
+export const incomingMessageId = (index: number) => `m-${index}`;
+
+export const sentMessageId = (index: number) => `b-${index}`;
 
 export function applyBotEvent(messages: BotChatMessage[], event: BotEvent): BotChatMessage[] {
   if (event.type === "snapshot") return event.messages;
 
   if (event.type === "message") return [...messages, event.message];
+
+  if (event.type === "reaction") {
+    return messages.map((message) => {
+      if (message.id !== event.messageId || message.reactions?.includes(event.emoji)) {
+        return message;
+      }
+
+      const reactions = message.reactions ? [...message.reactions, event.emoji] : [event.emoji];
+      return { ...message, reactions };
+    });
+  }
 
   return messages;
 }

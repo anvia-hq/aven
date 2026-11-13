@@ -20,8 +20,8 @@ export function inProcessReplier(options: {
   const pause = options.pause ?? (async () => undefined);
   return {
     ready: () => undefined,
-    answer: async ({ bot, userId, model, prompt, hops, say, ask, signal }) => {
-      const send: SendMessage = async ({ to, text }, { abortSignal }) => {
+    answer: async ({ bot, userId, model, prompt, hops, say, ask, react, signal }) => {
+      const send: SendMessage = async ({ to, text, quote }, { abortSignal }) => {
         if (to !== USER_HANDLE) {
           if (!options.sendToBot) throw new Error(`No bot with the handle "${to}"`);
 
@@ -29,13 +29,17 @@ export function inProcessReplier(options: {
         }
 
         await pause(typingDelay(text), abortSignal);
-        say(text);
+        say(text, quote);
         return "Sent to the person.";
       };
       const agent = options.createAgent({
         bot,
         model,
         send,
+        react: async ({ messageId, emoji }) => {
+          react(messageId, emoji);
+          return `Reacted to ${messageId} with ${emoji}.`;
+        },
         askQuestion: async (questions) => (ask(questions), {}),
         memory: { store: options.store, savePolicy: "turn" },
       });

@@ -28,7 +28,7 @@ export const botsRouter = (chats: BotChats) =>
     .post(
       "/:id/messages",
       async ({ params, body, user }) => {
-        await chats.send(user.id, params.id, body.text, body.attachments);
+        await chats.send(user.id, params.id, body.text, body.attachments, body.quote);
         return status(202, { ok: true });
       },
       { auth: true, params: botParams, body: sendBotMessageBody },

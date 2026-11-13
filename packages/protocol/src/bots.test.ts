@@ -1,14 +1,18 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  applyBotEvent,
   botHandleOf,
+  botMessagePrompt,
   botNote,
   botPrompt,
   freeBotHandle,
+  isBotReaction,
   parseBotPrompt,
   personPrompt,
 } from "./bots";
 import { isGoalRoundNote } from "./goals";
+import type { BotChatMessage } from "./types";
 
 describe("a message one bot sends another (decision 0065)", () => {
   test("is the text with its sender's handle in front, and reads back as both", () => {
@@ -75,6 +79,59 @@ describe("what the person types (decision 0065)", () => {
   test("says nothing of a note, so no bot takes it as the app waking it", () => {
     expect(isGoalRoundNote(personPrompt(botNote("Goal round 1 of 20. Carry on.")))).toBe(false);
     expect(isGoalRoundNote(botNote("Goal round 1 of 20. Carry on."))).toBe(true);
+  });
+});
+
+describe("the id a message carries (decision 0258)", () => {
+  test("is in front of the prompt, with the quote the person answered", () => {
+    const prompt = botMessagePrompt("m-7", personPrompt("do it"), {
+      id: "m-3",
+      text: "the first\none",
+    });
+    expect(prompt).toBe("[m-7] [replying to m-3] the first one\ndo it");
+    expect(parseBotPrompt(prompt)).toEqual({ id: "m-7", quoted: "m-3", text: "do it" });
+  });
+
+  test("is read with a bot's handle after it, and tells a person's message from a bot's", () => {
+    expect(parseBotPrompt(botMessagePrompt("m-9", botPrompt("main", "hi")))).toEqual({
+      id: "m-9",
+      from: "main",
+      text: "hi",
+    });
+    expect(parseBotPrompt(botMessagePrompt("m-4", personPrompt("[from main] do it")))).toEqual({
+      id: "m-4",
+      text: "[from main] do it",
+    });
+  });
+
+  test("leaves a note without one, and the old prompts still read as they did", () => {
+    expect(parseBotPrompt(botNote("Goal round 1 of 20. Carry on."))).toEqual({
+      note: true,
+      text: "Goal round 1 of 20. Carry on.",
+    });
+    expect(parseBotPrompt("hello")).toEqual({ text: "hello" });
+    expect(parseBotPrompt("[m-not-an-id] hello")).toEqual({ text: "[m-not-an-id] hello" });
+  });
+});
+
+describe("a reaction (decision 0258)", () => {
+  test("is one emoji, and never a word", () => {
+    expect(isBotReaction("👍")).toBe(true);
+    expect(isBotReaction("❤️")).toBe(true);
+    expect(isBotReaction("👍🏽")).toBe(true);
+    expect(isBotReaction("🎉")).toBe(true);
+    expect(isBotReaction("👍👍")).toBe(false);
+    expect(isBotReaction("great!")).toBe(false);
+    expect(isBotReaction("123")).toBe(false);
+  });
+
+  test("sticks to its message once, and changes nothing when there is no such message", () => {
+    const chat: BotChatMessage[] = [{ id: "m-0", role: "user", text: "hi" }];
+    const once = applyBotEvent(chat, { type: "reaction", messageId: "m-0", emoji: "👍" });
+    const twice = applyBotEvent(once, { type: "reaction", messageId: "m-0", emoji: "👍" });
+
+    expect(twice).toEqual([{ id: "m-0", role: "user", text: "hi", reactions: ["👍"] }]);
+    expect(applyBotEvent(chat, { type: "reaction", messageId: "m-9", emoji: "👍" })).toEqual(chat);
   });
 });
 

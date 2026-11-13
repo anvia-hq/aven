@@ -35,6 +35,7 @@ import type {
   BotProviderParams,
   BotQuestioned,
   BotQuestionParams,
+  BotReactParams,
   BotScheduled,
   BotScheduleParams,
   BotSendParams,
@@ -89,6 +90,7 @@ export class RemoteBotReplier implements BotReplier {
     aboutThread,
     say,
     ask,
+    react,
     signal,
   }: BotReplyInput) {
     signal.throwIfAborted();
@@ -140,6 +142,8 @@ export class RemoteBotReplier implements BotReplier {
       say,
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
       lost: (error: Error) => ended.reject(error),
+      react: async ({ messageId, emoji }: Omit<BotReactParams, "replyId">) =>
+        react(messageId, emoji),
       memory: answerBotMemory(this.store, { sessionId: bot.id, userId }),
       create: async ({ name, instruction, description }: NewBot) => {
         if (!bot.isMain) throw new Error("Only your main bot can make bots");

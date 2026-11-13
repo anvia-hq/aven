@@ -78,12 +78,15 @@ export function useBotChat(botId: string) {
   }, [botId, setLastMessages]);
 
   const send = useCallback(
-    async (text: string, attachments: AttachmentUpload[] = []) => {
+    async (text: string, attachments: AttachmentUpload[] = [], quote?: string) => {
+      const body: { text: string; attachments?: AttachmentUpload[]; quote?: string } = { text };
+
+      if (attachments.length) body.attachments = attachments;
+
+      if (quote) body.quote = quote;
+
       const sent = await attempt("Could not send message", async () => {
-        await postJson(
-          `/bots/${botId}/messages`,
-          attachments.length ? { text, attachments } : { text },
-        );
+        await postJson(`/bots/${botId}/messages`, body);
         return true;
       });
       return sent ?? false;

@@ -13,6 +13,7 @@ import {
   parseBotThreadParams,
   parseBotMemoryParams,
   parseBotQuestionParams,
+  parseBotReactParams,
   parseBotScheduleParams,
   parseBotSendParams,
   parseBotSkillParams,
@@ -147,6 +148,12 @@ export async function answerRuntimeCall(
   if (method === "bot.send") {
     return answerBotCall(params, parseBotSendParams, findBotReply, (reply, call) =>
       reply.send(call),
+    );
+  }
+
+  if (method === "bot.react") {
+    return answerBotCall(params, parseBotReactParams, findBotReply, async (reply, call) =>
+      reply.react(call),
     );
   }
 

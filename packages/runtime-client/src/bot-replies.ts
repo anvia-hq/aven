@@ -12,7 +12,7 @@ import { boundedTools } from "./late-bound-tools";
 import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
 import { remoteBotMemory } from "./remote-bot-memory";
-import type { SendMessage } from "@aven/agents/tools/types";
+import type { ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
   BotGoalView,
   BotMcpView,
@@ -41,6 +41,7 @@ export const defaultCreateBotAgent =
     bot,
     model,
     send,
+    react,
     memory,
     computer,
     createBot,
@@ -72,6 +73,7 @@ export const defaultCreateBotAgent =
       instruction: bot.instruction,
       compactAfterTokens: bot.compactAfterTokens,
       send,
+      react,
       memory,
       computer,
       createBot,
@@ -302,7 +304,7 @@ export class BotReplies {
 
       if (reply) reply.spoke = true;
     };
-    const send: SendMessage = async ({ to, text }, { abortSignal }) => {
+    const send: SendMessage = async ({ to, text, quote }, { abortSignal }) => {
       if (to !== USER_HANDLE) {
         const sent = await call("bot.send", { replyId, to, text });
         spoke();
@@ -311,7 +313,7 @@ export class BotReplies {
 
       await this.#pause(typingDelay(text), abortSignal);
 
-      if (post({ type: "bot.say", replyId, text })) {
+      if (post({ type: "bot.say", replyId, text, quote })) {
         spoke();
         return "Sent to the person.";
       }
@@ -319,6 +321,11 @@ export class BotReplies {
       const lost = new Error("The connection to the control plane dropped");
       abort.abort(lost);
       throw lost;
+    };
+    const react: ReactToMessage = async ({ messageId, emoji }) => {
+      const reacted = await call("bot.react", { replyId, messageId, emoji });
+      spoke();
+      return `Reacted to ${reacted.messageId} with ${emoji}.`;
     };
     const computer = boundedTools(
       box.tools.filter((tool) => tool.name !== SHOW_ARTIFACT_TOOL_NAME),
@@ -328,6 +335,7 @@ export class BotReplies {
       bot,
       model,
       send,
+      react,
       peers,
       memory: {
         store: remoteBotMemory(replyId, (params) => call("bot.memory", params)),

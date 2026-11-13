@@ -22,14 +22,20 @@ async function modelOf(userId: string, bot: Bot) {
 }
 
 export const createBotChats = (runner: BotRunner) => ({
-  async send(userId: string, botId: string, text: string, files: readonly AttachmentBody[] = []) {
+  async send(
+    userId: string,
+    botId: string,
+    text: string,
+    files: readonly AttachmentBody[] = [],
+    quote?: string,
+  ) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
     const attachments = prepareAttachments(files);
     const model = await modelOf(userId, bot);
 
     if (attachments.some((file) => file.image)) await assertSeesImages(model);
 
-    await runner.send(bot, userId, text, model, attachments);
+    await runner.send(bot, userId, text, model, attachments, quote);
   },
 
   async deliver({

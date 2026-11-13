@@ -16,8 +16,11 @@ import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
+  BOT_MESSAGE_ID,
   BOT_MESSAGE_MAX,
   BOT_NAME_MAX,
+  BOT_REACTION_MAX,
+  isBotReaction,
 } from "@aven/protocol/bots";
 import {
   ARTIFACT_MEDIA_TYPES,
@@ -37,6 +40,7 @@ import type {
   BotMemoryParams,
   BotProviderParams,
   BotQuestionParams,
+  BotReactParams,
   BotScheduleParams,
   BotSendParams,
   BotSkillParams,
@@ -68,6 +72,7 @@ const callMethods = [
   "bot.create",
   "bot.update",
   "bot.send",
+  "bot.react",
   "bot.question",
   "bot.schedule",
   "bot.goal",
@@ -248,6 +253,7 @@ const frame = z.discriminatedUnion("type", [
     type: z.literal("bot.say"),
     replyId: z.string().min(1),
     text: z.string().min(1).max(BOT_SAY_MAX),
+    quote: z.string().trim().regex(BOT_MESSAGE_ID).optional(),
   }),
   z.object({
     type: z.literal("bot.end"),
@@ -382,6 +388,12 @@ const botSendParams = z.object({
     .regex(/^[a-z0-9][a-z0-9-]*$/)
     .max(64),
   text: z.string().trim().min(1).max(BOT_MESSAGE_MAX),
+});
+
+const botReactParams = z.object({
+  replyId,
+  messageId: z.string().trim().regex(BOT_MESSAGE_ID),
+  emoji: z.string().trim().min(1).max(BOT_REACTION_MAX).refine(isBotReaction, "One emoji"),
 });
 
 const botUpdateParams = z
@@ -593,6 +605,8 @@ export const parseBotGoalParams = (params: unknown) =>
   parseParams(botGoalParams, params) as BotGoalParams;
 export const parseBotSendParams = (params: unknown) =>
   parseParams(botSendParams, params) as BotSendParams;
+export const parseBotReactParams = (params: unknown) =>
+  parseParams(botReactParams, params) as BotReactParams;
 export const parseBotUpdateParams = (params: unknown) =>
   parseParams(botUpdateParams, params) as BotUpdateParams;
 export const parseBotMcpParams = (params: unknown) =>

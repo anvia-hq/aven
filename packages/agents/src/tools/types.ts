@@ -114,6 +114,8 @@ export type SendMessage = (
   context: { abortSignal?: AbortSignal },
 ) => Promise<string>;
 
+export type ReactToMessage = (message: { messageId: string; emoji: string }) => Promise<string>;
+
 export type ImageFiles = {
   readFile(options: { path: string; abortSignal?: AbortSignal }): Promise<Uint8Array>;
 };

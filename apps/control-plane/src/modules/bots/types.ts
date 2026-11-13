@@ -6,13 +6,14 @@ import type { GoalInput } from "../goals/types";
 import type { MemoryCaller, MemoryOwner } from "../memory/types";
 import type { ScheduleInput, SchedulePatch } from "../schedules/types";
 import type { ModelConfig } from "@aven/agents/types";
-import type { AskQuestion, SendMessage } from "@aven/agents/tools/types";
+import type { AskQuestion, ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
   Bot,
   BotApiResult,
   BotCreateParams,
   BotGoalView,
   BotQuestion,
+  BotReacted,
   BotScheduleView,
   BotSent,
   GoalAction,
@@ -76,8 +77,9 @@ export type BotReplyInput = {
   onPersonsWord: boolean;
   hops: number;
   aboutThread?: string;
-  say(text: string): void;
+  say(text: string, quote?: string): void;
   ask(questions: BotQuestion[]): void;
+  react(messageId: string, emoji: string): BotReacted;
   signal: AbortSignal;
 };
 
@@ -111,6 +113,7 @@ export type CreateBotAgent = (input: {
   bot: Bot;
   model: ModelConfig;
   send: SendMessage;
+  react: ReactToMessage;
   askQuestion: AskQuestion;
   memory: AgentMemoryOptions;
 }) => BotAgent;
