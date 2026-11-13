@@ -49,3 +49,10 @@ export type SubagentType = (typeof SUBAGENT_TYPES)[number];
 export type ScriptStep =
   | AssistantContentPart[]
   | ((request: CompletionRequest) => AssistantContentPart[] | Promise<AssistantContentPart[]>);
+
+export type SentFile = { path: string; title?: string | undefined };
+
+export type BotFiles = {
+  readFile(options: { path: string; abortSignal?: AbortSignal | undefined }): Promise<Uint8Array>;
+  save(bytes: Uint8Array, mediaType: string): Promise<string>;
+};

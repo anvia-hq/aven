@@ -35,3 +35,33 @@ export function htmlType(bytes: Uint8Array) {
 
 export const artifactType = (bytes: Uint8Array) =>
   imageType(bytes) ?? videoType(bytes) ?? htmlType(bytes);
+
+const TEXT_TYPES: Record<string, string> = {
+  md: "text/markdown",
+  markdown: "text/markdown",
+  csv: "text/csv",
+  txt: "text/plain",
+  text: "text/plain",
+};
+
+export function pdfType(bytes: Uint8Array) {
+  return startsWith(bytes, 0, ascii("%PDF-")) ? "application/pdf" : null;
+}
+
+export function textType(bytes: Uint8Array, path: string) {
+  const extension = path.slice(path.lastIndexOf(".") + 1).toLowerCase();
+  const mediaType = TEXT_TYPES[extension];
+
+  if (!mediaType || bytes.includes(0)) return null;
+
+  try {
+    new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return null;
+  }
+
+  return mediaType;
+}
+
+export const documentType = (bytes: Uint8Array, path: string) =>
+  pdfType(bytes) ?? textType(bytes, path);

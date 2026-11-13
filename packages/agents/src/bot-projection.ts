@@ -20,6 +20,7 @@ import type {
   BotQuestion,
   MessageAttachment,
   ProviderKeyAsk,
+  ToolArtifact,
 } from "@aven/protocol/types";
 
 function resultsAfter(messages: readonly Message[], at: number) {
@@ -47,6 +48,29 @@ function relayedBy(output: ToolResultOutput | undefined) {
   return { handle: relayed.handle, text: relayed.text };
 }
 
+function artifactsSentIn(output: ToolResultOutput | undefined): ToolArtifact[] | undefined {
+  if (output?.type !== "json") return undefined;
+
+  const { artifacts } = output.value as { artifacts?: unknown };
+
+  if (!Array.isArray(artifacts)) return undefined;
+
+  const kept = artifacts.flatMap((item): ToolArtifact[] => {
+    const { name, mediaType, title, size } = (item ?? {}) as Record<string, unknown>;
+
+    if (typeof name !== "string" || typeof mediaType !== "string") return [];
+
+    const artifact: ToolArtifact = { name, mediaType };
+
+    if (typeof title === "string") artifact.title = title;
+
+    if (typeof size === "number") artifact.size = size;
+
+    return [artifact];
+  });
+  return kept.length ? kept : undefined;
+}
+
 function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | undefined {
   if (output?.type !== "json") return undefined;
 
@@ -68,12 +92,14 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
       peer,
       questions,
       attachments,
+      artifacts,
       quote,
       id,
     }: {
       peer?: BotChatMessage["peer"];
       questions?: BotQuestion[];
       attachments?: MessageAttachment[];
+      artifacts?: ToolArtifact[];
       quote?: BotChatQuote;
       id?: string;
     } = {},
@@ -93,6 +119,8 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
     if (questions) message.questions = questions;
 
     if (attachments?.length) message.attachments = attachments;
+
+    if (artifacts?.length) message.artifacts = artifacts;
 
     if (quote) message.quote = quote;
 
@@ -144,7 +172,11 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
           const { to, text, quote } = sent.data;
           const peer =
             to === USER_HANDLE ? undefined : { name: to, handle: to, direction: "to" as const };
-          add("bot", text, { peer, quote: quoteOf(quote) });
+          add("bot", text, {
+            peer,
+            quote: quoteOf(quote),
+            artifacts: artifactsSentIn(results.get(part.toolCallId)),
+          });
         } else if (part.toolName === REACT_TO_MESSAGE_TOOL_NAME) {
           const reacted = reactToMessageSchema.safeParse(part.input);
 

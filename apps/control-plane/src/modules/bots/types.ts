@@ -8,6 +8,7 @@ import type { ScheduleInput, SchedulePatch } from "../schedules/types";
 import type { ModelConfig } from "@aven/agents/types";
 import type { AskQuestion, ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
+  ToolArtifact,
   Bot,
   BotApiResult,
   BotCreateParams,
@@ -77,7 +78,7 @@ export type BotReplyInput = {
   onPersonsWord: boolean;
   hops: number;
   aboutThread?: string;
-  say(text: string, quote?: string): void;
+  say(text: string, quote?: string, files?: ToolArtifact[]): void;
   ask(questions: BotQuestion[]): void;
   react(messageId: string, emoji: string): BotReacted;
   activity?(label: string | null): void;

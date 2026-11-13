@@ -520,4 +520,54 @@ describe("quoting and reacting (decision 0258)", () => {
 
     expect(botMessagesToChat(messages)).toEqual([{ id: "m-0", role: "user", text: "hi" }]);
   });
+
+  test("a message the bot sent with files keeps them, so the chat has them again after a reload", () => {
+    const messages: Message[] = [
+      { role: "user", content: "a PDF please" },
+      {
+        role: "assistant",
+        content: [
+          call("c1", { text: "here", files: [{ path: "a.pdf", title: "Comparison" }] as never }),
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "c1",
+            toolName: "send_message",
+            output: {
+              type: "json",
+              value: {
+                sent: "Sent to the person.",
+                artifacts: [
+                  {
+                    name: "00000000-0000-4000-8000-000000000001.pdf",
+                    mediaType: "application/pdf",
+                    title: "Comparison",
+                    size: 12,
+                  },
+                ],
+                failed: [],
+              },
+            },
+          },
+        ],
+      },
+    ];
+    expect(botMessagesToChat(messages)[1]).toEqual({
+      id: "b-0",
+      role: "bot",
+      text: "here",
+      artifacts: [
+        {
+          name: "00000000-0000-4000-8000-000000000001.pdf",
+          mediaType: "application/pdf",
+          title: "Comparison",
+          size: 12,
+        },
+      ],
+    });
+  });
 });

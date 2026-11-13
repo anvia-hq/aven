@@ -6,6 +6,7 @@ import type { MemoryCaller } from "../memory/types";
 import type { CockpitCaller } from "../cockpit/types";
 import type { ThreadForks } from "../threads/types";
 import type {
+  ToolArtifact,
   BotCockpitParams,
   BotCreated,
   BotCreateParams,
@@ -71,7 +72,7 @@ export type RunSink = {
 };
 
 export type BotReplySink = CallBotReply & {
-  say(text: string, quote?: string): void;
+  say(text: string, quote?: string, files?: ToolArtifact[]): void;
   activity(label: string | null): void;
   end(error?: string): void;
   lost(error: Error): void;

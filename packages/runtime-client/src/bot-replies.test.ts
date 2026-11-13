@@ -81,12 +81,22 @@ const sandboxWith = (
   acquired: { id: string; repo: unknown }[] = [],
   run?: Exec,
   stores: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills"> = {},
+  files: Record<string, Uint8Array> = {},
 ): ThreadWorkspaces => ({
   ...stores,
   async acquire(thread, repo) {
     acquired.push({ id: thread.id, repo });
     return {
       tools: [exec(run), tool("show_artifact")],
+      runtime: {
+        readFile: async ({ path }: { path: string }) => {
+          const bytes = files[path];
+
+          if (!bytes) throw new Error(`File not found: ${path}`);
+
+          return bytes;
+        },
+      } as never,
       hasRunningProcesses: async () => false,
       processes: noProcesses,
     };
@@ -107,6 +117,7 @@ function harness(
     stores?: Pick<ThreadWorkspaces, "uploads" | "artifacts" | "skills">;
     archives?: Map<string, Uint8Array>;
     machines?: ThreadWorkspaces;
+    files?: Record<string, Uint8Array>;
   } = {},
 ) {
   const sent: RuntimeToControlPlane[] = [];
@@ -116,7 +127,7 @@ function harness(
   const pauses: number[] = [];
   const boxes = new Map<string, ThreadSandbox>();
   const replies = new BotReplies({
-    sandbox: sandboxWith(acquired, options.exec, options.stores),
+    sandbox: sandboxWith(acquired, options.exec, options.stores, options.files),
     machines: options.machines,
     createAgent,
     send: (frame) => {
@@ -170,6 +181,49 @@ function harness(
 }
 
 describe("BotReplies", () => {
+  test("a message can carry files from the bot's computer: each is kept under a name, sent with the words, and returned to the model (decision 0272)", async () => {
+    const saved: { bytes: Uint8Array; mediaType: string; botId: string }[] = [];
+    const pdf = new TextEncoder().encode("%PDF-1.7 body");
+    const run = harness(
+      agentThat([
+        toolCall("send_message", {
+          text: "here it is",
+          files: [{ path: "report.pdf", title: "Comparison" }, { path: "missing.pdf" }],
+        }),
+      ]),
+      {
+        files: { "report.pdf": pdf },
+        stores: {
+          artifacts: {
+            save: async (botId, bytes, mediaType) => {
+              saved.push({ botId, bytes, mediaType });
+              return "00000000-0000-4000-8000-000000000001.pdf";
+            },
+            keep: async () => undefined,
+            read: async () => null,
+          },
+        },
+      },
+    );
+    run.replies.start(message);
+    await run.until();
+    expect(saved).toEqual([{ botId: "bot-1", bytes: pdf, mediaType: "application/pdf" }]);
+    const said = run.sent.find((frame) => frame.type === "bot.say");
+    expect(said).toEqual({
+      type: "bot.say",
+      replyId: "r1",
+      text: "here it is",
+      files: [
+        {
+          name: "00000000-0000-4000-8000-000000000001.pdf",
+          mediaType: "application/pdf",
+          title: "Comparison",
+          size: pdf.length,
+        },
+      ],
+    });
+  });
+
   test("a reply is the bot agent, and it is not given a Claude setup token", async () => {
     let sawToken = false;
     const run = harness((input) => {
@@ -673,7 +727,7 @@ describe("BotReplies", () => {
           const refused = await send({ to: "ghost", text: "hi" }, {}).catch(
             (error: Error) => error.message,
           );
-          await send({ to: "user", text: refused }, {});
+          await send({ to: "user", text: String(refused) }, {});
           return { type: "response" } as never;
         },
       }),

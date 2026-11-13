@@ -290,6 +290,7 @@ export function directoryWorkspaces(seed?: (root: string) => Promise<void>): Thr
       const current = sandbox;
       return {
         tools: sandboxTools(current, { id: thread.id, artifacts }),
+        runtime: current,
         hasRunningProcesses: () => hasRunningProcesses(current),
         processes: threadProcesses(current, () => true),
       };

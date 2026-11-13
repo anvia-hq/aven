@@ -10,6 +10,17 @@ const IMAGE_HEADERS = {
   "content-security-policy": "default-src 'none'; sandbox",
 };
 
+const PDF_HEADERS = {
+  "cache-control": "private, max-age=31536000, immutable",
+  "x-content-type-options": "nosniff",
+  "content-security-policy": "default-src 'none'",
+};
+
+const policyOf = (mediaType: string) =>
+  mediaType === "application/pdf" ? PDF_HEADERS : IMAGE_HEADERS;
+
+const TEXT_MEDIA_TYPES = new Set(["text/markdown", "text/csv", "text/plain"]);
+
 export function createArtifactsService(runner: Runner) {
   return {
     async read(scope: string, threadId: string, name: string, range?: string | null) {
@@ -27,9 +38,11 @@ export function createArtifactsService(runner: Runner) {
       }
 
       const headers = {
-        "content-type": image.mediaType,
+        "content-type": TEXT_MEDIA_TYPES.has(image.mediaType)
+          ? "text/plain; charset=utf-8"
+          : image.mediaType,
         "accept-ranges": "bytes",
-        ...IMAGE_HEADERS,
+        ...policyOf(image.mediaType),
       };
       const wanted = byteRange(range, bytes.length);
 

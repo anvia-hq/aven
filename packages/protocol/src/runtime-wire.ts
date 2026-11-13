@@ -104,6 +104,10 @@ export const ARTIFACT_MEDIA_TYPES = [
   "video/mp4",
   "video/webm",
   "text/html",
+  "application/pdf",
+  "text/markdown",
+  "text/csv",
+  "text/plain",
 ] as const;
 
 export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
@@ -114,10 +118,16 @@ export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], 
   "video/mp4": "mp4",
   "video/webm": "webm",
   "text/html": "html",
+  "application/pdf": "pdf",
+  "text/markdown": "md",
+  "text/csv": "csv",
+  "text/plain": "txt",
 };
 
 export const ARTIFACT_NAME =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm|html)$/;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp|mp4|webm|html|pdf|md|csv|txt)$/;
+
+export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export const FILE_SEARCH_LIMIT = 50;
 
@@ -129,4 +139,4 @@ export const CloseCode = {
   Revoked: 4002,
 } as const;
 
-export const WIRE_VERSION = 58;
+export const WIRE_VERSION = 59;
