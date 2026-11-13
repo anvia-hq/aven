@@ -36,13 +36,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
       onClose={onClose}
       actions={
         <>
-          <FileTabs
-            open={explorer.open}
-            active={explorer.active}
-            onSelect={explorer.select}
-            onClose={explorer.closeFile}
-          />
-          {explorer.open.length === 0 && <span className="flex-1" />}
+          <span className="flex-1" />
           <Button
             variant="ghost"
             size="icon-sm"
@@ -69,8 +63,16 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
         </PanelNotice>
       ) : (
         <div className="flex min-h-0 flex-1">
-          <div className="min-w-0 flex-1">
-            <FileViewer threadId={threadId} path={explorer.active} running={running} />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <FileTabs
+              open={explorer.open}
+              active={explorer.active}
+              onSelect={explorer.select}
+              onClose={explorer.closeFile}
+            />
+            <div className="min-h-0 flex-1">
+              <FileViewer threadId={threadId} path={explorer.active} running={running} />
+            </div>
           </div>
           {explorer.treeShown && (
             <aside className="flex w-56 shrink-0 flex-col gap-2 border-l p-2">
