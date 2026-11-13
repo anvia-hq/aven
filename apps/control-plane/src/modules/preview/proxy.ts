@@ -26,6 +26,9 @@ const HEAD_TIMEOUT_SECONDS = 30;
 const MAX_EARLY_BYTES = 1024 * 1024;
 const MAX_QUEUED_BYTES = 8 * 1024 * 1024;
 
+export const ENTER_PAGE =
+  '<!doctype html><meta charset="utf-8"><title>Preview</title><script>location.replace("/")</script><noscript><meta http-equiv="refresh" content="0;url=/"></noscript>';
+
 const latin1 = new TextDecoder("latin1");
 const text = (value: string) => Buffer.from(value, "latin1");
 
@@ -202,7 +205,7 @@ class Relay {
       : `Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${PAGE_TTL_MS / 1000}`;
     const cookie = embed ? EMBED_COOKIE : PAGE_COOKIE;
     this.#answer(
-      `HTTP/1.1 302 Found\r\nLocation: /\r\nSet-Cookie: ${cookie}=${token}; ${attributes}\r\nReferrer-Policy: no-referrer\r\nCache-Control: no-store\r\nContent-Length: 0\r\nConnection: close\r\n\r\n`,
+      `HTTP/1.1 200 OK\r\nSet-Cookie: ${cookie}=${token}; ${attributes}\r\nReferrer-Policy: no-referrer\r\nCache-Control: no-store\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${ENTER_PAGE.length}\r\nConnection: close\r\n\r\n${ENTER_PAGE}`,
     );
   }
 

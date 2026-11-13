@@ -118,8 +118,9 @@ describe("the ticket", () => {
       `GET ${PREVIEW_ENTER_PATH}?ticket=${ticket()} HTTP/1.1\r\nHost: ${host()}\r\n\r\n`,
     );
 
-    expect(answer).toStartWith("HTTP/1.1 302");
-    expect(answer).toContain("Location: /\r\n");
+    expect(answer).toStartWith("HTTP/1.1 200");
+    expect(answer).toContain('location.replace("/")');
+    expect(answer).not.toContain("Location:");
     expect(answer).toMatch(
       new RegExp(
         `Set-Cookie: ${PAGE_COOKIE}=[^;]+; Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=3600\\r\\n`,
@@ -135,7 +136,7 @@ describe("the ticket", () => {
       `GET ${PREVIEW_ENTER_PATH}?ticket=${ticket()}&embed=1 HTTP/1.1\r\nHost: ${host()}\r\n\r\n`,
     );
 
-    expect(answer).toStartWith("HTTP/1.1 302");
+    expect(answer).toStartWith("HTTP/1.1 200");
     expect(answer).toMatch(
       new RegExp(
         `Set-Cookie: ${EMBED_COOKIE}=[^;]+; Path=/; HttpOnly; SameSite=None; Secure; Partitioned; Max-Age=3600\\r\\n`,
@@ -148,7 +149,7 @@ describe("the ticket", () => {
     const given = ticket();
     const path = `${PREVIEW_ENTER_PATH}?ticket=${given}`;
     expect(await raw(port, `GET ${path} HTTP/1.1\r\nHost: ${host()}\r\n\r\n`)).toStartWith(
-      "HTTP/1.1 302",
+      "HTTP/1.1 200",
     );
     expect(await raw(port, `GET ${path} HTTP/1.1\r\nHost: ${host()}\r\n\r\n`)).toStartWith(
       "HTTP/1.1 403",
