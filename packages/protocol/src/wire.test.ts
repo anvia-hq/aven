@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  BOT_DESCRIPTION_MAX,
-  BOT_INSTRUCTION_MAX,
-  BOT_MESSAGE_MAX,
-  BOT_NAME_MAX,
-} from "@aven/protocol/bots";
+import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_MESSAGE_MAX, BOT_NAME_MAX } from "./bots";
 
 import {
   parseBotCreateParams,
@@ -19,7 +14,7 @@ import {
   parseMachineRelayParams,
   parseRuntimeFrame,
 } from "./wire";
-import type { RunEvent } from "@aven/protocol/types";
+import type { RunEvent } from "./types";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 

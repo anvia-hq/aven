@@ -1,19 +1,13 @@
 import { BEDROCK_ENDPOINT, vertexPartsOf } from "@aven/protocol/providers";
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
+import { providerBaseUrl, providerModelId, providerName } from "@aven/protocol/provider-schema";
 import { z } from "zod";
 
 import { isGoogleCredential } from "./google-auth";
 
 export const providerParams = z.object({ id: z.uuid() });
 
-export const providerName = z.string().trim().min(1).max(100);
-export const providerModelId = z.string().trim().min(1).max(200);
 const apiKey = z.string().trim().min(1).max(500);
-export const providerBaseUrl = z
-  .url({ protocol: /^https?$/ })
-  .max(500)
-  .transform((value) => value.replace(/\/+$/, ""));
-
 export const azureEndpoint = z
   .url({ protocol: /^https$/ })
   .max(500)

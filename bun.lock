@@ -123,6 +123,10 @@
     "packages/protocol": {
       "name": "@aven/protocol",
       "version": "0.0.0",
+      "dependencies": {
+        "@anvia/core": "^1.18.0",
+        "zod": "^4.6.7",
+      },
     },
     "packages/runtime-client": {
       "name": "@aven/runtime-client",
