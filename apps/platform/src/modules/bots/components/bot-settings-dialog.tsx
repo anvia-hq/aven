@@ -1,6 +1,6 @@
 import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
 import { Cog } from "@mynaui/icons-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/button";
 import {
@@ -21,13 +21,30 @@ import { useBotForm } from "../hooks/use-bot-form";
 import type { Bot } from "../types";
 import { BotAvatarPicker } from "./bot-avatar-picker";
 
-export function BotSettingsDialog({ bot }: { bot: Bot }) {
+export function BotSettingsDialog({
+  bot,
+  className,
+  children,
+}: {
+  bot: Bot;
+  className?: string;
+  children?: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button variant="ghost" size="icon-sm" aria-label="Bot settings" />}>
-        <Cog />
+      <DialogTrigger
+        render={
+          <Button
+            variant="ghost"
+            size={children ? "default" : "icon-sm"}
+            aria-label="Bot settings"
+            className={className}
+          />
+        }
+      >
+        {children ?? <Cog />}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <BotSettingsForm bot={bot} onDone={() => setOpen(false)} />
