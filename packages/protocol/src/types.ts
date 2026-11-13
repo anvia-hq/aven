@@ -6,6 +6,7 @@ import type {
   DIFF_SCOPES,
   MACHINE_OPS,
   PROVIDERS,
+  RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
 } from "./runtime-wire";
@@ -396,6 +397,8 @@ export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
 export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
 
 export type RuntimeLifetime = (typeof RUNTIME_LIFETIMES)[number];
+
+export type RuntimeGithubMode = (typeof RUNTIME_GITHUB_MODES)[number];
 
 export type RunModel = {
   provider: Provider;

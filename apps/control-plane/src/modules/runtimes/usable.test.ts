@@ -62,4 +62,24 @@ run("requireUsableRuntime (real postgres)", async () => {
       await expect(requireUsableRuntime(seed.userId, id)).rejects.toThrow("not one you can use");
     }
   });
+  test("a runner's GitHub mode is machine by default, can be changed, and a temporary runner is always person", async () => {
+    const own = await make({ host: true, ownerId: seed.userId, organizationId: seed.orgA });
+    expect(await runtimesService.githubModeOf(own)).toBe("machine");
+
+    const changed = await runtimesService.setGithubMode(seed.orgA, own, "person");
+    expect(changed?.githubMode).toBe("person");
+    expect(await runtimesService.githubModeOf(own)).toBe("person");
+
+    const temporary = await make({
+      host: true,
+      ownerId: seed.userId,
+      organizationId: seed.orgA,
+      lifetime: "ephemeral",
+    });
+    expect(await runtimesService.githubModeOf(temporary)).toBe("person");
+    expect((await runtimesService.get(seed.orgA, temporary))?.githubMode).toBe("person");
+    await expect(runtimesService.setGithubMode(seed.orgA, temporary, "machine")).rejects.toThrow(
+      "temporary runner",
+    );
+  });
 });

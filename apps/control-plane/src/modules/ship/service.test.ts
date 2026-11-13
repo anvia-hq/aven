@@ -38,7 +38,7 @@ function setup(
     pullRequests?: (typeof project)["pullRequests"];
     installation?: string | null;
     directory?: string | null;
-    lifetime?: "persistent" | "ephemeral";
+    githubMode?: "machine" | "person";
     runner?: { login: string | null };
   } = {},
 ) {
@@ -59,7 +59,7 @@ function setup(
       githubInstallationId: options.installation === undefined ? "inst-1" : options.installation,
       pullRequests: options.pullRequests ?? [],
       directory: options.directory ?? null,
-      lifetime: options.lifetime ?? "persistent",
+      githubMode: options.githubMode ?? "machine",
       runtimeId: "runtime-1",
     }),
     userTokens: {
@@ -100,6 +100,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ship: true,
       appKey: "app-1",
       machine: false,
+      githubMode: "machine",
       runnerGithub: null,
     });
 
@@ -109,6 +110,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ship: false,
       appKey: "app-1",
       machine: false,
+      githubMode: "machine",
       runnerGithub: null,
     });
   });
@@ -120,9 +122,11 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       machine: true,
     });
 
-    const ephemeral = setup({ installation: null, lifetime: "ephemeral" });
-    expect(await ephemeral.service.readiness("org-1", threadId)).toMatchObject({
+    const person = setup({ installation: null, githubMode: "person" });
+    expect(await person.service.readiness("org-1", threadId)).toMatchObject({
       machine: false,
+      appKey: "platform",
+      githubMode: "person",
     });
   });
 
@@ -175,11 +179,20 @@ describe("shipping a thread", () => {
     expect(sent).toHaveLength(1);
   });
 
-  test("a project with no GitHub app is refused on an ephemeral runner", async () => {
-    const { service, sent } = setup({ installation: null, lifetime: "ephemeral" });
+  test("a project with no GitHub app on a runner in person mode needs the person's own connection", async () => {
+    const connected = setup({ installation: null, githubMode: "person" });
 
-    await expect(service.ship("org-1", "user-1", threadId)).rejects.toThrow("temporary");
-    expect(sent).toEqual([]);
+    await connected.service.ship("org-1", "user-1", threadId);
+
+    expect(connected.checked).toEqual(["connection for platform"]);
+    expect(connected.sent).toHaveLength(1);
+
+    const missing = setup({ installation: null, githubMode: "person", connected: false });
+
+    await expect(missing.service.ship("org-1", "user-1", threadId)).rejects.toBeInstanceOf(
+      GithubNotConnectedError,
+    );
+    expect(missing.sent).toEqual([]);
   });
 
   test("sends the thread's agent the ship prompt, as the person who pressed the button", async () => {

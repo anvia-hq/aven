@@ -10,6 +10,8 @@ import { useRuntimes } from "../hooks/use-runtimes";
 import { isStale, machineMetrics } from "../machine-metrics";
 import type { Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
+import { githubModeNote } from "../github-mode";
+import { GithubRuntimeDialog } from "./github-runtime-dialog";
 import { RenameRuntimeDialog } from "./rename-runtime-dialog";
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
 import { UpdateRuntimeDialog } from "./update-runtime-dialog";
@@ -95,6 +97,14 @@ export function RuntimesList() {
                       This computer
                     </Badge>
                   )}
+                  <Badge
+                    variant="outline"
+                    title={githubModeNote(runtime.githubMode, runtime.github)}
+                  >
+                    {runtime.githubMode === "person"
+                      ? "GitHub: each person"
+                      : "GitHub: this machine"}
+                  </Badge>
                   {runtime.ownerId === null && (
                     <span
                       role="img"
@@ -132,6 +142,7 @@ export function RuntimesList() {
               <td className="px-3 py-3">
                 <span className="flex items-center justify-end gap-1">
                   <UpdateRuntimeDialog runtime={runtime} />
+                  {canRename(runtime) && <GithubRuntimeDialog runtime={runtime} />}
                   {canRename(runtime) && <RenameRuntimeDialog runtime={runtime} />}
                   {isOwnedByMe(runtime) && (
                     <>

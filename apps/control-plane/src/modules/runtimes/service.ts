@@ -4,9 +4,11 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
+import { ConflictError } from "../../errors";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
+import type { RuntimeGithubMode } from "@aven/protocol/types";
 
 export { LOCAL_RUNTIME_ID };
 
@@ -66,7 +68,10 @@ const ownedBy = (organizationId: string, ownerId: string, id: string) =>
 const sameToken = (a: string, b: string) =>
   timingSafeEqual(Buffer.from(hashToken(a)), Buffer.from(hashToken(b)));
 
-const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => runtime;
+const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => ({
+  ...runtime,
+  githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
+});
 
 export const runtimesService = {
   localToken,
@@ -181,6 +186,38 @@ export const runtimesService = {
       .from(runtimes)
       .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
     return row?.provider;
+  },
+
+  async githubModeOf(id: string): Promise<RuntimeGithubMode> {
+    const [row] = await db
+      .select({ lifetime: runtimes.lifetime, githubMode: runtimes.githubMode })
+      .from(runtimes)
+      .where(eq(runtimes.id, id));
+
+    if (row?.lifetime === "ephemeral") return "person";
+
+    return row?.githubMode ?? "machine";
+  },
+
+  async setGithubMode(organizationId: string, id: string, githubMode: RuntimeGithubMode) {
+    const [current] = await db
+      .select({ lifetime: runtimes.lifetime })
+      .from(runtimes)
+      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+
+    if (!current) return null;
+
+    if (githubMode === "machine" && current.lifetime === "ephemeral")
+      throw new ConflictError(
+        "A temporary runner has no GitHub login of its own: each person's account is used",
+      );
+
+    const [row] = await db
+      .update(runtimes)
+      .set({ githubMode })
+      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)))
+      .returning();
+    return row ? publicRuntime(row) : null;
   },
 
   async lifetimeOf(id: string) {

@@ -1,3 +1,4 @@
+import { RUNTIME_GITHUB_MODES } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
 export const runtimeParams = z.object({ id: z.uuid() });
@@ -5,6 +6,8 @@ export const runtimeParams = z.object({ id: z.uuid() });
 export const createRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
 
 export const renameRuntimeBody = z.object({ name: z.string().trim().min(1).max(100) });
+
+export const githubModeBody = z.object({ githubMode: z.enum(RUNTIME_GITHUB_MODES) });
 
 export type CreateRuntimeBody = z.infer<typeof createRuntimeBody>;
 

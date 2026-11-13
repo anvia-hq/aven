@@ -1,0 +1,1 @@
+ALTER TABLE "runtimes" ADD COLUMN "github_mode" text DEFAULT 'machine' NOT NULL;

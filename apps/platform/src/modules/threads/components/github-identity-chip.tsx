@@ -1,9 +1,11 @@
-import type { RunnerGithub } from "@aven/protocol/types";
+import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 
 import { githubIdentityNote } from "../github-identity";
 
-export function GithubIdentityChip({ runnerGithub }: { runnerGithub: RunnerGithub | null }) {
-  const note = githubIdentityNote(runnerGithub);
+type Props = { runnerGithub: RunnerGithub | null; githubMode: RuntimeGithubMode };
+
+export function GithubIdentityChip({ runnerGithub, githubMode }: Props) {
+  const note = githubIdentityNote(runnerGithub, githubMode);
 
   if (!note) return null;
 

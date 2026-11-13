@@ -3,6 +3,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { ConflictError } from "../../errors";
 import { createFilesService } from "../files/service";
+import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { projectsService } from "../projects/service";
@@ -13,7 +14,7 @@ import { SHIP_PROMPT_FILE, shipPrompt } from "./prompt";
 import type { ModelSelection } from "../providers/types";
 import type { ShipMode } from "./types";
 import type { ThreadPullRequest } from "../threads/types";
-import type { FileContent, RuntimeLifetime } from "@aven/protocol/types";
+import type { FileContent, RuntimeGithubMode } from "@aven/protocol/types";
 
 export class GithubNotConnectedError extends ConflictError {
   constructor() {
@@ -33,7 +34,7 @@ type ShipDeps = {
     directory: string | null;
     defaultBranch: string | null;
     pullRequests: ThreadPullRequest[];
-    lifetime: RuntimeLifetime;
+    githubMode: RuntimeGithubMode;
     runtimeId: string;
   }>;
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
@@ -75,7 +76,7 @@ export function createShipService(
       return {
         ...project,
         pullRequests: thread.pullRequests,
-        lifetime: await runtimesService.lifetimeOf(thread.runtimeId),
+        githubMode: await runtimesService.githubModeOf(thread.runtimeId),
         runtimeId: thread.runtimeId,
       };
     });
@@ -100,11 +101,13 @@ export function createShipService(
         hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
         project.githubInstallationId ? github.appKeyOf(project.githubInstallationId) : null,
       ]);
+      const person = project.githubMode === "person";
       return {
         ready: ship,
         ship,
-        appKey,
-        machine: project.githubInstallationId === null && project.lifetime === "persistent",
+        appKey: appKey ?? (person ? PLATFORM_APP : null),
+        machine: project.githubInstallationId === null && !person,
+        githubMode: project.githubMode,
         runnerGithub: hub.get(project.runtimeId)?.github ?? null,
       };
     },
@@ -117,10 +120,11 @@ export function createShipService(
     ) {
       const project = await load(organizationId, threadId);
 
-      if (!project.githubInstallationId && project.lifetime === "ephemeral")
-        throw new ConflictError(
-          "This runner is temporary and has no GitHub of its own: connect the project to GitHub to ship",
-        );
+      if (!project.githubInstallationId && project.githubMode === "person") {
+        const connection = await userTokens.use(userId, PLATFORM_APP);
+
+        if (!connection) throw new GithubNotConnectedError();
+      }
 
       if (project.githubInstallationId && project.repoFullName) {
         const connection = await userTokens.use(

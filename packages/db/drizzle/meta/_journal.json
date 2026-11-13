@@ -470,6 +470,13 @@
       "when": 1794585893133,
       "tag": "0066_secret_energizer",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1794588074544,
+      "tag": "0067_fluffy_lethal_legion",
+      "breakpoints": true
     }
   ]
 }

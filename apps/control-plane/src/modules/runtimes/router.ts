@@ -13,6 +13,7 @@ import {
   createFolderBody,
   createRuntimeBody,
   foldersQuery,
+  githubModeBody,
   renameRuntimeBody,
   runtimeParams,
   updateRuntimeBody,
@@ -49,6 +50,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
               ),
               canUpdate: hub.canUpdateOf(runtime.id),
               stats: hub.statsOf(runtime.id) ?? null,
+              github: hub.get(runtime.id)?.github ?? null,
             };
           }),
         );
@@ -91,6 +93,31 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
         );
       },
       { auth: true, org: true, params: runtimeParams, body: renameRuntimeBody },
+    )
+    .patch(
+      "/:id/github",
+      async ({ params, body, organizationId, user }) => {
+        const runtime = orNotFound(
+          await runtimesService.get(organizationId, params.id),
+          "Runtime not found",
+        );
+        const allowed =
+          runtime.id === LOCAL_RUNTIME_ID
+            ? await platformService.isOwner(user)
+            : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
+
+        if (!allowed) {
+          throw new ForbiddenError(
+            "Only the runner's owner, an owner or an admin can change which GitHub it uses",
+          );
+        }
+
+        return orNotFound(
+          await runtimesService.setGithubMode(organizationId, params.id, body.githubMode),
+          "Runtime not found",
+        );
+      },
+      { auth: true, org: true, params: runtimeParams, body: githubModeBody },
     )
     .post(
       "/:id/rotate",

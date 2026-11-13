@@ -79,6 +79,8 @@ test.describe("the built-in runtime", () => {
                 id: "00000000-0000-4000-8000-000000000001",
                 name: "Control plane",
                 ownerId: null,
+                githubMode: "machine",
+                github: null,
                 tokenHint: "",
                 online: true,
                 build: null,
@@ -129,5 +131,29 @@ test.describe("renaming a runtime", () => {
     await expect(table).not.toContainText("devscalelabs-1");
     const listed = (await (await page.request.get("/api/runtimes")).json()) as { name: string }[];
     expect(listed.map((runtime) => runtime.name)).toEqual(["Homelab VPS"]);
+  });
+  test("says which GitHub a runner's runs use, and its owner can change it", async ({ page }) => {
+    await registerUser(page, "rtgithub", "Runtime Github");
+    const created = await page.request.post("/api/runtimes", { data: { name: "big-box" } });
+    expect(created.ok()).toBe(true);
+    await page.goto("/settings/runtimes");
+
+    const row = page.getByRole("table", { name: "Runtimes" }).getByRole("row", { name: /big-box/ });
+    await expect(row).toContainText("GitHub: this machine");
+
+    await page.getByRole("button", { name: "GitHub of big-box" }).click();
+    const dialog = page.getByRole("dialog", { name: "GitHub on big-box" });
+    await expect(dialog).toContainText("whoever sent the message");
+    await dialog.getByRole("combobox", { name: "Runs use" }).click();
+    await page.getByRole("option", { name: "Each person's own account" }).click();
+    await expect(dialog).toContainText("the machine's own login is not used");
+    await dialog.getByRole("button", { name: "Save" }).click();
+
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toContainText("GitHub: each person");
+    const listed = (await (await page.request.get("/api/runtimes")).json()) as {
+      githubMode: string;
+    }[];
+    expect(listed.map((runtime) => runtime.githubMode)).toEqual(["person"]);
   });
 });

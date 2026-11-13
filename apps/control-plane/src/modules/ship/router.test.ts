@@ -132,6 +132,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       ship: false,
       appKey: "platform",
       machine: false,
+      githubMode: "machine",
       runnerGithub: null,
     });
     workspaceFiles = [".aven/ship.md"];
@@ -140,6 +141,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       ship: true,
       appKey: "platform",
       machine: false,
+      githubMode: "machine",
       runnerGithub: null,
     });
 
