@@ -61,6 +61,53 @@ const renderEntity = ({ triggerId, id, label, data }: ComposerInputEntity) => {
   return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} />;
 };
 
+function QuotePreview({
+  author,
+  text,
+  onClear,
+}: {
+  author: string;
+  text: string;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div data-slot="quoting" className="flex items-start gap-2.5 px-3 pt-3 pr-2 pb-1">
+      <div className="w-0.5 shrink-0 self-stretch rounded-full bg-primary" />
+      <Button
+        variant="ghost"
+        aria-expanded={open}
+        title={open ? "Show less" : "Show more"}
+        onClick={() => setOpen((value) => !value)}
+        className="h-auto min-w-0 flex-1 flex-col items-stretch justify-start gap-0 rounded-md p-0 text-left text-sm font-normal whitespace-normal hover:bg-transparent"
+      >
+        <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
+          <MessageReply className="size-3.5 shrink-0" />
+          Replying to {author}
+        </span>
+        <span
+          className={cn(
+            "block text-muted-foreground",
+            open ? "max-h-40 overflow-y-auto whitespace-pre-wrap" : "line-clamp-2",
+          )}
+        >
+          {text}
+        </span>
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        className="shrink-0 rounded-full"
+        aria-label="Stop quoting"
+        onClick={onClear}
+      >
+        <X />
+      </Button>
+    </div>
+  );
+}
+
 export function BotComposer({ botId, main, ...props }: Props) {
   const chat = useComposerChat();
   const triggers = useBotMentions(botId, main);
@@ -146,26 +193,12 @@ function Composer({
       onKeyDownCapture={onKeyDown}
     >
       {quoting && (
-        <div className="flex flex-wrap gap-2 p-1">
-          <div
-            data-slot="quoting"
-            title={`${quoteAuthor}: ${quoting.text || "A file"}`}
-            className="flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-full bg-muted pr-0.5 pl-2.5 text-xs"
-          >
-            <MessageReply className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="shrink-0 font-medium">{quoteAuthor}</span>
-            <span className="truncate text-muted-foreground">{quoting.text || "A file"}</span>
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="shrink-0 rounded-full"
-              aria-label="Stop quoting"
-              onClick={onClearQuote}
-            >
-              <X />
-            </Button>
-          </div>
-        </div>
+        <QuotePreview
+          key={quoting.id}
+          author={quoteAuthor}
+          text={quoting.text || "A file"}
+          onClear={onClearQuote}
+        />
       )}
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
       <div
