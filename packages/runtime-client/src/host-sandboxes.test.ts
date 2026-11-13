@@ -277,7 +277,6 @@ describe("a runner that works on this machine", () => {
 
 describe("a person's GitHub on a run (decision 0276)", () => {
   const ada = { token: "ghu_adasecret", id: 42, login: "ada", name: "Ada L" };
-  // The machine running the tests may itself be signed in to GitHub through these.
   const ambient = ["GH_TOKEN", "GITHUB_TOKEN", "GIT_CONFIG_COUNT", "GIT_AUTHOR_EMAIL"].concat(
     Object.keys(process.env).filter((name) => /^GIT_CONFIG_(KEY|VALUE)_\d+$/.test(name)),
   );
