@@ -1,6 +1,6 @@
 # 0268: Threads and bot chats can have a font of their own
 
-Status: accepted. Builds on 0157 (the interface font).
+Status: superseded by 0270 (the request was for text size, not typeface). Builds on 0157 (the interface font).
 
 ## Decision
 
