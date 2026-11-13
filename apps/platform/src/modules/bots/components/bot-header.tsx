@@ -20,6 +20,11 @@ export function BotHeader({ bot }: { bot: Bot }) {
           className="size-9 shrink-0 text-base"
         />
         <h1 className="truncate text-base font-semibold">{bot.name}</h1>
+        {bot.description && (
+          <p className="hidden max-w-48 truncate text-xs text-muted-foreground sm:block">
+            {bot.description}
+          </p>
+        )}
         {!bot.isMain && <BotSettingsDialog bot={bot} />}
       </header>
     </div>
