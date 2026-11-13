@@ -21,7 +21,8 @@ import { toast } from "@aven/ui/toast";
 
 import { useDecisionModelReady } from "@/modules/decision-model/hooks/use-decision-model-ready";
 
-import { useDriveThread, useShareThread } from "../hooks/use-share-thread";
+import { useDriveThread } from "../hooks/use-drive-thread";
+import { useShareThread } from "../hooks/use-share-thread";
 import type { Thread, ThreadVisibility } from "../types";
 
 const CHOICES = [
