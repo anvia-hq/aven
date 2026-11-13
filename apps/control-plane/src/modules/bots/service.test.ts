@@ -10,8 +10,8 @@ run("botsService (postgres)", async () => {
   const { eq, inArray } = await import("drizzle-orm");
   const { bots } = await import("@aven/db/schema/bots");
   const { providers } = await import("@aven/db/schema/providers");
-  const { encryptSecret } = await import("../../crypto");
-  const { UnprocessableError } = await import("../../errors");
+  const { encryptSecret } = await import("@aven/server-kit/crypto");
+  const { UnprocessableError } = await import("@aven/server-kit/errors");
   const { botsService } = await import("./service");
 
   const suffix = crypto.randomUUID().slice(0, 8);

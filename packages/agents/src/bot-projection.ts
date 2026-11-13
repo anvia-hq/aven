@@ -7,10 +7,11 @@ import {
   USER_HANDLE,
 } from "@aven/protocol/bots";
 
+import { toQuestions } from "@aven/protocol/ask-question";
 import { providerKeyQuestion } from "@aven/protocol/providers";
 
 import { sentMessage } from "./attachments";
-import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
+import { ASK_QUESTION_TOOL_NAME, askQuestionSchema } from "./tools/ask-question";
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { REACT_TO_MESSAGE_TOOL_NAME, reactToMessageSchema } from "./tools/react-to-message";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";

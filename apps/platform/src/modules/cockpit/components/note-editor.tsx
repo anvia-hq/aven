@@ -3,8 +3,8 @@ import { useState } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
-import { DropdownMenuItem } from "@/components/dropdown-menu";
+import { Button } from "@aven/ui/button";
+import { DropdownMenuItem } from "@aven/ui/dropdown-menu";
 import { timeAgo } from "@/lib/format";
 
 import { useAutosave } from "../hooks/use-autosave";

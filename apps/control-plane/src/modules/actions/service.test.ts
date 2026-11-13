@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import type { RuntimeHub } from "../runtimes/hub";
 import { createActionsService } from "./service";
 import type { FileResult } from "../files/types";

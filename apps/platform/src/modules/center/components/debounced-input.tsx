@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ComponentProps } from "react";
 
-import { Input } from "@/components/input";
+import { Input } from "@aven/ui/input";
 
 type Props = Omit<ComponentProps<typeof Input>, "value" | "onChange"> & {
   value: string | undefined;

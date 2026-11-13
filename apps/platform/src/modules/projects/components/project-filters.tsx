@@ -1,9 +1,9 @@
 import { Search } from "@mynaui/icons-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
-import { Input } from "@/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Input } from "@aven/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import type { Runtime } from "@/modules/runtimes/types";
 
 import { PROJECT_VIEWS } from "../filters";

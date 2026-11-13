@@ -1,6 +1,6 @@
 import { createSign } from "node:crypto";
 
-import { ConflictError, UnavailableError } from "../../errors";
+import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 
 export class GithubNotConfiguredError extends UnavailableError {
   constructor() {

@@ -1,5 +1,5 @@
 import { SettingsRow } from "@/components/settings-section";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
 import type { Bot } from "../types";

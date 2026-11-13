@@ -1,9 +1,9 @@
 import { Filter } from "@mynaui/icons-react";
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 
 export function FilterPopover({
   label,

@@ -1,11 +1,11 @@
 import { ArrowUp, Lock } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
-import { RadioGroup, RadioGroupItem } from "@/components/radio-group";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Label } from "@aven/ui/label";
+import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
 
 import { useModelSelection } from "../hooks/use-model-selection";
 import type { QuestionAnswer, RunSelection, SecretChoice, ToolPart } from "../types";

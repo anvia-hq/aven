@@ -6,6 +6,7 @@
 
 /* The cockpit's editor draws with Tailwind classes of its own (decision 0105). */
 @source "../node_modules/@blocknote/shadcn";
+@source "../../../packages/ui/src";
 
 @custom-variant dark (&:is(.dark *));
 

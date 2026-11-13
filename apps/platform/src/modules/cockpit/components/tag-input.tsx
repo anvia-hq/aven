@@ -4,8 +4,8 @@ import { useState, type KeyboardEvent } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 
 import { useCockpitTags } from "../hooks/use-collection";
 import { useTagColors } from "../hooks/use-tags";

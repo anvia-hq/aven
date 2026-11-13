@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
-import { Button, buttonVariants } from "@/components/button";
+import { Button, buttonVariants } from "@aven/ui/button";
 import { AuthShell } from "@/modules/auth/components/auth-shell";
 import { useInvitation } from "@/modules/auth/hooks/use-invitation";
 import { ROLE_LABELS } from "@/modules/settings/types";

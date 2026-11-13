@@ -1,8 +1,8 @@
 import { Copy, Trash } from "@mynaui/icons-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SettingsList, SettingsRow } from "@/components/settings-section";
 import { initials } from "@/lib/format";
 

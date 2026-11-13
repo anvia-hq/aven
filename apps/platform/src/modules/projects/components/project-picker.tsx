@@ -1,6 +1,6 @@
 import { Folder } from "@mynaui/icons-react";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
 import { useProjects } from "../hooks/use-projects";
 

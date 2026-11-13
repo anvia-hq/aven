@@ -1,7 +1,7 @@
 import { useAtom } from "jotai";
 import { useEffect } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 

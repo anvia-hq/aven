@@ -1,8 +1,8 @@
 import { Plus } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Button } from "@aven/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { shortTimeAgo } from "@/lib/format";
 
 import { plainTextOf } from "../rich-text";

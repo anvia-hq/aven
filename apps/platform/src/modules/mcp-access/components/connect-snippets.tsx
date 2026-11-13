@@ -5,7 +5,7 @@ import {
   CodeBlockCopyButton,
   CodeBlockHeader,
   CodeBlockTitle,
-} from "@/components/code-block";
+} from "@aven/ui/code-block";
 
 export const endpointUrl = () => `${window.location.origin}/api/mcp`;
 

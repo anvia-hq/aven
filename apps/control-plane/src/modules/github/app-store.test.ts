@@ -15,7 +15,7 @@ import {
   saveOrganizationApp,
   useStoredGithubApp,
 } from "./app-store";
-import type { GithubConfig } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

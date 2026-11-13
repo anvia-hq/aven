@@ -2,7 +2,7 @@ import { ChevronRight, ExternalLink, File, Folder } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 
 import { useProjectFolder } from "../hooks/use-project-folder";
 import { blobUrl } from "../repo-links";

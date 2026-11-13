@@ -10,7 +10,7 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/command";
+} from "@aven/ui/command";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import { useCommandMenu } from "../hooks/use-command-menu";

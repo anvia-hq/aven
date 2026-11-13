@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-import { Input } from "@/components/input";
+import { Input } from "@aven/ui/input";
 
 import { FOLDER_NAME_MAX } from "../limits";
 

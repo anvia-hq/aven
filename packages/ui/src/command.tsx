@@ -2,14 +2,8 @@ import * as React from "react";
 import { Command as CommandPrimitive } from "cmdk";
 import { cn } from "cn";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/dialog";
-import { InputGroup, InputGroupAddon } from "@/components/input-group";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
+import { InputGroup, InputGroupAddon } from "./input-group";
 import { Search as SearchIcon, Check as CheckIcon } from "@mynaui/icons-react";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {

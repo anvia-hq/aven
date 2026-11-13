@@ -1,7 +1,7 @@
 import { Chat, Folder } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
 const tabs = [
   { to: "/threads", label: "Threads", icon: Chat, exact: true },

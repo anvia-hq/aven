@@ -19,7 +19,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
+} from "./dropdown-menu";
 import { Check as CheckIcon } from "@mynaui/icons-react";
 
 function Menubar({ className, ...props }: MenubarPrimitive.Props) {

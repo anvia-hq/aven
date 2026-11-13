@@ -15,9 +15,9 @@ import {
   threadContinuation,
   webhooks,
 } from "./composition";
-import { errorsRouter } from "./errors";
+import { errorsRouter } from "@aven/server-kit/errors";
 import { followUpsRouter } from "./modules/follow-ups/router";
-import { foreignOrigin } from "./origin-guard";
+import { foreignOrigin } from "@aven/server-kit/origin-guard";
 import { trustedOrigins } from "./modules/auth/service";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
@@ -33,7 +33,7 @@ import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
 import { processesRouter } from "./modules/processes/router";
 import { useStoredGithubApp } from "./modules/github/app-store";
-import { github } from "./modules/github/client";
+import { github } from "@aven/github/client";
 import { githubRouter } from "./modules/github/router";
 import { announcementsRouter } from "./modules/announcements/router";
 import { platformRouter } from "./modules/platform/router";

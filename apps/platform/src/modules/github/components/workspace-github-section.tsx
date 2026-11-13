@@ -1,10 +1,10 @@
 import { Github } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SettingsSection } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
+import { Switch } from "@aven/ui/switch";
 import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "@/modules/projects/hooks/use-create-github-app";
 import type { GithubStatus } from "@/modules/projects/types";

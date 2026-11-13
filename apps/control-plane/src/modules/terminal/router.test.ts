@@ -8,7 +8,7 @@ import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 import { eq } from "drizzle-orm";
 
-import { errorsRouter } from "../../errors";
+import { errorsRouter } from "@aven/server-kit/errors";
 import { createMemoryStore } from "../../memory-store";
 import { auth, authService } from "../auth/service";
 import { connectRouter } from "../runtimes/connect";

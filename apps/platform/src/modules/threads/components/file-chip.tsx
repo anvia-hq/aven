@@ -1,6 +1,6 @@
 import { File as FileIcon, X } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { fileSize } from "@/lib/format";
 
 export function FileChip({

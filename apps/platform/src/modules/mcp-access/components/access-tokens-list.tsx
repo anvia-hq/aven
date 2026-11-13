@@ -1,7 +1,7 @@
 import { Trash } from "@mynaui/icons-react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { timeAgo } from "@/lib/format";
 
 import { useAccessTokens } from "../hooks/use-access-tokens";

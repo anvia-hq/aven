@@ -5,7 +5,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/command";
+} from "@aven/ui/command";
 
 import type { ReactNode } from "react";
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { copyToClipboard } from "@/lib/clipboard";
 
 const COPIED_MS = 2000;

@@ -5,7 +5,7 @@ import { users } from "@aven/db/schema/users";
 import { and, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import type { AvatarImage } from "./types";
 
 export const AVATAR_MAX_BYTES = 256 * 1024;

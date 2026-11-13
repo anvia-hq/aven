@@ -17,8 +17,11 @@ COPY apps/platform/package.json apps/platform/
 COPY apps/runtime/package.json apps/runtime/
 COPY packages/agents/package.json packages/agents/
 COPY packages/db/package.json packages/db/
+COPY packages/github/package.json packages/github/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
+COPY packages/server-kit/package.json packages/server-kit/
+COPY packages/ui/package.json packages/ui/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./

@@ -2,7 +2,7 @@ import { ChevronRight, Folder as FolderIcon, FolderOne } from "@mynaui/icons-rea
 import { cn } from "cn";
 import { useState, type DragEvent, type ReactNode } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { dragsThread, THREAD_DRAG } from "@/modules/threads/split";
 
 import { isTempId } from "../folder-cache";

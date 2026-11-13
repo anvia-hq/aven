@@ -1,7 +1,7 @@
 import { X } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 
 import { PROBLEM_TEXT } from "../rows";
 import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, type EnvIssue, type RowState } from "../types";

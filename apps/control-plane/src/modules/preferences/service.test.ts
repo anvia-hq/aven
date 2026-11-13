@@ -6,7 +6,7 @@ run("preferencesService (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");
   const { eq } = await import("drizzle-orm");
-  const { UnprocessableError } = await import("../../errors");
+  const { UnprocessableError } = await import("@aven/server-kit/errors");
   const { preferencesService } = await import("./service");
 
   const alice = `u-pref-${crypto.randomUUID().slice(0, 8)}`;

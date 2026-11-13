@@ -1,6 +1,6 @@
 import { CLAUDE_TOKEN_MISSING } from "@aven/protocol/runtime-wire";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 
 export class ClaudeTokenMissingError extends UnprocessableError {
   constructor() {

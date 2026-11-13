@@ -3,7 +3,7 @@ import { Fragment, useState, type DragEvent } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { useScrollEdges } from "../hooks/use-scroll-edges";
 import { useTasks } from "../hooks/use-tasks";

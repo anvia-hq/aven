@@ -11,7 +11,7 @@ import {
 import { ARTIFACT_NAME } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-import { attachmentBody } from "../../attachments";
+import { attachmentBody } from "@aven/server-kit/attachments";
 
 export const botParams = z.object({ id: z.uuid() });
 

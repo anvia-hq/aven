@@ -1,9 +1,9 @@
 import { Trash } from "@mynaui/icons-react";
 
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { SectionCard } from "@/components/section-card";
 
 import { useCanChangeVariables } from "../hooks/use-can-change-variables";

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { saveClaudeSetupBody } from "./schema";
 import { claudeSetupService } from "./service";

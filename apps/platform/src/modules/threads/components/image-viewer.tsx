@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/dialog";
+import { Button } from "@aven/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@aven/ui/dialog";
 
 import type { ViewerImage } from "../types";
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import type { ProcessLogs, ProcessView } from "@aven/protocol/types";

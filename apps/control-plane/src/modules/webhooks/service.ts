@@ -5,7 +5,12 @@ import { botWebhooks } from "@aven/db/schema/bot-webhooks";
 import { WEBHOOKS_LIMIT, WEBHOOK_TOKEN_PREFIX } from "@aven/protocol/webhooks";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 
-import { ConflictError, NotFoundError, UnavailableError, UnprocessableError } from "../../errors";
+import {
+  ConflictError,
+  NotFoundError,
+  UnavailableError,
+  UnprocessableError,
+} from "@aven/server-kit/errors";
 import { botsService } from "../bots/service";
 import { webhookNote } from "./note";
 import type { CreateWebhookBody } from "./schema";

@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { notesAtom } from "../atoms/cockpit-atoms";
 import type { CockpitNote, NoteInput } from "../types";

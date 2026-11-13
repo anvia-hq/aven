@@ -1,6 +1,6 @@
 import { getDefaultStore, type PrimitiveAtom } from "jotai";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { errorMessage, api } from "./api";
 

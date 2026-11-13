@@ -1,7 +1,7 @@
 import { BOT_COMPACT_TOKENS } from "@aven/protocol/bots";
 import { useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import type { Bot } from "../types";
 import { useBots } from "./use-bots";

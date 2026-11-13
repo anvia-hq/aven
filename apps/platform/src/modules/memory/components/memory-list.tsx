@@ -1,7 +1,7 @@
 import { Pencil, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { SettingsSection } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 

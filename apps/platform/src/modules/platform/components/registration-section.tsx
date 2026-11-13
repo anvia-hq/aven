@@ -1,5 +1,5 @@
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
+import { Switch } from "@aven/ui/switch";
 
 import { usePlatformConfig } from "../hooks/use-platform-config";
 

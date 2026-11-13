@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { errorMessage, postJson } from "@/lib/api";
 import { forgetStoredKeys, registerUserState } from "@/lib/user-state";

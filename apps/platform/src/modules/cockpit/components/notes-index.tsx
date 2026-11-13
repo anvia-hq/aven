@@ -1,8 +1,8 @@
 import { FileText, Pin, Plus, Search } from "@mynaui/icons-react";
 import { useRef, useState } from "react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 import { shortTimeAgo } from "@/lib/format";
 
 import { useNotes } from "../hooks/use-notes";

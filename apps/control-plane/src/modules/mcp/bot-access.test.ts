@@ -5,7 +5,7 @@ import { mcpServers } from "@aven/db/schema/mcp-servers";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { botMcp } from "./bot-access";
 import { mcpService } from "./service";
 

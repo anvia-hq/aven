@@ -1,8 +1,8 @@
 import { useRef } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 import { initials } from "@/lib/format";
 
 import { useAvatar } from "../hooks/use-avatar";

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { NotFoundError, orNotFound } from "../../errors";
+import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
 import { labelsByModel, listAgentModels } from "./model-list";

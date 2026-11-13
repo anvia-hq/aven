@@ -1,7 +1,7 @@
 import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { SECRET_TOOL_NAME } from "@aven/protocol/events";
 
-import { describeError, UnprocessableError } from "../../errors";
+import { describeError, UnprocessableError } from "@aven/server-kit/errors";
 import { parseSaved } from "../runs/continuation";
 import { variableName } from "../variables/schema";
 import { variablesService } from "../variables/service";

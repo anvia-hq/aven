@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test";
 import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
 import { ARTIFACT_NAME } from "@aven/protocol/runtime-wire";
 
-import { prepareAttachments } from "./attachments";
-import { UnprocessableError } from "./errors";
+import { prepareAttachments } from "@aven/server-kit/attachments";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { sendMessageBody } from "./modules/threads/schema";
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];

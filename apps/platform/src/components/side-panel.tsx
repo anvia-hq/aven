@@ -1,7 +1,7 @@
 import { X } from "@mynaui/icons-react";
 import type { ComponentType, ReactNode } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 type Props = {
   title: string;

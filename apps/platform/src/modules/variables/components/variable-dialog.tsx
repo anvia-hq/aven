@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,10 +9,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Form } from "@/components/form";
-import { Switch } from "@/components/switch";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Form } from "@aven/ui/form";
+import { Switch } from "@aven/ui/switch";
+import { TextField } from "@aven/ui/text-field";
 
 import { useVariableForm } from "../hooks/use-variable-form";
 import { VariableRows } from "./variable-rows";

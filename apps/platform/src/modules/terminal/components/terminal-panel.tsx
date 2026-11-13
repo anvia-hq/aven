@@ -2,7 +2,7 @@ import { Terminal } from "@mynaui/icons-react";
 
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { ComputerAsleepNotice } from "@/modules/computer/components/computer-asleep-notice";
 import { computerView } from "@/modules/computer/computer-view";
 import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status";

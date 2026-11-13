@@ -1,6 +1,6 @@
 import { runMemoryCommand } from "./modules/memory/commands";
 import { memoryService } from "./modules/memory/service";
-import { describeError } from "./errors";
+import { describeError } from "@aven/server-kit/errors";
 import { botMemoryStore, memoryStore } from "./memory-store";
 import { createGoalDriver } from "./modules/goals/driver";
 import { goalsService } from "./modules/goals/service";

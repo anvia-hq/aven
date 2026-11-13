@@ -2,8 +2,8 @@ import "@xterm/xterm/css/xterm.css";
 
 import { Refresh } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { Spinner } from "@/components/spinner";
+import { Button } from "@aven/ui/button";
+import { Spinner } from "@aven/ui/spinner";
 
 import { useTerminal } from "../hooks/use-terminal";
 import type { Computer } from "@/modules/computer/types";

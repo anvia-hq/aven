@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
 import { ARTIFACT_MEDIA_TYPES } from "@aven/protocol/runtime-wire";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { fileSize } from "@/lib/format";
 
 import type { AttachmentUpload, PendingFile } from "../types";

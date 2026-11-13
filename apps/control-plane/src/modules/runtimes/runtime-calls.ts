@@ -26,7 +26,7 @@ import {
   parseForkStatusParams,
   parseMachineRelayParams,
   parseSkillsGetParams,
-} from "./wire";
+} from "@aven/protocol/wire";
 import type { CallBotReply, RuntimeCallContext } from "./types";
 import type { CallMethod } from "@aven/protocol/types";
 

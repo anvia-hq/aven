@@ -1,7 +1,7 @@
 import { Github } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { LabeledSelect } from "@/components/labeled-select";
+} from "@aven/ui/dialog";
+import { LabeledSelect } from "@aven/ui/labeled-select";
 import type { RuntimeGithubMode } from "@aven/protocol/types";
 
 import { githubModeNote, GITHUB_MODE_OPTIONS } from "../github-mode";

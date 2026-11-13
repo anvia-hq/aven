@@ -1,4 +1,4 @@
-import { ConflictError, UnavailableError } from "../../errors";
+import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import { computerInfo } from "./schema";
 import type { ComputerStatus } from "./types";
 import type { Refusal, Runner } from "../runtimes/types";

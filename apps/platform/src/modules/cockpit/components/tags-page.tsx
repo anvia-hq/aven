@@ -2,10 +2,10 @@ import { Check, Tag } from "@mynaui/icons-react";
 import { normalizeTag, TAG_PATTERN } from "@aven/protocol/cockpit";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { colors, paletteColor } from "@/modules/bots/avatar";
 
 import { useTagColors, useTags } from "../hooks/use-tags";

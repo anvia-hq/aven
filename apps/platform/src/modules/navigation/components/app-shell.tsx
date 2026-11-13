@@ -5,7 +5,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { cn } from "cn";
 
 import { AvenMark } from "@/components/brand-icons";
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { RailLink } from "@/components/rail-link";
 import {
   Sidebar,
@@ -14,8 +14,8 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
-} from "@/components/sidebar";
-import { TooltipProvider } from "@/components/tooltip";
+} from "@aven/ui/sidebar";
+import { TooltipProvider } from "@aven/ui/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";

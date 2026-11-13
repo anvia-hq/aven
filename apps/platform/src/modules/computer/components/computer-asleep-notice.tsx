@@ -1,8 +1,8 @@
 import { Power } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { PanelNotice } from "@/components/panel-notice";
-import { Spinner } from "@/components/spinner";
+import { Spinner } from "@aven/ui/spinner";
 
 import { useWorkspaceExists } from "../hooks/use-workspace-exists";
 import type { Computer } from "../types";

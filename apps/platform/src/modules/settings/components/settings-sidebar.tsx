@@ -25,7 +25,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/sidebar";
+} from "@aven/ui/sidebar";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
 const groups = [

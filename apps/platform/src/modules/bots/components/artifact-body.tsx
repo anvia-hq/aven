@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Refresh } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { Markdown } from "@/components/markdown";
-import { Spinner } from "@/components/spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { Spinner } from "@aven/ui/spinner";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@aven/ui/table";
 import { ArtifactFrame } from "@/modules/threads/components/artifact-frame";
 
 import { artifactSource, kindOf } from "../artifacts";

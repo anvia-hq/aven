@@ -1,7 +1,7 @@
 import { Download, File as FileIcon, X } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { NativeSelect } from "@/components/native-select";
+import { Button } from "@aven/ui/button";
+import { NativeSelect } from "@aven/ui/native-select";
 
 import { artifactSource, downloadName } from "../artifacts";
 import type { ArtifactFile, ArtifactGroup } from "../types";

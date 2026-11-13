@@ -4,7 +4,7 @@ import * as React from "react";
 import { Questionnaire as QuestionnairePrimitive } from "@shadcn/react/questionnaire";
 import { cn } from "cn";
 
-import { buttonVariants, type Button } from "@/components/button";
+import { buttonVariants, type Button } from "@aven/ui/button";
 import { Check as CheckIcon } from "@mynaui/icons-react";
 
 function Questionnaire({

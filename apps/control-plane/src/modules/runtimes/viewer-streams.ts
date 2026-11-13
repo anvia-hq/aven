@@ -1,6 +1,6 @@
 import { decodeViewerFrame, encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
-import { UnavailableError } from "../../errors";
+import { UnavailableError } from "@aven/server-kit/errors";
 import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 

@@ -3,18 +3,18 @@ import { db } from "@aven/db/client";
 import { githubInstallations } from "@aven/db/schema/github-installations";
 import { and, desc, eq } from "drizzle-orm";
 
-import { NotFoundError, UnprocessableError } from "../../errors";
-import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "./client";
+import { NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "@aven/github/client";
 import { githubClients, PLATFORM_APP } from "./clients";
 import { isLocalPath } from "./schema";
 import { githubUserTokenService } from "./user-tokens";
+import type { GithubClients } from "./types";
 import type {
-  GithubClients,
   GithubCommitFilters,
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedState,
-} from "./types";
+} from "@aven/github/types";
 
 export class InstallationNotAllowedError extends UnprocessableError {}
 export class InstallationNotFoundError extends NotFoundError {

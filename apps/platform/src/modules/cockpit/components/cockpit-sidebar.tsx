@@ -8,7 +8,7 @@ import {
   SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/sidebar";
+} from "@aven/ui/sidebar";
 
 import { useBotChanges } from "../hooks/use-bot-changes";
 import { useCockpitTags } from "../hooks/use-collection";

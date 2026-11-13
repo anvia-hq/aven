@@ -1,7 +1,7 @@
 import { ChevronRight } from "@mynaui/icons-react";
 
-import { Badge } from "@/components/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Badge } from "@aven/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 
 import type { DiffFile, DiffLayout } from "../types";
 import { DiffLines } from "./diff-lines";

@@ -1,4 +1,4 @@
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import type { ShipMode } from "./types";
 import type { FileContent } from "@aven/protocol/types";
 

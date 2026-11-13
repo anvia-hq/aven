@@ -2,8 +2,8 @@ import { db } from "@aven/db/client";
 import { decisionModels } from "@aven/db/schema/decision-models";
 import { eq } from "drizzle-orm";
 
-import { decryptOrUnavailable, encryptSecret } from "../../crypto";
-import { UnprocessableError } from "../../errors";
+import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { DEFAULT_MODEL } from "./jev";
 import { serverModelsService } from "../server-models/service";
 import { serverDecisionModel } from "./server-default";

@@ -1,4 +1,4 @@
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 
 export const UPDATE_RUNNER = "Update this computer's runner to use its tools";
 

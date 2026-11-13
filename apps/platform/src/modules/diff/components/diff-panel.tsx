@@ -3,8 +3,8 @@ import { useMemo, useState } from "react";
 
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
-import { Skeleton } from "@/components/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Skeleton } from "@aven/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
 import { useDiffPreferences } from "../hooks/use-diff-preferences";
 import { useThreadDiff } from "../hooks/use-thread-diff";

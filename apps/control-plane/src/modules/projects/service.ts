@@ -14,7 +14,7 @@ import {
   NotFoundError,
   orNotFound,
   UnprocessableError,
-} from "../../errors";
+} from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
@@ -25,7 +25,7 @@ import type {
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedState,
-} from "../github/types";
+} from "@aven/github/types";
 
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryAlreadyImportedError extends ConflictError {}

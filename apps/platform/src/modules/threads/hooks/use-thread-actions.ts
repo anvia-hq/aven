@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useRequest } from "@/hooks/use-request";
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { attempt, postJson } from "@/lib/api";
 import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
 import type { ThreadAction } from "@aven/protocol/types";

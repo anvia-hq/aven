@@ -1,9 +1,9 @@
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/tabs";
-import { Toggle } from "@/components/toggle";
+import { Button } from "@aven/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@aven/ui/tabs";
+import { Toggle } from "@aven/ui/toggle";
 
 import {
   avatarFor,

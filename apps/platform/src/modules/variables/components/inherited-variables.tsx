@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 import { SectionCard } from "@/components/section-card";
 
 import { useVariables } from "../hooks/use-variables";

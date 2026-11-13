@@ -4,8 +4,8 @@ import { users } from "@aven/db/schema/users";
 import { variableEvents } from "@aven/db/schema/variable-events";
 import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
-import { ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
-import { decryptOrUnavailable, encryptSecret } from "../../crypto";
+import { ForbiddenError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
 import { isOwnerOrAdmin } from "../auth/members";
 import { projectsService } from "../projects/service";
 import { MAX_VARIABLES, type SetVariableBody } from "./schema";

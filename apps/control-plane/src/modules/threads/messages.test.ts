@@ -7,7 +7,7 @@ import { users } from "@aven/db/schema/users";
 import { githubUserTokens } from "@aven/db/schema/github-user-tokens";
 import { eq } from "drizzle-orm";
 
-import { encryptSecret } from "../../crypto";
+import { encryptSecret } from "@aven/server-kit/crypto";
 
 import { decisionModelService } from "../decision-model/service";
 import { providersService } from "../providers/service";

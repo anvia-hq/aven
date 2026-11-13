@@ -2,7 +2,7 @@ import { X } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { baseName } from "../paths";
 

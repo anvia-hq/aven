@@ -1,4 +1,4 @@
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { HTML_HEADERS, framedHtml } from "./html-frame";
 import { byteRange } from "./range";
 import { artifactAnswer } from "./schema";

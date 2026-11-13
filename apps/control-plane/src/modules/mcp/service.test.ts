@@ -6,7 +6,7 @@ import { users } from "@aven/db/schema/users";
 import { MCP_LIMIT } from "@aven/protocol/mcp";
 import { eq } from "drizzle-orm";
 
-import { ConflictError, UnprocessableError } from "../../errors";
+import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import { createMcpBody, updateMcpBody } from "./schema";
 import { mcpService } from "./service";
 

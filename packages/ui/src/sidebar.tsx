@@ -4,13 +4,13 @@ import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { Separator } from "@/components/separator";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/sheet";
-import { Skeleton } from "@/components/skeleton";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { useIsMobile } from "./use-mobile";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Separator } from "./separator";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "./sheet";
+import { Skeleton } from "./skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 import { PanelLeft as PanelLeftIcon } from "@mynaui/icons-react";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";

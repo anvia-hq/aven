@@ -1,8 +1,8 @@
 import { Plus } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
-import { Badge } from "@/components/badge";
-import { buttonVariants } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { buttonVariants } from "@aven/ui/button";
 import { shortTimeAgo } from "@/lib/format";
 
 import { projectPlace } from "../place";

@@ -2,7 +2,7 @@ import { db } from "@aven/db/client";
 import { claudeSetupTokens } from "@aven/db/schema/claude-setup-tokens";
 import { eq } from "drizzle-orm";
 
-import { decryptOrUnavailable, encryptSecret } from "../../crypto";
+import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
 import { claudeTokenOf } from "./token";
 import type { ClaudeSetupView } from "./types";
 

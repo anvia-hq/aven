@@ -1,10 +1,10 @@
 import { Github } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
-import { TextField } from "@/components/text-field";
+import { Switch } from "@aven/ui/switch";
+import { TextField } from "@aven/ui/text-field";
 import { useRequest } from "@/hooks/use-request";
 import { useCreateGithubApp } from "@/modules/projects/hooks/use-create-github-app";
 import type { GithubStatus } from "@/modules/projects/types";

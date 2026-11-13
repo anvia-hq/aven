@@ -11,7 +11,7 @@ import { sessions } from "@aven/db/schema/sessions";
 import { users } from "@aven/db/schema/users";
 import { and, asc, eq, gt, inArray, max, ne, notInArray, sql } from "drizzle-orm";
 
-import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "@aven/server-kit/errors";
 import type { PutAwayThread } from "../threads/types";
 
 const REGISTRATION_KEY = "registration_enabled";

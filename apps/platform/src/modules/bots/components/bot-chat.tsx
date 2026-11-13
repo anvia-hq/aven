@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { useEffect, useMemo, useState } from "react";
 
-import { Message } from "@/components/message";
+import { Message } from "@aven/ui/message";
 import { useTextSize } from "@/modules/theme/hooks/use-text-size";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 

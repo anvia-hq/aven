@@ -2,7 +2,7 @@ import { Check, Copy, Plus } from "@mynaui/icons-react";
 import { WEBHOOK_NAME_MAX } from "@aven/protocol/webhooks";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,9 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Form } from "@/components/form";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Form } from "@aven/ui/form";
+import { TextField } from "@aven/ui/text-field";
 import { useClipboard } from "@/hooks/use-clipboard";
 
 import { useWebhooks } from "../hooks/use-webhooks";

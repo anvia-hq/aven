@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { RuntimeBadge } from "@/modules/runtimes/components/runtime-badge";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { runtimeLabel } from "@/modules/runtimes/runtime-label";

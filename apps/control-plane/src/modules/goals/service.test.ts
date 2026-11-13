@@ -7,7 +7,7 @@ run("goalsService (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
   const { GOAL_DEFAULT_ROUNDS, GOAL_MAX_ROUNDS } = await import("@aven/protocol/goals");
-  const { UnprocessableError } = await import("../../errors");
+  const { UnprocessableError } = await import("@aven/server-kit/errors");
   const { botsService } = await import("../bots/service");
   const { goalsService } = await import("./service");
 

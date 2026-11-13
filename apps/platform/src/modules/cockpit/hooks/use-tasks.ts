@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { tasksAtom } from "../atoms/cockpit-atoms";
 import type { CockpitTask, TaskInput, TaskPatch } from "../types";

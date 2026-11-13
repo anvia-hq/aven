@@ -7,7 +7,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "@aven/server-kit/errors";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "../threads/messages";

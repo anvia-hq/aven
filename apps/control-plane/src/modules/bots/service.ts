@@ -4,7 +4,7 @@ import { providers } from "@aven/db/schema/providers";
 import { BOT_LIMIT, botHandleOf, freeBotHandle, MAIN_BOT_HANDLE } from "@aven/protocol/bots";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { resolveModel } from "../providers/resolve-model";
 import { requireUsableRuntime } from "../runtimes/usable";
 import type { UpdateBotBody } from "./schema";

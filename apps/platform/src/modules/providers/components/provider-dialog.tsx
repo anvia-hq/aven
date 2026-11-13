@@ -1,7 +1,7 @@
 import { bedrockRegionOf, vertexPartsOf } from "@aven/protocol/providers";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Form } from "@/components/form";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Form } from "@aven/ui/form";
+import { TextField } from "@aven/ui/text-field";
 
 import { useProviderForm } from "../hooks/use-provider-form";
 import { PROVIDER_LABELS } from "../types";

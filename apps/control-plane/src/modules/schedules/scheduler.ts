@@ -3,7 +3,7 @@ import { botSchedules } from "@aven/db/schema/bot-schedules";
 import { SCHEDULE_CATCH_UP_MS } from "@aven/protocol/schedules";
 import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import { describeTime, nextRun } from "./cron";
 import type { BotScheduleRow } from "@aven/db/schema/types";
 import type { ScheduleStatus } from "@aven/protocol/types";

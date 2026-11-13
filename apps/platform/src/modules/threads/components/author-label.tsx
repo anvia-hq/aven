@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Avatar, AvatarFallback } from "@aven/ui/avatar";
 import { initials } from "@/lib/format";
 
 export function AuthorLabel({ name }: { name: string }) {

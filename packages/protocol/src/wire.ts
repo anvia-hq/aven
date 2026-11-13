@@ -1,18 +1,18 @@
 import type { Message } from "@anvia/core";
-import { botQuestionsSchema, toQuestions } from "@aven/agents/tools/ask-question";
+import { botQuestionsSchema, toQuestions } from "./ask-question";
 import {
   GOAL_CHECK_MAX,
   GOAL_CHECKS_MAX,
   GOAL_MAX_ROUNDS,
   GOAL_OBJECTIVE_MAX,
   GOAL_REASON_MAX,
-} from "@aven/protocol/goals";
-import { MAX_ARTIFACTS_PER_CALL } from "@aven/protocol/events";
-import { FORK_TEXT_MAX } from "@aven/protocol/forks";
-import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
-import { MEMORY_NOTE_MAX } from "@aven/protocol/memory";
-import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
-import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
+} from "./goals";
+import { MAX_ARTIFACTS_PER_CALL } from "./events";
+import { FORK_TEXT_MAX } from "./forks";
+import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "./mcp";
+import { MEMORY_NOTE_MAX } from "./memory";
+import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "./schedules";
+import { BOT_THREAD_PROMPT_MAX } from "./threads";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -21,18 +21,18 @@ import {
   BOT_NAME_MAX,
   BOT_REACTION_MAX,
   isBotReaction,
-} from "@aven/protocol/bots";
+} from "./bots";
 import {
   ARTIFACT_MEDIA_TYPES,
   ARTIFACT_NAME,
   MACHINE_OPS,
   SKILL_DIGEST,
   PROVIDERS,
-} from "@aven/protocol/runtime-wire";
+} from "./runtime-wire";
 import { z } from "zod";
 
-import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "../mcp/schema";
-import { providerBaseUrl, providerModelId, providerName } from "../providers/schema";
+import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "./mcp-schema";
+import { providerBaseUrl, providerModelId, providerName } from "./provider-schema";
 import type {
   BotCreateParams,
   BotGoalParams,
@@ -51,7 +51,7 @@ import type {
   MemoryCommand,
   RunOutcome,
   RuntimeToControlPlane,
-} from "@aven/protocol/types";
+} from "./types";
 
 const runId = z.string().min(1);
 const replyId = z.string().min(1);

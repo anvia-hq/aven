@@ -2,8 +2,8 @@ import { Check, ChevronDown } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Button } from "@aven/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 import type { ModelChoice } from "@/modules/providers/types";

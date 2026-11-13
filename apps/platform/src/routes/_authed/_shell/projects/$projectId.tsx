@@ -1,7 +1,7 @@
 import { Plus } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { NotFound } from "@/components/not-found";
 import { SectionCard } from "@/components/section-card";
 import { ProjectAbout } from "@/modules/projects/components/project-about";

@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 
-import { Toaster } from "@/components/toast";
+import { Toaster } from "@aven/ui/toast";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 
 export const Route = createRootRoute({

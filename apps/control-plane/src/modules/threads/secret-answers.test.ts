@@ -4,7 +4,7 @@ import { db } from "@aven/db/client";
 import { variableEvents } from "@aven/db/schema/variable-events";
 import { eq } from "drizzle-orm";
 
-import { ConflictError, UnprocessableError } from "../../errors";
+import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import { runtimesService } from "../runtimes/service";
 import { variablesService } from "../variables/service";
 import { keepSecretAnswers } from "./secret-answers";

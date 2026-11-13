@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 
 import { WEBHOOK_BODY_MAX } from "@aven/protocol/webhooks";
 
-import { errorsRouter, NotFoundError } from "../../errors";
+import { errorsRouter, NotFoundError } from "@aven/server-kit/errors";
 import { webhooksRouter } from "./router";
 import type { Webhook } from "@aven/protocol/types";
 import type { Webhooks } from "./types";

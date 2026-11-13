@@ -1,6 +1,6 @@
 import { Elysia, sse, status } from "elysia";
 
-import { orNotFound } from "../../errors";
+import { orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { botParams, sendBotMessageBody, updateBotBody } from "./schema";
 import { botsService } from "./service";
