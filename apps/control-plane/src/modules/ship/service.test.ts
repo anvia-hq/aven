@@ -39,6 +39,7 @@ function setup(
     installation?: string | null;
     directory?: string | null;
     lifetime?: "persistent" | "ephemeral";
+    runner?: { login: string | null };
   } = {},
 ) {
   const { connected = true, approved = true, canPush = true } = options;
@@ -51,13 +52,15 @@ function setup(
     modelId?: string;
   }[] = [];
   const checked: string[] = [];
-  const service = createShipService({} as RuntimeHub, {
+  const hub = { get: () => (options.runner ? { github: options.runner } : undefined) };
+  const service = createShipService(hub as unknown as RuntimeHub, {
     load: async () => ({
       ...project,
       githubInstallationId: options.installation === undefined ? "inst-1" : options.installation,
       pullRequests: options.pullRequests ?? [],
       directory: options.directory ?? null,
       lifetime: options.lifetime ?? "persistent",
+      runtimeId: "runtime-1",
     }),
     userTokens: {
       use: async (_userId, appKey) => {
@@ -97,6 +100,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ship: true,
       appKey: "app-1",
       machine: false,
+      runnerGithub: null,
     });
 
     const neither = setup();
@@ -105,6 +109,7 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
       ship: false,
       appKey: "app-1",
       machine: false,
+      runnerGithub: null,
     });
   });
 
@@ -119,6 +124,21 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     expect(await ephemeral.service.readiness("org-1", threadId)).toMatchObject({
       machine: false,
     });
+  });
+
+  test("says which GitHub login the thread's runner has, or nothing when it is offline or did not say", async () => {
+    const signedIn = setup({ runner: { login: "indrazm" } });
+    expect((await signedIn.service.readiness("org-1", threadId)).runnerGithub).toEqual({
+      login: "indrazm",
+    });
+
+    const signedOut = setup({ runner: { login: null } });
+    expect((await signedOut.service.readiness("org-1", threadId)).runnerGithub).toEqual({
+      login: null,
+    });
+
+    const offline = setup();
+    expect((await offline.service.readiness("org-1", threadId)).runnerGithub).toBeNull();
   });
 
   test("is asked of a thread of the organization only", async () => {

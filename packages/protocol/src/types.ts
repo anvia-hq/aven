@@ -719,6 +719,8 @@ export type ProcessEnded = {
   stderr: string;
 };
 
+export type RunnerGithub = { login: string | null };
+
 export type RuntimeToControlPlane =
   | {
       type: "hello";
@@ -730,6 +732,7 @@ export type RuntimeToControlPlane =
       dirs?: string[];
       backends?: string[];
       guests?: string[];
+      github?: RunnerGithub;
     }
   | { type: "host.stats"; stats: HostStats }
   | ({ type: "process.ended" } & ProcessEnded)

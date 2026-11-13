@@ -26,6 +26,7 @@ import type {
   RunMemory,
   RunModel,
   RunnerCallMethod,
+  RunnerGithub,
   RunSecrets,
   RunSkill,
   RunThreadInfo,
@@ -76,6 +77,7 @@ export class RuntimeConnection {
   #build: string | undefined;
   #canUpdate = false;
   #backends: readonly AgentBackendKind[] = BEFORE_BACKENDS;
+  #github: RunnerGithub | undefined;
   #stats: ReportedStats | undefined;
 
   constructor(
@@ -103,6 +105,10 @@ export class RuntimeConnection {
 
   get canUpdate() {
     return this.#canUpdate;
+  }
+
+  get github() {
+    return this.#github;
   }
 
   offers(backend: AgentBackendKind) {
@@ -220,6 +226,7 @@ export class RuntimeConnection {
         message.dirs,
         message.backends,
         message.guests,
+        message.github,
       );
 
     if (!this.#ready) return;
@@ -242,12 +249,14 @@ export class RuntimeConnection {
     dirs: string[] | undefined,
     backends: string[] | undefined,
     guests: string[] | undefined,
+    github: RunnerGithub | undefined,
   ) {
     if (version === WIRE_VERSION) {
       this.#ready = true;
       this.#backends = knownBackends(backends);
       this.#build = build;
       this.#canUpdate = canUpdate === true;
+      this.#github = github;
       void runtimesService.touch(this.runtimeId);
       void runtimesService.setHost(this.runtimeId, host === true);
       void runtimesService.setDirectories(this.runtimeId, dirs ?? []);

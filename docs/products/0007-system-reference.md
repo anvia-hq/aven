@@ -114,6 +114,10 @@ Settings > Webhooks (`/webhooks`, `modules/webhooks`) keeps a person's `bot_webh
 
 `shipPrompt` (`modules/ship/prompt.ts`) adds, after Aven's default or a repository's `.aven/ship.md`, a note that a folder project's `origin` is its folder (`folder` from `projects.directory`) and how to push on from it, and a note to watch the opened pull request with a background command until it is mergeable, never merging it. The coding instructions say a `<ship_request>` asks for that push.
 
+### The ship bar says which GitHub login the runner has (decision 0276, stage 1)
+
+A host runner reads the login `gh` is signed in as on its machine (`github-login.ts`, `gh api user`, five seconds) and sends it in `hello.github` (`login` is null when `gh` is signed out or missing); `RuntimeConnection.github` holds it. `GET /threads/:id/ship` returns it as `runnerGithub` (null when the runner is offline or did not say) and the ship bar shows `GithubIdentityChip` ("GitHub: this machine (@login)" or "this machine, not signed in"). Nothing about which GitHub a run uses has changed yet: no sandbox signs `gh` in with the person's token on a host runner, so the machine's login is what runs.
+
 ### A pull in a thread fetches GitHub through the folder (decision 0273)
 
 The `<machine>` section of the coding instructions (`instruction.ts`) tells the agent that a request to pull, update, sync or fetch from main, upstream or GitHub is fetched from the folder's own GitHub address (`git -C <folder> remote get-url origin`) into `/workspace` and merged from `FETCH_HEAD`, without changing the folder.

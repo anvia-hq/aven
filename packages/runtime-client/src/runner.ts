@@ -21,6 +21,7 @@ import { RemoteWorkspaces } from "./remote-workspaces";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { openAgentBackends } from "./agent-backends";
+import { readMachineGithubLogin } from "./github-login";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
@@ -92,6 +93,8 @@ export const defaultCreateAgent =
   };
 
 const DEFAULT_STATS_INTERVAL_MS = 15_000;
+const LOGIN_FRESH_MS = 60_000;
+
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 const DEFAULT_CALL_TIMEOUT_MS = 60_000;
@@ -115,6 +118,7 @@ export function startRuntime(options: RuntimeOptions) {
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
+  const githubLogin = options.githubLogin ?? (options.host ? readMachineGithubLogin : undefined);
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -328,7 +332,23 @@ export function startRuntime(options: RuntimeOptions) {
     } catch {}
   }
 
-  function connect() {
+  let loginSeen: { login: string | null; at: number } | undefined;
+
+  async function machineLogin() {
+    if (!githubLogin) return undefined;
+
+    if (loginSeen && Date.now() - loginSeen.at < LOGIN_FRESH_MS) return loginSeen.login;
+
+    const login = await githubLogin().catch(() => null);
+    loginSeen = { login, at: Date.now() };
+    return login;
+  }
+
+  async function connect() {
+    if (stopped) return;
+
+    const login = await machineLogin();
+
     if (stopped) return;
 
     const init = { headers: { authorization: `Bearer ${options.token}` } };
@@ -348,6 +368,7 @@ export function startRuntime(options: RuntimeOptions) {
         dirs: options.dirs?.length ? options.dirs : undefined,
         backends: [...backends.offered],
         guests: guestRuns.size ? [...guestRuns] : undefined,
+        github: login === undefined ? undefined : { login },
       });
       resend();
       connected.resolve();
@@ -391,13 +412,13 @@ export function startRuntime(options: RuntimeOptions) {
 
       if (stopped) return;
 
-      retry = setTimeout(connect, backoff);
+      retry = setTimeout(() => void connect(), backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
     };
     ws.onerror = () => {};
   }
 
-  connect();
+  void connect();
 
   return {
     ready: connected.promise,

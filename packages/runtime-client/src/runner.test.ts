@@ -102,6 +102,31 @@ describe("startRuntime updating itself (decision 0146)", () => {
     return plane.received.find((m) => m.type === "reply" && m.id === id);
   };
 
+  test("says in hello which GitHub login the machine has, and nothing when it was not asked to look", async () => {
+    const { sandbox, up } = slowSandbox();
+    up();
+    const signedIn = connect({ sandbox, githubLogin: async () => "indrazm" });
+    await signedIn.runtime.ready;
+    await until(() => signedIn.plane.received.some((m) => m.type === "hello"));
+    expect(signedIn.plane.received.find((m) => m.type === "hello")).toMatchObject({
+      github: { login: "indrazm" },
+    });
+
+    const signedOut = connect({ sandbox, githubLogin: async () => null });
+    await signedOut.runtime.ready;
+    await until(() => signedOut.plane.received.some((m) => m.type === "hello"));
+    expect(signedOut.plane.received.find((m) => m.type === "hello")).toMatchObject({
+      github: { login: null },
+    });
+
+    const unasked = connect({ sandbox });
+    await unasked.runtime.ready;
+    await until(() => unasked.plane.received.some((m) => m.type === "hello"));
+    expect(
+      (unasked.plane.received.find((m) => m.type === "hello") as { github?: unknown }).github,
+    ).toBeUndefined();
+  });
+
   test("says in hello that it can, only when it was given a way to", async () => {
     const { sandbox, up } = slowSandbox();
     up();
