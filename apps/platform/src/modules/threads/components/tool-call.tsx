@@ -58,7 +58,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
       <CollapsibleTrigger
         disabled={!expandable}
-        className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+        className="group flex w-fit max-w-full items-center gap-2 py-1 text-left disabled:cursor-default"
       >
         <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span
@@ -71,7 +71,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         </span>
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-mono text-xs",
+            "min-w-0 truncate font-mono text-xs",
             tool.status === "running" && "shimmer",
           )}
         >

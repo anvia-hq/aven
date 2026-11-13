@@ -100,8 +100,8 @@ export function ToolGroup({
 
   return (
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
-      <CollapsibleTrigger className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left text-muted-foreground hover:bg-muted/50">
-        <span className={cn("min-w-0 flex-1 truncate font-medium", running && "shimmer")}>
+      <CollapsibleTrigger className="group flex w-fit max-w-full items-center gap-2 py-1 text-left text-muted-foreground transition-colors hover:text-foreground">
+        <span className={cn("min-w-0 truncate font-medium", running && "shimmer")}>
           {notice && <span className="font-normal text-destructive">{notice}</span>}
           {notice && " · "}
           {summarize(tools)}
