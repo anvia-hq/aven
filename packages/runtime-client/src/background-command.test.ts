@@ -72,6 +72,41 @@ describe("exec_command with background", () => {
     expect(await sandbox.listProcesses()).toEqual([]);
   });
 
+  test("refuses a command that detaches itself and says to use background", async () => {
+    const { tool, sandbox } = await exec();
+    const detached = [
+      "nohup python3 -m http.server 3010 > server.log 2>&1 &",
+      "setsid nohup ./serve.sh",
+      "cd app && (setsid ./run &)",
+      "./serve.sh &",
+      "npm start & \n echo ok",
+      "sleep 5; disown",
+    ];
+
+    for (const command of detached) {
+      expect(() => tool.parseInput!({ command })).toThrow("background: true");
+      expect(() => tool.parseInput!({ command, background: true })).toThrow("background: true");
+    }
+    expect(() => tool.parseInput!({ command: "bash", args: ["-c", "nohup x &"] })).toThrow(
+      "background: true",
+    );
+    expect(await sandbox.listProcesses()).toEqual([]);
+  });
+
+  test("lets through commands that only look like detaching", async () => {
+    const { tool } = await exec();
+
+    for (const command of [
+      "make build && make test",
+      "echo hi 2>&1",
+      "ls > out.txt 2>&1",
+      "grep nohupped file.txt",
+      "echo a & echo b",
+    ]) {
+      expect(() => tool.parseInput!({ command })).not.toThrow();
+    }
+  });
+
   test("is still the tool the sandbox calls exec_command, among the others", async () => {
     const box = await workspaces.acquire({ id: "t1" });
     const names = box.tools.map((tool) => tool.name);

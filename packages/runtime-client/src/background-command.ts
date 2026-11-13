@@ -6,6 +6,18 @@ const BACKGROUND_DESCRIPTION =
 
 const invalid = (message: string) => new Error(message);
 
+const DETACH_PATTERN = /(^|[\s;&|(`])(nohup|setsid|disown)(?=\s|$|;|\))|(^|[^&>])&[ \t]*(;|\n|$)/;
+
+const DETACHED_MESSAGE =
+  "Do not detach a command with nohup, setsid, disown or a trailing &: it runs where Aven cannot see it, so it is missing from Background tasks and nobody is told when it ends. Run it again with background: true.";
+
+const refuseDetached = (rest: Record<string, unknown>) => {
+  const args = Array.isArray(rest.args) ? rest.args.filter((arg) => typeof arg === "string") : [];
+  const text = [typeof rest.command === "string" ? rest.command : "", ...args].join("\n");
+
+  if (DETACH_PATTERN.test(text)) throw invalid(DETACHED_MESSAGE);
+};
+
 export function withBackground(exec: AnyTool, start: AnyTool): AnyTool {
   return {
     name: exec.name,
@@ -30,6 +42,8 @@ export function withBackground(exec: AnyTool, start: AnyTool): AnyTool {
       if (background !== undefined && typeof background !== "boolean") {
         throw invalid("background must be true or false");
       }
+
+      refuseDetached(rest);
 
       if (background !== true) return exec.parseInput ? exec.parseInput(rest as never) : rest;
 
