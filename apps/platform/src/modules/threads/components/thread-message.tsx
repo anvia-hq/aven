@@ -159,18 +159,16 @@ function AssistantMessage({
       <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
         <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
           <CollapsibleTrigger
-            className="group flex w-full items-center gap-3 py-1 text-muted-foreground hover:text-foreground"
+            className="group flex items-center py-1 text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
             data-role="worked"
           >
-            <span className="h-px flex-1 bg-border" />
-            <span className="shrink-0 font-medium">
+            <span className="font-medium">
               {message.workedMs === undefined
                 ? "Worked"
                 : `Worked for ${elapsed(message.workedMs)}`}
             </span>
-            <span className="h-px flex-1 bg-border" />
           </CollapsibleTrigger>
-          <CollapsibleContent>
+          <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
             <div className="flex min-w-0 flex-col gap-2 pt-2">
               {folded.steps.map((block, index) => (
                 <AssistantBlock key={index} block={block} live={false} threadId={threadId} />
