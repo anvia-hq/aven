@@ -60,8 +60,9 @@ export function useThreadDiff(
     enabled && answer !== null && answer.threadId === threadId && answer.scope === scope
       ? answer.loaded
       : null;
+  const stale = answer !== null && answer.threadId === threadId ? answer.loaded : null;
   const cached = live === null ? (kept.current.get(scope) ?? null) : null;
-  const shown = live ?? cached;
+  const shown = live ?? cached ?? stale;
   const problem = typeof shown === "string" ? shown : null;
   const response = typeof shown === "object" ? shown : null;
   const patch = response?.available ? response : null;
