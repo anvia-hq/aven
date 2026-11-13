@@ -11,7 +11,7 @@ import {
 describe("claude models", () => {
   test("a name carries the version the alias resolves to", () => {
     expect(claudeNameOf("sonnet")).toBe("Sonnet 5.5");
-    expect(claudeNameOf(undefined)).toBe("Opus 5.5");
+    expect(claudeNameOf(undefined)).toBe("Sonnet 5.5");
     expect(claudeNameOf("fable")).toBe("Fable 5.2");
     expect(claudeNameOf("claude-x")).toBe("claude-x");
     expect(claudeVersionOf("claude-haiku-5-5")).toBe("5.5");

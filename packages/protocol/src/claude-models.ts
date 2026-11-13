@@ -11,7 +11,7 @@ export const CLAUDE_EFFORTS = [
 export const CLAUDE_DEFAULT_EFFORT: ClaudeEffort = "medium";
 
 export const CLAUDE_MODELS = [
-  { id: "default", family: "Opus", resolved: "claude-opus-5-5", isDefault: true },
+  { id: "default", family: "Sonnet", resolved: "claude-sonnet-5-5", isDefault: true },
   { id: "sonnet", family: "Sonnet", resolved: "claude-sonnet-5-5", isDefault: false },
   { id: "opus", family: "Opus", resolved: "claude-opus-5-5", isDefault: false },
   { id: "fable", family: "Fable", resolved: "claude-fable-5-2", isDefault: false },
