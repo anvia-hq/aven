@@ -37,10 +37,14 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://aven:${POSTGRES_PASSWORD}@postgres:5432/aven
+      # A preview listener that the web entry point can reach, when previews are set up (decision 0237).
+      AVEN_PREVIEW_BIND: ${AVEN_PREVIEW_BIND:-0.0.0.0}
     # The API on this machine only: the runner beside the server and `aven` use it, whatever the
-    # web entry point answers to.
+    # web entry point answers to. The preview listener is reachable by the web container above and
+    # published here for a proxy of your own; it serves nothing until AVEN_PREVIEW_DOMAIN is set.
     ports:
       - "127.0.0.1:${AVEN_API_PORT:-2837}:8000"
+      - "127.0.0.1:${AVEN_PREVIEW_PORT:-8001}:8001"
 
   web:
     image: ${AVEN_WEB_IMAGE:-ghcr.io/anvia-hq/aven-web}:${AVEN_VERSION:-latest}

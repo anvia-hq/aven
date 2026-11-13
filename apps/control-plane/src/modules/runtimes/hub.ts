@@ -10,7 +10,7 @@ import { ViewerStreams } from "./viewer-streams";
 import { parseRuntimeFrame } from "./wire";
 import type { CockpitCaller } from "../cockpit/types";
 import type { MemoryCaller } from "../memory/types";
-import type { BotReplySink, MachineRelay, RunSink, ViewerSink } from "./types";
+import type { BotReplySink, MachineRelay, RunSink, ViewerHandle, ViewerSink } from "./types";
 import type { ProcessEnds, ThreadForks } from "../threads/types";
 import type {
   AgentBackendKind,
@@ -183,6 +183,10 @@ export class RuntimeConnection {
     return this.#viewers.openTerminal(threadId, size, sink);
   }
 
+  openPort(port: number, sink: ViewerSink) {
+    return this.#viewers.openPort(this.runtimeId, port, sink);
+  }
+
   call(method: RunnerCallMethod, params: unknown, timeoutMs?: number) {
     return this.#calls.call(method, params, timeoutMs);
   }
@@ -303,6 +307,12 @@ export class RuntimeConnection {
         return;
       case "terminal.closed":
         this.#viewers.closed(message.viewerId, "terminal", message.reason);
+        return;
+      case "port.opened":
+        this.#viewers.opened(message.viewerId, "port");
+        return;
+      case "port.closed":
+        this.#viewers.closed(message.viewerId, "port", message.reason);
         return;
       case "reply":
         this.#calls.settle(message);
@@ -509,6 +519,14 @@ export class RuntimeHub {
 
   isOnline(runtimeId: string) {
     return this.get(runtimeId) !== undefined;
+  }
+
+  openPort(runtimeId: string, port: number, sink: ViewerSink): ViewerHandle {
+    const connection = this.get(runtimeId);
+
+    if (!connection) throw new RuntimeOfflineError("The runner of that port is offline");
+
+    return connection.openPort(port, sink);
   }
 
   buildOf(runtimeId: string) {

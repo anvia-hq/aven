@@ -93,6 +93,7 @@ test("the instructions tell the agent about the people in a thread and @agent", 
 test("the agent is told a server runs on the machine and that localhost is the page's own in the person's browser", () => {
   const section = codingInstructions(200).split("<servers>")[1]!.split("</servers>")[0]!;
   expect(section).toContain("tell them the port");
+  expect(section).toContain("You do not open it");
   expect(section).toContain("localhost and 127.0.0.1 mean the machine the page is opened on");
   expect(section).toContain("relative URLs");
 });

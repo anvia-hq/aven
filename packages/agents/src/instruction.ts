@@ -91,7 +91,7 @@ Run a command that takes more than a few seconds, or keeps going (a test run, a 
 </processes>
 
 <servers>
-- A server you start runs on the person's machine, and they open it in their own browser: tell them the port. Their browser is not the machine's: in a page's own code, localhost and 127.0.0.1 mean the machine the page is opened on, so browser code must call its own origin with relative URLs (/api/...), never http://localhost:<port>/....
+- A server you start runs on the person's machine, and they open it from the thread's Browser panel (or in a tab of their own): the panel asks them for the port and has them confirm it, so tell them the port. You do not open it: only the person can. Their browser is not the machine's: in a page's own code, localhost and 127.0.0.1 mean the machine the page is opened on, so browser code must call its own origin with relative URLs (/api/...), never http://localhost:<port>/....
 - Check it the way the person will see it: request the page and one API call through the dev server's port (curl localhost:5173/api/...), not only the API's own port, and say that you could not look at it in their browser.
 </servers>
 

@@ -20,7 +20,9 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { localRunnerMode } from "./modules/runtimes/local";
 import { reachRunner } from "./modules/runtimes/providers";
-import { LOCAL_RUNTIME_ID } from "./modules/runtimes/service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "./modules/runtimes/service";
+import { createPreviewService } from "./modules/preview/service";
+import { previewSettings } from "./modules/preview/config";
 import { createActionsService } from "./modules/actions/service";
 import { createShipService } from "./modules/ship/service";
 import { threadWatchService } from "./modules/thread-watch/service";
@@ -56,6 +58,14 @@ export const runtimeHub = new RuntimeHub(
   (results) => mcpService.record(results),
   (threadId) => projectsService.folderOf(threadId),
 );
+
+export const previews = createPreviewService({
+  settings: previewSettings(),
+  usable: async (organizationId, userId, runtimeId) =>
+    (await runtimesService.get(organizationId, runtimeId, userId)) !== null,
+  online: (runtimeId) => runtimeHub.isOnline(runtimeId),
+  openPort: (runtimeId, port, sink) => runtimeHub.openPort(runtimeId, port, sink),
+});
 
 export const runsService = new RunManager({
   store: memoryStore,

@@ -6,22 +6,31 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { threadComputer } from "@/modules/computer/computer";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
+import { PreviewPanel } from "@/modules/preview/components/preview-panel";
 import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
 import type { ThreadPanels } from "../types";
 
 type Props = {
   threadId: string;
+  runtimeId: string;
   running: boolean;
   panels: ThreadPanels;
   owned: boolean;
   handleClassName: string;
 };
 
-export function ThreadSidePanels({ threadId, running, panels, owned, handleClassName }: Props) {
-  const { diff, files, terminal } = panels;
+export function ThreadSidePanels({
+  threadId,
+  runtimeId,
+  running,
+  panels,
+  owned,
+  handleClassName,
+}: Props) {
+  const { diff, files, terminal, preview } = panels;
   const side = useDefaultLayout({
     id: `aven.thread.${threadId}.side`,
-    panelIds: ["files", "diff", "terminal"],
+    panelIds: ["files", "diff", "terminal", "preview"],
     storage: safeStorage,
   });
 
@@ -47,6 +56,13 @@ export function ThreadSidePanels({ threadId, running, panels, owned, handleClass
     sidePanels.push({
       id: "terminal",
       node: <TerminalPanel computer={threadComputer(threadId)} onClose={terminal.close} />,
+    });
+  }
+
+  if (owned && preview.open) {
+    sidePanels.push({
+      id: "preview",
+      node: <PreviewPanel key={threadId} runtimeId={runtimeId} onClose={preview.close} />,
     });
   }
 

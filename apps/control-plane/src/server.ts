@@ -3,6 +3,7 @@ import {
   botApiApp,
   botRunner,
   goalDriver,
+  previews,
   runsService,
   scheduler,
   threadWatcher,
@@ -11,6 +12,7 @@ import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
 import { startLocalRunner } from "./modules/runtimes/local";
+import { startPreviews } from "./modules/preview/start";
 
 export async function startControlPlane(edition: Edition) {
   editionInUse.current = edition;
@@ -35,9 +37,11 @@ export async function startControlPlane(edition: Edition) {
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
+  const previewListener = startPreviews(previews);
 
   const shutdown = async () => {
     botRunner.dispose();
+    previewListener?.stop();
     await localRunner?.stop();
     await scheduler.close();
     await goalDriver.close();

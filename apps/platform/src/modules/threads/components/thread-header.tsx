@@ -1,4 +1,13 @@
-import { Check, Folder, GitDiff, LayoutPanelLeft, List, Terminal, X } from "@mynaui/icons-react";
+import {
+  Check,
+  Folder,
+  GitDiff,
+  Globe,
+  LayoutPanelLeft,
+  List,
+  Terminal,
+  X,
+} from "@mynaui/icons-react";
 import type { ComponentType } from "react";
 
 import { cn } from "cn";
@@ -35,6 +44,7 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
     { label: "Changes", icon: GitDiff, panel: panels.diff, show: true },
     { label: "Files", icon: Folder, panel: panels.files, show: true },
     { label: "Terminal", icon: Terminal, panel: panels.terminal, show: owned },
+    { label: "Browser", icon: Globe, panel: panels.preview, show: owned },
   ];
   const shown = toggles.filter((toggle) => toggle.show);
 

@@ -15,5 +15,6 @@ export function useThreadPanels(threadId: string) {
   const diff = usePanel(key("diff"), false);
   const files = usePanel(key("files"), false);
   const terminal = usePanel(key("terminal"), false);
-  return { overview, diff, files, terminal };
+  const preview = usePanel(key("preview"), false);
+  return { overview, diff, files, terminal, preview };
 }

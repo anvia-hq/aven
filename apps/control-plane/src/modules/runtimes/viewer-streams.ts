@@ -4,15 +4,19 @@ import { UnavailableError } from "../../errors";
 import type { TerminalHandle, ViewerHandle, ViewerSink } from "./types";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
 
+type ViewerKind = "terminal" | "port";
+
 type Viewer = {
   sink: ViewerSink;
   ready: boolean;
-  kind: "terminal";
+  kind: ViewerKind;
   waiting: Uint8Array[];
   waitingBytes: number;
 };
 
-const MAX_VIEWERS = 32;
+const MAX_TERMINALS = 32;
+const MAX_PORTS = 64;
+const MAX_WAITING_BYTES = 1024 * 1024;
 
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
@@ -40,9 +44,32 @@ export class ViewerStreams {
     };
   }
 
-  #add(kind: Viewer["kind"], sink: ViewerSink) {
-    if (this.#viewers.size >= MAX_VIEWERS) {
-      throw new UnavailableError("Too many terminals are open on this runner");
+  openPort(runtimeId: string, port: number, sink: ViewerSink): ViewerHandle {
+    const viewerId = this.#add("port", sink);
+
+    try {
+      this.post({ type: "port.open", viewerId, runtimeId, port });
+    } catch (error) {
+      this.#viewers.delete(viewerId);
+      throw error;
+    }
+
+    return this.#handle(viewerId, "port.close");
+  }
+
+  #count(kind: ViewerKind) {
+    return [...this.#viewers.values()].filter((viewer) => viewer.kind === kind).length;
+  }
+
+  #add(kind: ViewerKind, sink: ViewerSink) {
+    const limit = kind === "port" ? MAX_PORTS : MAX_TERMINALS;
+
+    if (this.#count(kind) >= limit) {
+      throw new UnavailableError(
+        kind === "port"
+          ? "Too many ports are open on this runner"
+          : "Too many terminals are open on this runner",
+      );
     }
 
     const viewerId = crypto.randomUUID();
@@ -50,14 +77,29 @@ export class ViewerStreams {
     return viewerId;
   }
 
-  #handle(viewerId: string, closeType: "terminal.close"): ViewerHandle {
+  #handle(viewerId: string, closeType: "terminal.close" | "port.close"): ViewerHandle {
     return {
       write: (bytes) => {
         const viewer = this.#viewers.get(viewerId);
 
         if (!viewer) return;
 
-        if (viewer.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
+        if (viewer.ready) {
+          this.sendFrame(encodeViewerFrame(viewerId, bytes));
+          return;
+        }
+
+        if (viewer.waitingBytes + bytes.length > MAX_WAITING_BYTES) {
+          this.#viewers.delete(viewerId);
+
+          if (!this.connectionClosed()) this.post({ type: closeType, viewerId });
+
+          viewer.sink.closed("Too much was sent before the port opened");
+          return;
+        }
+
+        viewer.waiting.push(bytes.slice());
+        viewer.waitingBytes += bytes.length;
       },
       close: () => {
         if (!this.#viewers.delete(viewerId) || this.connectionClosed()) return;
@@ -67,7 +109,7 @@ export class ViewerStreams {
     };
   }
 
-  opened(viewerId: string, kind: Viewer["kind"]) {
+  opened(viewerId: string, kind: ViewerKind) {
     const viewer = this.#viewers.get(viewerId);
 
     if (viewer?.kind !== kind) return;
@@ -78,7 +120,7 @@ export class ViewerStreams {
     viewer.waitingBytes = 0;
   }
 
-  closed(viewerId: string, kind: Viewer["kind"], reason: string) {
+  closed(viewerId: string, kind: ViewerKind, reason: string) {
     const viewer = this.#viewers.get(viewerId);
 
     if (viewer?.kind !== kind) return;
