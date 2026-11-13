@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { usageFromHistory } from "@aven/agents/usage";
 import { ClaudeTurn } from "./claude-events";
 
 const TOKEN = "setup-token-should-never-leak-0001";
@@ -97,6 +98,34 @@ describe("Claude stream events become thread events", () => {
       turn: { inputTokens: 30, outputTokens: 9, cacheWriteTokens: 0, cacheReadTokens: 0 },
       context: { usedTokens: 1115, contextWindow: 200000 },
     });
+  });
+
+  test("files the turn's usage and context with its last reply so a reload can read them back", () => {
+    const turn = new ClaudeTurn();
+    turn.take({
+      type: "assistant",
+      parent_tool_use_id: null,
+      message: {
+        content: [{ type: "text", text: "hi" }],
+        usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 1000 },
+      },
+    });
+    turn.take({
+      type: "result",
+      subtype: "success",
+      usage: { input_tokens: 30, output_tokens: 9, cache_read_input_tokens: 7 },
+      modelUsage: { "claude-opus-4-8": { contextWindow: 200000 } },
+    });
+    expect(usageFromHistory(turn.messages("go"))).toEqual({
+      totals: { inputTokens: 30, outputTokens: 9, cacheWriteTokens: 0, cacheReadTokens: 7 },
+      context: { usedTokens: 1015, contextWindow: 200000 },
+    });
+  });
+
+  test("files no usage for a turn that never reported any", () => {
+    const turn = new ClaudeTurn();
+    turn.take({ type: "assistant", message: { content: [{ type: "text", text: "hi" }] } });
+    expect(usageFromHistory(turn.messages("go")).context).toBeUndefined();
   });
 
   test("does not repeat text that was already streamed", () => {

@@ -9,6 +9,7 @@ import {
 import { limitsFromRateLimitEvent, limitsFromUsage } from "./claude-limits";
 import type { ClaudeModelUsage, ClaudeSdkMessage, ClaudeUsage } from "./types";
 import type {
+  ContextUsage,
   QuestionPrompt,
   RunEvent,
   TokenUsage,
@@ -27,6 +28,43 @@ const STOPPED: Record<string, string> = {
 const MCP_PREFIX = "mcp__aven__";
 
 type Part = Record<string, unknown>;
+
+type Generation = { usage: TokenUsage; context?: ContextUsage };
+
+function generationMetadata({ usage, context }: Generation) {
+  const generation: Record<string, unknown> = {
+    provider: "anthropic",
+    modelId: "claude",
+    usage: {
+      inputTokens: usage.inputTokens,
+      outputTokens: usage.outputTokens,
+      totalTokens: usage.inputTokens + usage.outputTokens,
+      cachedInputTokens: usage.cacheReadTokens,
+      cacheCreationInputTokens: usage.cacheWriteTokens,
+    },
+  };
+
+  if (context && context.contextWindow > 0) {
+    const remainingTokens = Math.max(0, context.contextWindow - context.usedTokens);
+    generation.contextUsage = {
+      model: { modelId: "claude", context: { contextWindow: context.contextWindow } },
+      usedTokens: context.usedTokens,
+      remainingTokens,
+      usedPercent: Math.min(100, (context.usedTokens / context.contextWindow) * 100),
+      remainingPercent: (remainingTokens / context.contextWindow) * 100,
+    };
+  }
+
+  return { anvia: { generation } };
+}
+
+function lastAssistantIndex(messages: readonly Message[]) {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === "assistant") return index;
+  }
+
+  return -1;
+}
 
 const clip = (text: string) =>
   text.length > MAX_OUTPUT ? `${text.slice(0, MAX_OUTPUT)}\n…` : text;
@@ -111,6 +149,7 @@ export class ClaudeTurn {
   #names = new Map<string, string>();
   #sawText = false;
   #lastCall: ClaudeUsage | undefined;
+  #generation: Generation | undefined;
   #assistant: Part[] = [];
   #tools: Part[] = [];
   #filed: Message[] = [];
@@ -177,6 +216,7 @@ export class ClaudeTurn {
     this.#streamedThinking = false;
     this.#sawText = false;
     this.#lastCall = undefined;
+    this.#generation = undefined;
     return messages;
   }
 
@@ -187,8 +227,20 @@ export class ClaudeTurn {
 
     if (this.#tools.length > 0) filed.push(this.#toolMessageOf(this.#tools));
 
+    const stamped = this.#stamped(filed);
     const text = this.redact(prompt).trim();
-    return text ? [{ role: "user", content: text }, ...filed] : filed;
+    return text ? [{ role: "user", content: text }, ...stamped] : stamped;
+  }
+
+  #stamped(filed: Message[]): Message[] {
+    const index = this.#generation ? lastAssistantIndex(filed) : -1;
+    const message = filed[index];
+
+    if (!this.#generation || !message) return filed;
+
+    const stamped = [...filed];
+    stamped[index] = { ...message, metadata: generationMetadata(this.#generation) } as Message;
+    return stamped;
   }
 
   #remember(sessionId: string | undefined) {
@@ -340,6 +392,17 @@ export class ClaudeTurn {
 
     if (usage) {
       const context = this.#context(message.modelUsage);
+      this.#generation = this.#generation
+        ? {
+            usage: {
+              inputTokens: this.#generation.usage.inputTokens + usage.inputTokens,
+              outputTokens: this.#generation.usage.outputTokens + usage.outputTokens,
+              cacheWriteTokens: this.#generation.usage.cacheWriteTokens + usage.cacheWriteTokens,
+              cacheReadTokens: this.#generation.usage.cacheReadTokens + usage.cacheReadTokens,
+            },
+            context: context ?? this.#generation.context,
+          }
+        : { usage, context };
       events.push(
         context ? { type: "usage", turn: usage, context } : { type: "usage", turn: usage },
       );
