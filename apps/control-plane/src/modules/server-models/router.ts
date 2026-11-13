@@ -1,23 +1,16 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
-import { platformService } from "../platform/service";
+import { requirePlatformOwner } from "../platform/owner";
 import { saveServerDecisionBody, saveServerSmallBody } from "./schema";
 import { serverModelsService } from "./service";
-
-const ONLY_OWNERS = "Platform owners only";
-
-async function requireOwner(user: { id: string; email: string }) {
-  if (!(await platformService.isOwner(user))) throw new ForbiddenError(ONLY_OWNERS);
-}
 
 export const serverModelsRouter = new Elysia({ prefix: "/platform/server-models" })
   .use(authRouter)
   .get(
     "/",
     async ({ user }) => {
-      await requireOwner(user);
+      await requirePlatformOwner(user);
       return serverModelsService.view();
     },
     { auth: true },
@@ -25,7 +18,7 @@ export const serverModelsRouter = new Elysia({ prefix: "/platform/server-models"
   .put(
     "/decision",
     async ({ body, user }) => {
-      await requireOwner(user);
+      await requirePlatformOwner(user);
       return serverModelsService.saveDecision(body);
     },
     { auth: true, body: saveServerDecisionBody },
@@ -33,7 +26,7 @@ export const serverModelsRouter = new Elysia({ prefix: "/platform/server-models"
   .delete(
     "/decision",
     async ({ user }) => {
-      await requireOwner(user);
+      await requirePlatformOwner(user);
       await serverModelsService.removeDecision();
       return { removed: true };
     },
@@ -42,7 +35,7 @@ export const serverModelsRouter = new Elysia({ prefix: "/platform/server-models"
   .put(
     "/small",
     async ({ body, user }) => {
-      await requireOwner(user);
+      await requirePlatformOwner(user);
       return serverModelsService.saveSmall(body);
     },
     { auth: true, body: saveServerSmallBody },
@@ -50,7 +43,7 @@ export const serverModelsRouter = new Elysia({ prefix: "/platform/server-models"
   .delete(
     "/small",
     async ({ user }) => {
-      await requireOwner(user);
+      await requirePlatformOwner(user);
       await serverModelsService.removeSmall();
       return { removed: true };
     },
