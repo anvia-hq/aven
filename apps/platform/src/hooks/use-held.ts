@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Held } from "./types";
 
@@ -25,35 +25,44 @@ export function useHeldValue<T>(value: T | null | undefined, ms: number) {
 }
 
 export function useHeldList<T extends { id: string }>(items: T[], ms: number): Held<T>[] {
-  const [stale, setStale] = useState<{ item: T; index: number }[]>([]);
-  const seen = useRef<T[]>(items);
-  const key = items.map((item) => item.id).join();
-
-  useLayoutEffect(() => {
-    const before = seen.current;
-    seen.current = items;
-    const present = (id: string) => items.some((item) => item.id === id);
-    const left = before
-      .map((item, index) => ({ item, index }))
-      .filter(({ item }) => !present(item.id));
-    setStale((now) => [...now.filter(({ item }) => !present(item.id)), ...left]);
-
-    if (left.length === 0) return;
-
-    setTimeout(
-      () =>
-        setStale((now) => now.filter(({ item }) => !left.some((gone) => gone.item.id === item.id))),
-      ms,
-    );
-  }, [key]);
-
+  const previous = useRef<Held<T>[]>([]);
+  const scheduled = useRef(new Set<string>());
+  const [expired, setExpired] = useState<ReadonlySet<string>>(new Set());
+  const live = new Set(items.map((item) => item.id));
   const shown: Held<T>[] = items.map((item) => ({ item, leaving: false }));
 
-  for (const { item, index } of stale) {
-    if (items.some((live) => live.id === item.id)) continue;
+  previous.current.forEach((entry, index) => {
+    if (live.has(entry.item.id) || expired.has(entry.item.id)) return;
 
-    shown.splice(Math.min(index, shown.length), 0, { item, leaving: true });
-  }
+    shown.splice(Math.min(index, shown.length), 0, { item: entry.item, leaving: true });
+  });
+  previous.current = shown;
+
+  const leavingKey = shown
+    .filter((entry) => entry.leaving)
+    .map((entry) => entry.item.id)
+    .join();
+  const liveKey = items.map((item) => item.id).join();
+
+  useEffect(() => {
+    for (const id of leavingKey.split(",").filter(Boolean)) {
+      if (scheduled.current.has(id)) continue;
+
+      scheduled.current.add(id);
+      setTimeout(() => {
+        scheduled.current.delete(id);
+        setExpired((now) => new Set(now).add(id));
+      }, ms);
+    }
+  }, [leavingKey, ms]);
+
+  useEffect(() => {
+    const ids = new Set(liveKey.split(",").filter(Boolean));
+    setExpired((now) => {
+      const kept = [...now].filter((id) => !ids.has(id));
+      return kept.length === now.size ? now : new Set(kept);
+    });
+  }, [liveKey]);
 
   return shown;
 }
