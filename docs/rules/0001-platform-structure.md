@@ -37,7 +37,7 @@ routes/        thin pages: read params, compose components, no state logic
 - **Hooks own mutations.** Creating, removing or archiving something, and the toast that confirms it, live in a hook, not in a component or route.
 - Keep one hook per file, named `use-<thing>.ts`.
 - Dependencies between modules are one-directional (e.g. `projects` -> `threads`, `navigation` -> `projects`/`threads`, `auth` -> `navigation`). Do not create cycles.
-- Shared, feature-agnostic helpers go in `src/lib/` (`format.ts`: `timeAgo`, `initials`). Shared, feature-agnostic UI goes in `src/components/` (`page-header`, `stat-card`, `text-field`, `form`).
+- Shared, feature-agnostic helpers go in `src/lib/` (`format.ts`: `timeAgo`, `initials`). Shared, feature-agnostic UI goes in `src/components/` (`page-header`, `section-card`, `settings-section`).
 
 ## Imports
 
