@@ -8,7 +8,7 @@ import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { FontPicker } from "@/modules/theme/components/font-picker";
 import { ModePicker } from "@/modules/theme/components/mode-picker";
 import { PalettePicker } from "@/modules/theme/components/palette-picker";
-import { ScopedFontPicker } from "@/modules/theme/components/scoped-font-picker";
+import { TextSizePicker } from "@/modules/theme/components/text-size-picker";
 
 import { useTimezone } from "../hooks/use-timezone";
 
@@ -37,16 +37,22 @@ export function PreferencesSection() {
           <FontPicker />
         </SettingsRow>
         <SettingsRow
-          title="Thread font"
-          description="The font of an agent's conversation in a thread. Code keeps its monospace font."
+          title="Interface text size"
+          description="The size of the app's text, everywhere."
         >
-          <ScopedFontPicker scope="thread" label="Thread font" />
+          <TextSizePicker scope="interface" label="Interface text size" />
         </SettingsRow>
         <SettingsRow
-          title="Bot chat font"
-          description="The font of the conversation with a bot. Code keeps its monospace font."
+          title="Thread text size"
+          description="The size of an agent's conversation in a thread, on top of the interface size."
         >
-          <ScopedFontPicker scope="bot" label="Bot chat font" />
+          <TextSizePicker scope="thread" label="Thread text size" />
+        </SettingsRow>
+        <SettingsRow
+          title="Bot chat text size"
+          description="The size of the conversation with a bot, on top of the interface size."
+        >
+          <TextSizePicker scope="bot" label="Bot chat text size" />
         </SettingsRow>
         <SettingsRow title="Mode" description="Light, dark, or whichever this device is set to.">
           <ModePicker />

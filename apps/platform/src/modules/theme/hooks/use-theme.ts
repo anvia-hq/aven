@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 
 import { fontAtom } from "../atoms/font-atom";
 import { paletteAtom } from "../atoms/palette-atom";
+import { textSizeAtoms } from "../atoms/text-size-atoms";
 import { themeAtom } from "../atoms/theme-atom";
+import { scaleOf } from "./use-text-size";
 import { DEFAULT_PALETTE, PALETTES, SANS_FONTS } from "../types";
 import type { Theme } from "../types";
 
@@ -21,6 +23,7 @@ export function useTheme() {
   const [theme, setTheme] = useAtom(themeAtom);
   const [palette, setPalette] = useAtom(paletteAtom);
   const [font, setFont] = useAtom(fontAtom);
+  const [interfaceSize] = useAtom(textSizeAtoms.interface);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia(DARK_QUERY).matches);
   const resolvedTheme = resolveTheme(theme, systemDark);
 
@@ -62,6 +65,13 @@ export function useTheme() {
 
     if (!existing) document.head.appendChild(link);
   }, [palette]);
+
+  useEffect(() => {
+    const scale = scaleOf(interfaceSize);
+
+    if (scale === 1) document.documentElement.style.removeProperty("font-size");
+    else document.documentElement.style.setProperty("font-size", `${scale * 100}%`);
+  }, [interfaceSize]);
 
   useEffect(() => {
     const option = SANS_FONTS.find((item) => item.id === font) ?? SANS_FONTS[0];

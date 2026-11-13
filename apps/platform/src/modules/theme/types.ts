@@ -166,13 +166,23 @@ export const SANS_FONTS: SansFontOption[] = [
   },
 ];
 
-export type FontChoice = SansFont | "inherit";
+export type TextSize = "small" | "default" | "large" | "x-large";
 
-export type FontScope = "thread" | "bot";
+export type TextSizeScope = "interface" | "thread" | "bot";
 
-export const INHERIT_FONT = "inherit";
+export type TextSizeOption = { id: TextSize; label: string; scale: number };
 
-export const SCOPED_FONT_STORAGE_KEYS: Record<FontScope, string> = {
-  thread: "thread-font",
-  bot: "bot-font",
+export const TEXT_SIZES: TextSizeOption[] = [
+  { id: "small", label: "Small", scale: 0.9 },
+  { id: "default", label: "Default", scale: 1 },
+  { id: "large", label: "Large", scale: 1.125 },
+  { id: "x-large", label: "Extra large", scale: 1.25 },
+];
+
+export const DEFAULT_TEXT_SIZE: TextSize = "default";
+
+export const TEXT_SIZE_STORAGE_KEYS: Record<TextSizeScope, string> = {
+  interface: "interface-text-size",
+  thread: "thread-text-size",
+  bot: "bot-text-size",
 };
