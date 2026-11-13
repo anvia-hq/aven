@@ -1,4 +1,4 @@
-import { Columns, GitDiff, Menu } from "@mynaui/icons-react";
+import { GitDiff } from "@mynaui/icons-react";
 import { useMemo, useState } from "react";
 
 import { PanelNotice } from "@/components/panel-notice";
@@ -18,6 +18,38 @@ type Props = {
   running: boolean;
   onClose: () => void;
 };
+
+function UnifiedIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M7 9h10M7 13h10M7 17h6" />
+    </svg>
+  );
+}
+
+function SplitIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M12 4v16" />
+    </svg>
+  );
+}
 
 const EMPTY: Record<DiffScope, string> = {
   turn: "The last turn changed no files.",
@@ -53,10 +85,10 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           <Tabs value={layout} onValueChange={(next) => isDiffLayout(next) && setLayout(next)}>
             <TabsList aria-label="Layout">
               <TabsTrigger value="unified" aria-label="Unified">
-                <Menu />
+                <UnifiedIcon />
               </TabsTrigger>
               <TabsTrigger value="split" aria-label="Split">
-                <Columns />
+                <SplitIcon />
               </TabsTrigger>
             </TabsList>
           </Tabs>

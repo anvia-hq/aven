@@ -46,8 +46,8 @@ function FileHeader({
       aria-expanded={open}
       onClick={() => onToggle(file, !open)}
       className={cn(
-        "h-auto w-full min-w-0 justify-start gap-2 border bg-card px-3 py-2 text-left text-xs font-normal hover:bg-muted/50",
-        open ? "rounded-t-lg" : "rounded-lg",
+        "h-auto w-full min-w-0 justify-start gap-2 border bg-card bg-clip-border px-3 py-2 text-left text-xs font-normal hover:bg-muted/50",
+        open ? "rounded-t-lg rounded-b-none border-b-0" : "rounded-lg",
       )}
     >
       <ChevronRight
@@ -124,12 +124,17 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
                 </p>
               )}
               {item.kind === "hunk" && (
-                <div className="border-x bg-card">
+                <div className="border-x border-t bg-card">
                   <HunkHeader hunk={{ header: item.header, rows: [] }} />
                 </div>
               )}
               {item.kind === "unified" && (
-                <div className={cn("border-x bg-card", item.last && "rounded-b-lg border-b")}>
+                <div
+                  className={cn(
+                    "border-x bg-card",
+                    item.last && "overflow-hidden rounded-b-lg border-b",
+                  )}
+                >
                   <UnifiedRow row={item.row} colour={colour} />
                 </div>
               )}
@@ -137,7 +142,7 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
                 <div
                   className={cn(
                     "grid w-[calc(100cqw-2rem)] grid-cols-2 divide-x border-x bg-card",
-                    item.last && "rounded-b-lg border-b",
+                    item.last && "overflow-hidden rounded-b-lg border-b",
                   )}
                 >
                   <Side row={item.pair.old} number={item.pair.old?.oldNo} colour={colour} />
