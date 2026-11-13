@@ -37,7 +37,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
     />
   );
   const conversation = (
-    <div className="@container flex h-full min-h-0 min-w-0 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border">
+    <div className="relative @container flex h-full min-h-0 min-w-0 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border">
       <BotHeader bot={bot} />
       <BotChat bot={bot} chat={chat} openArtifact={artifact} onOpenArtifact={show} />
     </div>
