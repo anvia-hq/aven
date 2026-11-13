@@ -37,7 +37,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **License: MIT.** Raise it before adding a dependency whose license asks more of Aven than MIT does (a copyleft one).
 - **Bun only.** Use `bun`/`bunx`, never npm, yarn or pnpm, and no other lockfiles. Prefer Bun built-ins (`Bun.serve`, `Bun.file`, `bun:test`, `bun:sqlite`).
 - **TypeScript strict.** Avoid `any`; where it cannot be avoided, say why in the pull request.
-- **No comments in TypeScript.** Names, types and tests say what code does; why goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay.
+- **No comments in TypeScript.** Names, types and tests say what code does; why goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay. `aven/no-comments` in lint enforces it.
 - **Types live in `types.ts`.** Every exported `type` or `interface` goes in its module's `types.ts`, imported with `import type`. Component `Props` and zod-inferred types stay beside their code.
 - **No barrel files** (an `index.ts` that only re-exports): import from the exact file.
 - **Internal packages** are `@aven/<name>`, `"workspace:*"`, shipped as TS source with no build step. Apps never import from another app; shared code goes in `packages/`.

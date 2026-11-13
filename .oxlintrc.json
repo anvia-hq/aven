@@ -14,6 +14,7 @@
   ],
   "jsPlugins": ["./tooling/oxlint/aven-plugin.mjs"],
   "rules": {
+    "aven/no-comments": "error",
     "aven/no-conditional-spread": "error",
     "aven/no-barrel-file": "error",
     "aven/no-native-primitives": "error",
