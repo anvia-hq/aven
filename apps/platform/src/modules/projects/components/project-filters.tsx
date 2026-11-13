@@ -1,5 +1,5 @@
 import { Search } from "@mynaui/icons-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
@@ -16,6 +16,7 @@ type Props = {
   counts: Record<ProjectsView, number>;
   runtimes: Runtime[];
   onChange: (next: ProjectsSearch) => void;
+  children?: ReactNode;
 };
 
 const SEARCH_WAIT_MS = 250;
@@ -71,21 +72,23 @@ function SearchField({
   );
 }
 
-export function ProjectFilterBar({ filters, counts, runtimes, onChange }: Props) {
+export function ProjectFilterBar({ filters, counts, runtimes, onChange, children }: Props) {
   return (
-    <div className="flex shrink-0 flex-col gap-2">
-      <SearchField query={filters.query} onCommit={(q) => onChange({ q })} />
-      <div className="flex items-center gap-2">
+    <div className="flex shrink-0 flex-wrap items-center gap-2">
+      <div className="w-full sm:w-64">
+        <SearchField query={filters.query} onCommit={(q) => onChange({ q })} />
+      </div>
+      <div className="flex flex-1 items-center gap-2">
         <Tabs
           value={filters.view}
           onValueChange={(view) =>
             onChange({ view: view === "all" ? undefined : (view as ProjectsView) })
           }
-          className="min-w-0 flex-1"
+          className="shrink-0"
         >
-          <TabsList aria-label="Project filters" className="h-7 w-full">
+          <TabsList aria-label="Project filters" className="h-8">
             {PROJECT_VIEWS.map((view) => (
-              <TabsTrigger key={view.id} value={view.id} className="gap-1 px-1 text-xs">
+              <TabsTrigger key={view.id} value={view.id} className="gap-1 px-2.5 text-xs">
                 {view.label}
                 <span className="text-xs text-muted-foreground tabular-nums">
                   {counts[view.id]}
@@ -122,6 +125,7 @@ export function ProjectFilterBar({ filters, counts, runtimes, onChange }: Props)
             </SelectContent>
           </Select>
         )}
+        {children && <div className="ml-auto flex shrink-0 items-center">{children}</div>}
       </div>
     </div>
   );

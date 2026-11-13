@@ -10,9 +10,9 @@ test.describe("projects", () => {
     await importRepository(page, "shiny-app");
 
     const list = page.getByRole("region", { name: "Project list" });
-    await expect(list.getByRole("link")).toHaveCount(1);
+    await expect(list.getByRole("link", { name: /^shiny-app/ })).toHaveCount(1);
 
-    await list.getByRole("link", { name: "shiny-app" }).click();
+    await list.getByRole("link", { name: /^shiny-app/ }).click();
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
     await expect(page.locator("header")).toContainText("shiny-app");
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
@@ -37,7 +37,10 @@ test.describe("projects", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     await page.goto("/projects");
-    await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
+    await page
+      .getByRole("region", { name: "Project list" })
+      .getByRole("link", { name: /^shiny-app/ })
+      .click();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "Explain the project layout",
     );

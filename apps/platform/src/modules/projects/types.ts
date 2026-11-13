@@ -1,3 +1,5 @@
+import type { Thread } from "@/modules/threads/types";
+
 import type { useAddProject } from "./hooks/use-add-project";
 
 export type Project = {
@@ -18,6 +20,15 @@ export type ProjectsSearch = {
   q?: string;
   view?: ProjectsView;
   runner?: string;
+};
+
+export type ThreadShelf = "open" | "archived";
+
+export type ProjectActivity = {
+  project: Project;
+  threads: Thread[];
+  working: number;
+  lastActive: string;
 };
 
 export type ProjectFilters = {

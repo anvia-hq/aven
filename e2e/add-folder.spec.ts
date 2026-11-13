@@ -34,7 +34,7 @@ test.describe("adding a folder", () => {
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
 
     await expect(page.getByText("Folder added")).toBeVisible();
-    await expect(page.getByRole("link", { name: /notes/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^notes/ })).toBeVisible();
   });
 
   test("clones a repository onto the computer and makes it a project", async ({ page }) => {
@@ -53,7 +53,7 @@ test.describe("adding a folder", () => {
     await clone.click();
 
     await expect(page.getByText("Repository added")).toBeVisible();
-    await expect(page.getByRole("link", { name: /storefront/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^storefront/ })).toBeVisible();
   });
 
   test("a folder project's page lists its files, shows its README and its commits", async ({
@@ -69,7 +69,10 @@ test.describe("adding a folder", () => {
     await dialog.getByRole("button", { name: "code" }).dblclick();
     await dialog.getByRole("button", { name: "notes" }).click();
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
-    await page.getByRole("link", { name: /notes/ }).first().click();
+    await page
+      .getByRole("link", { name: /^notes/ })
+      .first()
+      .click();
 
     const files = page.getByRole("region", { name: "Files" });
     await expect(files.getByText("package.json")).toBeVisible();

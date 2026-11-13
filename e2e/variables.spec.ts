@@ -7,7 +7,10 @@ async function openProject(page: Page) {
   await addRunner(page);
   await connectGithub(page);
   await importRepository(page, "shiny-app");
-  await page.getByRole("region", { name: "Project list" }).getByRole("link").click();
+  await page
+    .getByRole("region", { name: "Project list" })
+    .getByRole("link", { name: /^shiny-app/ })
+    .click();
   return page.getByRole("region", { name: "Environment variables" });
 }
 
