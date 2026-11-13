@@ -19,6 +19,7 @@ export const isGlobalName = (context, node, name) => {
 
   while (scope) {
     if (scope.set?.get(name)?.defs.length > 0) return false;
+
     scope = scope.upper;
   }
 
