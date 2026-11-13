@@ -36,9 +36,3 @@ export function useTimezone() {
     save,
   };
 }
-
-export function useDefaultTimezone() {
-  useEffect(() => {
-    postJson("/preferences/default-timezone", { timezone: browserTimezone() }).catch(() => {});
-  }, []);
-}

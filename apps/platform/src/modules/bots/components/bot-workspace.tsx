@@ -6,7 +6,7 @@ import { useHeldValue } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
-import { useDefaultTimezone } from "@/modules/settings/hooks/use-timezone";
+import { useDefaultTimezone } from "@/modules/settings/hooks/use-default-timezone";
 
 import { artifactGroups, findArtifact } from "../artifacts";
 import { useBotChat } from "../hooks/use-bot-chat";
