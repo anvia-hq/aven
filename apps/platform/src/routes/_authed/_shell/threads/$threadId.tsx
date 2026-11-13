@@ -21,7 +21,7 @@ function ThreadPage() {
       {split && wide && split !== threadId ? (
         <SplitThreads threadId={threadId} split={split} />
       ) : (
-        <ThreadPane threadId={threadId} />
+        <ThreadPane key={threadId} threadId={threadId} />
       )}
     </SplitDropZone>
   );
