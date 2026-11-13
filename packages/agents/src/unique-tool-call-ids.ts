@@ -53,7 +53,7 @@ async function* renamedStream<R>(
 export function withUniqueToolCallIds<T extends CompletionModel>(model: T): T {
   return new Proxy(model, {
     get(target, key) {
-      const value: unknown = Reflect.get(target, key, target);
+      const value: unknown = target[key as keyof typeof target];
 
       if (typeof value !== "function") return value;
 
