@@ -3,7 +3,7 @@ import { cn } from "cn";
 import { useState, type DragEvent, type ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
-import { dragsThread, THREAD_DRAG } from "@/modules/threads/split";
+import { dragsThread, THREAD_DRAG } from "@/lib/thread-drag";
 
 import { isTempId } from "../folder-cache";
 import type { FolderGroup } from "../types";
