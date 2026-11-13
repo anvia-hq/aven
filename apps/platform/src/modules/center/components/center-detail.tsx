@@ -106,13 +106,15 @@ function People({ pull }: { pull: PullDetail }) {
             </Badge>
           </li>
         ))}
-        {pull.requestedReviewers
-          .filter((login) => !pull.reviews.some((review) => review.login === login))
-          .map((login) => (
-            <li key={login}>
-              <Badge variant="outline">{login} · Review requested</Badge>
-            </li>
-          ))}
+        {pull.requestedReviewers.flatMap((login) =>
+          pull.reviews.some((review) => review.login === login)
+            ? []
+            : [
+                <li key={login}>
+                  <Badge variant="outline">{login} · Review requested</Badge>
+                </li>,
+              ],
+        )}
       </ul>
     </section>
   );

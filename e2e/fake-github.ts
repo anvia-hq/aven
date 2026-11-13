@@ -326,46 +326,43 @@ Bun.serve({
         .replace(/"[^"]*"/g, "")
         .trim()
         .toLowerCase();
-      let items = titles
-        .map((title, index) => ({ title, index }))
-        .filter(({ title, index }) => {
-          if (qualifier("author") && qualifier("author") !== "ada") return false;
+      let items = titles.flatMap((title, index) => {
+        if (qualifier("author") && qualifier("author") !== "ada") return [];
 
-          if (
-            qualifier("review-requested") &&
-            (qualifier("review-requested") !== "ada" || index > 2)
-          )
-            return false;
+        if (qualifier("review-requested") && (qualifier("review-requested") !== "ada" || index > 2))
+          return [];
 
-          if (qualifier("draft") === "true" && !(pulls && open && index === 0)) return false;
+        if (qualifier("draft") === "true" && !(pulls && open && index === 0)) return [];
 
-          if (qualifier("draft") === "false" && pulls && open && index === 0) return false;
+        if (qualifier("draft") === "false" && pulls && open && index === 0) return [];
 
-          if (qualifier("label") && !(qualifier("label") === "bug" && index % 2 === 0))
-            return false;
+        if (qualifier("label") && !(qualifier("label") === "bug" && index % 2 === 0)) return [];
 
-          if (qualifier("status") === "failure" && index % 2 === 0) return false;
+        if (qualifier("status") === "failure" && index % 2 === 0) return [];
 
-          if (qualifier("status") === "success" && index % 2 === 1) return false;
+        if (qualifier("status") === "success" && index % 2 === 1) return [];
 
-          if (qualifier("review") === "approved" && index > 1) return false;
+        if (qualifier("review") === "approved" && index > 1) return [];
 
-          return !words || title.toLowerCase().includes(words.replace(" in", "").trim());
-        })
-        .map(({ title, index }) => ({
-          number: 100 - index,
-          title,
-          html_url: `https://github.com/acme/web/${pulls ? "pull" : "issues"}/${100 - index}`,
-          state: open ? "open" : "closed",
-          draft: pulls && open && index === 0,
-          comments: index === 0 ? 3 : 0,
-          labels: index % 2 === 0 ? [{ name: "bug" }] : [],
-          updated_at: new Date(Date.now() - index * 3_600_000).toISOString(),
-          user: { login: "ada" },
-          pull_request: pulls
-            ? { merged_at: merged || (!open && index === 0) ? "2026-10-30T10:00:00Z" : null }
-            : undefined,
-        }));
+        if (words && !title.toLowerCase().includes(words.replace(" in", "").trim())) return [];
+
+        return [
+          {
+            number: 100 - index,
+            title,
+            html_url: `https://github.com/acme/web/${pulls ? "pull" : "issues"}/${100 - index}`,
+            state: open ? "open" : "closed",
+            draft: pulls && open && index === 0,
+            comments: index === 0 ? 3 : 0,
+            labels: index % 2 === 0 ? [{ name: "bug" }] : [],
+            updated_at: new Date(Date.now() - index * 3_600_000).toISOString(),
+            user: { login: "ada" },
+            pull_request: pulls
+              ? { merged_at: merged || (!open && index === 0) ? "2026-10-30T10:00:00Z" : null }
+              : undefined,
+          },
+        ];
+      });
 
       if (new URL(request.url).searchParams.get("order") === "asc") items = items.reverse();
 
