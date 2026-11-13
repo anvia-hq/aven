@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { git } from "./git-clone";
 import { hostGit } from "./host-git";
-import { refreshBase } from "./refresh-base";
+import { refreshBase, UPSTREAM_REF } from "./refresh-base";
 import { remoteBase } from "./remote-base";
 import { threadBranchFamily } from "./thread-branches";
 import { trackPushes } from "./track-pushes";
@@ -56,13 +56,22 @@ export const markTurn = (root: string, run: Git = git) =>
 export const markFork = (root: string, run: Git = git) =>
   markTree(root, FORK_REF, "Start of a fork", run);
 
-async function branchPoint(root: string, run: Git) {
+async function branchPoints(root: string, run: Git) {
   const remote = await remoteBase(root, run);
+  const targets = [remote, UPSTREAM_REF].filter((target) => target !== null);
+  const found = await Promise.all(
+    targets.map(async (target) => {
+      const base = await run(["merge-base", "HEAD", target], { cwd: root });
+      return base.code === 0 ? base.stdout.trim() : null;
+    }),
+  );
+  const points = [...new Set(found.filter((point) => point !== null))];
+  return points.length > 0 ? points : ["HEAD"];
+}
 
-  if (!remote) return "HEAD";
-
-  const base = await run(["merge-base", "HEAD", remote], { cwd: root });
-  return base.code === 0 ? base.stdout.trim() : "HEAD";
+async function nearest(patches: Promise<ThreadDiff>[]) {
+  const all = await Promise.all(patches);
+  return all.reduce((best, next) => (next.patch.length < best.patch.length ? next : best));
 }
 
 async function turnStart(root: string, run: Git) {
@@ -128,7 +137,8 @@ export async function threadDiff(
 
   await refreshBase(root, run);
 
-  const point = await patchBetween(root, await branchPoint(root, host), now, host);
+  const points = await branchPoints(root, host);
+  const point = await nearest(points.map((from) => patchBetween(root, from, now, host)));
 
   if (scope === "all") return point;
 
