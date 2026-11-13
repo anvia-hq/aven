@@ -24,7 +24,7 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
-bun test apps packages # unit tests; the Postgres ones need `createdb aven` and DATABASE_URL
+bun test apps packages tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
 bun run test:macos     # AvenKit's Swift tests
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
