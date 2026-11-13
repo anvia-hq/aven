@@ -1,11 +1,13 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
+import { threadPlanLimits } from "@aven/db/schema/thread-plan-limits";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { isDriving } from "@aven/protocol/drivers";
+import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
@@ -349,6 +351,41 @@ export const threadsService = {
       .from(threadRunTimes)
       .where(eq(threadRunTimes.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.ms]));
+  },
+
+  async savePlanLimits(threadId: string, limits: readonly PlanLimit[]) {
+    for (const limit of limits) {
+      const values = {
+        status: limit.status,
+        percent: limit.percent,
+        resetsAt: limit.resetsAt ?? null,
+      };
+      await db
+        .insert(threadPlanLimits)
+        .values({ threadId, window: limit.window, ...values })
+        .onConflictDoUpdate({
+          target: [threadPlanLimits.threadId, threadPlanLimits.window],
+          set: { ...values, updatedAt: new Date() },
+        });
+    }
+  },
+
+  async planLimits(threadId: string): Promise<PlanLimit[]> {
+    const rows = await db
+      .select()
+      .from(threadPlanLimits)
+      .where(eq(threadPlanLimits.threadId, threadId));
+    return rows.map((row) => {
+      const limit: PlanLimit = {
+        window: row.window as PlanLimitWindow,
+        status: row.status as PlanLimitStatus,
+        percent: row.percent,
+      };
+
+      if (row.resetsAt !== null) limit.resetsAt = row.resetsAt;
+
+      return limit;
+    });
   },
 
   async saveSender(threadId: string, messageIndex: number, senderId: string) {

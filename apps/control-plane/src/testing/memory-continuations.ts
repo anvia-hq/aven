@@ -1,6 +1,9 @@
+import type { PlanLimit } from "@aven/protocol/types";
+
 import type {
   ContinuationStore,
   FailureStore,
+  LimitStore,
   SenderStore,
   WorkedTimeStore,
 } from "../modules/runs/types";
@@ -44,6 +47,19 @@ export function memorySenders() {
       saved.set(threadId, senders.set(index, senderId));
     },
     read: async (threadId) => new Map(saved.get(threadId) ?? []),
+  };
+  return { store, saved };
+}
+
+export function memoryLimits() {
+  const saved = new Map<string, PlanLimit[]>();
+  const store: LimitStore = {
+    record: async (threadId, limits) => {
+      const windows = new Set(limits.map((limit) => limit.window));
+      const kept = (saved.get(threadId) ?? []).filter((limit) => !windows.has(limit.window));
+      saved.set(threadId, kept.concat(limits));
+    },
+    read: async (threadId) => (saved.get(threadId) ?? []).slice(),
   };
   return { store, saved };
 }

@@ -67,6 +67,26 @@ run("threadsService (postgres)", async () => {
     );
   });
 
+  test("keeps the plan limits a thread's run reported, the latest per window", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
+    await threadsService.savePlanLimits(thread.id, [
+      { window: "seven_day", status: "allowed", percent: 40, resetsAt: 1_900_000_000_000 },
+      { window: "five_hour", status: "allowed", percent: 10 },
+    ]);
+    await threadsService.savePlanLimits(thread.id, [
+      { window: "seven_day", status: "allowed_warning", percent: 85, resetsAt: 1_900_000_000_000 },
+    ]);
+    const stored = await threadsService.planLimits(thread.id);
+    expect(stored).toHaveLength(2);
+    expect(stored).toContainEqual({
+      window: "seven_day",
+      status: "allowed_warning",
+      percent: 85,
+      resetsAt: 1_900_000_000_000,
+    });
+    expect(stored).toContainEqual({ window: "five_hour", status: "allowed", percent: 10 });
+  });
+
   test("keeps who sent a message at its place, and the latest sender wins", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     await threadsService.saveSender(thread.id, 0, userId);

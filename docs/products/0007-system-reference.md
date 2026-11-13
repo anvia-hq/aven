@@ -106,6 +106,10 @@ Settings > Webhooks (`/webhooks`, `modules/webhooks`) keeps a person's `bot_webh
 
 `runtimes.lifetime` (`persistent` by default, or `ephemeral`; `RUNTIME_LIFETIMES`) says whether a runner is a machine someone keeps. `GET /threads/:id/ship` returns `machine: true` when the project has no GitHub app and the thread's runner is persistent: `connectionOf` (`ship-state.ts`) then counts GitHub as connected and the bar shows Ship, which has the agent use the machine's own `gh`. With no app on an ephemeral runner the bar offers Connect GitHub and `ship` refuses.
 
+### The plan limits are kept with the thread (decision 0274)
+
+`thread_plan_limits` holds the latest `PlanLimit` per window for a thread, written by `RunManager` when a `limits` event arrives (`LimitStore`, `threadsService.savePlanLimits`). The idle snapshot and the one of a starting run read it, leaving out a window whose `resets_at` has passed, so the Limits card survives a refresh.
+
 ### A ship reaches GitHub from the folder and watches the pull request (decision 0231)
 
 `shipPrompt` (`modules/ship/prompt.ts`) adds, after Aven's default or a repository's `.aven/ship.md`, a note that a folder project's `origin` is its folder (`folder` from `projects.directory`) and how to push on from it, and a note to watch the opened pull request with a background command until it is mergeable, never merging it. The coding instructions say a `<ship_request>` asks for that push.

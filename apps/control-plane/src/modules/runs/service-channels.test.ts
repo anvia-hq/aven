@@ -3,17 +3,19 @@ import { describe, expect, test } from "bun:test";
 import {
   memoryContinuations,
   memoryFailures,
+  memoryLimits,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { RunManager } from "./service";
 import type { ConversationStore } from "../../types";
 import type { RunResult, RunThread, Runtime, RuntimeRun } from "./types";
-import type { RunEvent } from "@aven/protocol/types";
+import type { PlanLimit, RunEvent } from "@aven/protocol/types";
 
 type FakeRun = {
   handle: RuntimeRun;
   say(delta: string): void;
+  report(limits: PlanLimit[]): void;
   finish(outcome?: RunResult): void;
 };
 
@@ -44,6 +46,7 @@ function fakeRun(): FakeRun {
   return {
     handle,
     say: (delta) => void said.push({ type: "text", delta }),
+    report: (limits) => void said.push({ type: "limits", limits }),
     finish: (outcome: RunResult = { type: "response" }) => {
       finished = true;
       done.resolve(outcome);
@@ -81,6 +84,7 @@ function managerFor(
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
     senders: memorySenders().store,
+    limits: memoryLimits().store,
     ...extra,
   });
 }
@@ -280,5 +284,56 @@ describe("a message that starts no run", () => {
     expect(shown?.type === "snapshot" && shown.messages[0]?.senderId).toBe("user-randy");
     expect(await senders.store.read(thread.id)).toEqual(new Map([[0, "user-randy"]]));
     expect(manager.isRunning(thread.id)).toBe(false);
+  });
+});
+
+describe("the plan limits a run reported", () => {
+  const snapshotOf = async (manager: RunManager, thread: RunThread) => {
+    const watcher = attach(manager, thread);
+    await until(() => watcher.events.some((event) => event.type === "snapshot"));
+    await watcher.detach();
+    const snapshot = watcher.events.find((event) => event.type === "snapshot");
+    return snapshot?.type === "snapshot" ? snapshot : undefined;
+  };
+
+  test("are in the snapshot of a thread opened again, with none that have already reset", async () => {
+    const limits = memoryLimits();
+    const { runtime, current } = scriptedRuntime();
+    const manager = managerFor(runtime, { limits: limits.store });
+    const thread = newThread();
+    const week: PlanLimit = {
+      window: "seven_day",
+      status: "allowed",
+      percent: 81,
+      resetsAt: Date.now() + 1e8,
+    };
+    const hours: PlanLimit = {
+      window: "five_hour",
+      status: "allowed",
+      percent: 12,
+      resetsAt: Date.now() - 1,
+    };
+
+    await manager.start(thread, "one");
+    current().report([week, hours]);
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await until(() => (limits.saved.get(thread.id)?.length ?? 0) === 2);
+
+    const later = managerFor(runtime, { limits: limits.store });
+    expect((await snapshotOf(later, thread))?.usage?.limits).toEqual([week]);
+  });
+
+  test("are in the snapshot of a run that has only just begun", async () => {
+    const limits = memoryLimits();
+    const thread = newThread();
+    const week = { window: "seven_day", status: "allowed_warning", percent: 90 } as PlanLimit;
+    await limits.store.record(thread.id, [week]);
+    const { runtime } = scriptedRuntime();
+    const manager = managerFor(runtime, { limits: limits.store });
+
+    await manager.start(thread, "one");
+
+    expect((await snapshotOf(manager, thread))?.usage?.limits).toEqual([week]);
   });
 });
