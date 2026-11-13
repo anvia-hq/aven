@@ -344,12 +344,11 @@ export class HostSandboxes implements ThreadWorkspaces {
   }
 
   async signInGithub(threadId: string, github: RunGithub | undefined) {
-    if (!github) {
-      this.#githubEnv.delete(threadId);
-      this.#githubToken.delete(threadId);
-      this.#redact(threadId);
-      return;
-    }
+    this.#githubEnv.delete(threadId);
+    this.#githubToken.delete(threadId);
+    this.#redact(threadId);
+
+    if (!github) return;
 
     const configDir = join(this.#home, "gh-config", threadId);
     await mkdir(configDir, { recursive: true });

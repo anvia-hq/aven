@@ -321,4 +321,24 @@ describe("a person's GitHub on a run (decision 0276)", () => {
     expect(own).toContain("ghu_adasecret kept");
     expect(other).toContain("[]");
   });
+
+  test("a sign-in that fails leaves the thread signed out, never with the previous person's token", async () => {
+    const { sandbox, home } = await runner();
+    const { access } = await createRemoteRepo();
+    const box = await sandbox.acquire({ id: "t1" }, async () => access);
+
+    await sandbox.signInGithub("t1", ada);
+    await rm(join(home, "gh-config", "t1"), { recursive: true });
+    await writeFile(join(home, "gh-config", "t1"), "in the way");
+
+    await expect(
+      sandbox.signInGithub("t1", { token: "ghu_bobsecret", id: 7, login: "bob", name: null }),
+    ).rejects.toThrow();
+    const after = String(
+      (await call(box.tools, "exec_command", { command: 'echo "[$GH_TOKEN]"' })).stdout,
+    );
+
+    expect(after).toContain("[]");
+    expect(after).not.toContain("ghu_");
+  });
 });
