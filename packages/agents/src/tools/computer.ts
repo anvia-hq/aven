@@ -1,14 +1,10 @@
 import { createTool } from "@anvia/core";
-import type { ComputerState } from "@aven/protocol/types";
 import { z } from "zod";
+
+import type { ComputerHost } from "./types";
 
 export const COMPUTER_STATUS_TOOL_NAME = "computer_status";
 export const COMPUTER_WAKE_TOOL_NAME = "computer_wake";
-
-export type ComputerHost = {
-  status(): Promise<ComputerState>;
-  wake(): Promise<{ before: ComputerState; state: ComputerState }>;
-};
 
 export function createComputerTools(host: ComputerHost) {
   const status = createTool({

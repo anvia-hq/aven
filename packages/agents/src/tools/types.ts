@@ -18,6 +18,7 @@ import type {
   BotThreadDetail,
   BotThreadView,
   CockpitCommand,
+  ComputerState,
   ForkView,
   GoalAction,
   MemoryCommand,
@@ -26,6 +27,11 @@ import type {
 } from "@aven/protocol/types";
 
 export type AskQuestion = (questions: BotQuestion[]) => Promise<BotQuestioned>;
+
+export type ComputerHost = {
+  status(): Promise<ComputerState>;
+  wake(): Promise<{ before: ComputerState; state: ComputerState }>;
+};
 
 export type Clock = {
   now(): number;

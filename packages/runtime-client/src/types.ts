@@ -28,6 +28,7 @@ import type {
 import type {
   AskQuestion,
   CockpitHost,
+  ComputerHost,
   CreateBot,
   ForkHost,
   GoalHost,
@@ -57,7 +58,6 @@ import type {
   DurableRuntime,
 } from "@anvia/durable";
 import type { SandboxRuntime } from "@anvia/sandbox";
-import type { ComputerHost } from "@aven/agents/tools/computer";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import type { RunOutbox } from "./run-outbox";
 import type { RunRecords } from "./run-records";
