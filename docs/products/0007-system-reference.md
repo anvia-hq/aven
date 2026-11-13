@@ -134,7 +134,7 @@ The Changes panel (`apps/platform/src/modules/diff`) draws one virtual list (`@t
 
 ### A thread compares its changes with every branch it pushed (decision 0233)
 
-`refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch.
+`refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch. `refresh-base.ts` also fetches the default branch from the folder's own `origin` (GitHub) into `refs/aven/upstream`, at most once a minute (0277), and the diff takes the nearer of the two branch points, so commits a thread pulled from GitHub are not shown as its changes.
 
 ### Sign-in with GitHub (decision 0235)
 

@@ -135,6 +135,53 @@ describe("a thread's changes", () => {
     expect(whole).not.toContain("c.txt");
   });
 
+  test("a branch that pulled GitHub's main through a folder that is behind GitHub does not show the pulled commits", async () => {
+    const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
+    roots.push(base);
+    const github = join(base, "github");
+    const folder = join(base, "folder");
+    const root = join(base, "thread");
+    const sh = async (cwd: string, ...args: string[]) => {
+      const result = await git(args, { cwd });
+
+      if (result.code !== 0) throw new Error(result.stderr);
+    };
+    const commit = (cwd: string, message: string) =>
+      sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await Bun.$`mkdir ${github}`;
+    await sh(github, "init", "-q", "-b", "main");
+    await writeFile(join(github, "a.txt"), "one\n");
+    await sh(github, "add", ".");
+    await commit(github, "first");
+    await sh(base, "clone", "-q", github, folder);
+    await sh(base, "clone", "-q", folder, root);
+    await sh(root, "checkout", "-q", "-b", "aven/test");
+
+    await writeFile(join(github, "others.txt"), "other people's work\n");
+    await sh(github, "add", ".");
+    await commit(github, "merged by others");
+    await sh(root, "fetch", "-q", "--", github, "main");
+    await sh(
+      root,
+      "-c",
+      "user.name=t",
+      "-c",
+      "user.email=t@t",
+      "merge",
+      "-q",
+      "--no-edit",
+      "FETCH_HEAD",
+    );
+
+    expect((await threadDiff(root, "unshipped"))?.patch).toBe("");
+    expect((await threadDiff(root, "all"))?.patch).toBe("");
+
+    await writeFile(join(root, "mine.txt"), "mine\n");
+    const mine = (await threadDiff(root, "all"))?.patch;
+    expect(mine).toContain("+++ b/mine.txt");
+    expect(mine).not.toContain("others.txt");
+  });
+
   test("work already pushed to the folder under another of the thread's branch names is not unshipped", async () => {
     const { root, sh } = await workspace({ branchClone: true });
     const remote = join(root, "..", "remote");
