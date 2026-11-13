@@ -208,6 +208,29 @@ describe("usage", () => {
     expect(projectStreamEvent(turnEnd())).toMatchObject({ type: "usage", context: undefined });
   });
 
+  test("a thread whose model has no known window still reads back what its last call held", () => {
+    const stored = (modelId: string, inputTokens: number) =>
+      ({
+        role: "assistant",
+        content: "a",
+        metadata: {
+          anvia: {
+            generation: {
+              usage: { ...usage, inputTokens },
+              modelId,
+              provider: "openai",
+            },
+          },
+        },
+      }) as never;
+    expect(usageFromHistory([stored("deepseek", 700), stored("deepseek", 900)]).context).toEqual({
+      usedTokens: 900,
+    });
+    expect(usageFromHistory([stored("deepseek", 900), stored("compaction", 5000)]).context).toEqual(
+      { usedTokens: 900 },
+    );
+  });
+
   test("a thread's usage is read back from the stored messages", () => {
     const generation = { usage, modelId: "m", provider: "anthropic", contextUsage: context };
     const stored = (text: string) =>

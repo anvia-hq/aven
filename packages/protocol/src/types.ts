@@ -186,7 +186,7 @@ export type SubagentEvent =
   | { type: "tool_end"; id: string; status: "done" | "error" }
   | { type: "end"; status: "done" | "error"; output?: string };
 
-export type ContextUsage = { usedTokens: number; contextWindow: number };
+export type ContextUsage = { usedTokens: number; contextWindow?: number };
 
 export type TokenUsage = {
   inputTokens: number;

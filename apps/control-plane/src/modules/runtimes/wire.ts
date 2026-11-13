@@ -177,7 +177,7 @@ const runEvent = z.discriminatedUnion("type", [
       cacheReadTokens: tokenCount,
     }),
     context: z
-      .object({ usedTokens: tokenCount, contextWindow: z.number().int().positive() })
+      .object({ usedTokens: tokenCount, contextWindow: z.number().int().positive().optional() })
       .optional(),
   }),
   z.object({

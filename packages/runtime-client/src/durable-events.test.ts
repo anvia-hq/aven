@@ -85,6 +85,26 @@ test("a question the stream never announced is announced when the turn ends, bef
   });
 });
 
+test("a model whose window is unknown still reports what is in its context", () => {
+  const unknown = createDurableEventMapper().map(turnEnd([])).events;
+  expect(unknown).toEqual([
+    {
+      type: "usage",
+      turn: expect.objectContaining({ inputTokens: 100 }),
+      context: { usedTokens: 100 },
+    },
+  ]);
+  const known = createDurableEventMapper({ contextWindow: 1000 }).map(turnEnd([])).events;
+  expect(known[0]).toMatchObject({ context: { usedTokens: 100, contextWindow: 1000 } });
+});
+
+test("a compaction of a model with no known window reports no context, as its call is not the thread's", () => {
+  const { map } = createDurableEventMapper({ compacting: true });
+  expect(map(turnEnd([])).events).toEqual([
+    { type: "usage", turn: expect.objectContaining({ inputTokens: 100 }), context: undefined },
+  ]);
+});
+
 test("a call is announced once, whichever of the stream, the finished turn and its start comes first", () => {
   const stream = createDurableEventMapper();
   stream.map(event("model_delta", { event: { type: "tool_call", toolCall: question } }));
