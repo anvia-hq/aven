@@ -92,12 +92,18 @@ test.describe("bots", () => {
     await expect(bubble(page, "hello bot")).toBeVisible();
 
     const tile = page.locator('a[aria-label="Aven, main bot"] svg[data-mood]');
-    await expect(page.getByRole("status", { name: /typing/ })).toBeVisible();
-    await expect(tile).toHaveAttribute("data-mood", "working");
-    await expect(page.getByRole("status", { name: /typing/ }).locator("svg")).toHaveAttribute(
-      "data-mood",
-      "working",
-    );
+    await expect
+      .poll(() =>
+        page.evaluate(() => ({
+          typing: document
+            .querySelector('[role="status"][aria-label*="typing"] svg')
+            ?.getAttribute("data-mood"),
+          tile: document
+            .querySelector('a[aria-label="Aven, main bot"] svg[data-mood]')
+            ?.getAttribute("data-mood"),
+        })),
+      )
+      .toEqual({ typing: "working", tile: "working" });
     await expect(bubble(page, "Hey there!")).toBeVisible();
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
