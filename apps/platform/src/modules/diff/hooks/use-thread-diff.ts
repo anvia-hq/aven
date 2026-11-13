@@ -22,13 +22,9 @@ export function useThreadDiff(
 ) {
   const [reads, setReads] = useState(0);
   const [answer, setAnswer] = useState<KeptAnswer | null>(null);
-  const answers = useRef(new Map<string, KeptAnswer>());
-  const recent = useRef<KeptAnswer | null>(null);
 
   useEffect(() => {
     setAnswer(null);
-    answers.current.clear();
-    recent.current = null;
   }, [threadId]);
 
   useEffect(() => {
@@ -41,16 +37,11 @@ export function useThreadDiff(
         const data = await api<ThreadDiffResponse>(path);
 
         if (current) {
-          const next: KeptAnswer = { threadId, scope, loaded: data };
-          answers.current.set(scope, next);
-          recent.current = next;
-          setAnswer(next);
+          setAnswer({ threadId, scope, loaded: data });
         }
       } catch {
         if (current) {
-          const next: KeptAnswer = { threadId, scope, loaded: "The changes could not be read" };
-          answers.current.set(scope, next);
-          setAnswer(next);
+          setAnswer({ threadId, scope, loaded: "The changes could not be read" });
         }
       }
     };
@@ -62,20 +53,11 @@ export function useThreadDiff(
     };
   }, [threadId, scope, reads, running, enabled]);
 
-  const live = enabled && answer !== null && answer.threadId === threadId ? answer : null;
-  const current = live !== null && live.scope === scope ? live.loaded : null;
-  const sameScope = live === null ? null : (answers.current.get(scope) ?? null);
-  const sameKept = sameScope !== null && typeof sameScope.loaded === "object" ? sameScope : null;
-  const fresh = recent.current;
-  const fallback =
-    live === null ||
-    fresh === null ||
-    fresh.threadId !== threadId ||
-    typeof fresh.loaded !== "object"
-      ? null
-      : fresh;
-  const shown = current ?? sameKept?.loaded ?? fallback?.loaded ?? null;
-  const shownScope = current !== null ? scope : (sameKept?.scope ?? fallback?.scope ?? scope);
+  const current =
+    enabled && answer !== null && answer.threadId === threadId && answer.scope === scope
+      ? answer.loaded
+      : null;
+  const shown = current;
   const problem = typeof shown === "string" ? shown : null;
   const response = typeof shown === "object" ? shown : null;
   const patch = response?.available ? response : null;
@@ -100,7 +82,6 @@ export function useThreadDiff(
   return {
     loaded: shown !== null,
     problem,
-    scope: shownScope,
     available: response ? response.available : null,
     truncated: patch?.truncated ?? false,
     files,

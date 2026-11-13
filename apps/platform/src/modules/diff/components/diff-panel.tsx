@@ -27,16 +27,11 @@ const EMPTY: Record<DiffScope, string> = {
 
 export function DiffPanel({ threadId, running, onClose }: Props) {
   const { scope, setScope, layout, setLayout } = useDiffPreferences();
-  const {
-    loaded,
-    problem,
-    available,
-    truncated,
-    files,
-    additions,
-    deletions,
-    scope: shownScope,
-  } = useThreadDiff(threadId, scope, running);
+  const { loaded, problem, available, truncated, files, additions, deletions } = useThreadDiff(
+    threadId,
+    scope,
+    running,
+  );
   const counted = additions > 0 || deletions > 0;
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const items = useMemo(() => flatten(files, layout, opened), [files, layout, opened]);
@@ -77,12 +72,11 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           </TabsList>
         </Tabs>
       </div>
-      {files.length > 0 || shownScope !== scope ? (
+      {files.length > 0 ? (
         <DiffVirtualList
           items={items}
           files={files}
           layout={layout}
-          revealing={shownScope !== scope}
           onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
           footer={
             truncated
