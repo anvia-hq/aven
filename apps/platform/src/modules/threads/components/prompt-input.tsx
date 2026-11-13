@@ -1,4 +1,3 @@
-import { CLAUDE_DEFAULT_EFFORT } from "@aven/protocol/claude-models";
 import {
   ChatProvider,
   ComposerPrimitive,
@@ -20,6 +19,7 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
+import { runSelectionOf } from "../run-selection";
 import type { ClaudeControl, MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
@@ -111,12 +111,7 @@ function Composer({
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: claude?.choice
-      ? {
-          modelId: claude.choice.modelId,
-          reasoningEffort: claude.choice.effort ?? CLAUDE_DEFAULT_EFFORT,
-        }
-      : model.selection,
+    selection: claude ? runSelectionOf(claude.choice, model.selection) : model.selection,
     running,
     filesWhileRunning,
     onSubmit,
