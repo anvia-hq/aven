@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import { timeAgo } from "@/lib/format";
 
 import { busiestMetric, isStale, machineMetrics, meterLevel } from "../machine-metrics";

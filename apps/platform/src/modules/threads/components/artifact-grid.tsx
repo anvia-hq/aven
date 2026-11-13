@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Image as ImageIcon, Refresh } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import type { ToolArtifact } from "../types";
 import { ArtifactFrame } from "./artifact-frame";

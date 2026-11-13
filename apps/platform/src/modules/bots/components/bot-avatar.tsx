@@ -1,6 +1,6 @@
 import { useId, type CSSProperties, type ReactNode } from "react";
 
-import { Avatar, AvatarFallback } from "@/components/avatar";
+import { Avatar, AvatarFallback } from "@aven/ui/avatar";
 
 import { avatarFor, parseAvatarSetting } from "../avatar";
 import type { Avatar as Look, Bot, BotMood, Part, Point } from "../types";

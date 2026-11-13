@@ -1,4 +1,4 @@
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
 import { activeQuickView, QUICK_VIEWS } from "../filters";
 import type { CenterFilters } from "../types";

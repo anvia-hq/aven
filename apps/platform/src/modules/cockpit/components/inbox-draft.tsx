@@ -2,7 +2,7 @@ import { Tag } from "@mynaui/icons-react";
 import { useBlocker } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { useInbox } from "../hooks/use-inbox";
 import {

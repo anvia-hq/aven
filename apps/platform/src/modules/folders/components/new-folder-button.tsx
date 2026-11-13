@@ -1,6 +1,6 @@
 import { Folder } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 export function NewFolderButton({ onClick }: { onClick: () => void }) {
   return (

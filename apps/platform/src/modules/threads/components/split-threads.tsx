@@ -2,7 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { GAP_HANDLE } from "@/lib/panel-layout";
 

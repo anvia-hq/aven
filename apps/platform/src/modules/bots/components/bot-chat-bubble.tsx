@@ -1,9 +1,9 @@
 import { MessageReply } from "@mynaui/icons-react";
 
-import { Bubble, BubbleContent } from "@/components/bubble";
-import { Button } from "@/components/button";
+import { Bubble, BubbleContent } from "@aven/ui/bubble";
+import { Button } from "@aven/ui/button";
 import { ExternalLink, Markdown } from "@/components/markdown";
-import { MessageContent } from "@/components/message";
+import { MessageContent } from "@aven/ui/message";
 import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 
 import { cn } from "cn";

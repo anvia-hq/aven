@@ -1,8 +1,8 @@
 import { Check, Cog } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Avatar, AvatarFallback } from "@/components/avatar";
-import { DropdownMenuItem, DropdownMenuSeparator } from "@/components/dropdown-menu";
+import { Avatar, AvatarFallback } from "@aven/ui/avatar";
+import { DropdownMenuItem, DropdownMenuSeparator } from "@aven/ui/dropdown-menu";
 import { initials } from "@/lib/format";
 
 import { useOrganizations } from "../hooks/use-organizations";

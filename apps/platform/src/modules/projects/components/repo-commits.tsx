@@ -2,10 +2,10 @@ import { layoutGraph } from "@aven/protocol/commit-graph";
 import { ChevronLeft, ChevronRight, GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { timeAgo } from "@/lib/format";
 
 import { useProjectCommits } from "../hooks/use-project-commits";

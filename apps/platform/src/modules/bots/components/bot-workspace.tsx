@@ -1,7 +1,7 @@
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { PANEL_EXIT_MS, PanelEnter } from "@/components/panel-enter";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
 import { useHeldValue } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";

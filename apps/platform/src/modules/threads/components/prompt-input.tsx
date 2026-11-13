@@ -8,7 +8,7 @@ import {
 import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { useAttachmentDrop } from "../hooks/use-attachment-drop";
 import { useAttachments } from "../hooks/use-attachments";

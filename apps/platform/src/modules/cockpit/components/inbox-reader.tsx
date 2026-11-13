@@ -1,8 +1,8 @@
 import { Calendar, CheckCircle, CircleDashed, InboxUp, Tag, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { DropdownMenuItem } from "@/components/dropdown-menu";
+import { Button } from "@aven/ui/button";
+import { DropdownMenuItem } from "@aven/ui/dropdown-menu";
 import { timeAgo } from "@/lib/format";
 
 import { useAutosave } from "../hooks/use-autosave";

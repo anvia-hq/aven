@@ -3,9 +3,9 @@ import { useRef, type ComponentType, type KeyboardEvent, type ReactNode } from "
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@/components/dropdown-menu";
-import { Textarea } from "@/components/textarea";
+import { Button } from "@aven/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@aven/ui/dropdown-menu";
+import { Textarea } from "@aven/ui/textarea";
 
 import type { RichTextEditorProps } from "./rich-text-editor-view";
 import { RichTextEditor } from "./rich-text-editor";

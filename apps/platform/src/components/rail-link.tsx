@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "cn";
 
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 
 type Props = {
   to: NonNullable<LinkProps["to"]>;

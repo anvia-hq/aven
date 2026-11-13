@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 
 import { groupFailureNotice } from "../tool-failure";
 import type { ToolGroupEntry, ToolPart } from "../types";

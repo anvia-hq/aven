@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
+} from "@aven/ui/dialog";
 import { timeAgo } from "@/lib/format";
 
 import { useMemoryHistory } from "../hooks/use-memory-history";

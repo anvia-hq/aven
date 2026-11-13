@@ -3,7 +3,7 @@ import { Check, Globe, Link, Lock, Share } from "@mynaui/icons-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -13,11 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Label } from "@/components/label";
-import { RadioGroup, RadioGroupItem } from "@/components/radio-group";
-import { Switch } from "@/components/switch";
-import { toast } from "@/components/toast";
+} from "@aven/ui/dialog";
+import { Label } from "@aven/ui/label";
+import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
+import { Switch } from "@aven/ui/switch";
+import { toast } from "@aven/ui/toast";
 
 import { useDecisionModelReady } from "@/modules/decision-model/hooks/use-decision-model-ready";
 

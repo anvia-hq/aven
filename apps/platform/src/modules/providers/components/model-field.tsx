@@ -1,4 +1,4 @@
-import { LabeledSelect } from "@/components/labeled-select";
+import { LabeledSelect } from "@aven/ui/labeled-select";
 
 import type { ModelsState } from "../types";
 

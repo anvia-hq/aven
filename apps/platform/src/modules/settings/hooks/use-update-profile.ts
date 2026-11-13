@@ -1,6 +1,6 @@
 import { useRouter } from "@tanstack/react-router";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { authClient } from "@/lib/auth-client";
 
 export function useUpdateProfile() {

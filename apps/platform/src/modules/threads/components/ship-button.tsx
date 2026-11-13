@@ -1,9 +1,9 @@
 import { GitPullRequest, Github, Refresh, Rocket, Sparkles } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { ButtonGroup } from "@/components/button-group";
+import { Button } from "@aven/ui/button";
+import { ButtonGroup } from "@aven/ui/button-group";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 
 import type { ShipAct } from "../types";
 import { ShipMenu } from "./ship-menu";

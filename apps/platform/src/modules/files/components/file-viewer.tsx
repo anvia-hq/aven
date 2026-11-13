@@ -1,5 +1,5 @@
 import { PanelNotice } from "@/components/panel-notice";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 
 import { useHighlightedLines } from "../hooks/use-highlighted-lines";
 import { useWorkspaceFile } from "../hooks/use-workspace-file";

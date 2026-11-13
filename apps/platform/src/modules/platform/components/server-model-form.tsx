@@ -1,10 +1,10 @@
 import { Field } from "@base-ui/react/field";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { NativeSelect, NativeSelectOption } from "@/components/native-select";
-import { TextField } from "@/components/text-field";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { NativeSelect, NativeSelectOption } from "@aven/ui/native-select";
+import { TextField } from "@aven/ui/text-field";
 
 import type { ServerModel, ServerModelDraft, ServerModelOption } from "../types";
 

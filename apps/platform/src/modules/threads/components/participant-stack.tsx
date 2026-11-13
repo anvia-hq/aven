@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials } from "@/lib/format";
 
 import type { Crowd } from "../types";

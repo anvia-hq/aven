@@ -2,7 +2,7 @@ import type { ComposerSubmitMessageArgs, useComposer } from "@anvia/react-ui/cha
 import { MENTION_LIMIT } from "@aven/protocol/events";
 import { useRef, useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { COMPACT_COMMAND, mentionOf } from "../mentions";
 import type { MessageMention, OutgoingMessage, RunSelection } from "../types";

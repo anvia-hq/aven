@@ -1,8 +1,8 @@
 import type { FormEvent } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { TextField } from "@/components/text-field";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { TextField } from "@aven/ui/text-field";
 
 import { useUpdateProfile } from "../hooks/use-update-profile";
 import { AvatarField } from "./avatar-field";

@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "cn";
 import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "react-day-picker";
 
-import { Button, buttonVariants } from "@/components/button";
+import { Button, buttonVariants } from "./button";
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,

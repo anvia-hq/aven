@@ -10,7 +10,7 @@ import {
 
 import { cn } from "cn";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import { toolFailureNotice } from "../tool-failure";

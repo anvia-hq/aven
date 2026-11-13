@@ -1,6 +1,6 @@
 import { BOT_COMPACT_TOKENS } from "@aven/protocol/bots";
 
-import { Input } from "@/components/input";
+import { Input } from "@aven/ui/input";
 import { SettingsRow } from "@/components/settings-section";
 
 import { useBotCompaction } from "../hooks/use-bot-compaction";

@@ -1,6 +1,6 @@
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { GithubMark } from "@/components/brand-icons";
-import { Separator } from "@/components/separator";
+import { Separator } from "@aven/ui/separator";
 
 import { useGithubSignIn } from "../hooks/use-github-sign-in";
 import type { InvitationSearch } from "../types";

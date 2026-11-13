@@ -1,7 +1,7 @@
 import { getDefaultStore, useAtom } from "jotai";
 import { useEffect } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, postJson } from "@/lib/api";
 
 import { platformConfigAtom } from "../atoms/platform-config-atom";

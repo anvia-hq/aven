@@ -2,8 +2,8 @@ import { Plus } from "@mynaui/icons-react";
 import { ACCESS_MAX_NAME } from "@aven/protocol/mcp-access";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
-import { Checkbox } from "@/components/checkbox";
+import { Button } from "@aven/ui/button";
+import { Checkbox } from "@aven/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -12,10 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/field";
-import { Form } from "@/components/form";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "@aven/ui/field";
+import { Form } from "@aven/ui/form";
+import { TextField } from "@aven/ui/text-field";
 
 import { useAccessTokens } from "../hooks/use-access-tokens";
 import type { AccessPermission, AccessTokenCreated } from "../types";

@@ -10,13 +10,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/alert-dialog";
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
+} from "@aven/ui/alert-dialog";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { usePreview } from "../hooks/use-preview";
 import { parsePort } from "../port";

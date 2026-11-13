@@ -1,8 +1,8 @@
 import { Folder, Refresh, Search, Sidebar } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 

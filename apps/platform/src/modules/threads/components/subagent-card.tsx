@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
 
 import type { SubagentPart } from "../types";

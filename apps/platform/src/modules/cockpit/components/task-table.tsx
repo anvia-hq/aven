@@ -1,6 +1,6 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Button } from "@/components/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Button } from "@aven/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@aven/ui/table";
 import { timeAgo } from "@/lib/format";
 
 import { useTasks } from "../hooks/use-tasks";

@@ -1,7 +1,7 @@
 import { useSetAtom } from "jotai";
 import { useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt } from "@/lib/api";
 
 import { providerModelsAtom } from "../atoms/provider-models-atom";

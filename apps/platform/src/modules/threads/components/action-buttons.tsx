@@ -1,9 +1,9 @@
 import { Play, Star, StarSolid } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { Button } from "@aven/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import type { ThreadAction } from "@aven/protocol/types";
 
 import { useThreadActions } from "../hooks/use-thread-actions";

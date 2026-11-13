@@ -1,7 +1,7 @@
 import { ChevronRight } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { join } from "../paths";
 import type { FileEntry } from "../types";

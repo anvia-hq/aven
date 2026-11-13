@@ -1,10 +1,10 @@
 import { ArrowUp, Lock } from "@mynaui/icons-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Label } from "@aven/ui/label";
 import { useProviders } from "@/modules/providers/hooks/use-providers";
 import { PROVIDER_LABELS, type Provider } from "@/modules/providers/types";
 import type { ProviderKeyAsk } from "@aven/protocol/types";

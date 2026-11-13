@@ -1,10 +1,10 @@
 import { ChevronRight } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
-import { Button } from "@/components/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Button } from "@aven/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
+import { Switch } from "@aven/ui/switch";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";

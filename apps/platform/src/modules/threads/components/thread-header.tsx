@@ -12,13 +12,13 @@ import type { ComponentType } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
+} from "@aven/ui/dropdown-menu";
 import { PanelToggle } from "@/components/panel-toggle";
 
 import type { Thread, ThreadPanels } from "../types";

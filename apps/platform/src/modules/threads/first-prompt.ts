@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import type { OutgoingMessage, RunSelection } from "./types";
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 
 type Preferences = { timezone: string | null; defaultTimezone: string };

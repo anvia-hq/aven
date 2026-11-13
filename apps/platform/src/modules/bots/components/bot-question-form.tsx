@@ -2,8 +2,8 @@ import { ArrowLeft, ArrowRight, ArrowUp } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
 import { Question, valueOf } from "@/modules/threads/components/question-form";
 
 import { answerText } from "../questions";

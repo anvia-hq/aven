@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, setSystemTime, spyOn, test, type Mock } from "bun:test";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import {
   FIRST_PROMPT_LIFETIME_MS,

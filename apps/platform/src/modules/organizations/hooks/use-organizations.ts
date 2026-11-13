@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { authClient } from "@/lib/auth-client";
 import { resetProjects } from "@/modules/projects/hooks/use-projects";
 import { resetRuntimes } from "@/modules/runtimes/hooks/use-runtimes";

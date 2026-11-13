@@ -1,7 +1,7 @@
 import { ArrowUp } from "@mynaui/icons-react";
 import { useRef, type CSSProperties } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { useFullyVisible } from "../hooks/use-fully-visible";
 

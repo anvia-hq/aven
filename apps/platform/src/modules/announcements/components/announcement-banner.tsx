@@ -1,14 +1,14 @@
 import { X } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogTitle,
-} from "@/components/dialog";
+} from "@aven/ui/dialog";
 import { Markdown } from "@/components/markdown";
 
 import { useActiveAnnouncement } from "../hooks/use-active-announcement";

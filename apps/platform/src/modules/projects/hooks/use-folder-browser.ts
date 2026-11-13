@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { useRequest } from "@/hooks/use-request";
 import { attempt, postJson } from "@/lib/api";
 

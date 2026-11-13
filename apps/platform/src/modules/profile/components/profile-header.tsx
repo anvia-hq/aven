@@ -1,8 +1,8 @@
 import { Pencil } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
-import { Button } from "@/components/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
+import { Button } from "@aven/ui/button";
 import { initials } from "@/lib/format";
 
 import { handleOf } from "../activity";

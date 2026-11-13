@@ -8,8 +8,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/alert-dialog";
-import { Button } from "@/components/button";
+} from "@aven/ui/alert-dialog";
+import { Button } from "@aven/ui/button";
 
 import { useCanManageProject } from "../hooks/use-can-manage-project";
 import { useDeleteProject } from "../hooks/use-delete-project";

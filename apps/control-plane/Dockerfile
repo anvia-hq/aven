@@ -21,6 +21,7 @@ COPY packages/github/package.json packages/github/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
 COPY packages/server-kit/package.json packages/server-kit/
+COPY packages/ui/package.json packages/ui/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./

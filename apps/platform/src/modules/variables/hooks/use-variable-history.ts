@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, errorMessage } from "@/lib/api";
 
 import { variablesPath, type VariableEvent, type VariableScope } from "../types";

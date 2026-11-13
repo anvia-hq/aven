@@ -1,13 +1,13 @@
 import { ChevronDown, Plus } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
+} from "@aven/ui/dropdown-menu";
 
 type Props = { disabled: boolean; onNew: () => void };
 

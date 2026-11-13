@@ -1,7 +1,7 @@
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";

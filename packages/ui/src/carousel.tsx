@@ -2,7 +2,7 @@ import * as React from "react";
 import { cn } from "cn";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 
-import { Button } from "@/components/button";
+import { Button } from "./button";
 import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,

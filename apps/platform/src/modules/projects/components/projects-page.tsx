@@ -2,10 +2,10 @@ import { Plus } from "@mynaui/icons-react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { Button, buttonVariants } from "@/components/button";
+import { Button, buttonVariants } from "@aven/ui/button";
 import { PageHeader } from "@/components/page-header";
-import { Skeleton } from "@/components/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Skeleton } from "@aven/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useThreads } from "@/modules/threads/hooks/use-threads";

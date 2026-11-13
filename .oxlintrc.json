@@ -9,7 +9,8 @@
     "dist",
     "**/routeTree.gen.ts",
     "packages/db/drizzle",
-    "apps/platform/src/components"
+    "apps/platform/src/components",
+    "packages/ui/src"
   ],
   "jsPlugins": ["./tooling/oxlint/aven-plugin.mjs"],
   "rules": {

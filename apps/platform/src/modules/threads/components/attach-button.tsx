@@ -1,8 +1,8 @@
 import { Paperclip } from "@mynaui/icons-react";
 import { useRef } from "react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 
 export function AttachButton({
   onPick,

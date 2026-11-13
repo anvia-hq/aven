@@ -4,7 +4,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "./button";
 import { Check as CheckIcon, Copy as CopyIcon } from "@mynaui/icons-react";
 
 const codeBlockVariants = cva(

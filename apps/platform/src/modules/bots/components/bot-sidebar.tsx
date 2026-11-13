@@ -1,8 +1,8 @@
 import { Star } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
-import { AvatarBadge } from "@/components/avatar";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { AvatarBadge } from "@aven/ui/avatar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
 import { useBotLastMessages } from "../hooks/use-bot-last-messages";
 import { useBots } from "../hooks/use-bots";

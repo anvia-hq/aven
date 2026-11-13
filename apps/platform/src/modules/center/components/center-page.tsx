@@ -2,7 +2,7 @@ import { Refresh } from "@mynaui/icons-react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { RepoCommits } from "@/modules/projects/components/repo-commits";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 import { useProjects } from "@/modules/projects/hooks/use-projects";

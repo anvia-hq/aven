@@ -9,8 +9,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
-import { SidebarMenuAction } from "@/components/sidebar";
+} from "@aven/ui/dropdown-menu";
+import { SidebarMenuAction } from "@aven/ui/sidebar";
 
 import { isTempId } from "../folder-cache";
 import type { Folder } from "../types";

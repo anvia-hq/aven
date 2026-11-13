@@ -2,7 +2,7 @@ import { File } from "@mynaui/icons-react";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 type Props = {
   path: string;

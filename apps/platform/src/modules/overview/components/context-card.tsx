@@ -1,6 +1,6 @@
-import { Button } from "@/components/button";
-import { Progress } from "@/components/progress";
-import { Skeleton } from "@/components/skeleton";
+import { Button } from "@aven/ui/button";
+import { Progress } from "@aven/ui/progress";
+import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";

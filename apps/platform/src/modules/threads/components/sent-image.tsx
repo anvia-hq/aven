@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { isLocalPreview } from "../pending-messages";
 import type { MessageAttachment } from "../types";

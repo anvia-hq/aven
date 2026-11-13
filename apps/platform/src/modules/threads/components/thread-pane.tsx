@@ -5,7 +5,7 @@ import { backendSupports } from "@aven/protocol/runtime-wire";
 import { cn } from "cn";
 
 import { NotFound } from "@/components/not-found";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
 import { useHeldValue } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
