@@ -679,9 +679,7 @@ export class ClaudeRuns implements AgentBackend {
 
   #note(onEvent: Emit, text: string): FollowedRun {
     onEvent({ type: "text", delta: text });
-    const messages = [
-      { role: "assistant", content: [{ type: "text", text }] },
-    ] as unknown as Message[];
+    const messages = [{ role: "assistant", content: [{ type: "text", text }] }] as Message[];
     return {
       durableId: `claude-note-${crypto.randomUUID()}`,
       done: Promise.resolve({ type: "response", messages }),

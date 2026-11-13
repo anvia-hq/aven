@@ -92,6 +92,11 @@ export const defaultCreateAgent =
     });
   };
 
+type WebSocketWithInit = new (
+  url: string,
+  init: string | string[] | { headers: Record<string, string> },
+) => WebSocket;
+
 const DEFAULT_STATS_INTERVAL_MS = 15_000;
 const LOGIN_FRESH_MS = 60_000;
 
@@ -352,7 +357,7 @@ export function startRuntime(options: RuntimeOptions) {
     if (stopped) return;
 
     const init = { headers: { authorization: `Bearer ${options.token}` } };
-    const ws = new WebSocket(options.url, init as unknown as string[]);
+    const ws = new (WebSocket as WebSocketWithInit)(options.url, init);
     ws.binaryType = "arraybuffer";
     socket = ws;
     ws.onopen = () => {

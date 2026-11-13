@@ -69,6 +69,10 @@ function lastAssistantIndex(messages: readonly Message[]) {
 const clip = (text: string) =>
   text.length > MAX_OUTPUT ? `${text.slice(0, MAX_OUTPUT)}\n…` : text;
 
+function messageOf(message: Part): Message {
+  return message as Message;
+}
+
 function recordOf(value: unknown): Part {
   if (typeof value === "object" && value !== null && !Array.isArray(value)) return value as Part;
 
@@ -514,10 +518,10 @@ export class ClaudeTurn {
   }
 
   #assistantMessageOf(content: Part[]): Message {
-    return { role: "assistant", content } as unknown as Message;
+    return messageOf({ role: "assistant", content });
   }
 
   #toolMessageOf(content: Part[]): Message {
-    return { role: "tool", content } as unknown as Message;
+    return messageOf({ role: "tool", content });
   }
 }
