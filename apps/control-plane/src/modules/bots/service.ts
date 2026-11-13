@@ -39,6 +39,15 @@ const view = (row: BotRow): Bot => ({
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
 
 export const botsService = {
+  async makeMain(userId: string) {
+    const [made] = await db
+      .insert(bots)
+      .values({ userId, isMain: true, handle: MAIN_BOT_HANDLE, ...MAIN_BOT })
+      .onConflictDoNothing()
+      .returning();
+    return made ? view(made) : null;
+  },
+
   async list(userId: string) {
     await db
       .insert(bots)

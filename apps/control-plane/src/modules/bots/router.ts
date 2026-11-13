@@ -9,7 +9,21 @@ import type { BotChats } from "./types";
 export const botsRouter = (chats: BotChats) =>
   new Elysia({ prefix: "/bots" })
     .use(authRouter)
-    .get("/", ({ user }) => botsService.list(user.id), { auth: true })
+    .get(
+      "/",
+      async ({ user }) => {
+        const made = await botsService.makeMain(user.id);
+
+        if (made) {
+          chats.greet(user.id, made.id, 0).catch((error: unknown) => {
+            console.warn(`Bot ${made.id} could not greet its person:`, error);
+          });
+        }
+
+        return botsService.list(user.id);
+      },
+      { auth: true },
+    )
     .patch(
       "/:id",
       async ({ params, body, user }) =>
