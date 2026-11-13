@@ -30,7 +30,7 @@ const PING_MS = 5_000;
 
 const MAX_PENDING = 5;
 
-type ReplyRequest = Omit<BotReplyInput, "say" | "ask" | "react" | "signal" | "prompt">;
+type ReplyRequest = Omit<BotReplyInput, "say" | "ask" | "react" | "activity" | "signal" | "prompt">;
 
 type AnswerRequest = ReplyRequest & { prompt: string };
 
@@ -41,6 +41,7 @@ type Channel = {
   userId: string;
   messages: BotChatMessage[];
   typing: boolean;
+  activity: string | null;
   pending: number;
   tail: Promise<void>;
   subscribers: Set<(event: BotEvent) => void>;
@@ -170,7 +171,12 @@ export class BotRunner {
           this.#release(botId, channel);
         };
       },
-      { type: "snapshot", messages: channel.messages, typing: channel.typing },
+      {
+        type: "snapshot",
+        messages: channel.messages,
+        typing: channel.typing,
+        activity: channel.activity ?? undefined,
+      },
       signal,
     );
   }
@@ -267,6 +273,7 @@ export class BotRunner {
         userId,
         messages: [],
         typing: false,
+        activity: null,
         pending: 0,
         tail: Promise.resolve(),
         subscribers: new Set(),
@@ -359,6 +366,11 @@ export class BotRunner {
     channel.messages = applyBotEvent(channel.messages, event);
     const working = channel.typing;
     channel.typing = isTyping(channel.typing, event);
+
+    if (event.type === "activity") channel.activity = event.label;
+
+    if (!channel.typing) channel.activity = null;
+
     for (const subscriber of channel.subscribers) subscriber(event);
 
     if (channel.typing !== working) {
@@ -390,6 +402,11 @@ export class BotRunner {
             questions,
           }),
         react: (messageId, emoji) => this.#react(channel, messageId, emoji),
+        activity: (label) => {
+          if (channel.typing && channel.activity !== label) {
+            this.#emit(channel, { type: "activity", label });
+          }
+        },
         signal: this.#shutdown.signal,
       });
       ok = true;

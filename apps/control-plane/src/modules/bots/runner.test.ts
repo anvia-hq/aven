@@ -295,6 +295,36 @@ describe("BotRunner", () => {
     expect(typed(late.events)).toEqual(["snapshot", "bot: two", "stopped"]);
   });
 
+  test("what the bot is doing is told to the clients while it replies, once for each change, and is gone when it stops", async () => {
+    const gates: (() => void)[] = [];
+    const replier: BotReplier = {
+      ready: () => undefined,
+      answer: async ({ activity }) => {
+        activity?.("Thinking");
+        activity?.("Thinking");
+        await new Promise<void>((resolve) => gates.push(resolve));
+        activity?.("Reading app.ts");
+      },
+    };
+    const runner = new BotRunner({ store: fakeStore(), replier });
+    await runner.send(bot, USER, "hi", model);
+    await until(() => gates.length === 1);
+
+    const late = await watch(runner, stopped);
+    expect(late.events[0]).toMatchObject({ type: "snapshot", typing: true, activity: "Thinking" });
+    gates[0]!();
+    await late.done;
+    expect(
+      late.events.flatMap((event) => (event.type === "activity" ? [event.label] : [])),
+    ).toEqual(["Reading app.ts"]);
+
+    const after = await watch(runner);
+    expect(after.events[0]).toMatchObject({ type: "snapshot", typing: false });
+    expect(after.events[0]).not.toHaveProperty("activity", expect.any(String));
+    after.close();
+    await after.done;
+  });
+
   test("a reply that fails is told to the clients, and the next one goes on", async () => {
     let fail: () => void = () => undefined;
     const failing = new Promise<void>((resolve) => (fail = resolve));

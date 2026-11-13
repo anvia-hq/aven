@@ -1,6 +1,7 @@
 import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel } from "./agent-model";
+import { activityLabelOf, THINKING_LABEL } from "./bot-activity";
 import { botInstructions } from "./bot-instruction";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { createApiTools } from "./tools/api";
@@ -66,6 +67,7 @@ type BotAgentOptions = ModelSource & {
   api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
+  onActivity?: (label: string | null) => void;
 };
 
 export function createBotAgent({
@@ -95,6 +97,7 @@ export function createBotAgent({
   notes,
   cockpit,
   paths,
+  onActivity,
   ...source
 }: BotAgentOptions) {
   const agentModel = resolveAgentModel(source);
@@ -125,6 +128,13 @@ export function createBotAgent({
       }),
       paths ?? SANDBOX_PATHS,
     ),
+    lifecycle: onActivity && {
+      onStart: () => onActivity(THINKING_LABEL),
+      onToolStart: ({ toolName, input }) => onActivity(activityLabelOf(toolName, input)),
+      onToolFinish: () => onActivity(THINKING_LABEL),
+      onFinish: () => onActivity(null),
+      onError: () => onActivity(null),
+    },
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
     memory: compaction ? { ...memory, compaction } : memory,
     tools: [

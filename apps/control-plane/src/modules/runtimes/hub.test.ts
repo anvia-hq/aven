@@ -411,6 +411,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       const connection = hub.get(runtime.id)!;
       const heard = {
         said: [] as string[],
+        activity: [] as (string | null)[],
         ended: [] as (string | undefined)[],
         lost: [] as Error[],
       };
@@ -420,6 +421,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         { bot: info, prompt: "hi", model, machine },
         {
           say: (text) => heard.said.push(text),
+          activity: (label) => heard.activity.push(label),
           end: (error) => heard.ended.push(error),
           lost: (error) => heard.lost.push(error),
           memory: async (params) => (asked.push(params), answerMemory()),
@@ -523,6 +525,20 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
       await until(() => heard.ended.length === 1);
       expect(heard.said).toEqual(["one", "two"]);
       expect(heard.ended).toEqual([undefined]);
+    });
+
+    test("what the bot is doing comes back as a label, for the live reply only", async () => {
+      const { ws, heard } = await replying("bot-activity");
+
+      ws.send(JSON.stringify({ type: "bot.activity", replyId: "reply-1", label: "Thinking" }));
+      ws.send(JSON.stringify({ type: "bot.activity", replyId: "someone-elses", label: "forged" }));
+      ws.send(JSON.stringify({ type: "bot.activity", replyId: "reply-1", label: "Reading a.ts" }));
+      ws.send(JSON.stringify({ type: "bot.activity", replyId: "reply-1", label: null }));
+      ws.send(JSON.stringify({ type: "bot.activity", replyId: "reply-1", label: "" }));
+      ws.send(JSON.stringify({ type: "bot.end", replyId: "reply-1" }));
+
+      await until(() => heard.ended.length === 1);
+      expect(heard.activity).toEqual(["Thinking", "Reading a.ts", null]);
     });
 
     test("a runner can only speak for a reply the control plane started, and not after it ended", async () => {

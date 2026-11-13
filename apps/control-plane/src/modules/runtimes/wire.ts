@@ -91,6 +91,7 @@ const callMethods = [
 ] as const satisfies readonly CallMethod[];
 
 const BOT_SAY_MAX = 2000;
+const BOT_ACTIVITY_MAX = 80;
 
 const toolArtifact = z.object({
   name: z.string().regex(ARTIFACT_NAME),
@@ -259,6 +260,11 @@ const frame = z.discriminatedUnion("type", [
     type: z.literal("bot.end"),
     replyId: z.string().min(1),
     error: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal("bot.activity"),
+    replyId: z.string().min(1),
+    label: z.string().trim().min(1).max(BOT_ACTIVITY_MAX).nullable(),
   }),
   z.object({ type: z.literal("terminal.opened"), viewerId: z.string().min(1) }),
   z.object({

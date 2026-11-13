@@ -148,3 +148,11 @@ export function applyBotEvent(messages: BotChatMessage[], event: BotEvent): BotC
 export function isTyping(previous: boolean, event: BotEvent) {
   return event.type === "snapshot" || event.type === "typing" ? event.typing : previous;
 }
+
+export function activityOf(previous: string | null, event: BotEvent) {
+  if (event.type === "snapshot") return event.activity ?? null;
+
+  if (event.type === "activity") return event.label;
+
+  return event.type === "typing" && !event.typing ? null : previous;
+}

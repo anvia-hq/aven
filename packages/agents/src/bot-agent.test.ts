@@ -112,6 +112,21 @@ describe("createBotAgent", () => {
     expect(delivered).toEqual(["hey!", "how was your day?"]);
   });
 
+  test("tells what it is doing: thinking, then each tool, and nothing when it is done", async () => {
+    const labels: (string | null)[] = [];
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([[send("hey!")], [text("")]]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      onActivity: (label) => labels.push(label),
+    });
+
+    await agent.generate({ prompt: "hello", session: { sessionId: "b1" } });
+
+    expect(labels).toEqual(["Thinking", "Writing a message", "Thinking", null]);
+  });
+
   test("quotes the message it answers and reacts with one emoji, when it is given a way to react", async () => {
     const reacted: { messageId: string; emoji: string }[] = [];
     const quoted: (string | undefined)[] = [];

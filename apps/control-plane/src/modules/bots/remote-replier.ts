@@ -91,6 +91,7 @@ export class RemoteBotReplier implements BotReplier {
     say,
     ask,
     react,
+    activity,
     signal,
   }: BotReplyInput) {
     signal.throwIfAborted();
@@ -140,6 +141,7 @@ export class RemoteBotReplier implements BotReplier {
     };
     const sink = {
       say,
+      activity: (label: string | null) => activity?.(label),
       end: (error?: string) => (error ? ended.reject(new Error(error)) : ended.resolve()),
       lost: (error: Error) => ended.reject(error),
       react: async ({ messageId, emoji }: Omit<BotReactParams, "replyId">) =>

@@ -80,6 +80,7 @@ export type BotReplyInput = {
   say(text: string, quote?: string): void;
   ask(questions: BotQuestion[]): void;
   react(messageId: string, emoji: string): BotReacted;
+  activity?(label: string | null): void;
   signal: AbortSignal;
 };
 
