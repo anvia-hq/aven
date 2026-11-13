@@ -1,6 +1,6 @@
-import { Field } from "@base-ui/react/field";
 import { useState } from "react";
 
+import { FieldLabel, FieldRoot } from "@aven/ui/base-field";
 import { Button } from "@aven/ui/button";
 import { Form as DecisionForm } from "@aven/ui/form";
 import { NativeSelect, NativeSelectOption } from "@aven/ui/native-select";
@@ -64,8 +64,8 @@ function Form({
         void run(() => onSave({ kind, modelId, apiKey }));
       }}
     >
-      <Field.Root className="flex flex-col gap-1 text-sm">
-        <Field.Label>Provider</Field.Label>
+      <FieldRoot className="flex flex-col gap-1 text-sm">
+        <FieldLabel>Provider</FieldLabel>
         <NativeSelect
           aria-label="Decision model provider"
           value={kind}
@@ -77,7 +77,7 @@ function Form({
             </NativeSelectOption>
           ))}
         </NativeSelect>
-      </Field.Root>
+      </FieldRoot>
       <TextField
         label="Model"
         value={modelId}
