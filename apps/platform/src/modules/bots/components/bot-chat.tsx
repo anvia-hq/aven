@@ -2,6 +2,7 @@ import { cn } from "cn";
 import { useEffect, useMemo, useState } from "react";
 
 import { Message } from "@/components/message";
+import { useScopedFont } from "@/modules/theme/hooks/use-scoped-font";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { chatItems } from "../activity";
@@ -21,6 +22,7 @@ import { ProviderKeyForm } from "./provider-key-form";
 export function BotChat({ bot }: { bot: Bot }) {
   const { messages, typing, activity, error, send } = useBotChat(bot.id);
   const { bots } = useBots();
+  const font = useScopedFont("bot");
   const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
   const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
@@ -38,7 +40,7 @@ export function BotChat({ bot }: { bot: Bot }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="relative min-h-0 flex-1">
-        <div ref={scroll} className="h-full overflow-y-auto">
+        <div ref={scroll} className="h-full overflow-y-auto font-sans" style={font.style}>
           <div className="mx-auto flex max-w-4xl flex-col px-4 pt-6 pb-48">
             {messages.length === 0 && !typing && (
               <p className="py-16 text-center text-sm text-muted-foreground">

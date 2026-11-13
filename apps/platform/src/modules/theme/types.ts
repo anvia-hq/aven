@@ -165,3 +165,14 @@ export const SANS_FONTS: SansFontOption[] = [
     googleQuery: "family=Geist:wght@400;500;600;700",
   },
 ];
+
+export type FontChoice = SansFont | "inherit";
+
+export type FontScope = "thread" | "bot";
+
+export const INHERIT_FONT = "inherit";
+
+export const SCOPED_FONT_STORAGE_KEYS: Record<FontScope, string> = {
+  thread: "thread-font",
+  bot: "bot-font",
+};

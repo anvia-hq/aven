@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import { cn } from "cn";
 
 import { Button } from "@/components/button";
+import { useScopedFont } from "@/modules/theme/hooks/use-scoped-font";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import { mergedRuns } from "../merged-runs";
@@ -46,6 +47,7 @@ export function ThreadMessages({
   error,
   aside,
 }: Props) {
+  const font = useScopedFont("thread");
   const scrollRef = useScrollToBottom(messages.length + pending.length + steers.length);
   const earlierRuns = useMemo(
     () => mergedRuns(earlier, false, { after: messages[0] }),
@@ -83,7 +85,11 @@ export function ThreadMessages({
   const working = place({ kind: "agent" });
 
   return (
-    <div ref={scrollRef} className="h-full scrollbar-gutter-stable overflow-y-auto">
+    <div
+      ref={scrollRef}
+      className="h-full scrollbar-gutter-stable overflow-y-auto font-sans"
+      style={font.style}
+    >
       <div className="flex">
         <div className="min-w-0 flex-1">
           <div className="mx-auto flex max-w-4xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)]">
