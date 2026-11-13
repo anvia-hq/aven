@@ -8,7 +8,7 @@ import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
 
 import { useCockpitTags } from "../hooks/use-collection";
-import { useTagColors } from "../hooks/use-tags";
+import { useTagColors } from "../hooks/use-tag-colors";
 import { TagBadge, tagClass, tagStyle } from "./tag-badge";
 
 export function TagInput({
