@@ -47,8 +47,14 @@ export function ThreadMessages({
   aside,
 }: Props) {
   const scrollRef = useScrollToBottom(messages.length + pending.length + steers.length);
-  const earlierRuns = useMemo(() => mergedRuns(earlier, false), [earlier]);
-  const runs = useMemo(() => mergedRuns(messages, running), [messages, running]);
+  const earlierRuns = useMemo(
+    () => mergedRuns(earlier, false, { after: messages[0] }),
+    [earlier, messages],
+  );
+  const runs = useMemo(
+    () => mergedRuns(messages, running, { before: earlier.at(-1) }),
+    [messages, running, earlier],
+  );
   const entries = useMemo(() => {
     const listed = [
       ...earlierRuns.map((message) => ({ message, streaming: false, sending: false })),
