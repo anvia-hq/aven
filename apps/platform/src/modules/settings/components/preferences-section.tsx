@@ -8,6 +8,7 @@ import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { FontPicker } from "@/modules/theme/components/font-picker";
 import { ModePicker } from "@/modules/theme/components/mode-picker";
 import { PalettePicker } from "@/modules/theme/components/palette-picker";
+import { ScopedFontPicker } from "@/modules/theme/components/scoped-font-picker";
 
 import { useTimezone } from "../hooks/use-timezone";
 
@@ -34,6 +35,18 @@ export function PreferencesSection() {
           description="The font for the app's text. Code keeps its monospace font."
         >
           <FontPicker />
+        </SettingsRow>
+        <SettingsRow
+          title="Thread font"
+          description="The font of an agent's conversation in a thread. Code keeps its monospace font."
+        >
+          <ScopedFontPicker scope="thread" label="Thread font" />
+        </SettingsRow>
+        <SettingsRow
+          title="Bot chat font"
+          description="The font of the conversation with a bot. Code keeps its monospace font."
+        >
+          <ScopedFontPicker scope="bot" label="Bot chat font" />
         </SettingsRow>
         <SettingsRow title="Mode" description="Light, dark, or whichever this device is set to.">
           <ModePicker />

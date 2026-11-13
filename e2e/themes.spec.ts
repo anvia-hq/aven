@@ -216,6 +216,27 @@ test.describe("themes", () => {
     await expect(page.getByRole("combobox", { name: "Interface font" })).toContainText("Inter");
   });
 
+  test("the thread and bot chat fonts follow the interface font until chosen", async ({ page }) => {
+    await registerUser(page, "scopedfont", "Scoped Font User");
+    await page.goto("/settings/general");
+    for (const name of ["Thread font", "Bot chat font"]) {
+      await expect(page.getByRole("combobox", { name })).toContainText("Same as interface font");
+    }
+    const picker = page.getByRole("combobox", { name: "Thread font" });
+    await picker.click();
+    await page.getByRole("option", { name: "IBM Plex Sans", exact: true }).click();
+    await expect(picker).toContainText("IBM Plex Sans");
+    await expect(page.locator("#aven-font-thread")).toHaveAttribute("href", /family=IBM\+Plex/);
+    await expect(page.locator("#aven-font-bot")).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Thread font" })).toContainText(
+      "IBM Plex Sans",
+    );
+    await expect(page.getByRole("combobox", { name: "Bot chat font" })).toContainText(
+      "Same as interface font",
+    );
+  });
+
   test("screenshots of every theme", async ({ page }) => {
     test.skip(!process.env.THEME_SHOTS, "only when recording proof");
     await page.setViewportSize({ width: 1280, height: 900 });
