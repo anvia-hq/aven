@@ -3,14 +3,15 @@ import { describe, expect, test } from "bun:test";
 import { CLAUDE_TOKEN_MISSING } from "@aven/protocol/runtime-wire";
 
 import { backendFor, openAgentBackends } from "./agent-backends";
-import { ClaudeRuns } from "./claude-backend";
+import { ClaudeRuns } from "@aven/claude/claude-backend";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type { RuntimeToControlPlane } from "@aven/protocol/types";
-import type { ClaudeQuery, ClaudeQueryInput, RunMessage, ThreadWorkspaces } from "./types";
+import type { ClaudeQuery, ClaudeQueryInput } from "@aven/agent-backend/types";
+import type { RunMessage, ThreadWorkspaces } from "./types";
 
 const TOKEN_A = "setup-token-alice-thread-0001";
 const TOKEN_B = "setup-token-bob-thread-000002";

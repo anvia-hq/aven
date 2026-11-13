@@ -4,7 +4,7 @@ import { createForkTools } from "@aven/agents/tools/forks";
 import { z } from "zod";
 
 import { callAvenTool, claudeMcpTools } from "./claude-mcp";
-import type { ClaudeToolHost } from "./types";
+import type { ClaudeToolHost } from "@aven/agent-backend/types";
 
 const command = createTool({
   name: "exec_command",

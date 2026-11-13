@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 
 import { startRuntime } from "./runner";
 import { fakeControlPlane } from "./testing/fake-control-plane";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type {
   CreateBotReplyAgent,

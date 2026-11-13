@@ -11,7 +11,7 @@ import { projectToolCall, projectToolEnd } from "@aven/agents/tool-projection";
 import { tokenUsageOf } from "@aven/agents/usage";
 import { asRecord } from "@aven/agents/values";
 import type { ContextUsage, RunEvent } from "@aven/protocol/types";
-import type { DurableEnd } from "./types";
+import type { DurableEnd } from "@aven/agent-backend/types";
 
 const DELTAS = new Set(["text_delta", "reasoning_delta", "tool_call"]);
 

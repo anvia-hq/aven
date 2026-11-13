@@ -8,11 +8,11 @@ import { z } from "zod";
 
 import type {
   ClaudeImage,
-  ClaudeMcpTool,
   ClaudeQuestion,
   ClaudeToolContent,
   ClaudeToolHost,
-} from "./types";
+  ClaudeMcpTool,
+} from "@aven/agent-backend/types";
 
 const choice = z.object({
   label: z.string().trim().min(1),

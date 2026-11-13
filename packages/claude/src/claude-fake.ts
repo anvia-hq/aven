@@ -1,4 +1,4 @@
-import type { ClaudeQuery } from "./types";
+import type { ClaudeQuery } from "@aven/agent-backend/types";
 
 export const CLAUDE_FAKE_REPLY = "The Claude backend is answering this thread.";
 

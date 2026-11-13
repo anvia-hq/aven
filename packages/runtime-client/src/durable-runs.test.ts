@@ -21,11 +21,11 @@ import { z } from "zod";
 
 import { DurableRuns } from "./durable-runs";
 import { goalSessionMarker } from "./goal-report";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { defaultCreateAgent } from "./runner";
 import type { ScriptStep } from "@aven/agents/types";
 import type { RunEvent } from "@aven/protocol/types";
-import type { RunInput } from "./types";
+import type { RunInput } from "@aven/agent-backend/types";
 
 const question: ScriptStep = [
   {

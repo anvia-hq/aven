@@ -28,12 +28,10 @@ import type {
   Emit,
   FollowedGoal,
   FollowedRun,
-  FollowOptions,
-  GoalContext,
-  GoalJournal,
   GoalSpec,
   RunInput,
-} from "./types";
+} from "@aven/agent-backend/types";
+import type { FollowOptions, GoalContext, GoalJournal } from "./types";
 
 const AGENT_VERSION = "2";
 

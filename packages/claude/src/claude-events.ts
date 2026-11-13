@@ -7,7 +7,7 @@ import {
 } from "@aven/protocol/events";
 
 import { limitsFromRateLimitEvent, limitsFromUsage } from "./claude-limits";
-import type { ClaudeModelUsage, ClaudeSdkMessage, ClaudeUsage } from "./types";
+import type { ClaudeModelUsage, ClaudeSdkMessage, ClaudeUsage } from "@aven/agent-backend/types";
 import type {
   ContextUsage,
   QuestionPrompt,

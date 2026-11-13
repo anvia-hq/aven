@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { sentPrompt } from "@aven/agents/attachments";
 
 import { ClaudeRuns } from "./claude-backend";
-import { journalPath } from "./testing/journal-path";
-import type { ClaudePromptItem, ClaudeQuery, ClaudeRunContext } from "./types";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
+import type { ClaudePromptItem, ClaudeQuery, ClaudeRunContext } from "@aven/agent-backend/types";
 
 const context = (): ClaudeRunContext => ({
   token: "setup-token-images-0001",
