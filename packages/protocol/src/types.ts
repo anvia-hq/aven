@@ -55,10 +55,11 @@ export type BotChatMessage = {
 };
 
 export type BotEvent =
-  | { type: "snapshot"; messages: BotChatMessage[]; typing: boolean }
+  | { type: "snapshot"; messages: BotChatMessage[]; typing: boolean; activity?: string }
   | { type: "message"; message: BotChatMessage }
   | { type: "reaction"; messageId: string; emoji: string }
   | { type: "typing"; typing: boolean }
+  | { type: "activity"; label: string | null }
   | { type: "error"; message: string };
 
 export type TaskStatus = (typeof TASK_STATUSES)[number];
@@ -737,6 +738,7 @@ export type RuntimeToControlPlane =
   | { type: "call"; id: string; method: CallMethod; params: unknown }
   | { type: "bot.say"; replyId: string; text: string; quote?: string }
   | { type: "bot.end"; replyId: string; error?: string }
+  | { type: "bot.activity"; replyId: string; label: string | null }
   | { type: "terminal.opened"; viewerId: string }
   | { type: "terminal.closed"; viewerId: string; reason: string }
   | { type: "port.opened"; viewerId: string }

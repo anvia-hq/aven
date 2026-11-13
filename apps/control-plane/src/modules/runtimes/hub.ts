@@ -291,6 +291,9 @@ export class RuntimeConnection {
       case "bot.say":
         this.#botReplies.get(message.replyId)?.say(message.text, message.quote);
         return;
+      case "bot.activity":
+        this.#botReplies.get(message.replyId)?.activity(message.label);
+        return;
       case "bot.end":
         this.#endBotReply(message.replyId, message.error);
         return;

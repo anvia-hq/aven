@@ -88,6 +88,7 @@ export type CreateBotReplyAgent = (input: {
   model: RunModel;
   send: SendMessage;
   react: ReactToMessage;
+  onActivity?: (label: string | null) => void;
   memory: AgentMemoryOptions;
   computer: readonly AnyTool[];
   paths?: SandboxPaths;

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  activityOf,
   applyBotEvent,
   botHandleOf,
   botMessagePrompt,
@@ -149,5 +150,19 @@ describe("a bot's handle (decision 0065)", () => {
   test("is numbered when another has it", () => {
     expect(freeBotHandle("scout", new Set())).toBe("scout");
     expect(freeBotHandle("scout", new Set(["scout", "scout-2"]))).toBe("scout-3");
+  });
+});
+
+describe("activityOf", () => {
+  test("follows the label, and is gone when the bot stops typing or the connection starts over", () => {
+    expect(activityOf(null, { type: "activity", label: "Thinking" })).toBe("Thinking");
+    expect(activityOf("Thinking", { type: "activity", label: null })).toBeNull();
+    expect(activityOf("Thinking", { type: "typing", typing: true })).toBe("Thinking");
+    expect(activityOf("Thinking", { type: "typing", typing: false })).toBeNull();
+    expect(activityOf("Thinking", { type: "error", message: "x" })).toBe("Thinking");
+    expect(
+      activityOf(null, { type: "snapshot", messages: [], typing: true, activity: "Reading a.ts" }),
+    ).toBe("Reading a.ts");
+    expect(activityOf("Thinking", { type: "snapshot", messages: [], typing: false })).toBeNull();
   });
 });

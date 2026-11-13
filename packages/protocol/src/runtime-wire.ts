@@ -129,4 +129,4 @@ export const CloseCode = {
   Revoked: 4002,
 } as const;
 
-export const WIRE_VERSION = 57;
+export const WIRE_VERSION = 58;

@@ -331,11 +331,19 @@ export class BotReplies {
       box.tools.filter((tool) => tool.name !== SHOW_ARTIFACT_TOOL_NAME),
     );
     const exec = computer.find((tool) => tool.name === "exec_command");
+    let shown: string | null = null;
+    const onActivity = (label: string | null) => {
+      if (label === shown) return;
+
+      shown = label;
+      post({ type: "bot.activity", replyId, label });
+    };
     return createAgent({
       bot,
       model,
       send,
       react,
+      onActivity,
       peers,
       memory: {
         store: remoteBotMemory(replyId, (params) => call("bot.memory", params)),

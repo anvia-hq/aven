@@ -72,6 +72,7 @@ export type RunSink = {
 
 export type BotReplySink = CallBotReply & {
   say(text: string, quote?: string): void;
+  activity(label: string | null): void;
   end(error?: string): void;
   lost(error: Error): void;
 };

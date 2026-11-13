@@ -186,3 +186,34 @@ describe("a bot's reply with the person's providers (decision 0086)", () => {
     for (const tools of seen) expect(tools).toContain("add_provider");
   });
 });
+
+describe("what a bot is doing while it replies (decision 0267)", () => {
+  test("is sent as the label changes, once for each change, and only for the reply asked for", async () => {
+    const { plane, runtime } = connect(({ send, memory, onActivity }) => {
+      onActivity?.("Thinking");
+      onActivity?.("Thinking");
+      onActivity?.("Reading app.ts");
+      onActivity?.(null);
+      return new Agent({
+        id: "bot",
+        instructions: "x",
+        memory,
+        model: scriptedModel([[toolCall("send_message", { text: "Done" })], [text("")]]),
+        tools: [createSendMessageTool(send)],
+      });
+    }, answerProvider);
+    await runtime.ready;
+    plane.send(botReply);
+
+    await until(() => done(plane));
+    expect(
+      plane.received.flatMap((message) =>
+        message.type === "bot.activity" ? [[message.replyId, message.label]] : [],
+      ),
+    ).toEqual([
+      ["reply-1", "Thinking"],
+      ["reply-1", "Reading app.ts"],
+      ["reply-1", null],
+    ]);
+  });
+});

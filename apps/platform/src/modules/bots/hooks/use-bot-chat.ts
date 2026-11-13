@@ -1,4 +1,4 @@
-import { applyBotEvent, isTyping } from "@aven/protocol/bots";
+import { activityOf, applyBotEvent, isTyping } from "@aven/protocol/bots";
 import { useSetAtom } from "jotai";
 import { useCallback, useEffect, useState } from "react";
 
@@ -38,12 +38,14 @@ function botSaid(event: BotEvent) {
 export function useBotChat(botId: string) {
   const [messages, setMessages] = useState<BotChatMessage[]>([]);
   const [typing, setTyping] = useState(false);
+  const [activity, setActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const setLastMessages = useSetAtom(botLastMessagesAtom);
 
   useEffect(() => {
     setMessages([]);
     setTyping(false);
+    setActivity(null);
     setError(null);
 
     const source = new EventSource(`/api/bots/${botId}/events`);
@@ -54,6 +56,7 @@ export function useBotChat(botId: string) {
 
       setMessages((current) => applyBotEvent(current, event));
       setTyping((current) => isTyping(current, event));
+      setActivity((current) => activityOf(current, event));
       const last = botSaid(event);
 
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
@@ -71,6 +74,7 @@ export function useBotChat(botId: string) {
     };
     source.onerror = () => {
       setTyping(false);
+      setActivity(null);
 
       if (source.readyState === EventSource.CLOSED) setError("Lost the connection to the server");
     };
@@ -94,5 +98,5 @@ export function useBotChat(botId: string) {
     [botId],
   );
 
-  return { messages, typing, error, send };
+  return { messages, typing, activity, error, send };
 }

@@ -19,7 +19,7 @@ import { BotQuestionForm } from "./bot-question-form";
 import { ProviderKeyForm } from "./provider-key-form";
 
 export function BotChat({ bot }: { bot: Bot }) {
-  const { messages, typing, error, send } = useBotChat(bot.id);
+  const { messages, typing, activity, error, send } = useBotChat(bot.id);
   const { bots } = useBots();
   const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
@@ -75,7 +75,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                 </Message>
               );
             })}
-            {typing && <TypingIndicator bot={bot} />}
+            {typing && <TypingIndicator bot={bot} activity={activity} />}
             {error && (
               <p
                 role="alert"
@@ -120,15 +120,15 @@ function BotAsks({
   return <BotQuestionForm botName={botName} questions={questions} onSubmit={send} />;
 }
 
-function TypingIndicator({ bot }: { bot: Bot }) {
+function TypingIndicator({ bot, activity }: { bot: Bot; activity: string | null }) {
   return (
     <p
       role="status"
-      aria-label={`${bot.name} is typing`}
+      aria-label={activity ?? `${bot.name} is typing`}
       className="mt-3 flex items-center gap-2.5 text-xs text-muted-foreground"
     >
       <BotAvatar bot={bot} mood="working" className="size-6" />
-      {bot.name} is typing…
+      <span className={cn(activity && "shimmer")}>{activity ?? `${bot.name} is typing…`}</span>
     </p>
   );
 }
