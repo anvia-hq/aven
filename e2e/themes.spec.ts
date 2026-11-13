@@ -216,39 +216,36 @@ test.describe("themes", () => {
     await expect(page.getByRole("combobox", { name: "Interface font" })).toContainText("Inter");
   });
 
-  test("the thread and bot chat fonts follow the interface font until chosen", async ({ page }) => {
-    await registerUser(page, "scopedfont", "Scoped Font User");
+  test("the text size of the interface and of the bot chat can be chosen and is remembered", async ({
+    page,
+  }) => {
+    await registerUser(page, "textsize", "Text Size User");
     await page.goto("/settings/general");
-    for (const name of ["Thread font", "Bot chat font"]) {
-      await expect(page.getByRole("combobox", { name })).toContainText("Same as interface font");
+    for (const name of ["Interface text size", "Thread text size", "Bot chat text size"]) {
+      await expect(page.getByRole("combobox", { name })).toContainText("Default");
     }
-    const picker = page.getByRole("combobox", { name: "Thread font" });
-    await picker.click();
-    await page.getByRole("option", { name: "IBM Plex Sans", exact: true }).click();
-    await expect(picker).toContainText("IBM Plex Sans");
-    await expect(page.locator("#aven-font-thread")).toHaveAttribute("href", /family=IBM\+Plex/);
-    await expect(page.locator("#aven-font-bot")).toHaveCount(0);
-    await page.reload();
-    await expect(page.getByRole("combobox", { name: "Thread font" })).toContainText(
-      "IBM Plex Sans",
-    );
-    await expect(page.getByRole("combobox", { name: "Bot chat font" })).toContainText(
-      "Same as interface font",
-    );
     await page.goto("/bot");
     const hello = page.getByText(/Say hello to/);
     await expect(hello).toBeVisible();
-    const before = await hello.evaluate((node) => getComputedStyle(node).fontFamily);
+    const before = (await hello.boundingBox())!.height;
+
     await page.goto("/settings/general");
-    await page.getByRole("combobox", { name: "Bot chat font" }).click();
-    await page.getByRole("option", { name: "IBM Plex Sans", exact: true }).click();
+    await page.getByRole("combobox", { name: "Bot chat text size" }).click();
+    await page.getByRole("option", { name: "Extra large", exact: true }).click();
     await page.goto("/bot");
-    await expect(page.getByText(/Say hello to/)).toBeVisible();
-    const after = await page
-      .getByText(/Say hello to/)
-      .evaluate((node) => getComputedStyle(node).fontFamily);
-    expect(before).not.toContain("IBM Plex Sans");
-    expect(after).toContain("IBM Plex Sans");
+    await expect(hello).toBeVisible();
+    const larger = (await hello.boundingBox())!.height;
+    expect(larger).toBeGreaterThan(before * 1.2);
+
+    await page.goto("/settings/general");
+    await page.getByRole("combobox", { name: "Interface text size" }).click();
+    await page.getByRole("option", { name: "Large", exact: true }).click();
+    await expect(page.locator("html")).toHaveAttribute("style", /font-size: 112\.5%/);
+    await page.reload();
+    await expect(page.getByRole("combobox", { name: "Interface text size" })).toContainText(
+      "Large",
+    );
+    await expect(page.getByRole("combobox", { name: "Thread text size" })).toContainText("Default");
   });
 
   test("screenshots of every theme", async ({ page }) => {
