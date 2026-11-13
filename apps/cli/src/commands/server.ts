@@ -4,7 +4,7 @@ import { join } from "node:path";
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
 import { stringFlag } from "../args";
-import { composeCommand, dockerProblem, recordProject, run } from "../compose";
+import { runCompose as composeIn, dockerProblem, recordProject } from "../compose";
 import { addMissingKeys, parseEnv, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
@@ -26,7 +26,7 @@ const healthUrl = (env: Record<string, string>) =>
   `http://localhost:${env.AVEN_API_PORT || API_PORT}/health`;
 
 async function runCompose(dir: string, args: string[]) {
-  const code = await run(composeCommand(dir, args));
+  const code = await composeIn(dir, args);
 
   if (code !== 0) throw new Error(`docker compose ${args[0]} failed (exit ${code})`);
 }
@@ -108,7 +108,7 @@ export async function serverStop() {
 export async function serverStatus() {
   const dir = serverDir();
   const env = await readServerEnv(dir);
-  await run(composeCommand(dir, ["ps"]));
+  await composeIn(dir, ["ps"]);
   const answers = await waitForHealthy(healthUrl(env), { timeoutMs: 0 });
   console.log(
     answers ? `\nThe server answers at ${env.BETTER_AUTH_URL}` : "\nThe server does not answer.",
@@ -122,7 +122,7 @@ export async function serverLogs(service: string | undefined, follow: boolean) {
 
   if (service) args.push(service);
 
-  await run(composeCommand(serverDir(), args));
+  await composeIn(serverDir(), args);
 }
 
 export async function serverUpgrade(release: string) {
