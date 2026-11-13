@@ -234,6 +234,7 @@ const input = (
   onPersonsWord: true,
   say,
   ask: () => undefined,
+  react: (messageId: string) => ({ messageId }),
   signal,
 });
 

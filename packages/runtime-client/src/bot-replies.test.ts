@@ -7,6 +7,7 @@ import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-mod
 import { createCreateBotTool } from "@aven/agents/tools/create-bot";
 import { createAskQuestionTool } from "@aven/agents/tools/ask-question";
 import { createSendMessageTool } from "@aven/agents/tools/send-message";
+import { createReactToMessageTool } from "@aven/agents/tools/react-to-message";
 import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
 import { z } from "zod";
 
@@ -50,7 +51,7 @@ const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(
 
 const agentThat =
   (...steps: Parameters<typeof scriptedModel>[0]): CreateBotReplyAgent =>
-  ({ send, computer, memory, createBot, updateSelf }) =>
+  ({ send, react, computer, memory, createBot, updateSelf }) =>
     new Agent({
       id: "bot",
       model: scriptedModel([...steps, [text("")]]),
@@ -58,6 +59,7 @@ const agentThat =
       memory,
       tools: [
         createSendMessageTool(send),
+        createReactToMessageTool(react),
         ...computer,
         ...makingBots(createBot),
         createUpdateSelfTool(updateSelf),
@@ -139,6 +141,10 @@ function harness(
 
       if (method === "bot.update") return { name: "Pip", description: "Now for research." };
 
+      if (method === "bot.react") {
+        return { messageId: (params as { messageId: string }).messageId };
+      }
+
       if (method === "bot.goal") return null;
 
       if (method === "bot.skill") {
@@ -174,6 +180,28 @@ describe("BotReplies", () => {
     await run.until();
     expect(sawToken).toBe(false);
     expect(run.sent.some((frame) => frame.type === "bot.end")).toBe(true);
+  });
+
+  test("a message can quote one the person wrote, and the bot can react to it with one emoji (decision 0258)", async () => {
+    const run = harness(
+      agentThat([
+        toolCall("send_message", { text: "tomorrow then", quote: "m-0" }),
+        toolCall("react_to_message", { messageId: "m-0", emoji: "👍" }),
+      ]),
+    );
+    run.replies.start({ ...message, prompt: "[m-0] what is the plan?" });
+    await run.until();
+
+    expect(run.sent).toContainEqual({
+      type: "bot.say",
+      replyId: "r1",
+      text: "tomorrow then",
+      quote: "m-0",
+    });
+    expect(run.calls).toContainEqual({
+      method: "bot.react",
+      params: { replyId: "r1", messageId: "m-0", emoji: "👍" },
+    });
   });
 
   describe("the person's skills (decision 0081)", () => {
@@ -922,6 +950,7 @@ describe("BotReplies", () => {
         },
         model: { provider: "openai", gatewayPath: "/g", gatewayToken: "t" },
         send: async () => "Sent",
+        react: async ({ messageId }) => `Reacted to ${messageId}`,
         goals: {
           get: async () => null,
           start: async () => {
@@ -1054,6 +1083,7 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "react_to_message",
         "get_goal",
         "start_goal",
         "update_goal",
@@ -1101,6 +1131,7 @@ describe("BotReplies", () => {
       expect(agent.tools.map((each) => each.name)).toEqual([
         "send_message",
         "list_bots",
+        "react_to_message",
         "get_goal",
         "start_goal",
         "update_goal",

@@ -19,6 +19,8 @@ import type {
   BotProviderParams,
   BotQuestioned,
   BotQuestionParams,
+  BotReacted,
+  BotReactParams,
   BotScheduled,
   BotScheduleParams,
   BotSendParams,
@@ -69,7 +71,7 @@ export type RunSink = {
 };
 
 export type BotReplySink = CallBotReply & {
-  say(text: string): void;
+  say(text: string, quote?: string): void;
   end(error?: string): void;
   lost(error: Error): void;
 };
@@ -94,6 +96,7 @@ export type CallBotReply = {
   create(params: BotCreateParams): Promise<BotCreated>;
   update(params: BotUpdateParams): Promise<BotUpdated>;
   send(params: BotSendParams): Promise<BotSent>;
+  react(params: BotReactParams): Promise<BotReacted>;
   schedule(params: BotScheduleParams): Promise<BotScheduled>;
   goal(params: BotGoalParams): Promise<BotGoaled>;
   question(params: BotQuestionParams): Promise<BotQuestioned>;

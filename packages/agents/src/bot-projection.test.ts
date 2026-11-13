@@ -44,7 +44,7 @@ describe("botMessagesToChat", () => {
     ];
     expect(botMessagesToChat(messages)).toEqual([
       { id: "m-0", role: "user", text: "run it" },
-      { id: "m-1", role: "bot", text: "done" },
+      { id: "b-0", role: "bot", text: "done" },
     ]);
   });
 
@@ -75,9 +75,9 @@ describe("botMessagesToChat", () => {
     ];
     expect(botMessagesToChat(messages)).toEqual([
       { id: "m-0", role: "user", text: "hello" },
-      { id: "m-1", role: "bot", text: "hey!" },
-      { id: "m-2", role: "bot", text: "how are you?" },
-      { id: "m-3", role: "user", text: "good" },
+      { id: "b-0", role: "bot", text: "hey!" },
+      { id: "b-1", role: "bot", text: "how are you?" },
+      { id: "m-1", role: "user", text: "good" },
     ]);
   });
 
@@ -161,13 +161,13 @@ describe("botMessagesToChat", () => {
         peer: { name: "main", handle: "main", direction: "from" },
       },
       {
-        id: "m-1",
+        id: "b-0",
         role: "bot",
         text: "A, B and C are done",
         peer: { name: "main", handle: "main", direction: "to" },
       },
-      { id: "m-2", role: "user", text: "thanks, from me" },
-      { id: "m-3", role: "bot", text: "you are welcome" },
+      { id: "m-1", role: "user", text: "thanks, from me" },
+      { id: "b-1", role: "bot", text: "you are welcome" },
     ]);
   });
 
@@ -191,9 +191,9 @@ describe("botMessagesToChat", () => {
         text: "look at it",
         peer: { name: "main", handle: "main", direction: "from" },
       },
-      { id: "m-1", role: "bot", text: "looks fine" },
+      { id: "b-0", role: "bot", text: "looks fine" },
       {
-        id: "m-2",
+        id: "b-1",
         role: "bot",
         text: "done",
         peer: { name: "main", handle: "main", direction: "to" },
@@ -208,7 +208,7 @@ describe("botMessagesToChat", () => {
     ];
 
     expect(botMessagesToChat(messages)).toEqual([
-      { id: "m-0", role: "bot", text: "Hi, I am Scout" },
+      { id: "b-0", role: "bot", text: "Hi, I am Scout" },
     ]);
   });
 
@@ -226,25 +226,25 @@ describe("botMessagesToChat", () => {
     expect(botMessagesToChat(messages)).toEqual([
       { id: "m-0", role: "user", text: "ask @scout to do A" },
       {
-        id: "m-1",
+        id: "b-0",
         role: "bot",
         text: "do A",
         peer: { name: "scout", handle: "scout", direction: "to" },
       },
-      { id: "m-2", role: "bot", text: "Scout is on it" },
+      { id: "b-1", role: "bot", text: "Scout is on it" },
       {
-        id: "m-3",
+        id: "m-1",
         role: "user",
         text: "A is done",
         peer: { name: "scout", handle: "scout", direction: "from" },
       },
-      { id: "m-4", role: "bot", text: "Scout says A is done" },
+      { id: "b-2", role: "bot", text: "Scout says A is done" },
     ]);
   });
 
   test("a message with no `to`, as every one was before bots wrote to bots, is the person's", () => {
     const messages: Message[] = [{ role: "assistant", content: [call("c1", { text: "hello" })] }];
-    expect(botMessagesToChat(messages)).toEqual([{ id: "m-0", role: "bot", text: "hello" }]);
+    expect(botMessagesToChat(messages)).toEqual([{ id: "b-0", role: "bot", text: "hello" }]);
   });
 
   test("a message that was refused was never sent, so it is not in the chat", () => {
@@ -275,7 +275,7 @@ describe("botMessagesToChat", () => {
 
     expect(botMessagesToChat(messages)).toEqual([
       { id: "m-0", role: "user", text: "tell ghost to do A" },
-      { id: "m-1", role: "bot", text: "No such bot" },
+      { id: "b-0", role: "bot", text: "No such bot" },
     ]);
   });
 
@@ -323,8 +323,8 @@ describe("botMessagesToChat", () => {
 
       expect(botMessagesToChat(messages)).toEqual([
         { id: "m-0", role: "user", text: "help me choose" },
-        { id: "m-1", role: "bot", text: "Which first?", questions },
-        { id: "m-2", role: "user", text: "Scout" },
+        { id: "b-0", role: "bot", text: "Which first?", questions },
+        { id: "m-1", role: "user", text: "Scout" },
       ]);
     });
 
@@ -339,7 +339,7 @@ describe("botMessagesToChat", () => {
       ];
 
       expect(botMessagesToChat(messages)).toEqual([
-        { id: "m-0", role: "bot", text, peer: { name: "main", handle: "main", direction: "to" } },
+        { id: "b-0", role: "bot", text, peer: { name: "main", handle: "main", direction: "to" } },
       ]);
     });
 
@@ -380,7 +380,7 @@ describe("botMessagesToChat", () => {
       expect(botMessagesToChat(messages)).toEqual([
         { id: "m-0", role: "user", text: "add my azure" },
         {
-          id: "m-1",
+          id: "b-0",
           role: "bot",
           text: "Enter the API key for Work Azure",
           questions: [
@@ -391,7 +391,7 @@ describe("botMessagesToChat", () => {
             },
           ],
         },
-        { id: "m-2", role: "user", text: "Saved the key." },
+        { id: "m-1", role: "user", text: "Saved the key." },
       ]);
     });
 
@@ -403,5 +403,121 @@ describe("botMessagesToChat", () => {
         botMessagesToChat([asking("k1"), answered("k1", { type: "json", value: { nope: 1 } })]),
       ).toEqual([]);
     });
+  });
+});
+
+describe("quoting and reacting (decision 0258)", () => {
+  const reacting = (toolCallId: string, messageId: string, emoji: string) =>
+    ({
+      type: "tool-call",
+      toolCallId,
+      toolName: "react_to_message",
+      input: { messageId, emoji },
+    }) as const;
+  const reacted = (toolCallId: string) =>
+    ({
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId,
+          toolName: "react_to_message",
+          output: { type: "json", value: { messageId: "m-0" } },
+        },
+      ],
+    }) as Message;
+
+  test("a message the person answered shows the one they answered, and the bot's answer shows it too", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] what is the plan?" },
+      { role: "assistant", content: [call("c1", { text: "Ask Scout" })] },
+      {
+        role: "user",
+        content:
+          "[m-1] [replying to m-0] the traffic is bad, what is the plan?\nwhat about tomorrow?",
+      },
+      { role: "assistant", content: [call("c2", { text: "Tomorrow then", quote: "m-0" })] },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "what is the plan?" },
+      { id: "b-0", role: "bot", text: "Ask Scout" },
+      {
+        id: "m-1",
+        role: "user",
+        text: "what about tomorrow?",
+        quote: { id: "m-0", role: "user", text: "what is the plan?" },
+      },
+      {
+        id: "b-1",
+        role: "bot",
+        text: "Tomorrow then",
+        quote: { id: "m-0", role: "user", text: "what is the plan?" },
+      },
+    ]);
+  });
+
+  test("a quote of a message between bots carries which bot wrote it", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] [from main] do A" },
+      { role: "assistant", content: [call("c1", { text: "on it", quote: "m-0" })] },
+    ];
+
+    expect(botMessagesToChat(messages)[1]?.quote).toEqual({
+      id: "m-0",
+      role: "user",
+      text: "do A",
+      peer: { name: "main", handle: "main", direction: "from" },
+    });
+  });
+
+  test("a quote of a message the chat does not have is left off, and the message is still sent", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] hi" },
+      { role: "assistant", content: [call("c1", { text: "hello", quote: "m-9" })] },
+    ];
+
+    expect(botMessagesToChat(messages)[1]).toEqual({ id: "b-0", role: "bot", text: "hello" });
+  });
+
+  test("a reaction the bot sent sticks to the message it is about, once, and a refused one does not", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] hi" },
+      {
+        role: "assistant",
+        content: [
+          reacting("r1", "m-0", "👍"),
+          reacting("r2", "m-0", "👍"),
+          call("c1", { text: "hello" }),
+        ],
+      },
+      reacted("r1"),
+      reacted("r2"),
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "m-0", role: "user", text: "hi", reactions: ["👍"] },
+      { id: "b-0", role: "bot", text: "hello" },
+    ]);
+  });
+
+  test("a reaction that failed is not in the chat", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] hi" },
+      { role: "assistant", content: [reacting("r1", "m-0", "👍")] },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "r1",
+            toolName: "react_to_message",
+            output: { type: "error-text", value: "There is no message m-0 in this chat" },
+          },
+        ],
+      } as Message,
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([{ id: "m-0", role: "user", text: "hi" }]);
   });
 });

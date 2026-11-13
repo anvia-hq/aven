@@ -1,14 +1,16 @@
 import { cn } from "cn";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Message } from "@/components/message";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { chatItems } from "../activity";
 import { isOpen } from "../questions";
+import { quoteAuthor, quoteOf } from "../quote";
 import { useBotChat } from "../hooks/use-bot-chat";
 import { useBots } from "../hooks/use-bots";
-import type { Bot, BotChatMessage } from "../types";
+import type { AttachmentUpload } from "@/modules/threads/types";
+import type { Bot, BotChatMessage, BotChatQuote } from "../types";
 import { BotComposer } from "./bot-composer";
 import { BotActivity } from "./bot-activity";
 import { BotAvatar } from "./bot-avatar";
@@ -21,6 +23,17 @@ export function BotChat({ bot }: { bot: Bot }) {
   const { bots } = useBots();
   const items = useMemo(() => chatItems(messages), [messages]);
   const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
+  const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
+
+  useEffect(() => setQuoting(null), [bot.id]);
+
+  const onSend = async (text: string, files: AttachmentUpload[] = []) => {
+    const sent = await send(text, files, quoting?.id);
+
+    if (sent) setQuoting(null);
+
+    return sent;
+  };
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -49,9 +62,15 @@ export function BotChat({ bot }: { bot: Bot }) {
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
                   {isOpen(messages, message) && message.questions ? (
-                    <BotAsks botName={bot.name} questions={message.questions} send={send} />
+                    <BotAsks botName={bot.name} questions={message.questions} send={onSend} />
                   ) : (
-                    <BotChatBubble botId={bot.id} message={message} bots={bots} />
+                    <BotChatBubble
+                      botId={bot.id}
+                      bot={bot}
+                      message={message}
+                      bots={bots}
+                      onQuote={(quoted) => setQuoting(quoteOf(quoted))}
+                    />
                   )}
                 </Message>
               );
@@ -72,7 +91,10 @@ export function BotChat({ bot }: { bot: Bot }) {
             <BotComposer
               botId={bot.id}
               main={bot.isMain}
-              onSend={send}
+              onSend={onSend}
+              quoting={quoting}
+              quoteAuthor={quoting ? quoteAuthor(quoting, bot, bots) : ""}
+              onClearQuote={() => setQuoting(null)}
               placeholder={`Message ${bot.name}, @ to mention ${bot.isMain ? "a bot or thread" : "a thread"}, / for a skill`}
             />
           </div>

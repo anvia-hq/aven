@@ -38,6 +38,7 @@ import type {
   McpServersHost,
   MemoryHost,
   ProvidersHost,
+  ReactToMessage,
   RunSubagent,
   ScheduleHost,
   SendMessage,
@@ -86,6 +87,7 @@ export type CreateBotReplyAgent = (input: {
   bot: BotReplyInfo;
   model: RunModel;
   send: SendMessage;
+  react: ReactToMessage;
   memory: AgentMemoryOptions;
   computer: readonly AnyTool[];
   paths?: SandboxPaths;

@@ -1,7 +1,14 @@
 import type { faces } from "./avatar";
 import type { Bot, BotChatMessage } from "@aven/protocol/types";
 
-export type { Bot, BotChatMessage, BotChatPeer, BotEvent, BotQuestion } from "@aven/protocol/types";
+export type {
+  Bot,
+  BotChatMessage,
+  BotChatPeer,
+  BotChatQuote,
+  BotEvent,
+  BotQuestion,
+} from "@aven/protocol/types";
 
 export type BotPatch = {
   name?: string;

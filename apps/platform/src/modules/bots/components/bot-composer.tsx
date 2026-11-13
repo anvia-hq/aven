@@ -4,7 +4,7 @@ import {
   useComposer,
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
-import { ArrowUp } from "@mynaui/icons-react";
+import { ArrowUp, MessageReply, X } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
@@ -23,6 +23,7 @@ import { BotMentionChip } from "./bot-mention-chip";
 import { MentionChip } from "@/modules/threads/components/mention-chip";
 import { MentionIcon } from "./mention-icon";
 import { ThreadMentionChip } from "./thread-mention-chip";
+import type { BotChatQuote } from "../types";
 
 const SINGLE_LINE_HEIGHT = 40;
 
@@ -31,6 +32,9 @@ type Props = {
   main: boolean;
   onSend: (text: string, files: AttachmentUpload[]) => Promise<boolean>;
   placeholder: string;
+  quoting: BotChatQuote | null;
+  quoteAuthor: string;
+  onClearQuote: () => void;
 };
 
 function avatarOf(data: ComposerInputEntity["data"]) {
@@ -73,7 +77,13 @@ export function BotComposer({ botId, main, ...props }: Props) {
   );
 }
 
-function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
+function Composer({
+  onSend,
+  placeholder,
+  quoting,
+  quoteAuthor,
+  onClearQuote,
+}: Omit<Props, "botId" | "main">) {
   const composer = useComposer();
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
@@ -135,6 +145,28 @@ function Composer({ onSend, placeholder }: Omit<Props, "botId" | "main">) {
       {...drop}
       onKeyDownCapture={onKeyDown}
     >
+      {quoting && (
+        <div className="flex flex-wrap gap-2 p-1">
+          <div
+            data-slot="quoting"
+            title={`${quoteAuthor}: ${quoting.text || "A file"}`}
+            className="flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-full bg-muted pr-0.5 pl-2.5 text-xs"
+          >
+            <MessageReply className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="shrink-0 font-medium">{quoteAuthor}</span>
+            <span className="truncate text-muted-foreground">{quoting.text || "A file"}</span>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="shrink-0 rounded-full"
+              aria-label="Stop quoting"
+              onClick={onClearQuote}
+            >
+              <X />
+            </Button>
+          </div>
+        </div>
+      )}
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
       <div
         data-expanded={expanded || undefined}

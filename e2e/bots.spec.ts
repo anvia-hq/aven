@@ -54,6 +54,49 @@ test.describe("bots", () => {
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
   });
 
+  test("a bot quotes the message it answers and reacts to it, and the person quotes one too", async ({
+    page,
+  }) => {
+    await registerUser(page, "bot-quote", "Quote Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const box = page.getByRole("textbox", { name: "Message" });
+    await box.fill("react to my plan");
+    await box.press("Enter");
+
+    await expect(
+      page.locator('[data-slot="bubble-content"]').filter({ hasText: "Good plan" }),
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="quote"]')).toContainText("You");
+    await expect(page.locator('[data-slot="quote"]')).toContainText("react to my plan");
+    await expect(page.getByTitle("Reaction")).toHaveText("👍");
+
+    await bubble(page, "react to my plan").hover();
+    await page.getByRole("button", { name: "Quote this message" }).first().click();
+    await expect(page.locator('[data-slot="quoting"]')).toContainText("You");
+    await expect(page.locator('[data-slot="quoting"]')).toContainText("react to my plan");
+
+    await box.fill("a second thought");
+    await box.press("Enter");
+    await expect(
+      page.locator('[data-role="user"]').filter({ hasText: "a second thought" }),
+    ).toBeVisible();
+    await expect(page.locator('[data-slot="quoting"]')).toBeHidden();
+
+    await page.reload();
+    await expect(page.getByTitle("Reaction")).toHaveText("👍");
+    await expect(page.locator('[data-slot="quote"]')).toHaveCount(2);
+  });
+
   test("a bot is told which skills it has", async ({ page }) => {
     await registerUser(page, "bot-skills", "Skills Person");
     const provider = await page.request.post("/api/providers", {

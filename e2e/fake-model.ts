@@ -5,6 +5,11 @@ type ChatMessage = { role: string; content?: string | { type: string; text?: str
 const textOf = (content: ChatMessage["content"]) =>
   typeof content === "string" ? content : (content ?? []).map((part) => part.text ?? "").join("");
 
+const heardOf = (content: ChatMessage["content"]) =>
+  textOf(content)
+    .replace(/^\[[mb]-\d+\] /, "")
+    .replace(/^\[replying to [mb]-\d+\] [^\n]*\n/, "");
+
 const reply = (message: Record<string, unknown>, finish: string) =>
   Response.json({
     id: "chatcmpl-fake",
@@ -222,7 +227,7 @@ Bun.serve({
       return reply({ content: null, tool_calls: [sendMessage("call_2", said)] }, "tool_calls");
     }
 
-    const heard = textOf(last?.content);
+    const heard = heardOf(last?.content);
 
     if (/make a bot/i.test(heard) && !body.messages.some(madeABot)) {
       return reply({ content: null, tool_calls: [createBot("call_1")] }, "tool_calls");
@@ -354,6 +359,22 @@ Bun.serve({
 
     if (/call yourself/i.test(heard) && !body.messages.some(changedItself)) {
       return reply({ content: null, tool_calls: [updateSelf("call_1")] }, "tool_calls");
+    }
+
+    if (
+      /react to my plan/i.test(heard) &&
+      !body.messages.some((message) => calledTool(message, "react_to_message"))
+    ) {
+      return reply(
+        {
+          content: null,
+          tool_calls: [
+            toolCall("call_1", "react_to_message", { messageId: "m-0", emoji: "👍" }),
+            toolCall("call_2", "send_message", { text: "Good plan", quote: "m-0" }),
+          ],
+        },
+        "tool_calls",
+      );
     }
 
     return reply(

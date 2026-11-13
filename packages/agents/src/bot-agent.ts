@@ -10,6 +10,7 @@ import { createGoalTools } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools } from "./tools/mcp-servers";
 import { createProviderTools } from "./tools/providers";
+import { createReactToMessageTool } from "./tools/react-to-message";
 import { createThreadTools } from "./tools/threads";
 import { createCockpitTool } from "./tools/cockpit";
 import { createMemoryTool } from "./tools/memory";
@@ -25,6 +26,7 @@ import type {
   McpServersHost,
   MemoryHost,
   ProvidersHost,
+  ReactToMessage,
   ScheduleHost,
   SendMessage,
   ApiHost,
@@ -44,6 +46,7 @@ type BotAgentOptions = ModelSource & {
   handle: string;
   instruction: string;
   send: SendMessage;
+  react?: ReactToMessage;
   memory: AgentMemoryOptions;
   compactAfterTokens?: number;
   computer?: readonly AnyTool[];
@@ -71,6 +74,7 @@ export function createBotAgent({
   handle,
   instruction,
   send,
+  react,
   memory,
   compactAfterTokens,
   computer = [],
@@ -106,6 +110,7 @@ export function createBotAgent({
         computer: computer.length > 0,
         createBots: Boolean(createBot),
         questions: Boolean(askQuestion),
+        reactions: Boolean(react),
         goals: Boolean(goals),
         schedules: schedules && timezone ? { timezone } : undefined,
         peers,
@@ -125,6 +130,7 @@ export function createBotAgent({
     tools: [
       createSendMessageTool(send),
       createListBotsTool(() => peers),
+      ...reacting(react),
       ...computer,
       ...asking(askQuestion),
       ...working(goals),
@@ -143,6 +149,7 @@ export function createBotAgent({
 }
 
 const usingApi = (host?: ApiHost) => (host ? createApiTools(host) : []);
+const reacting = (react?: ReactToMessage) => (react ? [createReactToMessageTool(react)] : []);
 const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
 const workingCockpit = (cockpit?: { access: CockpitAccess; host: CockpitHost }) =>
   cockpit ? [createCockpitTool(cockpit.host, cockpit.access)] : [];

@@ -11,6 +11,7 @@ import {
   parseBotCreateParams,
   parseBotMemoryParams,
   parseBotGoalParams,
+  parseBotReactParams,
   parseBotScheduleParams,
   parseBotSendParams,
   parseBotThreadParams,
@@ -208,6 +209,47 @@ describe("a bot's reply from a runtime", () => {
     expect(parseRuntimeFrame(say("r1", "x".repeat(2001)))).toBeNull();
     expect(parseRuntimeFrame(say("", "hi"))).toBeNull();
     expect(parseRuntimeFrame(say("r1", 7))).toBeNull();
+  });
+
+  test("a message can name the one it answers, and a bot can put one emoji on a message of its chat (decision 0258)", () => {
+    expect(
+      parseRuntimeFrame(
+        JSON.stringify({ type: "bot.say", replyId: "r1", text: "on it", quote: "m-3" }),
+      ),
+    ).toEqual({ type: "bot.say", replyId: "r1", text: "on it", quote: "m-3" });
+    expect(
+      parseRuntimeFrame(
+        JSON.stringify({ type: "bot.say", replyId: "r1", text: "on it", quote: "x" }),
+      ),
+    ).toBeNull();
+    expect(
+      parseRuntimeFrame(
+        JSON.stringify({
+          type: "call",
+          id: "c1",
+          method: "bot.react",
+          params: { replyId: "r1", messageId: "m-3", emoji: "👍" },
+        }),
+      ),
+    ).toMatchObject({ type: "call", method: "bot.react" });
+    expect(
+      parseRuntimeFrame(
+        JSON.stringify({
+          type: "call",
+          id: "c2",
+          method: "bot.react",
+          params: { replyId: "r1", messageId: "m-3", emoji: "great!" },
+        }),
+      ),
+    ).toMatchObject({ type: "call", method: "bot.react" });
+    expect(() =>
+      parseBotReactParams({ replyId: "r1", messageId: "m-3", emoji: "great!" }),
+    ).toThrow();
+    expect(parseBotReactParams({ replyId: "r1", messageId: "m-3", emoji: "🎉" })).toEqual({
+      replyId: "r1",
+      messageId: "m-3",
+      emoji: "🎉",
+    });
   });
 
   test("a runner can read and add to a bot's conversation and summarize it, but not clear it", () => {

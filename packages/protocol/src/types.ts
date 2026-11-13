@@ -36,6 +36,13 @@ export type BotChatPeer = {
 
 export type BotQuestion = QuestionPrompt & { providerKey?: ProviderKeyAsk };
 
+export type BotChatQuote = {
+  id: string;
+  role: "user" | "bot";
+  text: string;
+  peer?: BotChatPeer;
+};
+
 export type BotChatMessage = {
   id: string;
   role: "user" | "bot";
@@ -43,11 +50,14 @@ export type BotChatMessage = {
   attachments?: MessageAttachment[];
   peer?: BotChatPeer;
   questions?: BotQuestion[];
+  quote?: BotChatQuote;
+  reactions?: string[];
 };
 
 export type BotEvent =
   | { type: "snapshot"; messages: BotChatMessage[]; typing: boolean }
   | { type: "message"; message: BotChatMessage }
+  | { type: "reaction"; messageId: string; emoji: string }
   | { type: "typing"; typing: boolean }
   | { type: "error"; message: string };
 
@@ -725,7 +735,7 @@ export type RuntimeToControlPlane =
       continuation?: unknown;
     }
   | { type: "call"; id: string; method: CallMethod; params: unknown }
-  | { type: "bot.say"; replyId: string; text: string }
+  | { type: "bot.say"; replyId: string; text: string; quote?: string }
   | { type: "bot.end"; replyId: string; error?: string }
   | { type: "terminal.opened"; viewerId: string }
   | { type: "terminal.closed"; viewerId: string; reason: string }
@@ -748,6 +758,7 @@ export type BotCallMethod =
   | "bot.create"
   | "bot.update"
   | "bot.send"
+  | "bot.react"
   | "bot.question"
   | "bot.schedule"
   | "bot.goal"
@@ -933,6 +944,10 @@ export type BotSendParams = { replyId: string; to: string; text: string };
 
 export type BotSent = { handle: string; name: string };
 
+export type BotReactParams = { replyId: string; messageId: string; emoji: string };
+
+export type BotReacted = { messageId: string };
+
 export type BotQuestionParams = { replyId: string; questions: BotQuestion[] };
 
 export type BotQuestioned = { relayed?: { handle: string; name: string; text: string } };
@@ -977,6 +992,7 @@ export type RuntimeCalls = {
   "bot.create": { params: BotCreateParams; result: BotCreated };
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
   "bot.send": { params: BotSendParams; result: BotSent };
+  "bot.react": { params: BotReactParams; result: BotReacted };
   "bot.question": { params: BotQuestionParams; result: BotQuestioned };
   "bot.schedule": { params: BotScheduleParams; result: BotScheduled };
   "bot.goal": { params: BotGoalParams; result: BotGoaled };

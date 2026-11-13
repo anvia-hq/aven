@@ -283,7 +283,7 @@ run("createBotChats (postgres)", async () => {
         peer: { name: "main", handle: "main", direction: "from" },
       },
       {
-        id: "m-1",
+        id: "b-0",
         role: "bot",
         text: "Scout did A",
         peer: { name: "main", handle: "main", direction: "to" },
@@ -317,7 +317,7 @@ run("createBotChats (postgres)", async () => {
     await Bun.sleep(20);
 
     expect(await chatOf(runner, scout.id, alice)).toEqual([
-      { id: "m-0", role: "bot", text: "Hi, I am Hello" },
+      { id: "b-0", role: "bot", text: "Hi, I am Hello" },
     ]);
     await expect(botChats.greet(bob, scout.id, 0)).rejects.toBeInstanceOf(NotFoundError);
   });

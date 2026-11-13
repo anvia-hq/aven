@@ -1,14 +1,22 @@
 import type { Message, ToolResultOutput } from "@anvia/core";
-import { botMessageId, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
+import {
+  BOT_REACTIONS_MAX,
+  incomingMessageId,
+  parseBotPrompt,
+  sentMessageId,
+  USER_HANDLE,
+} from "@aven/protocol/bots";
 
 import { providerKeyQuestion } from "@aven/protocol/providers";
 
 import { sentMessage } from "./attachments";
 import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, toQuestions } from "./tools/ask-question";
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
+import { REACT_TO_MESSAGE_TOOL_NAME, reactToMessageSchema } from "./tools/react-to-message";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
 import type {
   BotChatMessage,
+  BotChatQuote,
   BotQuestion,
   MessageAttachment,
   ProviderKeyAsk,
@@ -56,11 +64,29 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
   const add = (
     role: BotChatMessage["role"],
     text: string,
-    peer?: BotChatMessage["peer"],
-    questions?: BotQuestion[],
-    attachments?: MessageAttachment[],
+    {
+      peer,
+      questions,
+      attachments,
+      quote,
+      id,
+    }: {
+      peer?: BotChatMessage["peer"];
+      questions?: BotQuestion[];
+      attachments?: MessageAttachment[];
+      quote?: BotChatQuote;
+      id?: string;
+    } = {},
   ) => {
-    const message: BotChatMessage = { id: botMessageId(chat.length), role, text };
+    const message: BotChatMessage = {
+      id:
+        id ??
+        (role === "user"
+          ? incomingMessageId(chat.filter((each) => each.role === "user").length)
+          : sentMessageId(chat.filter((each) => each.role === "bot").length)),
+      role,
+      text,
+    };
 
     if (peer) message.peer = peer;
 
@@ -68,23 +94,43 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
 
     if (attachments?.length) message.attachments = attachments;
 
+    if (quote) message.quote = quote;
+
     chat.push(message);
+  };
+  const quoteOf = (id: string | undefined): BotChatQuote | undefined => {
+    if (!id) return undefined;
+
+    const quoted = chat.find((message) => message.id === id);
+
+    if (!quoted) return undefined;
+
+    return quoted.peer
+      ? { id: quoted.id, role: quoted.role, text: quoted.text, peer: quoted.peer }
+      : { id: quoted.id, role: quoted.role, text: quoted.text };
+  };
+  const react = (id: string, emoji: string) => {
+    const target = chat.find((message) => message.id === id);
+    const reactions = target?.reactions ?? [];
+
+    if (!target || reactions.includes(emoji) || reactions.length >= BOT_REACTIONS_MAX) return;
+
+    target.reactions = [...reactions, emoji];
   };
 
   for (const [at, message] of messages.entries()) {
     if (message.role === "user") {
       const sent = sentMessage(message);
-      const { from, note, text } = parseBotPrompt(sent.text.trim());
+      const { from, note, text, id, quoted } = parseBotPrompt(sent.text.trim());
 
       if (note || (!text && !sent.attachments?.length)) continue;
 
-      add(
-        "user",
-        text,
-        from ? { name: from, handle: from, direction: "from" } : undefined,
-        undefined,
-        sent.attachments,
-      );
+      add("user", text, {
+        peer: from ? { name: from, handle: from, direction: "from" } : undefined,
+        attachments: sent.attachments,
+        quote: quoteOf(quoted),
+        id,
+      });
     } else if (message.role === "assistant" && typeof message.content !== "string") {
       const results = resultsAfter(messages, at);
       for (const part of message.content) {
@@ -95,10 +141,16 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
 
           if (!sent.success) continue;
 
-          const { to, text } = sent.data;
+          const { to, text, quote } = sent.data;
           const peer =
             to === USER_HANDLE ? undefined : { name: to, handle: to, direction: "to" as const };
-          add("bot", text, peer);
+          add("bot", text, { peer, quote: quoteOf(quote) });
+        } else if (part.toolName === REACT_TO_MESSAGE_TOOL_NAME) {
+          const reacted = reactToMessageSchema.safeParse(part.input);
+
+          if (!reacted.success) continue;
+
+          react(reacted.data.messageId, reacted.data.emoji);
         } else if (part.toolName === ASK_QUESTION_TOOL_NAME) {
           const asked = askQuestionSchema.safeParse(part.input);
 
@@ -108,13 +160,11 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
 
           if (relayed) {
             add("bot", relayed.text, {
-              name: relayed.handle,
-              handle: relayed.handle,
-              direction: "to",
+              peer: { name: relayed.handle, handle: relayed.handle, direction: "to" },
             });
           } else {
             const questions = toQuestions(asked.data.questions);
-            add("bot", questions.map((question) => question.text).join("\n"), undefined, questions);
+            add("bot", questions.map((question) => question.text).join("\n"), { questions });
           }
         } else if (part.toolName === ASK_PROVIDER_KEY_TOOL_NAME) {
           const asked = keyAskedFor(results.get(part.toolCallId));
@@ -122,7 +172,7 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
           if (!asked) continue;
 
           const question = providerKeyQuestion(asked);
-          add("bot", question.text, undefined, [question]);
+          add("bot", question.text, { questions: [question] });
         }
       }
     }

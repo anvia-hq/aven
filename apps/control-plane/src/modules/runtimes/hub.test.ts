@@ -428,6 +428,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
             { id: "bot-2", name: params.name, handle: params.name.toLowerCase() }
           ),
           send: async (params) => (asked.push(params), { handle: params.to, name: "Scout" }),
+          react: async (params) => (asked.push(params), { messageId: params.messageId }),
           question: async (params) => (asked.push(params), {}),
           schedule: async (params) => (asked.push(params), params.op === "list" ? [] : null),
           goal: async (params) => (asked.push(params), null),

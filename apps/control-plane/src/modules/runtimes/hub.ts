@@ -289,7 +289,7 @@ export class RuntimeConnection {
           );
         return;
       case "bot.say":
-        this.#botReplies.get(message.replyId)?.say(message.text);
+        this.#botReplies.get(message.replyId)?.say(message.text, message.quote);
         return;
       case "bot.end":
         this.#endBotReply(message.replyId, message.error);
