@@ -940,8 +940,10 @@ describe("BotReplies", () => {
       skills: readonly SkillListing[] = [],
       computer: readonly AnyTool[] = [],
       mcp?: { tools: readonly AnyTool[]; note: McpNote },
+      onActivity?: (label: string | null) => void,
     ) =>
       defaultCreateBotAgent("http://control-plane")({
+        onActivity,
         bot: {
           ...message.bot,
           canCreateBots,
@@ -1026,7 +1028,24 @@ describe("BotReplies", () => {
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })
           : undefined,
-      }) as unknown as { tools: { name: string }[]; instructions: string };
+      }) as unknown as {
+        tools: { name: string }[];
+        instructions: string;
+        lifecycle?: {
+          onStart?: (event: unknown) => void;
+          onToolStart?: (event: { toolName: string; input: unknown }) => void;
+          onFinish?: (event: unknown) => void;
+        };
+      };
+
+    test("the agent the runner builds tells what it is doing", () => {
+      const labels: (string | null)[] = [];
+      const agent = build(false, false, [], [], undefined, (label) => labels.push(label));
+      agent.lifecycle?.onStart?.({});
+      agent.lifecycle?.onToolStart?.({ toolName: "web_search", input: {} });
+      agent.lifecycle?.onFinish?.({});
+      expect(labels).toEqual(["Thinking", "Searching the web", null]);
+    });
 
     test("a bot that is given a way to ask the person has the tool and is told when to use it, and one that is not has neither", () => {
       const ask = build(false, true);
