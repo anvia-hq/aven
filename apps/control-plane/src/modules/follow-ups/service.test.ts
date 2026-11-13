@@ -74,6 +74,59 @@ describe("createFollowUps", () => {
   });
 });
 
+describe("createFollowUps for a thread more than one person writes to", () => {
+  const sentBy = (senderId: string | undefined, text: string): ChatMessage => ({
+    ...message("user", text),
+    senderId,
+  });
+  const followUpsOf = (messages: ChatMessage[], asked: string[]) =>
+    createFollowUps({
+      messagesOf: async () => messages,
+      worthSuggesting: async () => true,
+      suggest: async (_user, transcript) => {
+        asked.push(transcript);
+        return ["Run the tests"];
+      },
+    });
+
+  test("suggests only to the person who sent the prompt the agent answered", async () => {
+    const asked: string[] = [];
+    const messages = [sentBy("user", "Go"), message("assistant", "Done.")];
+
+    expect(await followUpsOf(messages, asked).forThread(viewer, "t")).toEqual({
+      suggestions: ["Run the tests"],
+    });
+    expect(
+      await followUpsOf(messages, asked).forThread({ ...viewer, userId: "other" }, "t"),
+    ).toEqual({ suggestions: [] });
+    expect(asked).toHaveLength(1);
+  });
+
+  test("goes by the latest prompt, not a note the agent was woken with", async () => {
+    const asked: string[] = [];
+    const messages = [
+      sentBy("other", "Go"),
+      message("assistant", "Started."),
+      sentBy(undefined, "[process] Process abc (bun test) ended with exit code 0 after 12s."),
+      message("assistant", "Done."),
+    ];
+
+    expect(await followUpsOf(messages, asked).forThread(viewer, "t")).toEqual({ suggestions: [] });
+    expect(asked).toHaveLength(0);
+  });
+
+  test("suggests as before when the prompt has no sender on record", async () => {
+    const asked: string[] = [];
+
+    expect(
+      await followUpsOf([message("user", "Go"), message("assistant", "Done.")], asked).forThread(
+        viewer,
+        "t",
+      ),
+    ).toEqual({ suggestions: ["Run the tests"] });
+  });
+});
+
 describe("createFollowUps with the gate", () => {
   const long =
     "I can do it two ways: Box cards, or a plain list. Which one do you want me to build?";

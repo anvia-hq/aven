@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 
+import { lastSubmission } from "@aven/protocol/submitter";
+
 import { postJson } from "@/lib/api";
 import { useFollowUpSettings } from "@/modules/settings/hooks/use-follow-up-settings";
 
-import type { ChatMessage } from "../types";
+import { authorOf } from "../message-author";
+import type { ChatMessage, Viewer } from "../types";
 
 export function useFollowUps(
   threadId: string,
   loaded: boolean,
   running: boolean,
   messages: ChatMessage[],
+  viewer: Viewer,
 ) {
   const { settings } = useFollowUpSettings();
   const enabled = settings?.enabled ?? false;
@@ -18,6 +22,14 @@ export function useFollowUps(
   const asked = useRef<string | null>(null);
   const last = messages.at(-1);
   const answered = last?.role === "assistant" ? last.id : null;
+  const submission = lastSubmission(messages);
+  const submitted =
+    submission === undefined ||
+    authorOf(
+      submission.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+      viewer,
+      submission.senderId,
+    ).mine;
 
   useEffect(() => {
     baseline.current = undefined;
@@ -37,7 +49,7 @@ export function useFollowUps(
       return;
     }
 
-    if (running || !enabled || answered === null) return;
+    if (running || !enabled || !submitted || answered === null) return;
 
     if (answered === baseline.current || answered === asked.current) return;
 
@@ -47,7 +59,7 @@ export function useFollowUps(
       .then((done) => current && setSuggestions(done.suggestions))
       .catch(() => undefined);
     return () => void (current = false);
-  }, [loaded, running, enabled, answered, threadId]);
+  }, [loaded, running, enabled, submitted, answered, threadId]);
 
   return { suggestions, clear: () => setSuggestions([]) };
 }
