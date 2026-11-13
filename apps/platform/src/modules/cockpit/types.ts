@@ -1,6 +1,7 @@
 import type { TaskPriority, TaskStatus } from "@aven/protocol/types";
 
 export type {
+  CockpitActivity,
   CockpitNote,
   CockpitTag,
   CockpitTask,

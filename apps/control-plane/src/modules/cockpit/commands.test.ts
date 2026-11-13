@@ -3,7 +3,12 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { threadCockpit } from "./commands";
 
 test("a thread's agent reads, and nothing it does is the person's word", () => {
-  expect(threadCockpit("u1")).toEqual({ userId: "u1", access: "read", onPersonsWord: false });
+  expect(threadCockpit("u1", { title: "Fix the release" })).toEqual({
+    userId: "u1",
+    access: "read",
+    onPersonsWord: false,
+    actor: { kind: "thread", name: "Fix the release" },
+  });
 });
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;

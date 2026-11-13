@@ -380,7 +380,10 @@ export class RemoteBotReplier implements BotReplier {
           command,
         ),
       cockpit: ({ command }: { command: unknown }) =>
-        runCockpitCommand({ userId, access: "write", onPersonsWord }, command),
+        runCockpitCommand(
+          { userId, access: "write", onPersonsWord, actor: { kind: "bot", name: bot.name } },
+          command,
+        ),
     };
     const cancel = () => this.#cancel(replyId, signal, runtimeId);
     try {

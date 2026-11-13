@@ -9,6 +9,8 @@ import { cockpitMarkdown } from "@aven/protocol/cockpit-markdown";
 import { z } from "zod";
 
 import { UnprocessableError } from "../../errors";
+import { cockpitActivityOf } from "./activity";
+import { cockpitPulses } from "./pulses";
 import {
   createInboxBody,
   createNoteBody,
@@ -28,10 +30,11 @@ import type {
   InboxItem,
 } from "@aven/protocol/types";
 
-export const threadCockpit = (userId: string): CockpitCaller => ({
+export const threadCockpit = (userId: string, thread: { title: string }): CockpitCaller => ({
   userId,
   access: "read",
   onPersonsWord: false,
+  actor: { kind: "thread", name: thread.title },
 });
 
 const kind = z.enum(COCKPIT_KINDS);
@@ -290,13 +293,22 @@ export async function runCockpitCommand(caller: CockpitCaller, raw: unknown) {
   if (!parsed.success) throw invalid(parsed.error);
 
   const cmd = parsed.data;
-  const { userId } = caller;
 
   if (caller.access === "read" && (COCKPIT_WRITES as readonly string[]).includes(cmd.command)) {
     throw new UnprocessableError(
       "You can only read the person's cockpit here; tell them what to add or change.",
     );
   }
+
+  const answer = await perform(caller, cmd);
+
+  if (caller.actor) cockpitPulses.publish(caller.userId, cockpitActivityOf(caller.actor, cmd));
+
+  return answer;
+}
+
+async function perform(caller: CockpitCaller, cmd: CockpitCommand) {
+  const { userId } = caller;
 
   switch (cmd.command) {
     case "list":

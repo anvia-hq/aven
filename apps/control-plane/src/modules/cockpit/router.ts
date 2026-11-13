@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, sse } from "elysia";
 
 import { authRouter } from "../auth/router";
 import {
@@ -13,10 +13,20 @@ import {
   updateTagBody,
   updateTaskBody,
 } from "./schema";
+import { cockpitPulses } from "./pulses";
 import { cockpitService } from "./service";
 
 export const cockpitRouter = new Elysia({ prefix: "/cockpit" })
   .use(authRouter)
+  .get(
+    "/activity",
+    async function* ({ user, request }) {
+      for await (const activity of cockpitPulses.watch(user.id, request.signal)) {
+        yield activity ? sse({ data: activity }) : sse({ event: "ping", data: "" });
+      }
+    },
+    { auth: true },
+  )
   .get("/tags", ({ user }) => cockpitService.tags(user.id), { auth: true })
   .post(
     "/tags",

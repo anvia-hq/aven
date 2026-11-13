@@ -97,6 +97,14 @@ export type CockpitTag = {
   notes: number;
 };
 
+export type CockpitActivity = {
+  actor: "bot" | "thread";
+  source: string;
+  summary: string;
+  changed: boolean;
+  at: string;
+};
+
 export type CockpitKind = (typeof COCKPIT_KINDS)[number];
 
 export type CockpitAccess = "read" | "write";

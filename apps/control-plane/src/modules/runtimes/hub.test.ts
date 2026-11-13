@@ -335,7 +335,15 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
     const connection = hub.get(runtime.id)!;
     const thread = { id: crypto.randomUUID(), organizationId: seed.orgA };
     const sink = { event: () => undefined, end: () => undefined, lost: () => undefined };
-    connection.startRun("run-read", thread, sink, [], [], undefined, threadCockpit(seed.userId));
+    connection.startRun(
+      "run-read",
+      thread,
+      sink,
+      [],
+      [],
+      undefined,
+      threadCockpit(seed.userId, { title: "A thread" }),
+    );
     connection.startRun("run-no-cockpit", thread, sink);
 
     const listed = await ask(ws, received, "cockpit.read", {

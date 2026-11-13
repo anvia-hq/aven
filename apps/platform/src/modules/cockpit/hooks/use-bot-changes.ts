@@ -9,7 +9,7 @@ import { refreshTasks } from "./use-tasks";
 
 const WHILE_WORKING_MS = 5_000;
 
-const refreshAll = () => {
+export const refreshCockpit = () => {
   void refreshInbox();
   void refreshTasks();
   void refreshNotes();
@@ -21,11 +21,11 @@ export function useBotChanges() {
   const key = [...working].sort().join(",");
 
   useEffect(() => {
-    refreshAll();
+    refreshCockpit();
 
     if (!key) return undefined;
 
-    const timer = setInterval(refreshAll, WHILE_WORKING_MS);
+    const timer = setInterval(refreshCockpit, WHILE_WORKING_MS);
     return () => clearInterval(timer);
   }, [key]);
 }

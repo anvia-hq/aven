@@ -71,7 +71,7 @@ async function senderExtras(userId: string, installationRowId: string | null, dr
 
 async function threadExtras(
   organizationId: string,
-  thread: { id: string; organizationId: string; projectId: string },
+  thread: { id: string; organizationId: string; projectId: string; title: string },
   userId: string,
   onPersonsWord = true,
   driverId?: string,
@@ -85,7 +85,7 @@ async function threadExtras(
   const identity = await runIdentity(thread, userId, driverId);
   const memory = await runMemory(thread, userId, onPersonsWord && driverId === undefined);
   await threadsService.markRunBy(thread.id, userId);
-  const cockpit = threadCockpit(userId);
+  const cockpit = threadCockpit(userId, thread);
   return { env, identity, memory, cockpit, webSearch: webSearchForRun };
 }
 
