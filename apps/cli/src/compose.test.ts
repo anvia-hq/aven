@@ -3,7 +3,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, test } from "bun:test";
 
-import { composeCommand, composeProject, projectName, recordProject } from "./compose";
+import {
+  composeCommand,
+  composeProject,
+  projectName,
+  recordProject,
+  serverEnvKeys,
+  without,
+} from "./compose";
 
 const legacy = { Name: "aven", ConfigFiles: "/home/me/.aven/server/docker-compose.yml" };
 
@@ -101,4 +108,17 @@ test("records the project an existing install is in, once, before its compose fi
 test("records nothing where no install has been made", () => {
   recordProject(dir, []);
   expect(Bun.file(join(dir, ".env")).size).toBe(0);
+});
+
+test("takes the keys of the install's .env out of the environment compose is run in", async () => {
+  await writeFile(join(dir, ".env"), "AVEN_VERSION=0.8.18\nAVEN_PORT=2836\n# AVEN_BIND=x\n");
+  const keys = serverEnvKeys(dir);
+  expect(keys).toEqual(["AVEN_VERSION", "AVEN_PORT"]);
+  expect(without({ AVEN_VERSION: "0.8.18", PATH: "/bin", DOCKER_HOST: "unix:///x" }, keys)).toEqual(
+    { PATH: "/bin", DOCKER_HOST: "unix:///x" },
+  );
+});
+
+test("has no keys to take out where there is no .env", () => {
+  expect(serverEnvKeys(dir)).toEqual([]);
 });

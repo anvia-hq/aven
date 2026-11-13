@@ -23,7 +23,7 @@ for target in bun-darwin-arm64:darwin-arm64 bun-darwin-x64:darwin-amd64 bun-linu
   platform="${target##*:}"
   mkdir -p "$work/$platform"
   # @valibot/to-json-schema is imported lazily by Anvia and is not needed at run time.
-  (cd "$cli" && bun build --compile --target="$bun_target" --external @valibot/to-json-schema \
+  (cd "$cli" && bun build --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --target="$bun_target" --external @valibot/to-json-schema \
     --define "AVEN_VERSION=\"$version\"" src/main.ts --outfile "$work/$platform/aven")
   cp "$license" "$work/$platform/LICENSE"
   tar -C "$work/$platform" -czf "$out/aven-$version-$platform.tar.gz" aven LICENSE

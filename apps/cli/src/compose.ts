@@ -124,13 +124,36 @@ export const composeCommand = (dir: string, args: string[]) => [
   ...args,
 ];
 
-export async function run(command: string[], env?: Record<string, string>) {
+export function without(env: Record<string, string | undefined>, keys: readonly string[]) {
+  const kept = { ...env };
+
+  for (const key of keys) delete kept[key];
+
+  return kept;
+}
+
+export function serverEnvKeys(dir: string) {
+  try {
+    return Object.keys(parseEnv(readFileSync(envFile(dir), "utf8")));
+  } catch {
+    return [];
+  }
+}
+
+export async function run(
+  command: string[],
+  env?: Record<string, string>,
+  drop: readonly string[] = [],
+) {
   const child = Bun.spawn(command, {
     stdio: ["inherit", "inherit", "inherit"],
-    env: { ...process.env, ...env },
+    env: { ...without(process.env, drop), ...env },
   });
   return child.exited;
 }
+
+export const runCompose = (dir: string, args: string[]) =>
+  run(composeCommand(dir, args), undefined, serverEnvKeys(dir));
 
 export async function capture(command: string[]) {
   try {

@@ -1,7 +1,7 @@
 import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-import { composeCommand, run } from "../compose";
+import { runCompose } from "../compose";
 import { avenHome, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
 import type { Args } from "../types";
@@ -36,7 +36,7 @@ export async function uninstall(args: Args) {
 
     if (purge) down.push("--volumes");
 
-    if ((await run(composeCommand(dir, down))) !== 0) throw new Error("docker compose down failed");
+    if ((await runCompose(dir, down)) !== 0) throw new Error("docker compose down failed");
 
     console.log(
       purge
