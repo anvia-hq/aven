@@ -240,7 +240,7 @@ export class ClaudeRuns implements AgentBackend {
     if (!context?.token) return Promise.reject(new Error(CLAUDE_TOKEN_MISSING));
 
     const abort = new AbortController();
-    const waiting: string[] = [];
+    const waiting: { id: string; text: string }[] = [];
     let current: LiveRun | undefined;
     const done = runClaudeGoal(
       spec,
@@ -268,7 +268,10 @@ export class ClaudeRuns implements AgentBackend {
       {
         drain: () => {
           const taken = waiting.splice(0);
-          return taken;
+
+          for (const steer of taken) spec.onEvent({ type: "steer_applied", id: steer.id });
+
+          return taken.map((steer) => steer.text);
         },
       },
     ).catch((error: unknown) => ({ type: "error" as const, error: errorMessage(error) }));
@@ -279,12 +282,15 @@ export class ClaudeRuns implements AgentBackend {
 
         if (current) this.#cancel(current);
       },
-      steer: async (prompt) => {
+      steer: async (prompt, requestId) => {
         const text = promptText(prompt);
 
-        if (current?.queue.push(text)) return true;
+        if (current?.queue.push(text)) {
+          spec.onEvent({ type: "steer_applied", id: requestId });
+          return true;
+        }
 
-        waiting.push(text);
+        waiting.push({ id: requestId, text });
         return true;
       },
     });
