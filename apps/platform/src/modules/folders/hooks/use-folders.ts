@@ -1,14 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import { authClient } from "@/lib/auth-client";
 
 import type { Folder } from "../types";
-
-export function useFoldersKey() {
-  const { data: session } = authClient.useSession();
-  return ["folders", session?.user.id ?? null] as const;
-}
+import { useFoldersKey } from "./use-folders-key";
 
 export function useFolders() {
   const queryKey = useFoldersKey();

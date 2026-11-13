@@ -5,7 +5,7 @@ import { api, errorMessage, postJson } from "@/lib/api";
 
 import { withFolder, withMove, withOpen, withoutFolder, withRename } from "../folder-cache";
 import type { Folder, FolderOpen, FolderRename, NewFolder, ThreadMove } from "../types";
-import { useFoldersKey } from "./use-folders";
+import { useFoldersKey } from "./use-folders-key";
 
 const WRITE_KEY = ["folders", "write"] as const;
 
