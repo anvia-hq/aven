@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { registerUser, threadOnFakeRunner } from "./helpers";
 
 const palettes = [
   "Mint",
@@ -24,6 +24,10 @@ const palettes = [
   "Horizon",
   "Zenburn",
   "Synthwave",
+  "Codex",
+  "Claude",
+  "Devin",
+  "T3",
 ];
 const ids: Record<string, string> = {
   Catppuccin: "catppuccin",
@@ -46,11 +50,43 @@ const ids: Record<string, string> = {
   Horizon: "horizon",
   Zenburn: "zenburn",
   Synthwave: "synthwave",
+  Codex: "codex",
+  Claude: "claude",
+  Devin: "devin",
+  T3: "t3",
 };
 
 async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {
   await page.getByRole("combobox", { name: "Mode" }).click();
   await page.getByRole("option", { name, exact: true }).click();
+}
+
+async function choosePalette(page: Page, palette: string, mode: "light" | "dark") {
+  await page.evaluate(
+    ({ palette, mode }) => {
+      for (const [key, value] of [
+        ["palette", palette],
+        ["theme", mode],
+      ] as const) {
+        const stored = JSON.stringify(value);
+        localStorage.setItem(key, stored);
+        window.dispatchEvent(
+          new StorageEvent("storage", { key, newValue: stored, storageArea: localStorage }),
+        );
+      }
+    },
+    { palette, mode },
+  );
+  const html = page.locator("html");
+  await expect(html).toHaveAttribute("data-theme", palette);
+
+  if (mode === "dark") {
+    await expect(html).toHaveClass(/dark/);
+  } else {
+    await expect(html).not.toHaveClass(/dark/);
+  }
+
+  await page.waitForTimeout(600);
 }
 
 test.describe("themes", () => {
@@ -95,6 +131,32 @@ test.describe("themes", () => {
     expect(
       await html.evaluate((el) => getComputedStyle(el).getPropertyValue("--brand").trim()),
     ).toBe(brand);
+  });
+
+  test("a palette can lend the headings a face of its own", async ({ page }) => {
+    await registerUser(page, "heading", "Heading User");
+    await page.goto("/settings/general");
+    const html = page.locator("html");
+    const heading = page.getByRole("heading", { level: 1 }).first();
+    const picker = page.getByRole("combobox", { name: "Theme" });
+
+    await picker.click();
+    await page.getByRole("option", { name: "Claude", exact: true }).click();
+    await expect(html).toHaveAttribute("style", /--palette-heading-font/);
+    await expect(heading).toHaveCSS("font-family", /Source Serif 4/);
+    await expect(page.locator("#aven-theme-font")).toHaveAttribute(
+      "href",
+      /family=Source\+Serif\+4/,
+    );
+
+    await picker.click();
+    await page.getByRole("option", { name: "Mint", exact: true }).click();
+    await expect(html).not.toHaveAttribute("style", /--palette-heading-font/);
+    await expect(page.locator("#aven-theme-font")).toHaveCount(0);
+
+    await picker.click();
+    await page.getByRole("option", { name: "Codex", exact: true }).click();
+    await expect(html).not.toHaveAttribute("style", /--palette-heading-font/);
   });
 
   test("the mode is light, dark or the device's, and system follows the device as it changes", async ({
@@ -169,6 +231,39 @@ test.describe("themes", () => {
           path: `.aven/proof/themes/${ids[name] ?? "mint"}-${mode}.png`,
         });
       }
+    }
+  });
+
+  test("screenshots of the new themes on a thread", async ({ page }) => {
+    test.skip(!process.env.THEME_SHOTS, "only when recording proof");
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await registerUser(page, "shotthread", "Theme User");
+    await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_SUBAGENTS: "1" });
+
+    try {
+      await page.goto(`/threads/${threadId}`);
+      await page
+        .getByRole("textbox", { name: "Prompt" })
+        .fill("Where does the auth middleware live, and can you add a test for it?");
+      await page.getByRole("button", { name: "Send" }).click();
+      await expect(
+        page.getByText("Auth is in src/auth.ts; the test could not be written."),
+      ).toBeVisible({ timeout: 30_000 });
+      await page.locator('[data-role="worked"]').first().click();
+
+      for (const mode of ["light", "dark"] as const) {
+        for (const name of ["Codex", "Claude", "Devin", "T3"]) {
+          await choosePalette(page, ids[name]!, mode);
+          await page.screenshot({
+            path: `.aven/proof/themes/${ids[name]}-${mode}-thread.png`,
+          });
+        }
+      }
+    } finally {
+      child.kill();
     }
   });
 });

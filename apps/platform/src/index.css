@@ -1346,6 +1346,262 @@
   --sidebar-ring: #ff7edb;
 }
 
+/* The themes of other coding tools, drawn from their own design tokens (decision 0257): Codex
+   (ChatGPT's grays and the Codex terminal's green), Claude (bone paper, clay and a serif
+   heading), Devin (its page and wash grays and its blue) and T3 (near-black zinc and violet). */
+
+:root[data-theme="codex"] {
+  --radius: 0.75rem;
+  --background: #ffffff;
+  --foreground: #0d0d0d;
+  --card: #f9f9f9;
+  --card-foreground: #0d0d0d;
+  --popover: #ffffff;
+  --popover-foreground: #0d0d0d;
+  --primary: #0d0d0d;
+  --code: #0d0d0d;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f3f3;
+  --secondary-foreground: #0d0d0d;
+  --muted: #f3f3f3;
+  --muted-foreground: #5d5d5d;
+  --accent: #ececec;
+  --accent-foreground: #0d0d0d;
+  --frame: #f9f9f9;
+  --border: #e5e5e5;
+  --input: #d9d9d9;
+  --ring: #8f8f8f;
+  --effort: #0b7a5f;
+  --sidebar: #f9f9f9;
+  --sidebar-foreground: #0d0d0d;
+  --sidebar-primary: #0d0d0d;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ececec;
+  --sidebar-accent-foreground: #0d0d0d;
+  --sidebar-border: #e5e5e5;
+  --sidebar-ring: #8f8f8f;
+}
+
+:root[data-theme="codex"].dark {
+  --background: #212121;
+  --foreground: #ececec;
+  --card: #2a2a2a;
+  --card-foreground: #ececec;
+  --popover: #303030;
+  --popover-foreground: #ececec;
+  --primary: #ffffff;
+  --code: #ececec;
+  --primary-foreground: #212121;
+  --secondary: #2f2f2f;
+  --secondary-foreground: #ececec;
+  --muted: #2a2a2a;
+  --muted-foreground: #b4b4b4;
+  --accent: #333333;
+  --accent-foreground: #ffffff;
+  --frame: #171717;
+  --border: #ffffff1f;
+  --input: #ffffff2e;
+  --ring: #8f8f8f;
+  --effort: #6ee7c7;
+  --sidebar: #171717;
+  --sidebar-foreground: #ececec;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #212121;
+  --sidebar-accent: #2f2f2f;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #8f8f8f;
+}
+
+:root[data-theme="claude"] {
+  --radius: 0.75rem;
+  --background: #faf9f5;
+  --foreground: #1f1e1d;
+  --card: #f0eee6;
+  --card-foreground: #1f1e1d;
+  --popover: #ffffff;
+  --popover-foreground: #1f1e1d;
+  --primary: #b5552f;
+  --code: #9a4626;
+  --primary-foreground: #ffffff;
+  --secondary: #f0eee6;
+  --secondary-foreground: #1f1e1d;
+  --muted: #f0eee6;
+  --muted-foreground: #6b6a63;
+  --accent: #e9e5d8;
+  --accent-foreground: #1f1e1d;
+  --frame: #f0eee6;
+  --border: #e5e1d3;
+  --input: #d8d3c2;
+  --ring: #b5552f;
+  --effort: #7a6a45;
+  --sidebar: #f0eee6;
+  --sidebar-foreground: #1f1e1d;
+  --sidebar-primary: #b5552f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e9e5d8;
+  --sidebar-accent-foreground: #1f1e1d;
+  --sidebar-border: #e5e1d3;
+  --sidebar-ring: #b5552f;
+}
+
+:root[data-theme="claude"].dark {
+  --background: #1f1e1d;
+  --foreground: #f5f4ee;
+  --card: #262624;
+  --card-foreground: #f5f4ee;
+  --popover: #30302e;
+  --popover-foreground: #f5f4ee;
+  --primary: #d97757;
+  --code: #e0a184;
+  --primary-foreground: #1f1e1d;
+  --secondary: #262624;
+  --secondary-foreground: #f5f4ee;
+  --muted: #262624;
+  --muted-foreground: #b8b5a8;
+  --accent: #30302e;
+  --accent-foreground: #f5f4ee;
+  --frame: #191918;
+  --border: #3a3936;
+  --input: #4a4844;
+  --ring: #d97757;
+  --effort: #c9b382;
+  --sidebar: #191918;
+  --sidebar-foreground: #f5f4ee;
+  --sidebar-primary: #d97757;
+  --sidebar-primary-foreground: #1f1e1d;
+  --sidebar-accent: #2c2b28;
+  --sidebar-accent-foreground: #f5f4ee;
+  --sidebar-border: #34332f;
+  --sidebar-ring: #d97757;
+}
+
+:root[data-theme="devin"] {
+  --radius: 0.5rem;
+  --background: #fcfcfc;
+  --foreground: #191919;
+  --card: #ffffff;
+  --card-foreground: #191919;
+  --popover: #ffffff;
+  --popover-foreground: #191919;
+  --primary: #005fcc;
+  --code: #005a9c;
+  --primary-foreground: #ffffff;
+  --secondary: #f8f8f8;
+  --secondary-foreground: #191919;
+  --muted: #f8f8f8;
+  --muted-foreground: #6b6b6b;
+  --accent: #ececec;
+  --accent-foreground: #191919;
+  --frame: #f8f8f8;
+  --border: #e7e7e7;
+  --input: #dcdcdc;
+  --ring: #005fcc;
+  --effort: #b45309;
+  --sidebar: #f8f8f8;
+  --sidebar-foreground: #191919;
+  --sidebar-primary: #005fcc;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ececec;
+  --sidebar-accent-foreground: #191919;
+  --sidebar-border: #e7e7e7;
+  --sidebar-ring: #005fcc;
+}
+
+:root[data-theme="devin"].dark {
+  --background: #141414;
+  --foreground: #ffffff;
+  --card: #1f1f1f;
+  --card-foreground: #ffffff;
+  --popover: #1f1f1f;
+  --popover-foreground: #ffffff;
+  --primary: #4d8dff;
+  --code: #8bc4ff;
+  --primary-foreground: #0a0a0a;
+  --secondary: #1f1f1f;
+  --secondary-foreground: #ffffff;
+  --muted: #1f1f1f;
+  --muted-foreground: #a6a6a6;
+  --accent: #282828;
+  --accent-foreground: #ffffff;
+  --frame: #0f0f0f;
+  --border: #ffffff14;
+  --input: #ffffff24;
+  --ring: #4d8dff;
+  --effort: #ffb878;
+  --sidebar: #191919;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #4d8dff;
+  --sidebar-primary-foreground: #0a0a0a;
+  --sidebar-accent: #282828;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #4d8dff;
+}
+
+:root[data-theme="t3"] {
+  --radius: 0.625rem;
+  --background: #fafafa;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --popover: #ffffff;
+  --popover-foreground: #09090b;
+  --primary: #7c3aed;
+  --code: #7c3aed;
+  --primary-foreground: #ffffff;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #09090b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #f4f4f5;
+  --accent-foreground: #09090b;
+  --frame: #f4f4f5;
+  --border: #e4e4e7;
+  --input: #d4d4d8;
+  --ring: #8b5cf6;
+  --effort: #db2777;
+  --sidebar: #f4f4f5;
+  --sidebar-foreground: #09090b;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e4e4e7;
+  --sidebar-accent-foreground: #09090b;
+  --sidebar-border: #e4e4e7;
+  --sidebar-ring: #8b5cf6;
+}
+
+:root[data-theme="t3"].dark {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #131316;
+  --card-foreground: #fafafa;
+  --popover: #18181b;
+  --popover-foreground: #fafafa;
+  --primary: #a78bfa;
+  --code: #c4b5fd;
+  --primary-foreground: #09090b;
+  --secondary: #18181b;
+  --secondary-foreground: #fafafa;
+  --muted: #131316;
+  --muted-foreground: #a1a1aa;
+  --accent: #27272a;
+  --accent-foreground: #fafafa;
+  --frame: #050507;
+  --border: #ffffff14;
+  --input: #3f3f46;
+  --ring: #a78bfa;
+  --effort: #f472b6;
+  --sidebar: #0c0c0e;
+  --sidebar-foreground: #fafafa;
+  --sidebar-primary: #a78bfa;
+  --sidebar-primary-foreground: #09090b;
+  --sidebar-accent: #27272a;
+  --sidebar-accent-foreground: #fafafa;
+  --sidebar-border: #ffffff14;
+  --sidebar-ring: #a78bfa;
+}
+
 /* A profile's charts take the accent of the chosen theme: Mint's own green, and every other
    palette's primary, which is the colour that palette is known by (Mint's primary is its ink). */
 :root {
@@ -1377,6 +1633,15 @@
   --avatar-eye: oklch(0.99 0 0);
 }
 
+/* What a heading is set in: a color theme may lend the page a heading face of its own (decision
+   0257), and the interface font choice stays the body's. */
+:root {
+  --heading-font: var(
+    --palette-heading-font,
+    var(--app-font, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif)
+  );
+}
+
 @theme inline {
   --font-sans: var(
     --app-font,
@@ -1387,6 +1652,7 @@
     Roboto,
     sans-serif
   );
+  --font-heading: var(--heading-font);
   --font-mono: "Geist Mono Variable", ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -1532,6 +1798,12 @@
   }
   body {
     @apply overflow-x-clip bg-background text-foreground antialiased;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--heading-font);
   }
 }
 

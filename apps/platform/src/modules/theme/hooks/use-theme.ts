@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { fontAtom } from "../atoms/font-atom";
 import { paletteAtom } from "../atoms/palette-atom";
 import { themeAtom } from "../atoms/theme-atom";
-import { DEFAULT_PALETTE, SANS_FONTS } from "../types";
+import { DEFAULT_PALETTE, PALETTES, SANS_FONTS } from "../types";
 import type { Theme } from "../types";
 
 const FONT_LINK_ID = "aven-font";
+const THEME_FONT_LINK_ID = "aven-theme-font";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
 function resolveTheme(theme: Theme, systemDark: boolean): "light" | "dark" {
@@ -37,6 +38,29 @@ export function useTheme() {
   useEffect(() => {
     if (palette === DEFAULT_PALETTE) document.documentElement.removeAttribute("data-theme");
     else document.documentElement.setAttribute("data-theme", palette);
+
+    const heading = PALETTES.find((option) => option.id === palette)?.heading;
+
+    if (heading)
+      document.documentElement.style.setProperty("--palette-heading-font", heading.family);
+    else document.documentElement.style.removeProperty("--palette-heading-font");
+
+    const existing = document.getElementById(THEME_FONT_LINK_ID);
+
+    if (!heading?.googleQuery) {
+      existing?.remove();
+      return;
+    }
+
+    const link = existing ?? document.createElement("link");
+
+    if (!(link instanceof HTMLLinkElement)) return;
+
+    link.id = THEME_FONT_LINK_ID;
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?${heading.googleQuery}&display=swap`;
+
+    if (!existing) document.head.appendChild(link);
   }, [palette]);
 
   useEffect(() => {
