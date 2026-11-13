@@ -6,6 +6,7 @@ import { cn } from "cn";
 
 import { NotFound } from "@/components/not-found";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
+import { useHeldValue } from "@/hooks/use-held";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { GAP_HANDLE } from "@/lib/panel-layout";
@@ -19,6 +20,7 @@ import { ShipBar } from "@/modules/threads/components/ship-bar";
 import { FollowUpChips } from "@/modules/threads/components/follow-up-chips";
 import { ThreadHeader } from "@/modules/threads/components/thread-header";
 import { ThreadMessages } from "@/modules/threads/components/thread-messages";
+import { PANEL_EXIT_MS } from "@/components/panel-enter";
 import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
 import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
 import { useElementHeight } from "@/modules/threads/hooks/use-element-height";
@@ -67,8 +69,9 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
   const { overview, diff, files, terminal, preview } = panels;
-  const sideOpen =
+  const sideWanted =
     !split && (diff.open || files.open || (owned && (terminal.open || preview.open)));
+  const sideOpen = useHeldValue(sideWanted || null, PANEL_EXIT_MS).shown !== null;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running);
   const layout = useDefaultLayout({

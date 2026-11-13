@@ -42,7 +42,13 @@ test.describe("a thread's changes", () => {
     );
     await expect(panel.locator(".grid-cols-2").first()).toBeVisible();
 
+    const before = await panel.elementHandle();
     await page.getByRole("button", { name: "Close changes" }).click();
+    const leaving = await before!.evaluate((el) => ({
+      connected: el.isConnected,
+      inert: el.closest("[inert]") !== null,
+    }));
+    expect(leaving).toEqual({ connected: true, inert: true });
     await expect(panel).toHaveCount(0);
   });
 
