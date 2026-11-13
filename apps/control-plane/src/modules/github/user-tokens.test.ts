@@ -1,8 +1,8 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
 import type * as CryptoModule from "@aven/server-kit/crypto";
-import type { GithubClient } from "./client";
-import type { GithubUserGrant } from "./types";
+import type { GithubClient } from "@aven/github/client";
+import type { GithubUserGrant } from "@aven/github/types";
 
 const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => ({
   forKey: async () => client as GithubClient,

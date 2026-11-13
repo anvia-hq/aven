@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-import type { GithubConfig, GithubUrls } from "./types";
+import type { GithubUrls } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 export const githubUrlsFromEnv = (env: Record<string, string | undefined> = process.env) => ({
   apiUrl: env.GITHUB_API_URL ?? "https://api.github.com",

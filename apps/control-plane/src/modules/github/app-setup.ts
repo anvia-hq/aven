@@ -10,9 +10,10 @@ import {
   readSetupState,
 } from "./app-manifest";
 import { saveGithubApp, saveOrganizationApp } from "./app-store";
-import { github, type GithubClient } from "./client";
+import { github, type GithubClient } from "@aven/github/client";
 import { githubClients, PLATFORM_APP } from "./clients";
-import type { GithubClients, GithubConfig, GithubUrls } from "./types";
+import type { GithubClients, GithubUrls } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 type Person = { id: string; email: string };
 

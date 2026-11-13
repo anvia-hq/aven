@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { shipRequestOf } from "@aven/protocol/ship-request";
 
-import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "../github/client";
+import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "@aven/github/client";
 import type { RuntimeHub } from "../runtimes/hub";
 import { createShipService, GithubNotConnectedError, shipMode } from "./service";
 import type { FileContent } from "@aven/protocol/types";

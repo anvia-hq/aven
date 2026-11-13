@@ -25,7 +25,7 @@ import type {
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedState,
-} from "../github/types";
+} from "@aven/github/types";
 
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryAlreadyImportedError extends ConflictError {}
