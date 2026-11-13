@@ -7,9 +7,9 @@ import type {
 } from "./types";
 
 const shipLabel = (latest: ThreadPullRequest | undefined): ShipLabel => {
-  if (!latest) return "Ship";
+  if (!latest) return "Open PR";
 
-  return latest.state === "open" ? "Update PR" : "New PR";
+  return latest.state === "open" ? `Update PR #${latest.number}` : "Open new PR";
 };
 
 export function shipActionOf(facts: ShipFacts): ShipAct {
@@ -44,6 +44,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
     return {
       kind: "ship",
       label: shipLabel(latest),
+      primary: !latest,
       disabled: busy,
       shipping,
       canOpenNew: latest?.state === "open",

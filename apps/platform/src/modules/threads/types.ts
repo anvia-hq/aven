@@ -109,7 +109,7 @@ export type ShipConnectionFacts = {
   account: { data: { connected?: boolean } | null } | null;
 };
 
-export type ShipLabel = "Ship" | "Update PR" | "New PR";
+export type ShipLabel = "Open PR" | `Update PR #${number}` | "Open new PR";
 
 export type ShipAct =
   | { kind: "loading" }
@@ -120,6 +120,7 @@ export type ShipAct =
   | {
       kind: "ship";
       label: ShipLabel;
+      primary: boolean;
       disabled: boolean;
       shipping: boolean;
       canOpenNew: boolean;

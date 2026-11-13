@@ -86,3 +86,27 @@ describe("whether GitHub is connected", () => {
     ).toBe(true);
   });
 });
+
+describe("the ship button says what it will do", () => {
+  const unshipped = { changes: { loaded: true, available: true, problem: null, any: true } };
+
+  test("opens a PR when the thread has none", () => {
+    expect(shipActionOf(facts(unshipped))).toMatchObject({ label: "Open PR", primary: true });
+  });
+
+  test("updates the open PR by its number", () => {
+    expect(shipActionOf(facts({ ...unshipped, pullRequests: [pull] }))).toMatchObject({
+      label: "Update PR #658",
+      primary: false,
+      canOpenNew: true,
+    });
+  });
+
+  test("opens a new PR once the last one is merged or closed", () => {
+    for (const state of ["merged", "closed"] as const) {
+      expect(
+        shipActionOf(facts({ ...unshipped, pullRequests: [{ ...pull, state }] })),
+      ).toMatchObject({ label: "Open new PR", primary: false, canOpenNew: false });
+    }
+  });
+});

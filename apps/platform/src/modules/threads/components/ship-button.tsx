@@ -105,9 +105,9 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
   return (
     <ButtonGroup>
       <Button
-        variant={action.label === "Ship" ? "default" : "outline"}
+        variant={action.primary ? "default" : "outline"}
         size="sm"
-        className={action.label === "Ship" ? "shadow-md" : FLOATING_BUTTON}
+        className={action.primary ? "shadow-md" : FLOATING_BUTTON}
         disabled={action.disabled}
         onClick={() => onShip()}
       >
