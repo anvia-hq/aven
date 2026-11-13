@@ -3,14 +3,12 @@ import { useEffect, useState } from "react";
 import { toast } from "@/components/toast";
 import { attempt, postJson } from "@/lib/api";
 
-import { useModelSelection } from "./use-model-selection";
-import type { Thread } from "../types";
+import type { RunSelection, Thread } from "../types";
 
 const RUN_WAIT_MS = 6_000;
 
-export function useShipThread(thread: Thread, showShip: () => () => void) {
+export function useShipThread(thread: Thread, showShip: () => () => void, selection: RunSelection) {
   const [shipping, setShipping] = useState(false);
-  const { selection } = useModelSelection(thread.id);
 
   const [waitingForRun, setWaitingForRun] = useState(false);
   const [pullRequestsAtShip, setPullRequestsAtShip] = useState(0);

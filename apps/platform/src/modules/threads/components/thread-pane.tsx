@@ -26,6 +26,7 @@ import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
+import { runSelectionOf } from "@/modules/threads/run-selection";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 import type { ClaudeChoice } from "@/modules/threads/types";
 
@@ -87,12 +88,17 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
   }
 
+  const runSelection = runSelectionOf(
+    thread.agentBackend === "claude" ? claudeChoice : null,
+    selection,
+  );
+
   const chips = (
     <FollowUpChips
       suggestions={followUps.suggestions}
       onPick={(prompt) => {
         followUps.clear();
-        void send({ prompt, attachments: [], mentions: [] }, selection);
+        void send({ prompt, attachments: [], mentions: [] }, runSelection);
       }}
     />
   );
@@ -162,6 +168,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                         unshipped={unshipped}
                         showShip={showShip}
                         send={send}
+                        selection={runSelection}
                         panels={panels}
                         split={split}
                         suggestions={question ? null : chips}

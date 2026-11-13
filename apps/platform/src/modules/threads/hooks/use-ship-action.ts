@@ -6,7 +6,6 @@ import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
 import { connectionOf, shipActionOf } from "../ship-state";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
 import { useBranchPullRequests } from "./use-branch-pull-requests";
-import { useModelSelection } from "./use-model-selection";
 import { useShipReadiness } from "./use-ship-readiness";
 import { useShipThread } from "./use-ship-thread";
 import { useThreads } from "./use-threads";
@@ -18,11 +17,11 @@ export function useShipAction(
   unshipped: ReturnType<typeof useThreadDiff>,
   showShip: () => () => void,
   send: Send,
+  selection: RunSelection,
 ) {
-  const { shipping, ship } = useShipThread(thread, showShip);
+  const { shipping, ship } = useShipThread(thread, showShip, selection);
   const { gate, appKey, machine } = useShipReadiness(thread.id, thread.running);
   const account = useGithubAccount(appKey);
-  const { selection } = useModelSelection(thread.id);
   const connected = connectionOf({
     machine,
     appKey,

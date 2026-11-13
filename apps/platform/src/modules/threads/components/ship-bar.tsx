@@ -15,6 +15,7 @@ type Props = {
   unshipped: ReturnType<typeof useThreadDiff>;
   showShip: () => () => void;
   send: (message: OutgoingMessage, selection?: RunSelection) => Promise<boolean>;
+  selection: RunSelection;
   panels: ThreadPanels;
   split?: boolean;
   suggestions?: ReactNode;
@@ -25,11 +26,18 @@ export function ShipBar({
   unshipped,
   showShip,
   send,
+  selection,
   panels,
   split = false,
   suggestions,
 }: Props) {
-  const { action, ship, setUp, retry } = useShipAction(thread, unshipped, showShip, send);
+  const { action, ship, setUp, retry } = useShipAction(
+    thread,
+    unshipped,
+    showShip,
+    send,
+    selection,
+  );
   const { setScope } = useDiffPreferences();
 
   const showChanges = () => {
