@@ -58,7 +58,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     cancel,
   } = useThread(threadId);
   useFirstPrompt(threadId, send);
-  const followUps = useFollowUps(threadId, loaded && synced, running, messages);
+  const followUps = useFollowUps(threadId, loaded && synced, running, messages, viewer);
   const { selection } = useModelSelection(threadId);
   const [claudeChoice, setClaudeChoice] = useState<ClaudeChoice | null>({});
   const { compacting, compact } = useCompactThread(threadId);
