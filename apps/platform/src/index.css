@@ -1372,7 +1372,7 @@
   --input: #d9d9d9;
   --ring: #8f8f8f;
   --effort: #0b7a5f;
-  --sidebar: #f9f9f9;
+  --sidebar: var(--background);
   --sidebar-foreground: #0d0d0d;
   --sidebar-primary: #0d0d0d;
   --sidebar-primary-foreground: #ffffff;
@@ -1403,7 +1403,7 @@
   --input: #ffffff2e;
   --ring: #8f8f8f;
   --effort: #6ee7c7;
-  --sidebar: #171717;
+  --sidebar: var(--background);
   --sidebar-foreground: #ececec;
   --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #212121;
@@ -1435,7 +1435,7 @@
   --input: #d8d3c2;
   --ring: #b5552f;
   --effort: #7a6a45;
-  --sidebar: #f0eee6;
+  --sidebar: var(--background);
   --sidebar-foreground: #1f1e1d;
   --sidebar-primary: #b5552f;
   --sidebar-primary-foreground: #ffffff;
@@ -1466,7 +1466,7 @@
   --input: #4a4844;
   --ring: #d97757;
   --effort: #c9b382;
-  --sidebar: #191918;
+  --sidebar: var(--background);
   --sidebar-foreground: #f5f4ee;
   --sidebar-primary: #d97757;
   --sidebar-primary-foreground: #1f1e1d;
@@ -1498,7 +1498,7 @@
   --input: #dcdcdc;
   --ring: #005fcc;
   --effort: #b45309;
-  --sidebar: #f8f8f8;
+  --sidebar: var(--background);
   --sidebar-foreground: #191919;
   --sidebar-primary: #005fcc;
   --sidebar-primary-foreground: #ffffff;
@@ -1529,7 +1529,7 @@
   --input: #ffffff24;
   --ring: #4d8dff;
   --effort: #ffb878;
-  --sidebar: #191919;
+  --sidebar: var(--background);
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #4d8dff;
   --sidebar-primary-foreground: #0a0a0a;
@@ -1561,7 +1561,7 @@
   --input: #d4d4d8;
   --ring: #8b5cf6;
   --effort: #db2777;
-  --sidebar: #f4f4f5;
+  --sidebar: var(--background);
   --sidebar-foreground: #09090b;
   --sidebar-primary: #7c3aed;
   --sidebar-primary-foreground: #ffffff;
@@ -1592,7 +1592,7 @@
   --input: #3f3f46;
   --ring: #a78bfa;
   --effort: #f472b6;
-  --sidebar: #0c0c0e;
+  --sidebar: var(--background);
   --sidebar-foreground: #fafafa;
   --sidebar-primary: #a78bfa;
   --sidebar-primary-foreground: #09090b;
