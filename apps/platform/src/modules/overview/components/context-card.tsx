@@ -43,9 +43,10 @@ export function ContextCard({
     return (
       <OverviewCard title="Context">
         <div className="flex min-h-6 items-center justify-between gap-2">
-          <span>{compactNumber(context.usedTokens)} tokens in context</span>
-          <span className="text-xs text-muted-foreground">Model size unknown</span>
+          <span>{compactNumber(context.usedTokens)} tokens</span>
+          <span className="text-xs text-muted-foreground">in context</span>
         </div>
+        <p className="text-xs text-muted-foreground">Model size unknown</p>
       </OverviewCard>
     );
   }
