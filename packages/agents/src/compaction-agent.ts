@@ -12,14 +12,13 @@ import {
   isMemoryCompactionMessage,
 } from "@anvia/core/memory";
 
+import { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT } from "@aven/protocol/compaction";
+
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { outputLimitFor, resolveAgentModel } from "./agent-model";
 import type { ModelSource } from "./types";
 
-export const COMPACTED = "Compacted the conversation: the earlier turns are now a summary.";
-export const NOTHING_TO_COMPACT = "There is nothing to compact yet.";
-
-export const COMPACT_PROMPT = "/compact";
+export { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT };
 
 const MODEL_ID = "compaction";
 

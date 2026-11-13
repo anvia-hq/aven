@@ -24,7 +24,7 @@ export function speakerOf(message: ChatMessage, viewer: Viewer, sending = false)
 
   const note = systemNoteOf(text);
 
-  if (note?.kind === "process") return null;
+  if (note?.kind === "process" || note?.kind === "compaction") return null;
 
   if (note) return AGENT;
 

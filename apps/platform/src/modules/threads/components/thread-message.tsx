@@ -16,6 +16,7 @@ import type { Block, ChatMessage, Viewer } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
 import { ForkCard } from "./fork-card";
 import { AuthorLabel } from "./author-label";
+import { CompactionDivider } from "./compaction-divider";
 import { mentionCode } from "./mention-code";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
@@ -85,6 +86,8 @@ export const ThreadMessage = memo(function ThreadMessage({
     );
 
     if (note?.kind === "process") return null;
+
+    if (note?.kind === "compaction") return <CompactionDivider label={note.line} />;
 
     if (note) {
       return (
