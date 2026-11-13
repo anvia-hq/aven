@@ -8,10 +8,9 @@ import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom"
 import { chatItems } from "../activity";
 import { isOpen } from "../questions";
 import { quoteAuthor, quoteOf } from "../quote";
-import { useBotChat } from "../hooks/use-bot-chat";
 import { useBots } from "../hooks/use-bots";
 import type { AttachmentUpload } from "@/modules/threads/types";
-import type { Bot, BotChatMessage, BotChatQuote } from "../types";
+import type { Bot, BotChatMessage, BotChatQuote, BotChatState } from "../types";
 import { BotComposer } from "./bot-composer";
 import { BotActivity } from "./bot-activity";
 import { BotAvatar } from "./bot-avatar";
@@ -19,8 +18,18 @@ import { BotChatBubble, isPersons } from "./bot-chat-bubble";
 import { BotQuestionForm } from "./bot-question-form";
 import { ProviderKeyForm } from "./provider-key-form";
 
-export function BotChat({ bot }: { bot: Bot }) {
-  const { messages, typing, activity, error, send } = useBotChat(bot.id);
+export function BotChat({
+  bot,
+  chat,
+  openArtifact,
+  onOpenArtifact,
+}: {
+  bot: Bot;
+  chat: BotChatState;
+  openArtifact: string | undefined;
+  onOpenArtifact: (name: string) => void;
+}) {
+  const { messages, typing, activity, error, send } = chat;
   const { bots } = useBots();
   const textSize = useTextSize("bot");
   const items = useMemo(() => chatItems(messages), [messages]);
@@ -77,6 +86,8 @@ export function BotChat({ bot }: { bot: Bot }) {
                       message={message}
                       bots={bots}
                       onQuote={(quoted) => setQuoting(quoteOf(quoted))}
+                      onOpenArtifact={onOpenArtifact}
+                      openArtifact={openArtifact}
                       joined={joined}
                     />
                   )}
