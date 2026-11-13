@@ -1,6 +1,6 @@
 # Bots message each other as in the harness
 
-Status: accepted. Supersedes the parts of 0063 about how bots write to each other (the `message_bot` tool, `bot.ask`, waiting for the answer, only the main bot writing); the rest of 0063 stands: the `@` mention, the line that opens in the chat, the greeting, `[note]`. Builds on 0058 to 0064. The model is the Anvia harness's, which the person asked for as closely as it fits.
+Status: accepted; its `@` mention being offered only from the main bot's chat is superseded by 0271. Supersedes the parts of 0063 about how bots write to each other (the `message_bot` tool, `bot.ask`, waiting for the answer, only the main bot writing); the rest of 0063 stands: the `@` mention, the line that opens in the chat, the greeting, `[note]`. Builds on 0058 to 0064. The model is the Anvia harness's, which the person asked for as closely as it fits.
 
 ## Context
 

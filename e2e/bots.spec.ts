@@ -500,12 +500,15 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Aven → Scout A, B and C");
     await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
+    await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
+      "data-placeholder",
+      /@ to mention a bot or thread/,
+    );
     await page.getByRole("textbox", { name: "Message" }).click();
     await page.keyboard.type("@Av");
     await expect(page.getByRole("textbox", { name: "Message" })).toContainText("@Av");
     const menuHere = page.getByRole("listbox", { name: "Mention" });
-    await expect(menuHere).toContainText("No bot or thread matches");
-    await expect(menuHere.getByRole("option")).toHaveCount(0);
+    await expect(menuHere.getByRole("option", { name: /Aven/ })).toBeVisible();
     await page.keyboard.press("Control+A");
     await page.keyboard.press("Backspace");
 
