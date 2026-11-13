@@ -93,6 +93,8 @@ export const defaultCreateAgent =
   };
 
 const DEFAULT_STATS_INTERVAL_MS = 15_000;
+const LOGIN_FRESH_MS = 60_000;
+
 const RECONNECT_MIN_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 const DEFAULT_CALL_TIMEOUT_MS = 60_000;
@@ -330,17 +332,32 @@ export function startRuntime(options: RuntimeOptions) {
     } catch {}
   }
 
-  function connect() {
+  let loginSeen: { login: string | null; at: number } | undefined;
+
+  async function machineLogin() {
+    if (!githubLogin) return undefined;
+
+    if (loginSeen && Date.now() - loginSeen.at < LOGIN_FRESH_MS) return loginSeen.login;
+
+    const login = await githubLogin().catch(() => null);
+    loginSeen = { login, at: Date.now() };
+    return login;
+  }
+
+  async function connect() {
+    if (stopped) return;
+
+    const login = await machineLogin();
+
     if (stopped) return;
 
     const init = { headers: { authorization: `Bearer ${options.token}` } };
     const ws = new WebSocket(options.url, init as unknown as string[]);
     ws.binaryType = "arraybuffer";
     socket = ws;
-    ws.onopen = async () => {
+    ws.onopen = () => {
       backoff = RECONNECT_MIN_MS;
       outbox.detachAll();
-      const login = githubLogin ? await githubLogin().catch(() => null) : undefined;
       send({
         type: "hello",
         version: WIRE_VERSION,
@@ -395,13 +412,13 @@ export function startRuntime(options: RuntimeOptions) {
 
       if (stopped) return;
 
-      retry = setTimeout(connect, backoff);
+      retry = setTimeout(() => void connect(), backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
     };
     ws.onerror = () => {};
   }
 
-  connect();
+  void connect();
 
   return {
     ready: connected.promise,
