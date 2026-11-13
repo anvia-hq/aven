@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 
@@ -63,5 +64,21 @@ test.describe("Settings > Profile", () => {
 
     await page.getByRole("link", { name: "Profile" }).click();
     await expect(page.getByRole("heading", { name: "Renamed Person" })).toBeVisible();
+  });
+
+  test("Download Capture saves the profile as a 4:5 PNG without the buttons", async ({ page }) => {
+    await registerUser(page, "capture", "Capture Person");
+    await page.goto("/settings/profile");
+    await expect(page.getByRole("heading", { name: "Capture Person" })).toBeVisible();
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Download Capture" }).click();
+    const download = await downloadPromise;
+
+    expect(download.suggestedFilename()).toBe("aven-profile-capture.png");
+    const bytes = readFileSync((await download.path()) as string);
+    expect(bytes.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(bytes.readUInt32BE(16)).toBe(1080);
+    expect(bytes.readUInt32BE(20)).toBe(1350);
   });
 });

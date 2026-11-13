@@ -1,4 +1,4 @@
-import { Pencil } from "@mynaui/icons-react";
+import { Download, Pencil } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
@@ -11,9 +11,19 @@ type Props = {
   name: string;
   email: string;
   image?: string | null;
+  capturing: boolean;
+  captureReady: boolean;
+  onDownloadCapture: () => void;
 };
 
-export function ProfileHeader({ name, email, image }: Props) {
+export function ProfileHeader({
+  name,
+  email,
+  image,
+  capturing,
+  captureReady,
+  onDownloadCapture,
+}: Props) {
   const navigate = useNavigate();
 
   return (
@@ -31,14 +41,25 @@ export function ProfileHeader({ name, email, image }: Props) {
           <p className="truncate text-sm text-muted-foreground">@{handleOf(name, email)}</p>
         </div>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => void navigate({ to: "/settings/general" })}
-      >
-        <Pencil />
-        Edit profile
-      </Button>
+      <div data-capture-ignore className="flex items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={capturing || !captureReady}
+          onClick={onDownloadCapture}
+        >
+          <Download />
+          Download Capture
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => void navigate({ to: "/settings/general" })}
+        >
+          <Pencil />
+          Edit profile
+        </Button>
+      </div>
     </header>
   );
 }
