@@ -53,7 +53,7 @@ export function FileTabs({ open, active, onSelect, onClose }: Props) {
               title={path}
               aria-current={current || undefined}
               onClick={() => onSelect(path)}
-              className="h-full min-w-0 justify-start rounded-none px-0 pr-2 font-normal hover:bg-transparent"
+              className="h-full min-w-0 shrink justify-start overflow-hidden rounded-none px-0 pr-2 font-normal hover:bg-transparent"
             >
               <span className="truncate">{shared ? path : name}</span>
             </Button>
