@@ -1865,25 +1865,21 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   }
 }
 
-/* A bot's avatar bobs gently, each at its own time, and at work opens its eyes, looks about and gives
-   off a ring and an orbiting dot (decision 0062, from the Anvia harness). */
+/* A bot's avatar bobs gently, each at its own time. At work it hops and runs a nine second routine:
+   a lean, a horizontal turn (the face slides off one edge of the shape and comes round from the other,
+   the shape itself never changes size), a wobble, a look about and the turn back. The shape is only
+   moved and turned, never scaled, and it starts and ends at rest, so a bot that begins to work moves off calmly (decision 0265). */
 .bot-avatar {
   overflow: visible;
 }
 
-.bot-eye,
-.bot-body,
-.bot-gaze {
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
 /* The reference box of view-box starts at the origin of the user space, not at the viewBox's 4 4, so
    the middle of the avatar (drawn in 4 4 40 40) is 24 24. */
-.bot-orbit,
-.bot-ring {
+.bot-hop,
+.bot-body,
+.bot-face {
   transform-box: view-box;
-  transform-origin: 24px 24px;
+  transform-origin: 24px 25px;
 }
 
 @keyframes bot-bob {
@@ -1896,56 +1892,145 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   }
 }
 
-@keyframes bot-look {
+@keyframes bot-hop {
   0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes bot-moves {
+  0%,
+  24%,
+  40%,
+  58%,
+  86%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+  5% {
+    transform: translateX(-2.4px) rotate(-7deg);
+  }
+  13% {
+    transform: translateX(2.4px) rotate(7deg);
+  }
+  46% {
+    transform: rotate(10deg);
+  }
+  50% {
+    transform: rotate(-10deg);
+  }
+  54% {
+    transform: rotate(4deg);
+  }
+  89% {
+    transform: translateX(-2.4px) rotate(-7deg);
+  }
+  95% {
+    transform: translateX(2.4px) rotate(7deg);
+  }
+}
+
+@keyframes bot-face-moves {
+  0% {
+    transform: translateX(0);
+    animation-timing-function: ease-in-out;
+  }
+  5% {
+    transform: translateX(-3.6px);
+    animation-timing-function: ease-in-out;
+  }
+  13% {
+    transform: translateX(3.6px);
+    animation-timing-function: ease-in-out;
+  }
+  22% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  30% {
+    transform: translateX(-30px);
+  }
+  30.1% {
+    transform: translateX(30px);
+    animation-timing-function: cubic-bezier(0.1, 0.4, 0.5, 1);
+  }
+  40% {
+    transform: translateX(0);
+    animation-timing-function: ease-in-out;
+  }
+  58% {
+    transform: translateX(0);
+  }
+  62% {
+    transform: translateX(-5px);
+  }
+  67% {
+    transform: translateX(5px);
+  }
+  70% {
+    transform: translateX(0);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  76% {
+    transform: translateX(30px);
+  }
+  76.1% {
+    transform: translateX(-30px);
+    animation-timing-function: cubic-bezier(0.1, 0.4, 0.5, 1);
+  }
+  84% {
+    transform: translateX(0);
+    animation-timing-function: ease-in-out;
+  }
+  89% {
+    transform: translateX(-3.6px);
+  }
+  95% {
+    transform: translateX(3.6px);
+  }
   100% {
     transform: translateX(0);
   }
+}
+
+@keyframes bot-look {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
   25% {
-    transform: translateX(-2.4px);
+    transform: translate(1.4px, -1px);
   }
-  75% {
-    transform: translateX(2.4px);
-  }
-}
-
-@keyframes bot-ring {
-  from {
-    transform: scale(0.95);
-    opacity: 0.7;
-  }
-  to {
-    transform: scale(1.28);
-    opacity: 0;
-  }
-}
-
-@keyframes bot-orbit {
-  to {
-    transform: rotate(360deg);
+  70% {
+    transform: translate(-1.6px, 0.6px);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .bot-body {
+  .bot-hop {
     animation: bot-bob 3.6s ease-in-out infinite;
     animation-delay: var(--bot-delay, 0ms);
   }
 
+  .bot-avatar[data-mood="working"] .bot-hop {
+    animation: bot-hop 0.95s cubic-bezier(0.4, 0, 0.3, 1) infinite;
+    animation-delay: var(--bot-delay, 0ms);
+  }
+
   .bot-avatar[data-mood="working"] .bot-body {
-    animation: bot-bob 0.9s ease-in-out infinite;
+    animation: bot-moves 9s ease-in-out infinite;
   }
 
-  .bot-avatar[data-mood="working"] .bot-gaze {
-    animation: bot-look 1.8s ease-in-out infinite;
+  .bot-avatar[data-mood="working"] .bot-face {
+    animation: bot-face-moves 9s ease-in-out infinite;
   }
 
-  .bot-avatar[data-mood="working"] .bot-ring {
-    animation: bot-ring 1.6s ease-out infinite;
-  }
-
-  .bot-avatar[data-mood="working"] .bot-orbit {
-    animation: bot-orbit 2.4s linear infinite;
+  .bot-avatar[data-mood="working"] .bot-pupil {
+    animation: bot-look 1.9s ease-in-out infinite;
   }
 }
 

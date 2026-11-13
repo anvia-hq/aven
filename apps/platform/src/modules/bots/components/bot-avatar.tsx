@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/avatar";
 
@@ -60,10 +60,10 @@ function Face({ look, mood }: { look: Look; mood: BotMood }) {
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      <g className="bot-gaze">
+      <g>
         {[-EYE_SPACING, EYE_SPACING].map((offset) =>
           mood === "working" ? (
-            <g key={offset} className="bot-eye stroke-none">
+            <g key={offset} className="stroke-none">
               <circle
                 className="fill-avatar-eye"
                 cx={center.x + offset}
@@ -71,7 +71,7 @@ function Face({ look, mood }: { look: Look; mood: BotMood }) {
                 r={5.1}
               />
               <circle
-                className="fill-avatar-face"
+                className="bot-pupil fill-avatar-face"
                 cx={center.x + offset + gaze.x}
                 cy={center.y - 1 + gaze.y}
                 r={2.7}
@@ -85,27 +85,6 @@ function Face({ look, mood }: { look: Look; mood: BotMood }) {
       {face === "smile" && <path d={`M${center.x - 6.5} ${center.y + 2.5}q6.5 6 13 0`} />}
       {face === "grin" && <path d={`M${center.x - 3} ${center.y + 4}q3 3 6 0`} />}
     </g>
-  );
-}
-
-function Working({ look }: { look: Look }) {
-  const radius = look.reach + 3;
-  return (
-    <>
-      <circle
-        className="bot-ring"
-        cx="24"
-        cy="24"
-        r={radius}
-        fill="none"
-        stroke={look.color}
-        strokeWidth="2"
-      />
-      <g className="bot-orbit">
-        <circle cx="24" cy={24 - radius} r="2.4" fill={look.color} />
-        <circle cx="30" cy={25 - radius} r="1.4" fill={look.color} opacity="0.5" />
-      </g>
-    </>
   );
 }
 
@@ -123,6 +102,7 @@ export function BotAvatar({
   const setting = parseAvatarSetting(bot.avatar);
   const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
   const look = avatarFor(bot.id, setting ?? undefined);
+  const maskId = `bot-mask-${useId().replace(/:/g, "")}`;
   return (
     <Avatar className={className}>
       {text ? (
@@ -140,10 +120,31 @@ export function BotAvatar({
           className="bot-avatar size-full!"
           style={{ "--bot-delay": `-${look.delay}ms` } as CSSProperties}
         >
-          {mood === "working" && <Working look={look} />}
-          <g className="bot-body">
-            <Body parts={look.parts} color={look.color} />
-            <Face look={look} mood={mood} />
+          <g className="bot-hop">
+            <g className="bot-body">
+              <Body parts={look.parts} color={look.color} />
+              {mood === "working" ? (
+                <>
+                  <mask
+                    id={maskId}
+                    maskUnits="userSpaceOnUse"
+                    x={-20}
+                    y={-20}
+                    width={88}
+                    height={88}
+                  >
+                    <Body parts={look.parts} color="#fff" />
+                  </mask>
+                  <g mask={`url(#${maskId})`}>
+                    <g className="bot-face">
+                      <Face look={look} mood={mood} />
+                    </g>
+                  </g>
+                </>
+              ) : (
+                <Face look={look} mood={mood} />
+              )}
+            </g>
           </g>
         </svg>
       )}
