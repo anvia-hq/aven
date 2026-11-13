@@ -13,8 +13,9 @@ Ship this thread's work.
 
 3. **Bring the database up.** `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
    Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
-   it if connecting fails. Then apply the schema, which is also safe to repeat:
-   `bun run --cwd packages/db db:migrate`.
+   it if connecting fails. Then apply the schema from the repository root, which is also safe to
+   repeat: `set -a && . ./.env.local && set +a && bun packages/db/src/migrate.ts`. Do not run
+   `db:migrate` through `--cwd packages/db`: it reads `.env`, whose `DATABASE_URL` is not this thread's.
 
 4. **Run the checks, and fix what your change broke:**
    `bun run format && bun run typecheck && bun run lint && bun run format:check && bun test apps packages`.

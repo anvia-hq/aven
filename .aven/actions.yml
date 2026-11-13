@@ -1,4 +1,6 @@
 actions:
+  - name: Set up
+    run: bash .aven/setup && bash .aven/stack
   - name: Rebase
     prompt: |
       Update this branch from the default branch and fix any conflicts.
