@@ -5,7 +5,7 @@ import { lstat, mkdir, realpath, rename, rmdir, symlink } from "node:fs/promises
 import { dirname, join, sep } from "node:path";
 
 import type { SandboxPaths } from "@aven/agents/types";
-import type { ComputerState, RepoAccess, RunEnvVar } from "@aven/protocol/types";
+import type { ComputerState, RepoAccess, RunEnvVar, RunGithub } from "@aven/protocol/types";
 
 import { ArtifactStore } from "./artifacts";
 import { DirectorySandbox } from "./directory-sandbox";
@@ -14,6 +14,7 @@ import { forkWorkspace } from "./fork-workspace";
 import { cloneRepository, git, isCloned } from "./git-clone";
 import { cloneRepositoryFolder, refreshRepositoryFolder } from "./repository-clone";
 import { ensureLocalExcludes } from "./local-excludes";
+import { githubRunEnv } from "./github-signin";
 import { envOf, withProjectEnv } from "./project-env";
 import { runtimeHome } from "./runtime-home";
 import { secretRedactor } from "./secret-redaction";
@@ -42,6 +43,9 @@ export class HostSandboxes implements ThreadWorkspaces {
   #roots = new Map<string, Promise<string>>();
   #sandboxes = new Map<string, DirectorySandbox>();
   #projectEnv = new Map<string, Readonly<Record<string, string>>>();
+  #projectVars = new Map<string, readonly RunEnvVar[]>();
+  #githubEnv = new Map<string, Readonly<Record<string, string>>>();
+  #githubToken = new Map<string, string>();
   #redactors = new Map<string, ReturnType<typeof secretRedactor>>();
 
   private constructor(config: HostSandboxConfig) {
@@ -247,9 +251,7 @@ export class HostSandboxes implements ThreadWorkspaces {
     await mkdir(this.#workspaceDir(thread.id), { recursive: true });
     const sandbox = new DirectorySandbox(thread.id, this.#workspaceDir(thread.id));
     this.#sandboxes.set(thread.id, sandbox);
-    const runtime = withProjectEnv(startedOnUse(sandbox, start), () =>
-      this.#projectEnv.get(thread.id),
-    );
+    const runtime = withProjectEnv(startedOnUse(sandbox, start), () => this.#envOf(thread.id));
     return {
       tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
       runtime,
@@ -274,7 +276,7 @@ export class HostSandboxes implements ThreadWorkspaces {
 
   shell(threadId: string, _sessionId: string) {
     const root = this.#workspaceDir(threadId);
-    const project = this.#projectEnv.get(threadId) ?? {};
+    const project = this.#envOf(threadId);
     return {
       argv: ["bash", "-c", SHELL_START],
       env: {
@@ -325,6 +327,9 @@ export class HostSandboxes implements ThreadWorkspaces {
     this.#sandboxes.delete(threadId);
     this.#roots.delete(threadId);
     this.#projectEnv.delete(threadId);
+    this.#projectVars.delete(threadId);
+    this.#githubEnv.delete(threadId);
+    this.#githubToken.delete(threadId);
     this.#redactors.delete(threadId);
   }
 
@@ -332,7 +337,37 @@ export class HostSandboxes implements ThreadWorkspaces {
     if (env?.length) this.#projectEnv.set(threadId, envOf(env));
     else this.#projectEnv.delete(threadId);
 
-    const redact = secretRedactor(env);
+    if (env?.length) this.#projectVars.set(threadId, env);
+    else this.#projectVars.delete(threadId);
+
+    this.#redact(threadId);
+  }
+
+  async signInGithub(threadId: string, github: RunGithub | undefined) {
+    this.#githubEnv.delete(threadId);
+    this.#githubToken.delete(threadId);
+    this.#redact(threadId);
+
+    if (!github) return;
+
+    const configDir = join(this.#home, "gh-config", threadId);
+    await mkdir(configDir, { recursive: true });
+    this.#githubEnv.set(threadId, githubRunEnv(github, configDir));
+    this.#githubToken.set(threadId, github.token);
+    this.#redact(threadId);
+  }
+
+  #envOf(threadId: string): Record<string, string> {
+    return Object.assign({}, this.#projectEnv.get(threadId), this.#githubEnv.get(threadId));
+  }
+
+  #redact(threadId: string) {
+    const token = this.#githubToken.get(threadId);
+    const variables = Array.from(this.#projectVars.get(threadId) ?? []);
+
+    if (token !== undefined) variables.push({ name: "GH_TOKEN", value: token, secret: true });
+
+    const redact = secretRedactor(variables);
 
     if (redact) this.#redactors.set(threadId, redact);
     else this.#redactors.delete(threadId);

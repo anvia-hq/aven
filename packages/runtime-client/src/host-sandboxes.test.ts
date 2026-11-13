@@ -274,3 +274,71 @@ describe("a runner that works on this machine", () => {
     });
   });
 });
+
+describe("a person's GitHub on a run (decision 0276)", () => {
+  const ada = { token: "ghu_adasecret", id: 42, login: "ada", name: "Ada L" };
+  const show =
+    'echo "token=$GH_TOKEN"; echo "email=$GIT_AUTHOR_EMAIL"; git config --get-all credential.https://github.com.helper; echo "dir=$GH_CONFIG_DIR"';
+
+  test("signs gh and git in for the run's commands only, as the person, and signs out with none", async () => {
+    const { sandbox, home } = await runner();
+    const { access } = await createRemoteRepo();
+    const box = await sandbox.acquire({ id: "t1" }, async () => access);
+
+    await sandbox.signInGithub("t1", ada);
+    const signedIn = String((await call(box.tools, "exec_command", { command: show })).stdout);
+
+    expect(signedIn).toContain("token=ghu_adasecret");
+    expect(signedIn).toContain("email=42+ada@users.noreply.github.com");
+    expect(signedIn).toContain("!gh auth git-credential");
+    expect(signedIn).toContain(`dir=${join(home, "gh-config", "t1")}`);
+
+    await sandbox.signInGithub("t1", undefined);
+    const signedOut = String((await call(box.tools, "exec_command", { command: show })).stdout);
+
+    expect(signedOut).toContain("token=\n");
+    expect(signedOut).not.toContain("ghu_adasecret");
+    expect(signedOut).not.toContain("!gh auth git-credential");
+  });
+
+  test("survives the project's variables being set after it, and leaves another thread's commands alone", async () => {
+    const { sandbox } = await runner();
+    const { access } = await createRemoteRepo();
+    const first = await sandbox.acquire({ id: "t1" }, async () => access);
+    const second = await sandbox.acquire({ id: "t2" }, async () => access);
+
+    await sandbox.signInGithub("t1", ada);
+    sandbox.setProjectEnv("t1", [{ name: "PROJECT_VAR", value: "kept", secret: false }]);
+
+    const own = String(
+      (await call(first.tools, "exec_command", { command: 'echo "$GH_TOKEN $PROJECT_VAR"' }))
+        .stdout,
+    );
+    const other = String(
+      (await call(second.tools, "exec_command", { command: 'echo "[$GH_TOKEN]"' })).stdout,
+    );
+
+    expect(own).toContain("ghu_adasecret kept");
+    expect(other).toContain("[]");
+  });
+
+  test("a sign-in that fails leaves the thread signed out, never with the previous person's token", async () => {
+    const { sandbox, home } = await runner();
+    const { access } = await createRemoteRepo();
+    const box = await sandbox.acquire({ id: "t1" }, async () => access);
+
+    await sandbox.signInGithub("t1", ada);
+    await rm(join(home, "gh-config", "t1"), { recursive: true });
+    await writeFile(join(home, "gh-config", "t1"), "in the way");
+
+    await expect(
+      sandbox.signInGithub("t1", { token: "ghu_bobsecret", id: 7, login: "bob", name: null }),
+    ).rejects.toThrow();
+    const after = String(
+      (await call(box.tools, "exec_command", { command: 'echo "[$GH_TOKEN]"' })).stdout,
+    );
+
+    expect(after).toContain("[]");
+    expect(after).not.toContain("ghu_");
+  });
+});
