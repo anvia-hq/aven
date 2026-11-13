@@ -85,7 +85,7 @@ export function MentionMenu({ icon }: { icon?: (item: ComposerTriggerItem) => Re
   return (
     <ComposerPrimitive.TriggerMenu
       aria-label="Mention"
-      className="absolute bottom-full left-0 z-20 mb-2 flex max-h-80 w-full max-w-lg flex-col overflow-hidden rounded-xl border bg-popover/95 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/5 backdrop-blur-md"
+      className="absolute inset-x-0 bottom-full z-20 mb-2 flex max-h-80 flex-col overflow-hidden rounded-xl border bg-popover/95 text-sm text-popover-foreground shadow-lg ring-1 ring-foreground/5 backdrop-blur-md"
       style={{ position: "absolute", top: "auto", left: 0 }}
     >
       {(trigger) => (
