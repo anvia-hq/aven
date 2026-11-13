@@ -58,6 +58,35 @@ test.describe("the agent's question", () => {
     expect(again.status()).toBe(409);
   });
 
+  test("a question the server no longer waits on is not shown, so the composer is back", async ({
+    page,
+  }) => {
+    await registerUser(page, "ask", "Ask User");
+    await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "1" });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("form", { name: "Answer the agent" })).toBeVisible();
+
+    await page.route("**/api/threads", async (route) => {
+      const response = await route.fetch();
+      const threads = (await response.json()) as { awaitingAnswer: boolean }[];
+      await route.fulfill({
+        response,
+        json: threads.map((thread) => ({ ...thread, awaitingAnswer: false })),
+      });
+    });
+    await page.reload();
+
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    await expect(page.getByRole("form", { name: "Answer the agent" })).toHaveCount(0);
+  });
+
   test("your own words answer a question that allows them", async ({ page }) => {
     await registerUser(page, "ask", "Ask User");
     await page.request.post("/api/providers", {

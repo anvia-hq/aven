@@ -69,6 +69,7 @@ export type Thread = {
   runtimeId: string;
   state: ThreadState;
   running: boolean;
+  awaitingAnswer?: boolean;
   pullRequests: ThreadPullRequest[];
   createdAt: string;
   updatedAt: string;

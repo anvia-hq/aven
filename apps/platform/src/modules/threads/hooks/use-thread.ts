@@ -259,7 +259,8 @@ export function useThread(threadId: string) {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  const question = answerableQuestion(messages, running, error !== null);
+  const asked = answerableQuestion(messages, running, error !== null);
+  const question = thread?.awaitingAnswer === false ? undefined : asked;
 
   return {
     thread,
