@@ -119,3 +119,49 @@ describe("a compaction", () => {
     expect(texts(merged)).toEqual(["what does /compact do?"]);
   });
 });
+
+describe("a compaction across the page of earlier messages", () => {
+  const texts = (messages: ChatMessage[]) =>
+    messages.map((message) =>
+      message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+    );
+
+  test("is one note when its reply is on the next page", () => {
+    const request = said("c", "user", "/compact");
+    const reply = said("r", "assistant", COMPACTED);
+    const next = said("u", "user", "next");
+
+    expect(texts(mergedRuns([request], false, { after: reply }))).toEqual([
+      "[compaction] Compacted",
+    ]);
+    expect(texts(mergedRuns([reply, next], false, { before: request }))).toEqual(["next"]);
+  });
+
+  test("keeps an unusual reply on the next page", () => {
+    const request = said("c", "user", "/compact");
+    const reply = said("r", "assistant", "Context compacted to 12k tokens");
+
+    expect(texts(mergedRuns([reply], false, { before: request }))).toEqual([
+      "Context compacted to 12k tokens",
+    ]);
+  });
+
+  test("says compacting only for the compaction that is running last", () => {
+    const merged = mergedRuns(
+      [
+        said("c1", "user", "/compact"),
+        said("u", "user", "go on"),
+        said("a", "assistant", "working"),
+        said("c2", "user", "/compact"),
+      ],
+      true,
+    );
+
+    expect(texts(merged)).toEqual([
+      "[compaction] Compaction did not finish",
+      "go on",
+      "working",
+      "[compaction] Compacting…",
+    ]);
+  });
+});

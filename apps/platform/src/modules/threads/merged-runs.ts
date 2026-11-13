@@ -18,44 +18,77 @@ const compactionNote = (message: ChatMessage, line: string): ChatMessage => ({
   parts: [{ type: "text", text: `[compaction] ${line}` }],
 });
 
-export function foldedCompactions(messages: ChatMessage[], running: boolean): ChatMessage[] {
+type Neighbours = { before?: ChatMessage; after?: ChatMessage };
+
+const isCompactRequest = (message: ChatMessage | undefined) =>
+  message?.role === "user" && textOf(message).trim() === COMPACT_PROMPT;
+
+const isUsualReply = (message: ChatMessage) => {
+  const answer = textOf(message).trim();
+
+  return answer === COMPACTED || answer === NOTHING_TO_COMPACT;
+};
+
+export function foldedCompactions(
+  messages: ChatMessage[],
+  running: boolean,
+  neighbours: Neighbours = {},
+): ChatMessage[] {
   const folded: ChatMessage[] = [];
+  const last = messages.length - 1;
 
   for (let index = 0; index < messages.length; index += 1) {
     const message = messages[index]!;
 
-    if (message.role !== "user" || textOf(message).trim() !== COMPACT_PROMPT) {
+    if (
+      index === 0 &&
+      isCompactRequest(neighbours.before) &&
+      message.role === "assistant" &&
+      isUsualReply(message)
+    ) {
+      continue;
+    }
+
+    if (!isCompactRequest(message)) {
       folded.push(message);
       continue;
     }
 
-    const reply = messages[index + 1];
+    const reply = messages[index + 1] ?? neighbours.after;
+    const own = index + 1 <= last;
     const answer = reply?.role === "assistant" ? textOf(reply).trim() : "";
+    const latest = index === last || (own && index + 1 === last);
 
     if (answer === NOTHING_TO_COMPACT) {
       folded.push(compactionNote(message, "Nothing to compact"));
-      index += 1;
+
+      if (own) index += 1;
     } else if (answer === COMPACTED) {
       folded.push(compactionNote(message, "Compacted"));
-      index += 1;
+
+      if (own) index += 1;
     } else if (reply?.role === "assistant" && reply.parts.length > 0) {
       folded.push(compactionNote(message, "Compacted"));
-    } else if (running) {
+    } else if (running && latest) {
       folded.push(compactionNote(message, "Compacting…"));
 
-      if (reply?.role === "assistant") index += 1;
+      if (own && reply?.role === "assistant") index += 1;
     } else {
       folded.push(compactionNote(message, "Compaction did not finish"));
 
-      if (reply?.role === "assistant") index += 1;
+      if (own && reply?.role === "assistant") index += 1;
     }
   }
 
   return folded;
 }
 
-export function mergedRuns(source: ChatMessage[], running: boolean): ChatMessage[] {
-  const messages = foldedCompactions(source, running);
+export function mergedRuns(
+  source: ChatMessage[],
+  running: boolean,
+  neighbours: Neighbours = {},
+): ChatMessage[] {
+  const messages = foldedCompactions(source, running, neighbours);
   const merged: ChatMessage[] = [];
   let notes = 0;
   messages.forEach((message, index) => {
