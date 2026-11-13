@@ -30,7 +30,7 @@ const SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads";
 
 export function PreviewPanel({ runtimeId, onClose }: Props) {
-  const { port, setPort, session, problem, opening, open } = usePreview(runtimeId);
+  const { port, setPort, session, problem, opening, open, openInTab } = usePreview(runtimeId);
   const [asking, setAsking] = useState<number | null>(null);
 
   function ask() {
@@ -85,11 +85,12 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
           </Button>
           {session && (
             <Button
+              type="button"
               variant="ghost"
               size="icon-sm"
               aria-label="Open in a new tab"
               title="Open in a new tab"
-              render={<a href={session.url} target="_blank" rel="noreferrer" />}
+              onClick={() => void openInTab(session.port)}
             >
               <ExternalLink />
             </Button>
