@@ -35,5 +35,30 @@ export function usePreview(runtimeId: string) {
     }
   }
 
-  return { port, setPort, session, problem, opening, open };
+  async function openInTab(target: number) {
+    const tab = window.open("about:blank", "_blank");
+
+    if (!tab) {
+      toast.add({ title: "Allow pop-ups for Aven to open a preview in a new tab", type: "error" });
+      return;
+    }
+
+    tab.opener = null;
+
+    try {
+      const answer = await postJson<PreviewAnswer>(`/runtimes/${runtimeId}/ports`, {
+        port: target,
+      });
+      tab.location.href = answer.url;
+    } catch (failure) {
+      tab.close();
+      toast.add({
+        title: "Could not open the preview",
+        description: errorMessage(failure),
+        type: "error",
+      });
+    }
+  }
+
+  return { port, setPort, session, problem, opening, open, openInTab };
 }
