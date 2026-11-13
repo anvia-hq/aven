@@ -1,5 +1,5 @@
 import type { Message } from "@anvia/core";
-import type { GoalEnd } from "./types";
+import type { GoalEnd } from "@aven/agent-backend/types";
 
 export const goalSessionMarker = (session: number) =>
   `\n\n---\n\n**Goal · session ${session}**\n\n`;

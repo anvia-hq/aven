@@ -15,6 +15,7 @@ COPY apps/cli/package.json apps/cli/
 COPY apps/control-plane/package.json apps/control-plane/
 COPY apps/platform/package.json apps/platform/
 COPY apps/runtime/package.json apps/runtime/
+COPY packages/agent-backend/package.json packages/agent-backend/
 COPY packages/agents/package.json packages/agents/
 COPY packages/db/package.json packages/db/
 COPY packages/github/package.json packages/github/

@@ -9,7 +9,7 @@ import { applyEvent } from "@aven/protocol/events";
 import { Elysia } from "elysia";
 import { startRuntime } from "@aven/runtime-client/runner";
 import { directoryWorkspaces } from "@aven/runtime-client/testing/directory-workspaces";
-import { journalPath } from "@aven/runtime-client/testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 
 import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { createMemoryStore } from "../../memory-store";

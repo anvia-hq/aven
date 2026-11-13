@@ -31,14 +31,16 @@ import { backendRefusal } from "@aven/protocol/runtime-wire";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
   AgentBackend,
-  ConnectedMcp,
-  DriverContext,
   DurableEnd,
   Emit,
   FollowedGoal,
   FollowedRun,
   GoalEnd,
   RunInput,
+} from "@aven/agent-backend/types";
+import type {
+  ConnectedMcp,
+  DriverContext,
   RunMessage,
   RunRecord,
   SteerParams,

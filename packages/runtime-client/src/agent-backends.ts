@@ -2,7 +2,7 @@ import { ClaudeRuns } from "./claude-backend";
 import { claudeFakeQuery } from "./claude-fake";
 import { claudeSdkQuery } from "./claude-sdk";
 import { DurableRuns } from "./durable-runs";
-import type { AgentBackend, AgentBackendSet, ClaudeQuery } from "./types";
+import type { AgentBackend, AgentBackendSet, ClaudeQuery } from "@aven/agent-backend/types";
 
 const NATIVE = "native";
 const CLAUDE = "claude";

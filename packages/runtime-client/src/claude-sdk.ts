@@ -2,8 +2,8 @@ import { mkdirSync } from "node:fs";
 
 import { claudeExecutable } from "./claude-binary";
 import { claudeMcpTools } from "./claude-mcp";
-import { withoutRunnerSecrets } from "./runner-secrets";
-import type { ClaudePromptItem, ClaudeQuery, ClaudeSdkMessage } from "./types";
+import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
+import type { ClaudePromptItem, ClaudeQuery, ClaudeSdkMessage } from "@aven/agent-backend/types";
 import type { RunEnvVar } from "@aven/protocol/types";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 

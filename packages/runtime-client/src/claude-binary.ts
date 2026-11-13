@@ -7,7 +7,7 @@ import { once } from "node:events";
 import { finished } from "node:stream/promises";
 
 import { CLAUDE_BINARIES } from "./claude-binary-manifest";
-import type { ClaudeBinaryEntry, ClaudeBinaryOptions } from "./types";
+import type { ClaudeBinaryEntry, ClaudeBinaryOptions } from "@aven/agent-backend/types";
 
 const REGISTRY = "https://registry.npmjs.org";
 

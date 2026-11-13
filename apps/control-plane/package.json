@@ -14,6 +14,7 @@
     "@anvia/core": "^1.18.0",
     "@anvia/jev": "^0.2.1",
     "@anvia/memory-drizzle": "^1.2.0",
+    "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
     "@aven/db": "workspace:*",
     "@aven/github": "workspace:*",

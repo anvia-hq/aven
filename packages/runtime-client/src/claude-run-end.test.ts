@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 
 import { ClaudeRuns } from "./claude-backend";
-import { journalPath } from "./testing/journal-path";
-import type { ClaudeQuery, ClaudeRunContext } from "./types";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
+import type { ClaudeQuery, ClaudeRunContext } from "@aven/agent-backend/types";
 
 const context = (): ClaudeRunContext => ({
   token: "setup-token-run-end-0001",

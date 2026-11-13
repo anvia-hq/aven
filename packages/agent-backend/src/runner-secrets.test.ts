@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { withoutRunnerSecrets } from "./runner-secrets";
+import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 
 test("the runner's own credentials and the server's secrets stay out of what the agent runs with", () => {
   const kept = withoutRunnerSecrets({

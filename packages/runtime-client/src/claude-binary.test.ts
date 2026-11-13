@@ -7,7 +7,7 @@ import { join } from "node:path";
 
 import { CLAUDE_BINARIES } from "./claude-binary-manifest";
 import { claudeExecutable } from "./claude-binary";
-import type { ClaudeBinaryEntry } from "./types";
+import type { ClaudeBinaryEntry } from "@aven/agent-backend/types";
 
 let scratch = "";
 let tarball = Buffer.alloc(0);

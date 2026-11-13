@@ -1,6 +1,6 @@
 import { startRuntime } from "../packages/runtime-client/src/runner";
 import { directoryWorkspaces } from "../packages/runtime-client/src/testing/directory-workspaces";
-import { journalPath } from "../packages/runtime-client/src/testing/journal-path";
+import { journalPath } from "../packages/agent-backend/src/testing/journal-path";
 import { BOT_RUNNER_HEALTH_PORT, BOT_RUNNER_TOKEN } from "./bot-runner-config";
 
 const url = process.env.AVEN_URL ?? "http://localhost:8100";

@@ -1,4 +1,4 @@
-import type { ClaudeBinaryEntry } from "./types";
+import type { ClaudeBinaryEntry } from "@aven/agent-backend/types";
 
 export const CLAUDE_BINARIES: Record<string, ClaudeBinaryEntry> = {
   "darwin-arm64": {

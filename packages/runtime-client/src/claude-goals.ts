@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import type { Message } from "@anvia/core";
 
-import type { GoalEnd, GoalSpec } from "./types";
+import type { GoalEnd, GoalSpec } from "@aven/agent-backend/types";
 
 const DEFAULT_GOAL_SESSIONS = 20;
 const NO_PROGRESS_SESSIONS = 3;

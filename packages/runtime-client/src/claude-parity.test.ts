@@ -10,16 +10,11 @@ import { ClaudeRuns } from "./claude-backend";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type { RuntimeToControlPlane } from "@aven/protocol/types";
-import type {
-  ClaudeQuery,
-  ClaudeQueryInput,
-  ClaudeRunContext,
-  RunMessage,
-  ThreadWorkspaces,
-} from "./types";
+import type { ClaudeQuery, ClaudeQueryInput, ClaudeRunContext } from "@aven/agent-backend/types";
+import type { RunMessage, ThreadWorkspaces } from "./types";
 
 const TOKEN = "setup-token-parity-thread-0001";
 

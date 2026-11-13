@@ -3,7 +3,7 @@ import { statSync } from "node:fs";
 
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import type { RunRecord } from "./types";
 
 const record: RunRecord = {

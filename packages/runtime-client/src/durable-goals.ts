@@ -8,13 +8,12 @@ import { goalSessionMarker } from "./goal-report";
 import type {
   Emit,
   FollowedGoal,
-  GoalContext,
   GoalEnd,
-  GoalJournal,
   GoalSpec,
   GoalState,
   RunInput,
-} from "./types";
+} from "@aven/agent-backend/types";
+import type { GoalContext, GoalJournal } from "./types";
 
 const DEFAULT_GOAL_SESSIONS = 20;
 const TURNS_PER_SESSION = CODING_MAX_TURNS;

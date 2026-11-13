@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { db } from "@aven/db/client";
 import { HostSandboxes } from "@aven/runtime-client/host-sandboxes";
 import { startRuntime } from "@aven/runtime-client/runner";
-import { journalPath } from "@aven/runtime-client/testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { createRemoteRepo } from "@aven/runtime-client/testing/remote-repo";
 import { Elysia } from "elysia";
 

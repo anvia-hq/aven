@@ -31,7 +31,7 @@ import type {
   FollowedRun,
   GoalSpec,
   RunInput,
-} from "./types";
+} from "@aven/agent-backend/types";
 
 const STEER_NOTE =
   "The person sent this while you were working. Read it now and change course if it asks you to:";

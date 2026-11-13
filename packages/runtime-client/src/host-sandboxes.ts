@@ -1,5 +1,5 @@
 import { SHELL_START } from "./shell-start";
-import { withoutRunnerSecrets } from "./runner-secrets";
+import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { lstat, mkdir, realpath, rename, rmdir, symlink } from "node:fs/promises";
 import { dirname, join, sep } from "node:path";

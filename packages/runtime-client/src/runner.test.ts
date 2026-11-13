@@ -13,7 +13,7 @@ import { directoryWorkspaces } from "./testing/directory-workspaces";
 import { goalSessionMarker } from "./goal-report";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { gitFixture, sh } from "./testing/git-fixture";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import type { ScriptStep } from "@aven/agents/types";
 import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
