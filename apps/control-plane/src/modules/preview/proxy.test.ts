@@ -190,6 +190,30 @@ describe("a page", () => {
     expect(app.opened).toEqual([]);
   });
 
+  test("is refused when another preview host asks for it", async () => {
+    const { port, app } = setup((_app, _text, sink) => ok(sink));
+    const answer = await raw(
+      port,
+      `GET / HTTP/1.1\r\nHost: ${host()}\r\nCookie: ${PAGE_COOKIE}=${page()}\r\nSec-Fetch-Site: same-site\r\n\r\n`,
+    );
+
+    expect(answer).toStartWith("HTTP/1.1 403");
+    expect(app.opened).toEqual([]);
+  });
+
+  test("is carried when its own host, the address bar or the panel asks for it", async () => {
+    for (const site of ["same-origin", "none", "cross-site"]) {
+      const { port, app } = setup((_app, _text, sink) => ok(sink));
+      const answer = await raw(
+        port,
+        `GET / HTTP/1.1\r\nHost: ${host()}\r\nCookie: ${PAGE_COOKIE}=${page()}\r\nSec-Fetch-Site: ${site}\r\n\r\n`,
+      );
+
+      expect(answer).toStartWith("HTTP/1.1 200");
+      expect(app.opened).toEqual([claim()]);
+    }
+  });
+
   test("is asked for as localhost on its port, with the panel's own cookie kept apart", async () => {
     const { port, app } = setup((_app, _text, sink) => ok(sink));
     await raw(

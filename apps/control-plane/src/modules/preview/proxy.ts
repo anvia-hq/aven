@@ -149,6 +149,11 @@ class Relay {
       return;
     }
 
+    if (headerOf(head, "sec-fetch-site")?.toLowerCase() === "same-site") {
+      this.#reply(403, "A page of another preview cannot reach this one");
+      return;
+    }
+
     const forwarded = requestForPort(head, claims.port);
     const first = concat(text(serializeHead(forwarded.head)), rest);
     this.#options
