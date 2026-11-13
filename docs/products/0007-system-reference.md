@@ -110,6 +110,10 @@ Settings > Webhooks (`/webhooks`, `modules/webhooks`) keeps a person's `bot_webh
 
 `shipPrompt` (`modules/ship/prompt.ts`) adds, after Aven's default or a repository's `.aven/ship.md`, a note that a folder project's `origin` is its folder (`folder` from `projects.directory`) and how to push on from it, and a note to watch the opened pull request with a background command until it is mergeable, never merging it. The coding instructions say a `<ship_request>` asks for that push.
 
+### A pull in a thread fetches GitHub through the folder (decision 0273)
+
+The `<machine>` section of the coding instructions (`instruction.ts`) tells the agent that a request to pull, update, sync or fetch from main, upstream or GitHub is fetched from the folder's own GitHub address (`git -C <folder> remote get-url origin`) into `/workspace` and merged from `FETCH_HEAD`, without changing the folder.
+
 ### Unshipped is the nearer of the pushed copy and the default branch (decision 0232)
 
 `threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.

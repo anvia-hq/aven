@@ -97,3 +97,11 @@ test("the agent is told a server runs on the machine and that localhost is the p
   expect(section).toContain("localhost and 127.0.0.1 mean the machine the page is opened on");
   expect(section).toContain("relative URLs");
 });
+
+test("a request to pull from GitHub is fetched through the folder's own remote, not stopped at origin", () => {
+  const section = codingInstructions(200).split("<machine>")[1]!.split("</machine>")[0]!;
+  expect(section).toContain("pull, update, sync or fetch from main, upstream or GitHub");
+  expect(section).toContain("git -C <folder> remote get-url origin");
+  expect(section).toContain("merge FETCH_HEAD");
+  expect(section).toContain("Do not change the folder itself");
+});
