@@ -399,7 +399,10 @@ export class DurableRuns implements AgentBackend {
     options: FollowOptions = {},
   ): FollowedRun {
     const { agentId = this.#agent(input).id, after, keepAgent } = options;
-    const mapper = createDurableEventMapper({ contextWindow: input.contextWindow });
+    const mapper = createDurableEventMapper({
+      contextWindow: input.contextWindow,
+      compacting: input.compacting,
+    });
 
     if (after) this.#replay(run.id, after, mapper);
 

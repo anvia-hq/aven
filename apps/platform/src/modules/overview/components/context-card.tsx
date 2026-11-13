@@ -39,6 +39,17 @@ export function ContextCard({
     );
   }
 
+  if (!context.contextWindow) {
+    return (
+      <OverviewCard title="Context">
+        <div className="flex min-h-6 items-center justify-between gap-2">
+          <span>{compactNumber(context.usedTokens)} tokens in context</span>
+          <span className="text-xs text-muted-foreground">Model size unknown</span>
+        </div>
+      </OverviewCard>
+    );
+  }
+
   const percent = Math.min(100, (context.usedTokens / context.contextWindow) * 100);
   return (
     <OverviewCard title="Context">

@@ -273,6 +273,7 @@ export function createRunDriver(context: DriverContext) {
       build: (id) => ({
         ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
         contextWindow: model?.contextWindow,
+        compacting: true,
       }),
       async claudeInput() {
         const token = secrets.claudeToken;

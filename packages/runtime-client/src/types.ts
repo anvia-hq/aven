@@ -315,6 +315,7 @@ export type RunInput = {
   agent?: Agent<unknown>;
   compaction?: DurableAgentRegistration["compaction"];
   contextWindow?: number;
+  compacting?: boolean;
   claude?: ClaudeRunContext;
 };
 

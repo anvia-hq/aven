@@ -44,7 +44,7 @@ function generationMetadata({ usage, context }: Generation) {
     },
   };
 
-  if (context && context.contextWindow > 0) {
+  if (context?.contextWindow && context.contextWindow > 0) {
     const remainingTokens = Math.max(0, context.contextWindow - context.usedTokens);
     generation.contextUsage = {
       model: { modelId: "claude", context: { contextWindow: context.contextWindow } },

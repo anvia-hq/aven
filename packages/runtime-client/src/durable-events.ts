@@ -10,12 +10,14 @@ import { projectStreamEvent } from "@aven/agents/projection";
 import { projectToolCall, projectToolEnd } from "@aven/agents/tool-projection";
 import { tokenUsageOf } from "@aven/agents/usage";
 import { asRecord } from "@aven/agents/values";
-import type { RunEvent } from "@aven/protocol/types";
+import type { ContextUsage, RunEvent } from "@aven/protocol/types";
 import type { DurableEnd } from "./types";
 
 const DELTAS = new Set(["text_delta", "reasoning_delta", "tool_call"]);
 
-export function createDurableEventMapper(options: { contextWindow?: number } = {}) {
+export function createDurableEventMapper(
+  options: { contextWindow?: number; compacting?: boolean } = {},
+) {
   const calls = new Map<string, { id: string; name?: string }>();
   const announced = new Set<string>();
 
@@ -46,13 +48,14 @@ export function createDurableEventMapper(options: { contextWindow?: number } = {
         if (typeof usage.inputTokens === "number") {
           const { contextWindow } = options;
           const used = asRecord(result.contextUsage).usedTokens;
-          events.push({
-            type: "usage",
-            turn: tokenUsageOf(usage),
-            context: contextWindow
-              ? { usedTokens: typeof used === "number" ? used : usage.inputTokens, contextWindow }
-              : undefined,
-          });
+          const context: ContextUsage | undefined =
+            options.compacting && !contextWindow
+              ? undefined
+              : { usedTokens: typeof used === "number" ? used : usage.inputTokens };
+
+          if (context && contextWindow) context.contextWindow = contextWindow;
+
+          events.push({ type: "usage", turn: tokenUsageOf(usage), context });
         }
 
         return { events };
