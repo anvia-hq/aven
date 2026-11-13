@@ -1,5 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
+import { COMPACTED, NOTHING_TO_COMPACT } from "@aven/protocol/compaction";
+
 import { mergedRuns } from "./merged-runs";
 import type { ChatMessage } from "./types";
 
@@ -55,5 +57,65 @@ describe("answers a background task's end woke the agent for", () => {
     );
     expect(merged).toHaveLength(1);
     expect(merged[0]?.workedMs).toBeUndefined();
+  });
+});
+
+describe("a compaction", () => {
+  const texts = (messages: ChatMessage[]) =>
+    messages.map((message) =>
+      message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
+    );
+
+  test("is one note, without the command and the reply", () => {
+    const merged = mergedRuns(
+      [
+        said("u", "user", "fix it"),
+        said("a", "assistant", "done"),
+        said("c", "user", "/compact"),
+        said("r", "assistant", COMPACTED),
+        said("u2", "user", "next"),
+      ],
+      false,
+    );
+    expect(merged.map((message) => message.id)).toEqual(["u", "a", "c", "u2"]);
+    expect(texts(merged)[2]).toBe("[compaction] Compacted");
+  });
+
+  test("says when there was nothing to compact", () => {
+    const merged = mergedRuns(
+      [said("c", "user", "/compact"), said("r", "assistant", NOTHING_TO_COMPACT)],
+      false,
+    );
+    expect(texts(merged)).toEqual(["[compaction] Nothing to compact"]);
+  });
+
+  test("says it is compacting while the run is going, with or without an empty reply", () => {
+    const empty = { id: "r", role: "assistant", parts: [] } as ChatMessage;
+
+    expect(texts(mergedRuns([said("c", "user", "/compact")], true))).toEqual([
+      "[compaction] Compacting…",
+    ]);
+    expect(texts(mergedRuns([said("c", "user", "/compact"), empty], true))).toEqual([
+      "[compaction] Compacting…",
+    ]);
+  });
+
+  test("says so when the run ended without a reply", () => {
+    expect(texts(mergedRuns([said("c", "user", "/compact")], false))).toEqual([
+      "[compaction] Compaction did not finish",
+    ]);
+  });
+
+  test("keeps a reply that is not the usual one", () => {
+    const merged = mergedRuns(
+      [said("c", "user", "/compact"), said("r", "assistant", "Context compacted to 12k tokens")],
+      false,
+    );
+    expect(texts(merged)).toEqual(["[compaction] Compacted", "Context compacted to 12k tokens"]);
+  });
+
+  test("is not made of a message that only contains the command", () => {
+    const merged = mergedRuns([said("u", "user", "what does /compact do?")], false);
+    expect(texts(merged)).toEqual(["what does /compact do?"]);
   });
 });
