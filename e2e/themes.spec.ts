@@ -235,6 +235,20 @@ test.describe("themes", () => {
     await expect(page.getByRole("combobox", { name: "Bot chat font" })).toContainText(
       "Same as interface font",
     );
+    await page.goto("/bot");
+    const hello = page.getByText(/Say hello to/);
+    await expect(hello).toBeVisible();
+    const before = await hello.evaluate((node) => getComputedStyle(node).fontFamily);
+    await page.goto("/settings/general");
+    await page.getByRole("combobox", { name: "Bot chat font" }).click();
+    await page.getByRole("option", { name: "IBM Plex Sans", exact: true }).click();
+    await page.goto("/bot");
+    await expect(page.getByText(/Say hello to/)).toBeVisible();
+    const after = await page
+      .getByText(/Say hello to/)
+      .evaluate((node) => getComputedStyle(node).fontFamily);
+    expect(before).not.toContain("IBM Plex Sans");
+    expect(after).toContain("IBM Plex Sans");
   });
 
   test("screenshots of every theme", async ({ page }) => {

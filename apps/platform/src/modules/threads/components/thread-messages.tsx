@@ -87,7 +87,7 @@ export function ThreadMessages({
   return (
     <div
       ref={scrollRef}
-      className="h-full scrollbar-gutter-stable overflow-y-auto"
+      className="h-full scrollbar-gutter-stable overflow-y-auto font-sans"
       style={font.style}
     >
       <div className="flex">
