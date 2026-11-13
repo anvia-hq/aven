@@ -13,11 +13,11 @@ function BotPill({ bot }: { bot: Bot }) {
   return (
     <>
       <BotAvatar bot={bot} mood={online ? "working" : "idle"} className="size-7 shrink-0 text-sm" />
-      <h1 className="truncate text-sm font-semibold">{bot.name}</h1>
+      <span className="truncate text-sm font-semibold">{bot.name}</span>
       {bot.description && (
-        <p className="hidden max-w-48 truncate text-xs font-normal text-muted-foreground sm:block">
+        <span className="hidden max-w-48 truncate text-xs font-normal text-muted-foreground sm:block">
           {bot.description}
-        </p>
+        </span>
       )}
     </>
   );
@@ -31,12 +31,16 @@ export function BotHeader({ bot }: { bot: Bot }) {
         title={bot.description || undefined}
         className="flex max-w-full"
       >
+        <h1 className="sr-only">{bot.name}</h1>
         {bot.isMain ? (
           <div className={PILL}>
             <BotPill bot={bot} />
           </div>
         ) : (
-          <BotSettingsDialog bot={bot} className={`${PILL} hover:bg-background/60`}>
+          <BotSettingsDialog
+            bot={bot}
+            className={`${PILL} hover:bg-background/60 dark:hover:bg-background/60`}
+          >
             <BotPill bot={bot} />
           </BotSettingsDialog>
         )}
