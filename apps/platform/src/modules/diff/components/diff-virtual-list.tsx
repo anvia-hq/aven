@@ -28,6 +28,7 @@ type Props = {
   files: DiffFile[];
   onToggle: (file: DiffFile, open: boolean) => void;
   layout: DiffLayout;
+  revealing: boolean;
   footer?: string;
 };
 
@@ -65,7 +66,7 @@ function FileHeader({
   );
 }
 
-export function DiffVirtualList({ items, files, layout, onToggle, footer }: Props) {
+export function DiffVirtualList({ items, files, layout, revealing, onToggle, footer }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const virtual = useVirtualizer({
     count: items.length,
@@ -91,7 +92,11 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
   );
 
   return (
-    <div ref={scroller} className="@container min-h-0 flex-1 overflow-auto">
+    <div
+      ref={scroller}
+      aria-busy={revealing}
+      className={cn("@container min-h-0 flex-1 overflow-auto", revealing && "pointer-events-none")}
+    >
       <div
         className="relative font-mono text-xs leading-5"
         style={{

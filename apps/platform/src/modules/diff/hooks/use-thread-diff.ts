@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { api } from "@/lib/api";
+import { api, errorMessage } from "@/lib/api";
 
 import { parsePatch } from "../parse-patch";
 import { sameFile } from "../same-file";
@@ -22,9 +22,11 @@ export function useThreadDiff(
 ) {
   const [reads, setReads] = useState(0);
   const [answer, setAnswer] = useState<KeptAnswer | null>(null);
+  const kept = useRef(new Map<string, ThreadDiffResponse>());
 
   useEffect(() => {
     setAnswer(null);
+    kept.current.clear();
   }, [threadId]);
 
   useEffect(() => {
@@ -37,12 +39,13 @@ export function useThreadDiff(
         const data = await api<ThreadDiffResponse>(path);
 
         if (current) {
+          if (data.available) kept.current.set(scope, data);
+          else kept.current.delete(scope);
+
           setAnswer({ threadId, scope, loaded: data });
         }
-      } catch {
-        if (current) {
-          setAnswer({ threadId, scope, loaded: "The changes could not be read" });
-        }
+      } catch (failure) {
+        if (current) setAnswer({ threadId, scope, loaded: errorMessage(failure) });
       }
     };
     void look();
@@ -53,11 +56,12 @@ export function useThreadDiff(
     };
   }, [threadId, scope, reads, running, enabled]);
 
-  const current =
+  const live =
     enabled && answer !== null && answer.threadId === threadId && answer.scope === scope
       ? answer.loaded
       : null;
-  const shown = current;
+  const cached = live === null ? (kept.current.get(scope) ?? null) : null;
+  const shown = live ?? cached;
   const problem = typeof shown === "string" ? shown : null;
   const response = typeof shown === "object" ? shown : null;
   const patch = response?.available ? response : null;
@@ -82,6 +86,7 @@ export function useThreadDiff(
   return {
     loaded: shown !== null,
     problem,
+    refreshing: live === null && cached !== null,
     available: response ? response.available : null,
     truncated: patch?.truncated ?? false,
     files,
