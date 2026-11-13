@@ -16,6 +16,7 @@ import { createMemoryStore } from "../../memory-store";
 import {
   memoryContinuations,
   memoryFailures,
+  memoryLimits,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
@@ -83,6 +84,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
       failures: failures.store,
       workedTimes: memoryWorkedTimes().store,
       senders: memorySenders().store,
+      limits: memoryLimits().store,
       ...extra,
     });
   };

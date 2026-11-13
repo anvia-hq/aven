@@ -10,6 +10,7 @@ import { createMemoryStore } from "../../memory-store";
 import {
   memoryContinuations,
   memoryFailures,
+  memoryLimits,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
@@ -121,6 +122,7 @@ run("a run on a remote runtime, end to end (real postgres, fake provider)", asyn
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
     senders: memorySenders().store,
+    limits: memoryLimits().store,
   });
   const thread = {
     id: threadId,

@@ -463,6 +463,13 @@
       "when": 1794505988427,
       "tag": "0065_slow_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1794585893133,
+      "tag": "0066_secret_energizer",
+      "breakpoints": true
     }
   ]
 }

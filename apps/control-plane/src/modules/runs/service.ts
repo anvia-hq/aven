@@ -17,6 +17,7 @@ import type { ConversationStore } from "../../types";
 import type {
   ContinuationStore,
   FailureStore,
+  LimitStore,
   SenderStore,
   WorkedTimeStore,
   FinishedRun,
@@ -78,6 +79,7 @@ export class RunManager {
   #failures: FailureStore;
   #workedTimes: WorkedTimeStore;
   #senders: SenderStore;
+  #limits: LimitStore;
 
   constructor(deps: {
     store: ConversationStore;
@@ -87,6 +89,7 @@ export class RunManager {
     failures: FailureStore;
     workedTimes: WorkedTimeStore;
     senders: SenderStore;
+    limits: LimitStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
@@ -95,6 +98,7 @@ export class RunManager {
     this.#failures = deps.failures;
     this.#workedTimes = deps.workedTimes;
     this.#senders = deps.senders;
+    this.#limits = deps.limits;
   }
 
   isRunning(threadId: string) {
@@ -252,10 +256,15 @@ export class RunManager {
       this.#store.load({ scope: this.#scope(thread) }),
       this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
       this.#senders.read(thread.id).catch(() => new Map<number, string>()),
+      this.#storedLimits(thread.id),
     ])
-      .then(([history, times, senders]) => {
+      .then(([history, times, senders, stored]) => {
         run.messages = withSenders(withWorkedTimes(messagesToChat(history), times), senders);
-        run.usage = { ...usageFromHistory(history), limits: run.usage.limits };
+        const base = {
+          ...usageFromHistory(history),
+          limits: stored.length > 0 ? stored : undefined,
+        };
+        run.usage = run.usage.limits ? applyLimits(base, run.usage.limits) : base;
       })
       .then(prepare);
     run.ready = loaded.catch(() => undefined);
@@ -415,6 +424,12 @@ export class RunManager {
     this.#runtime.dispose();
   }
 
+  async #storedLimits(threadId: string) {
+    const stored = await this.#limits.read(threadId).catch(() => []);
+    const now = Date.now();
+    return stored.filter((limit) => limit.resetsAt === undefined || limit.resetsAt > now);
+  }
+
   #scope(thread: RunThread) {
     return { sessionId: thread.id, metadata: { organizationId: thread.organizationId } };
   }
@@ -459,11 +474,12 @@ export class RunManager {
         };
       }
 
-      const [history, times, senders, failure] = await Promise.all([
+      const [history, times, senders, failure, stored] = await Promise.all([
         this.#store.load({ scope: this.#scope(channel.thread) }),
         this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
         this.#senders.read(channel.thread.id).catch(() => new Map<number, string>()),
         this.#failure(channel),
+        this.#storedLimits(channel.thread.id),
       ]);
 
       if (channel.run) continue;
@@ -476,7 +492,7 @@ export class RunManager {
         messages: shown.messages,
         hidden: shown.hidden,
         running: false,
-        usage: usageFromHistory(history),
+        usage: { ...usageFromHistory(history), limits: stored.length > 0 ? stored : undefined },
       };
 
       if (failure) snapshot.error = failure;
@@ -496,6 +512,9 @@ export class RunManager {
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
 
     if (event.type === "limits" && run) run.usage = applyLimits(run.usage, event.limits);
+
+    if (event.type === "limits")
+      void this.#limits.record(channel.thread.id, event.limits).catch(() => undefined);
 
     for (const subscriber of channel.subscribers) subscriber(event);
   }

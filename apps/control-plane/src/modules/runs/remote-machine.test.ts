@@ -14,6 +14,7 @@ import { createMemoryStore } from "../../memory-store";
 import {
   memoryContinuations,
   memoryFailures,
+  memoryLimits,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
@@ -238,6 +239,7 @@ run(
       failures: failures.store,
       workedTimes: memoryWorkedTimes().store,
       senders: memorySenders().store,
+      limits: memoryLimits().store,
     });
     const thread = { id: threadId, organizationId: seed.orgA, runtimeId: machine.id };
     const model = { provider: "anthropic", modelId: "claude-sonnet-5", apiKey: "sk-key" } as const;

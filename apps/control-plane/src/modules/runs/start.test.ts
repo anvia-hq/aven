@@ -4,6 +4,7 @@ import { UnavailableError } from "../../errors";
 import {
   memoryContinuations,
   memoryFailures,
+  memoryLimits,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
@@ -43,6 +44,7 @@ function managerWith(runtime: Runtime, store: Partial<ConversationStore> = {}) {
     failures: memoryFailures().store,
     workedTimes: memoryWorkedTimes().store,
     senders: memorySenders().store,
+    limits: memoryLimits().store,
   });
 }
 

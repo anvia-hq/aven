@@ -6,6 +6,7 @@ import type { RuntimeConnection } from "../runtimes/hub";
 import type {
   AgentBackendKind,
   MessageMention,
+  PlanLimit,
   QueuedSteer,
   RunAttachment,
   RunEnvVar,
@@ -121,6 +122,11 @@ export type FailureStore = {
 export type WorkedTimeStore = {
   record(threadId: string, messageIndex: number, workedMs: number): Promise<void>;
   read(threadId: string): Promise<Map<number, number>>;
+};
+
+export type LimitStore = {
+  record(threadId: string, limits: readonly PlanLimit[]): Promise<void>;
+  read(threadId: string): Promise<PlanLimit[]>;
 };
 
 export type SenderStore = {
