@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { PanelEnter } from "@/components/panel-enter";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { threadComputer } from "@/modules/computer/computer";
@@ -76,7 +77,7 @@ export function ThreadSidePanels({
         <Fragment key={panel.id}>
           {index > 0 && <ResizableHandle className={handleClassName} />}
           <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
-            {panel.node}
+            <PanelEnter>{panel.node}</PanelEnter>
           </ResizablePanel>
         </Fragment>
       ))}
