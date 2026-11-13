@@ -5,6 +5,11 @@ import { join } from "node:path";
 
 import { CLAUDE_EFFORTS, CLAUDE_MODELS } from "@aven/protocol/claude-models";
 
+const hostEnv = () =>
+  Object.fromEntries(
+    Object.entries(process.env).filter(([name]) => !/^(ANTHROPIC_|CLAUDE_)/i.test(name)),
+  );
+
 describe("the Claude model table against the SDK", () => {
   test("every alias resolves to the version and offers the efforts the table says", async () => {
     const { query } = await import("@anthropic-ai/claude-agent-sdk");
@@ -16,7 +21,7 @@ describe("the Claude model table against the SDK", () => {
       options: {
         cwd: process.cwd(),
         env: {
-          ...process.env,
+          ...hostEnv(),
           CLAUDE_CODE_OAUTH_TOKEN: "sk-ant-oat01-table",
           CLAUDE_CONFIG_DIR: mkdtempSync(join(tmpdir(), "aven-claude-table-")),
         },
@@ -36,4 +41,15 @@ describe("the Claude model table against the SDK", () => {
       q.close();
     }
   }, 30_000);
+
+  test("a model override in the machine's environment does not change what the table is checked against", async () => {
+    const before = process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "claude-opus-5-5";
+    try {
+      expect(hostEnv().ANTHROPIC_DEFAULT_SONNET_MODEL).toBeUndefined();
+    } finally {
+      if (before === undefined) delete process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
+      else process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = before;
+    }
+  });
 });
