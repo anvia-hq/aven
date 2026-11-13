@@ -7,7 +7,6 @@ import type { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { useShipAction } from "../hooks/use-ship-action";
 import type { OutgoingMessage, RunSelection, Thread, ThreadPanels } from "../types";
 import { ActionButtons } from "./action-buttons";
-import { GithubIdentityChip } from "./github-identity-chip";
 import { PullRequestChip } from "./pull-request-chip";
 import { ShipButton } from "./ship-button";
 
@@ -32,7 +31,7 @@ export function ShipBar({
   split = false,
   suggestions,
 }: Props) {
-  const { action, ship, setUp, retry, githubMode, runnerGithub } = useShipAction(
+  const { action, ship, setUp, retry } = useShipAction(
     thread,
     unshipped,
     showShip,
@@ -58,7 +57,6 @@ export function ShipBar({
         />
         <PullRequestChip pullRequests={thread.pullRequests} />
         {!split && <ChangesBadge diff={unshipped} onOpen={showChanges} />}
-        <GithubIdentityChip runnerGithub={runnerGithub} githubMode={githubMode} />
       </div>
       {suggestions}
       <div className="ml-auto flex shrink-0 items-center gap-2">

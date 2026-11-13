@@ -1,8 +1,10 @@
-import { Folder, GitBranch, Servers } from "@mynaui/icons-react";
+import { Folder, GitBranch, Github, Servers } from "@mynaui/icons-react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { githubIdentityNote } from "@/modules/threads/github-identity";
+import { useShipReadiness } from "@/modules/threads/hooks/use-ship-readiness";
 import { ContinueThreadDialog } from "@/modules/threads/components/continue-thread-dialog";
 import type { Thread } from "@/modules/threads/types";
 
@@ -12,6 +14,8 @@ import { projectPlace } from "@/modules/projects/place";
 export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: boolean }) {
   const { project } = useProject(thread.projectId);
   const { runtime } = useRuntime(thread.runtimeId);
+  const { githubMode, runnerGithub } = useShipReadiness(thread.id, thread.running);
+  const github = githubIdentityNote(runnerGithub, githubMode);
 
   return (
     <OverviewCard title="Environment">
@@ -34,6 +38,11 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         </Row>
       )}
       <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
+      {github && (
+        <Row icon={<Github />}>
+          <span title={github.detail}>{github.label}</span>
+        </Row>
+      )}
     </OverviewCard>
   );
 }

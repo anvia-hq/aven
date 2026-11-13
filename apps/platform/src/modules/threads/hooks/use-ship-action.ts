@@ -20,7 +20,7 @@ export function useShipAction(
   selection: RunSelection,
 ) {
   const { shipping, ship } = useShipThread(thread, showShip, selection);
-  const { gate, appKey, machine, githubMode, runnerGithub } = useShipReadiness(
+  const { gate, appKey, machine } = useShipReadiness(
     thread.id,
     thread.running,
   );
@@ -96,5 +96,5 @@ export function useShipAction(
     branch.reload();
   }, [unshipped, branch]);
 
-  return { action, ship, setUp, retry, githubMode, runnerGithub };
+  return { action, ship, setUp, retry };
 }
