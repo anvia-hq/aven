@@ -3,7 +3,7 @@ import { announcements } from "@aven/db/schema/announcements";
 import { and, desc, eq, ne } from "drizzle-orm";
 import type { z } from "zod";
 
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import type { createAnnouncementBody, updateAnnouncementBody } from "./schema";
 
 type Create = z.infer<typeof createAnnouncementBody>;

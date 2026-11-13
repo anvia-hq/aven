@@ -3,7 +3,7 @@ import { threadFolderThreads } from "@aven/db/schema/thread-folder-threads";
 import { threadFolders } from "@aven/db/schema/thread-folders";
 import { and, asc, desc, eq } from "drizzle-orm";
 
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { threadsService } from "../threads/service";
 
 export class FolderNotFoundError extends NotFoundError {

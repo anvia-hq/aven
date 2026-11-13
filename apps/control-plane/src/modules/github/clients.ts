@@ -1,4 +1,4 @@
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { loadAppById, loadOrganizationApp } from "./app-store";
 import { github as platformClient, GithubClient } from "./client";
 import type { GithubClients, GithubConfig } from "./types";

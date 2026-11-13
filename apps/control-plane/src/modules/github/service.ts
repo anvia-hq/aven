@@ -3,7 +3,7 @@ import { db } from "@aven/db/client";
 import { githubInstallations } from "@aven/db/schema/github-installations";
 import { and, desc, eq } from "drizzle-orm";
 
-import { NotFoundError, UnprocessableError } from "../../errors";
+import { NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "./client";
 import { githubClients, PLATFORM_APP } from "./clients";
 import { isLocalPath } from "./schema";

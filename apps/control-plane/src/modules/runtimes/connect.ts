@@ -1,7 +1,7 @@
 import { CloseCode } from "@aven/protocol/runtime-wire";
 import { Elysia } from "elysia";
 
-import { bytesOf } from "../../bytes";
+import { bytesOf } from "@aven/server-kit/bytes";
 import { bearerToken } from "./bearer";
 import type { RuntimeConnection, RuntimeHub } from "./hub";
 import { runtimesService } from "./service";

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError, orNotFound } from "../../errors";
+import { ForbiddenError, orNotFound } from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
 import { platformService } from "../platform/service";

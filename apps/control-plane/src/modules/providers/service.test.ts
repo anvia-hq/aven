@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
-import type * as CryptoModule from "../../crypto";
+import type * as CryptoModule from "@aven/server-kit/crypto";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -16,7 +16,7 @@ run("providersService (postgres)", async () => {
   const { providers } = await import("@aven/db/schema/providers");
   const { users } = await import("@aven/db/schema/users");
   const { eq, inArray } = await import("drizzle-orm");
-  const { UnavailableError } = await import("../../errors");
+  const { UnavailableError } = await import("@aven/server-kit/errors");
   const { providersService } = await import("./service");
   const { effortsByModel } = await import("./model-list");
   const { bedrockEndpoint } = await import("./schema");
@@ -27,7 +27,7 @@ run("providersService (postgres)", async () => {
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
     try {
       const { encryptSecret } = (await import(
-        `../../crypto.ts?key=${crypto.randomUUID()}`
+        `@aven/server-kit/crypto?key=${crypto.randomUUID()}`
       )) as typeof CryptoModule;
       return encryptSecret(plain);
     } finally {

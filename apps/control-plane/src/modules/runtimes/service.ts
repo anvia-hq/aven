@@ -4,7 +4,7 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";

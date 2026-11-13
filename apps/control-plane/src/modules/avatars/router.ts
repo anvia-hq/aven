@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 import { z } from "zod";
 
 import { authRouter } from "../auth/router";
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { AVATAR_MAX_BYTES, avatarsService, readCapped } from "./service";
 
 export const avatarsRouter = new Elysia()

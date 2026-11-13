@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError, NotFoundError } from "../../errors";
+import { ForbiddenError, NotFoundError } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { isOwnerOrAdmin } from "../auth/members";
 import { saveDecisionModelBody } from "./schema";

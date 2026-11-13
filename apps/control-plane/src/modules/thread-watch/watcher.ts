@@ -1,4 +1,4 @@
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import { threadWatchService } from "./service";
 import type { RunEnding } from "../runs/types";
 import type { NoteEnding, WatchedRun, Watcher } from "./types";

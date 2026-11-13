@@ -1,4 +1,4 @@
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import type { RuntimeHub } from "../runtimes/hub";
 import { releaseThread } from "../runtimes/providers";
 import type { ProviderOf } from "../runtimes/types";

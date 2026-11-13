@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import type * as CryptoModule from "../../crypto";
+import type * as CryptoModule from "@aven/server-kit/crypto";
 import type { GithubClient } from "./client";
 import type { GithubUserGrant } from "./types";
 
@@ -55,7 +55,7 @@ run("a person's GitHub connection (postgres)", async () => {
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 6).toString("base64");
     try {
       const { encryptSecret } = (await import(
-        `../../crypto.ts?key=${crypto.randomUUID()}`
+        `@aven/server-kit/crypto?key=${crypto.randomUUID()}`
       )) as typeof CryptoModule;
       return encryptSecret(plain);
     } finally {

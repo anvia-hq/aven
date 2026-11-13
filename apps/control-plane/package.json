@@ -18,6 +18,7 @@
     "@aven/db": "workspace:*",
     "@aven/protocol": "workspace:*",
     "@aven/runtime-client": "workspace:*",
+    "@aven/server-kit": "workspace:*",
     "@typesafe-ai/sdk": "^0.7.0",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",

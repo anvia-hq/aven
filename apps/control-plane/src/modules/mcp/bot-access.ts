@@ -1,4 +1,4 @@
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { createMcpBody, updateMcpBody } from "./schema";
 import { mcpService } from "./service";
 import type { BotMcp, McpServerView } from "./types";

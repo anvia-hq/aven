@@ -14,6 +14,7 @@ COPY packages/agents/package.json packages/agents/
 COPY packages/db/package.json packages/db/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
+COPY packages/server-kit/package.json packages/server-kit/
 RUN bun install --frozen-lockfile --filter @aven/platform
 
 COPY tsconfig.json ./

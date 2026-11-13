@@ -1,7 +1,7 @@
 import type { MemoryStore } from "@anvia/core";
 import { AGENT_BACKENDS, CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
-import { describeError, UnavailableError } from "../../errors";
+import { describeError, UnavailableError } from "@aven/server-kit/errors";
 import { MachineProcessWatch } from "./machine-process-watch";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";

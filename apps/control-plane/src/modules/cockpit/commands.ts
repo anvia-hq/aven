@@ -8,7 +8,7 @@ import {
 import { cockpitMarkdown } from "@aven/protocol/cockpit-markdown";
 import { z } from "zod";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import {
   createInboxBody,
   createNoteBody,

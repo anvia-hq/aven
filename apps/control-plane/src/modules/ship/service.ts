@@ -1,7 +1,7 @@
 import { wrapShipRequest } from "@aven/protocol/ship-request";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 import { createFilesService } from "../files/service";
 import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";

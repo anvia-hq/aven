@@ -1,4 +1,4 @@
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { WAKE_TIMEOUT_MS } from "../computer/service";
 import { createFilesService } from "../files/service";
 import { runnerFor } from "../runtimes/ask-runner";

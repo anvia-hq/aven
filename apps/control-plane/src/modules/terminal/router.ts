@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { bytesOf } from "../../bytes";
+import { bytesOf } from "@aven/server-kit/bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
 import { threadAccess } from "../threads/access";
 import type { RuntimeHub } from "../runtimes/hub";

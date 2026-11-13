@@ -3,8 +3,8 @@ import { mcpServers } from "@aven/db/schema/mcp-servers";
 import { MCP_LIMIT, mcpSlug } from "@aven/protocol/mcp";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 
-import { decryptOrUnavailable, encryptSecret } from "../../crypto";
-import { ConflictError, UnprocessableError } from "../../errors";
+import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
+import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import type { CreateMcpBody, UpdateMcpBody } from "./schema";
 import type { McpServerView } from "./types";
 import type { McpServerRow } from "@aven/db/schema/types";

@@ -6,7 +6,7 @@ import { botMessagesToChat } from "@aven/agents/bot-projection";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { parseBotPrompt } from "@aven/protocol/bots";
 
-import { ConflictError, UnavailableError, UnprocessableError } from "../../errors";
+import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { BotRunner } from "./runner";
 import { inProcessReplier } from "./testing/in-process-replier";
 import type { BotReplier, BotReplyInput, CreateBotAgent } from "./types";

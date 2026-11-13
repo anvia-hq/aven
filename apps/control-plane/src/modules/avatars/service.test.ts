@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { AVATAR_MAX_BYTES, imageTypeOf, readCapped } from "./service";
 
 const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);

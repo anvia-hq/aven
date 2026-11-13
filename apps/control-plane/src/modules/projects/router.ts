@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { orNotFound } from "../../errors";
+import { orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import {
   addFolderBody,

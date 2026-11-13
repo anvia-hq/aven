@@ -1,6 +1,6 @@
 import { reasoningControlsFor } from "@aven/agents/model";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { assertProviderAddress } from "./address-guard";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";

@@ -30,6 +30,7 @@
         "@aven/db": "workspace:*",
         "@aven/protocol": "workspace:*",
         "@aven/runtime-client": "workspace:*",
+        "@aven/server-kit": "workspace:*",
         "@typesafe-ai/sdk": "^0.7.0",
         "better-auth": "^1.7.12",
         "drizzle-orm": "^0.45.4",
@@ -145,6 +146,16 @@
         "@modelcontextprotocol/server": "2.4.0",
       },
     },
+    "packages/server-kit": {
+      "name": "@aven/server-kit",
+      "version": "0.0.0",
+      "dependencies": {
+        "@aven/agents": "workspace:*",
+        "@aven/protocol": "workspace:*",
+        "elysia": "^1.4.30",
+        "zod": "^4.6.7",
+      },
+    },
   },
   "patchedDependencies": {
     "@anvia/durable@0.14.0": "patches/@anvia%2Fdurable@0.14.0.patch",
@@ -213,6 +224,8 @@
     "@aven/runtime": ["@aven/runtime@workspace:apps/runtime"],
 
     "@aven/runtime-client": ["@aven/runtime-client@workspace:packages/runtime-client"],
+
+    "@aven/server-kit": ["@aven/server-kit@workspace:packages/server-kit"],
 
     "@babel/code-frame": ["@babel/code-frame@7.29.7", "", { "dependencies": { "@babel/helper-validator-identifier": "^7.29.7", "js-tokens": "^4.0.0", "picocolors": "^1.1.1" } }, "sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw=="],
 

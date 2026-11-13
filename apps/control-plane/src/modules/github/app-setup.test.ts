@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ConflictError, ForbiddenError, UnprocessableError } from "../../errors";
+import { ConflictError, ForbiddenError, UnprocessableError } from "@aven/server-kit/errors";
 import { createSetupState, readSetupState } from "./app-manifest";
 import { createGithubAppSetup } from "./app-setup";
 import type { GithubConfig } from "./types";

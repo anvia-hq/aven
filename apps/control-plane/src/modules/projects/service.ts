@@ -14,7 +14,7 @@ import {
   NotFoundError,
   orNotFound,
   UnprocessableError,
-} from "../../errors";
+} from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";

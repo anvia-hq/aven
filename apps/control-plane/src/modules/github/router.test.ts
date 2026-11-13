@@ -6,7 +6,7 @@ import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { ConflictError, errorsRouter, ForbiddenError } from "../../errors";
+import { ConflictError, errorsRouter, ForbiddenError } from "@aven/server-kit/errors";
 import { auth, authService } from "../auth/service";
 import type { githubAppSetup } from "./app-setup";
 import type { GithubClient } from "./client";

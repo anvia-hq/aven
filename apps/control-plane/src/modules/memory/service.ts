@@ -12,7 +12,7 @@ import {
 import { projects } from "@aven/db/schema/projects";
 import { and, asc, count, desc, eq, isNull, sql, type SQL } from "drizzle-orm";
 
-import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import { botsService } from "../bots/service";
 import { projectsService } from "../projects/service";
 import type { MemoryActor, MemoryOwner, MemoryPlace } from "./types";

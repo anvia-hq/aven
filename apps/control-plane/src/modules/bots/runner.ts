@@ -12,8 +12,13 @@ import {
   sentMessageId,
 } from "@aven/protocol/bots";
 
-import { withoutBytes } from "../../attachments";
-import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
+import { withoutBytes } from "@aven/server-kit/attachments";
+import {
+  ConflictError,
+  describeError,
+  UnavailableError,
+  UnprocessableError,
+} from "@aven/server-kit/errors";
 import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
 import type {

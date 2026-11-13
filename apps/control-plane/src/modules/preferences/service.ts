@@ -2,7 +2,7 @@ import { db } from "@aven/db/client";
 import { userSettings } from "@aven/db/schema/user-settings";
 import { eq, sql } from "drizzle-orm";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { serverSmallModel } from "../providers/server-small-model";
 import { serverModelsService } from "../server-models/service";
 import type { FollowUpSettings, FollowUpView, ServerSmallModelView } from "./types";

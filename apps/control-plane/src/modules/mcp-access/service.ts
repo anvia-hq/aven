@@ -5,7 +5,7 @@ import { mcpAccessTokens } from "@aven/db/schema/mcp-access-tokens";
 import { ACCESS_LIMIT, ACCESS_TOKEN_PREFIX } from "@aven/protocol/mcp-access";
 import { and, asc, count, eq } from "drizzle-orm";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 import type { CreateAccessTokenBody } from "./schema";
 import type { McpCaller } from "./types";
 import type { AccessPermission, AccessToken, AccessTokenCreated } from "@aven/protocol/types";

@@ -7,7 +7,8 @@ run("webhooks (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { botWebhooks } = await import("@aven/db/schema/bot-webhooks");
   const { eq, inArray } = await import("drizzle-orm");
-  const { ConflictError, NotFoundError, UnprocessableError } = await import("../../errors");
+  const { ConflictError, NotFoundError, UnprocessableError } =
+    await import("@aven/server-kit/errors");
   const { botsService } = await import("../bots/service");
   const { createWebhooks } = await import("./service");
 

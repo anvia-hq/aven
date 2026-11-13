@@ -3,7 +3,7 @@ import { resolveAgentModel } from "@aven/agents/agent-model";
 import type { ModelConfig } from "@aven/agents/types";
 import { z } from "zod";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 
 export const CHECK_TIMEOUT_MS = 15_000;
 

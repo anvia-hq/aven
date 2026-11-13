@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { FORKS_PER_THREAD } from "@aven/protocol/forks";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 import { runtimesService } from "../runtimes/service";
 import { createThreadForks } from "./forks";
 import { threadsService } from "./service";

@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 
-import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import { serverModelsService } from "./service";
 
 const run =

@@ -1,4 +1,4 @@
-import { ConflictError, ForbiddenError, UnprocessableError } from "../../errors";
+import { ConflictError, ForbiddenError, UnprocessableError } from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { platformService } from "../platform/service";
 import {

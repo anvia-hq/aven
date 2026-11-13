@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { ConflictError, describeError, UnavailableError } from "../../errors";
+import { ConflictError, describeError, UnavailableError } from "@aven/server-kit/errors";
 import type { RuntimeHub } from "./hub";
 
 const answer = z.discriminatedUnion("status", [

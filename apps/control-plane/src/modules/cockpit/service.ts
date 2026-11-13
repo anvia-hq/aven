@@ -6,7 +6,7 @@ import { cockpitTasks } from "@aven/db/schema/cockpit-tasks";
 import { COCKPIT_ITEMS_MAX, TAGS_DEFINED_MAX } from "@aven/protocol/cockpit";
 import { and, asc, count, desc, eq, sql } from "drizzle-orm";
 
-import { ConflictError, NotFoundError, UnprocessableError } from "../../errors";
+import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import type {
   CreateInboxBody,
   CreateNoteBody,

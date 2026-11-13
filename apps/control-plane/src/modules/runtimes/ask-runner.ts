@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import { describeError, UnavailableError } from "../../errors";
+import { describeError, UnavailableError } from "@aven/server-kit/errors";
 import { threadsService } from "../threads/service";
 import type { RuntimeHub } from "./hub";
 import { reachRunner } from "./providers";

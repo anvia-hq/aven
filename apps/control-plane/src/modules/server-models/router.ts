@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError } from "../../errors";
+import { ForbiddenError } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { platformService } from "../platform/service";
 import { saveServerDecisionBody, saveServerSmallBody } from "./schema";
