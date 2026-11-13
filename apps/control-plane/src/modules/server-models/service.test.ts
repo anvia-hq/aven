@@ -19,6 +19,8 @@ run("serverModelsService (postgres)", async () => {
   await clear();
   afterAll(clear);
 
+  const accepted = async () => undefined;
+
   test("nothing is set until an owner saves one, and the key is never returned", async () => {
     expect(await serverModelsService.view({})).toEqual({ decision: null, small: null });
     expect(await serverModelsService.decision({})).toBeNull();
@@ -54,6 +56,7 @@ run("serverModelsService (postgres)", async () => {
     const saved = await serverModelsService.saveSmall(
       { kind: "anthropic", modelId: "claude-haiku-5-5", apiKey: "sk-ant-zzzz9876" },
       {},
+      accepted,
     );
     expect(saved).toEqual({
       kind: "anthropic",
@@ -78,9 +81,41 @@ run("serverModelsService (postgres)", async () => {
     expect((await serverModelsService.view(env)).small?.source).toBe("env");
     expect((await serverModelsService.view(env)).decision?.keyHint).toBe("");
     await expect(
-      serverModelsService.saveSmall({ kind: "openai", modelId: "m" }, env),
+      serverModelsService.saveSmall({ kind: "openai", modelId: "m" }, env, accepted),
     ).rejects.toBeInstanceOf(ConflictError);
     await expect(serverModelsService.removeDecision(env)).rejects.toBeInstanceOf(ConflictError);
+    await serverModelsService.removeSmall({});
+  });
+
+  test("a small model the provider refuses is not saved", async () => {
+    const refused = async () => {
+      throw new UnprocessableError("The provider did not accept this key and model");
+    };
+    await expect(
+      serverModelsService.saveSmall(
+        { kind: "anthropic", modelId: "claude-haiku-5-5", apiKey: "sk-ant-bad0000" },
+        {},
+        refused,
+      ),
+    ).rejects.toBeInstanceOf(UnprocessableError);
+    expect((await serverModelsService.view({})).small).toBeNull();
+  });
+
+  test("the key saved before is the one checked when only the model changes", async () => {
+    await serverModelsService.saveSmall(
+      { kind: "anthropic", modelId: "claude-haiku-5-5", apiKey: "sk-ant-first1111" },
+      {},
+      accepted,
+    );
+    const seen: (string | undefined)[] = [];
+    await serverModelsService.saveSmall(
+      { kind: "anthropic", modelId: "claude-haiku-4" },
+      {},
+      async (config) => {
+        seen.push(config.apiKey);
+      },
+    );
+    expect(seen).toEqual(["sk-ant-first1111"]);
     await serverModelsService.removeSmall({});
   });
 
@@ -88,6 +123,7 @@ run("serverModelsService (postgres)", async () => {
     await serverModelsService.saveSmall(
       { kind: "anthropic", modelId: "claude-haiku-5-5", apiKey: "sk-ant-zzzz9876" },
       {},
+      accepted,
     );
     await db
       .update(platformSettings)
