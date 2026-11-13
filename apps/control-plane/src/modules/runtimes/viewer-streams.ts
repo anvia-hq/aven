@@ -16,6 +16,7 @@ type Viewer = {
 
 const MAX_TERMINALS = 32;
 const MAX_PORTS = 64;
+const MAX_WAITING_BYTES = 1024 * 1024;
 
 export class ViewerStreams {
   #viewers = new Map<string, Viewer>();
@@ -83,7 +84,22 @@ export class ViewerStreams {
 
         if (!viewer) return;
 
-        if (viewer.ready) this.sendFrame(encodeViewerFrame(viewerId, bytes));
+        if (viewer.ready) {
+          this.sendFrame(encodeViewerFrame(viewerId, bytes));
+          return;
+        }
+
+        if (viewer.waitingBytes + bytes.length > MAX_WAITING_BYTES) {
+          this.#viewers.delete(viewerId);
+
+          if (!this.connectionClosed()) this.post({ type: closeType, viewerId });
+
+          viewer.sink.closed("Too much was sent before the port opened");
+          return;
+        }
+
+        viewer.waiting.push(bytes.slice());
+        viewer.waitingBytes += bytes.length;
       },
       close: () => {
         if (!this.#viewers.delete(viewerId) || this.connectionClosed()) return;
