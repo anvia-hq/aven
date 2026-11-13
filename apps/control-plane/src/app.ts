@@ -12,6 +12,7 @@ import {
   followUps,
   putAwayThread,
   threadContinuation,
+  webhooks,
 } from "./composition";
 import { errorsRouter } from "./errors";
 import { followUpsRouter } from "./modules/follow-ups/router";
@@ -21,6 +22,7 @@ import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
+import { webhooksRouter } from "./modules/webhooks/router";
 import { claudeSetupRouter } from "./modules/claude-setup/router";
 import { cockpitRouter } from "./modules/cockpit/router";
 import { computerRouter } from "./modules/computer/router";
@@ -65,6 +67,7 @@ export const app = new Elysia()
   .use(artifactsRouter(runtimeHub))
   .use(authRouter)
   .use(botsRouter(botChats))
+  .use(webhooksRouter(webhooks))
   .use(botComputerRouter(runtimeHub, botRuntimeId))
   .use(claudeSetupRouter)
   .use(cockpitRouter)

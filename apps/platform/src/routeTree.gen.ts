@@ -45,6 +45,7 @@ import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/settings/providers'
 import { Route as AuthedSettingsRuntimesRouteImport } from './routes/_authed/settings/runtimes'
 import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
+import { Route as AuthedSettingsWebhooksRouteImport } from './routes/_authed/settings/webhooks'
 import { Route as AuthedSettingsWorkspaceVariablesRouteImport } from './routes/_authed/settings/workspace-variables'
 import { Route as AuthedShellProjectsIndexRouteImport } from './routes/_authed/_shell/projects/index'
 import { Route as AuthedShellProjectsProjectIdRouteImport } from './routes/_authed/_shell/projects/$projectId'
@@ -233,6 +234,11 @@ const AuthedSettingsSkillsRoute = AuthedSettingsSkillsRouteImport.update({
   path: '/skills',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsWebhooksRoute = AuthedSettingsWebhooksRouteImport.update({
+  id: '/webhooks',
+  path: '/webhooks',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsWorkspaceVariablesRoute =
   AuthedSettingsWorkspaceVariablesRouteImport.update({
     id: '/workspace-variables',
@@ -294,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/bot/': typeof AuthedBotIndexRoute
   '/center/': typeof AuthedCenterIndexRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/bot': typeof AuthedBotIndexRoute
   '/center': typeof AuthedCenterIndexRoute
@@ -375,6 +383,7 @@ export interface FileRoutesById {
   '/_authed/settings/providers': typeof AuthedSettingsProvidersRoute
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
+  '/_authed/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/_authed/bot/': typeof AuthedBotIndexRoute
   '/_authed/center/': typeof AuthedCenterIndexRoute
@@ -418,6 +427,7 @@ export interface FileRouteTypes {
     | '/settings/providers'
     | '/settings/runtimes'
     | '/settings/skills'
+    | '/settings/webhooks'
     | '/settings/workspace-variables'
     | '/bot/'
     | '/center/'
@@ -455,6 +465,7 @@ export interface FileRouteTypes {
     | '/settings/providers'
     | '/settings/runtimes'
     | '/settings/skills'
+    | '/settings/webhooks'
     | '/settings/workspace-variables'
     | '/bot'
     | '/center'
@@ -498,6 +509,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/providers'
     | '/_authed/settings/runtimes'
     | '/_authed/settings/skills'
+    | '/_authed/settings/webhooks'
     | '/_authed/settings/workspace-variables'
     | '/_authed/bot/'
     | '/_authed/center/'
@@ -771,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsSkillsRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/webhooks': {
+      id: '/_authed/settings/webhooks'
+      path: '/webhooks'
+      fullPath: '/settings/webhooks'
+      preLoaderRoute: typeof AuthedSettingsWebhooksRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/workspace-variables': {
       id: '/_authed/settings/workspace-variables'
       path: '/workspace-variables'
@@ -891,6 +910,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsProvidersRoute: typeof AuthedSettingsProvidersRoute
   AuthedSettingsRuntimesRoute: typeof AuthedSettingsRuntimesRoute
   AuthedSettingsSkillsRoute: typeof AuthedSettingsSkillsRoute
+  AuthedSettingsWebhooksRoute: typeof AuthedSettingsWebhooksRoute
   AuthedSettingsWorkspaceVariablesRoute: typeof AuthedSettingsWorkspaceVariablesRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
 }
@@ -914,6 +934,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsProvidersRoute: AuthedSettingsProvidersRoute,
   AuthedSettingsRuntimesRoute: AuthedSettingsRuntimesRoute,
   AuthedSettingsSkillsRoute: AuthedSettingsSkillsRoute,
+  AuthedSettingsWebhooksRoute: AuthedSettingsWebhooksRoute,
   AuthedSettingsWorkspaceVariablesRoute: AuthedSettingsWorkspaceVariablesRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
 }

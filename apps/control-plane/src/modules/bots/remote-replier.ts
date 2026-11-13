@@ -3,6 +3,7 @@ import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, parseBotPrompt } from "@aven/p
 import { providerKeyQuestion } from "@aven/protocol/providers";
 import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 import { isGoalRoundNote } from "@aven/protocol/goals";
+import { isWebhookNote } from "@aven/protocol/webhooks";
 
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
@@ -112,6 +113,7 @@ export class RemoteBotReplier implements BotReplier {
     const ended = Promise.withResolvers<void>();
     const { from, note } = parseBotPrompt(prompt);
     const makesBotsOnTheirWord = onPersonsWord && from === undefined;
+    const onWebhook = bot.isMain && isWebhookNote(prompt);
     let written = 0;
     let asked = false;
     let threadRuns = 0;
@@ -332,7 +334,9 @@ export class RemoteBotReplier implements BotReplier {
 
         const via = makesBotsOnTheirWord ? "person" : "note";
 
-        if (via === "note") this.#mayFollowUp(params, { note, aboutThread, inspected });
+        if (via === "note") {
+          this.#mayFollowUp(params, { note, aboutThread, inspected, webhook: onWebhook });
+        }
 
         const actor = { userId, botId: bot.id, via } as const;
 
@@ -419,11 +423,18 @@ export class RemoteBotReplier implements BotReplier {
 
   #mayFollowUp(
     params: Exclude<BotThreadParams, { op: "projects" | "list" | "get" }>,
-    reply: { note?: boolean; aboutThread?: string; inspected: ReadonlySet<string> },
+    reply: {
+      note?: boolean;
+      aboutThread?: string;
+      inspected: ReadonlySet<string>;
+      webhook: boolean;
+    },
   ) {
     const asked = "only when the person asks you to, in their own message";
 
     if (params.op === "start" || params.op === "archive") {
+      if (params.op === "start" && reply.webhook) return;
+
       throw new Error(`Start or archive threads ${asked}`);
     }
 

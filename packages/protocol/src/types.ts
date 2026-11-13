@@ -1067,3 +1067,18 @@ export type AccessToken = {
 };
 
 export type AccessTokenCreated = AccessToken & { token: string };
+
+export type WebhookStatus = "delivered" | "busy" | "failed";
+
+export type Webhook = {
+  id: string;
+  name: string;
+  hint: string;
+  path: string;
+  enabled: boolean;
+  lastDeliveryAt: string | null;
+  lastStatus: WebhookStatus | null;
+  createdAt: string;
+};
+
+export type WebhookCreated = Webhook & { token: string; urlPath: string };
