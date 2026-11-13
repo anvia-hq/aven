@@ -1,5 +1,6 @@
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { PanelEnter } from "@/components/panel-enter";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/resizable";
 import { safeStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
@@ -27,14 +28,16 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
     storage: safeStorage,
   });
   const panel = found && (
-    <ArtifactPanel
-      botId={bot.id}
-      group={found.group}
-      version={found.version}
-      number={found.number}
-      onVersion={show}
-      onClose={() => show(undefined)}
-    />
+    <PanelEnter>
+      <ArtifactPanel
+        botId={bot.id}
+        group={found.group}
+        version={found.version}
+        number={found.number}
+        onVersion={show}
+        onClose={() => show(undefined)}
+      />
+    </PanelEnter>
   );
   const conversation = (
     <div className="relative @container flex h-full min-h-0 min-w-0 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border">
