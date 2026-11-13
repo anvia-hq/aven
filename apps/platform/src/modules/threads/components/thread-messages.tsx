@@ -77,7 +77,7 @@ export function ThreadMessages({
   const working = place({ kind: "agent" });
 
   return (
-    <div ref={scrollRef} className="h-full overflow-y-auto">
+    <div ref={scrollRef} className="h-full scrollbar-gutter-stable overflow-y-auto">
       <div className="flex">
         <div className="min-w-0 flex-1">
           <div className="mx-auto flex max-w-4xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)]">

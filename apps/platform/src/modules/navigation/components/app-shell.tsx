@@ -140,7 +140,7 @@ export function AppShell({ user, sidebar }: Props) {
             "pb-(--mobile-tab-bar) md:ml-1 md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
-              : "md:h-[calc(100svh-1rem)] md:min-h-0 md:overflow-y-auto md:rounded-xl md:border md:border-sidebar-border",
+              : "md:h-[calc(100svh-1rem)] md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:rounded-xl md:border md:border-sidebar-border",
           )}
         >
           <MobileAppBar />
