@@ -29,7 +29,6 @@ const SINGLE_LINE_HEIGHT = 40;
 
 type Props = {
   botId: string;
-  main: boolean;
   onSend: (text: string, files: AttachmentUpload[]) => Promise<boolean>;
   placeholder: string;
   quoting: BotChatQuote | null;
@@ -108,9 +107,9 @@ function QuotePreview({
   );
 }
 
-export function BotComposer({ botId, main, ...props }: Props) {
+export function BotComposer({ botId, ...props }: Props) {
   const chat = useComposerChat();
-  const triggers = useBotMentions(botId, main);
+  const triggers = useBotMentions(botId);
   return (
     <ChatProvider controller={chat}>
       <ComposerPrimitive.Root
@@ -130,7 +129,7 @@ function Composer({
   quoting,
   quoteAuthor,
   onClearQuote,
-}: Omit<Props, "botId" | "main">) {
+}: Omit<Props, "botId">) {
   const composer = useComposer();
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);

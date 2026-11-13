@@ -92,12 +92,11 @@ export function BotChat({ bot }: { bot: Bot }) {
           <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
             <BotComposer
               botId={bot.id}
-              main={bot.isMain}
               onSend={onSend}
               quoting={quoting}
               quoteAuthor={quoting ? quoteAuthor(quoting, bot, bots) : ""}
               onClearQuote={() => setQuoting(null)}
-              placeholder={`Message ${bot.name}, @ to mention ${bot.isMain ? "a bot or thread" : "a thread"}, / for a skill`}
+              placeholder={`Message ${bot.name}, @ to mention a bot or thread, / for a skill`}
             />
           </div>
         </div>

@@ -1,6 +1,6 @@
 # The main bot can message other bots
 
-Status: accepted; its `message_bot` tool, `bot.ask`, the wait for an answer and "only the main bot writes" are superseded by 0065 (handles, `send_message` to a handle, answers as messages of their own). Builds on 0058, 0059, 0060 and 0061. The idea (`@` mentions, a bot writing to another and hearing back) is the Anvia harness's, where bots share one thread; here each bot keeps its own chat with the person, so the exchange is shaped differently.
+Status: accepted; "only the main bot's composer has the `@` mention" is superseded by 0271; its `message_bot` tool, `bot.ask`, the wait for an answer and "only the main bot writes" are superseded by 0065 (handles, `send_message` to a handle, answers as messages of their own). Builds on 0058, 0059, 0060 and 0061. The idea (`@` mentions, a bot writing to another and hearing back) is the Anvia harness's, where bots share one thread; here each bot keeps its own chat with the person, so the exchange is shaped differently.
 
 ## Context
 

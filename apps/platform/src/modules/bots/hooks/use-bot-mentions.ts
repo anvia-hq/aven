@@ -32,7 +32,7 @@ const threadItem = (
   data: { kind: "thread", projectId: thread.projectId },
 });
 
-export function useBotMentions(selfId: string, main: boolean) {
+export function useBotMentions(selfId: string) {
   const { bots } = useBots();
   const { threads } = useThreads();
   const { personal, builtIn } = useSkills();
@@ -56,9 +56,9 @@ export function useBotMentions(selfId: string, main: boolean) {
         allowSpaces: true,
         items: ({ query }) => {
           const wanted = query.trim().toLowerCase();
-          const botItems = main
-            ? others.current.filter((bot) => bot.name.toLowerCase().includes(wanted)).map(itemOf)
-            : [];
+          const botItems = others.current
+            .filter((bot) => bot.name.toLowerCase().includes(wanted))
+            .map(itemOf);
           const threadItems = mine.current
             .filter(
               (thread) => thread.state === "open" && thread.title.toLowerCase().includes(wanted),
@@ -86,5 +86,5 @@ export function useBotMentions(selfId: string, main: boolean) {
         },
       },
     ];
-  }, [main]);
+  }, []);
 }

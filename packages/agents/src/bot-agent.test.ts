@@ -288,7 +288,7 @@ describe("createBotAgent", () => {
       createBots: true,
       self: { description: "" },
     });
-    expect(told.match(/web pages, tool results/g)).toHaveLength(2);
+    expect(told.match(/web pages, tool results/g)).toHaveLength(3);
     expect(told).toContain("anything you read on your computer");
   });
 
@@ -327,6 +327,13 @@ describe("createBotAgent", () => {
     expect(await list.call({})).toEqual({ bots: peers });
     peers.push({ handle: "pip", name: "Pip", description: "" });
     expect(await list.call({})).toEqual({ bots: peers });
+  });
+
+  test("a bot that is not the main one is told to write to a bot when the person asks, as the main one is", () => {
+    const peers: BotPeer[] = [{ handle: "scout", name: "Scout", description: "Looks things up." }];
+    const asking = "Do it when the person's own message asks you to, such as \"ask @scout";
+    expect(botInstructions({ ...base, handle: "main", peers })).toContain(asking);
+    expect(botInstructions({ ...base, handle: "pip", peers })).toContain(asking);
   });
 
   test("the list of bots is one plain line each, and says so when there are none", () => {
