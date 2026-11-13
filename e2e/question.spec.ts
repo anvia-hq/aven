@@ -58,7 +58,7 @@ test.describe("the agent's question", () => {
     expect(again.status()).toBe(409);
   });
 
-  test("a question the server no longer waits on is not shown, so the composer is back", async ({
+  test("a question the server is not waiting on is not shown, so the composer stays", async ({
     page,
   }) => {
     await registerUser(page, "ask", "Ask User");
@@ -67,24 +67,25 @@ test.describe("the agent's question", () => {
     });
     const { child, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "1" });
     runner = child;
-
-    await page.goto(`/threads/${threadId}`);
-    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
-    await page.getByRole("button", { name: "Send" }).click();
-    await expect(page.getByRole("form", { name: "Answer the agent" })).toBeVisible();
-
     await page.route("**/api/threads", async (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+
       const response = await route.fetch();
       const threads = (await response.json()) as { awaitingAnswer: boolean }[];
-      await route.fulfill({
+      return route.fulfill({
         response,
         json: threads.map((thread) => ({ ...thread, awaitingAnswer: false })),
       });
     });
-    await page.reload();
 
-    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    await page.goto(`/threads/${threadId}`);
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
+    await page.waitForTimeout(2500);
+
     await expect(page.getByRole("form", { name: "Answer the agent" })).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
   });
 
   test("your own words answer a question that allows them", async ({ page }) => {
