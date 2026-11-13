@@ -56,7 +56,12 @@ export function BotChat({ bot }: { bot: Bot }) {
 
               const { message } = item;
               const before = items[index - 1];
+              const after = items[index + 1];
               const together = before?.type === "message" && before.message.role === message.role;
+              const joined = {
+                above: together,
+                below: after?.type === "message" && after.message.role === message.role,
+              };
               return (
                 <Message
                   key={item.key}
@@ -72,6 +77,7 @@ export function BotChat({ bot }: { bot: Bot }) {
                       message={message}
                       bots={bots}
                       onQuote={(quoted) => setQuoting(quoteOf(quoted))}
+                      joined={joined}
                     />
                   )}
                 </Message>

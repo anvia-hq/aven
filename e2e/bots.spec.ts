@@ -13,6 +13,42 @@ const bubble = (page: Page, text: string) =>
     .filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
 
 test.describe("bots", () => {
+  test("bubbles in a row of one speaker lose the rounding of their left side where they touch", async ({
+    page,
+  }) => {
+    await registerUser(page, "corners", "Corners User");
+    const said = (id: string, text: string) => ({ id, role: "bot", text });
+    await page.route("**/api/bots/*/events", (route) =>
+      route.fulfill({
+        contentType: "text/event-stream",
+        body: `data: ${JSON.stringify({
+          type: "snapshot",
+          typing: false,
+          messages: [said("m-1", "First"), said("m-2", "Middle"), said("m-3", "Last")],
+        })}\n\n`,
+      }),
+    );
+    await page.getByRole("link", { name: "Bot", exact: true }).click();
+    await expect(page).toHaveURL(/\/bot$/);
+    const radius = async (text: string) =>
+      bubble(page, text).evaluate((node) => {
+        const style = getComputedStyle(node);
+        return {
+          topLeft: Number.parseFloat(style.borderTopLeftRadius),
+          bottomLeft: Number.parseFloat(style.borderBottomLeftRadius),
+        };
+      });
+    const first = await radius("First");
+    const middle = await radius("Middle");
+    const last = await radius("Last");
+    expect(first.topLeft).toBeGreaterThan(middle.topLeft);
+    expect(first.bottomLeft).toBe(middle.bottomLeft);
+    expect(middle.topLeft).toBe(middle.bottomLeft);
+    expect(last.topLeft).toBe(middle.topLeft);
+    expect(last.bottomLeft).toBe(first.topLeft);
+    expect(first.bottomLeft).toBeLessThan(first.topLeft);
+  });
+
   test("the main bot is under the logo, and it answers in several messages", async ({ page }) => {
     await registerUser(page, "bot", "Bot Person");
     const provider = await page.request.post("/api/providers", {
