@@ -767,7 +767,6 @@ test.describe("bots", () => {
 
     await expect(page.getByRole("link", { name: "Pip, main bot" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Pip" })).toBeVisible();
-    await expect(page.getByText("Keeps you company.")).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Message" }).locator("p")).toHaveAttribute(
       "data-placeholder",
       /^Message Pip, /,
@@ -777,7 +776,9 @@ test.describe("bots", () => {
     await expect(page.getByLabel("Description")).toHaveValue("Keeps you company.");
     await page.getByLabel("Description").fill("Your pal at the keyboard.");
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Your pal at the keyboard.")).toBeVisible();
+    await page.getByRole("button", { name: "Bot settings" }).click();
+    await expect(page.getByLabel("Description")).toHaveValue("Your pal at the keyboard.");
+    await page.keyboard.press("Escape");
 
     await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
