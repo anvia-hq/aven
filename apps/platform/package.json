@@ -35,6 +35,7 @@
     "date-fns": "^4.4.0",
     "embla-carousel-react": "^8.6.0",
     "fflate": "^0.8.3",
+    "html-to-image": "^1.11.13",
     "input-otp": "^1.5.0",
     "jotai": "^3.0.1",
     "react": "^19.3.1",
