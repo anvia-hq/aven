@@ -21,6 +21,7 @@ import { RemoteWorkspaces } from "./remote-workspaces";
 import { createRunnerCalls } from "./runner-calls";
 import { TerminalSessions } from "./terminal-sessions";
 import { openAgentBackends } from "./agent-backends";
+import { readMachineGithubLogin } from "./github-login";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords, agentsOf } from "./run-records";
@@ -115,6 +116,7 @@ export function startRuntime(options: RuntimeOptions) {
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
   );
+  const githubLogin = options.githubLogin ?? (options.host ? readMachineGithubLogin : undefined);
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
@@ -335,9 +337,10 @@ export function startRuntime(options: RuntimeOptions) {
     const ws = new WebSocket(options.url, init as unknown as string[]);
     ws.binaryType = "arraybuffer";
     socket = ws;
-    ws.onopen = () => {
+    ws.onopen = async () => {
       backoff = RECONNECT_MIN_MS;
       outbox.detachAll();
+      const login = githubLogin ? await githubLogin().catch(() => null) : undefined;
       send({
         type: "hello",
         version: WIRE_VERSION,
@@ -348,6 +351,7 @@ export function startRuntime(options: RuntimeOptions) {
         dirs: options.dirs?.length ? options.dirs : undefined,
         backends: [...backends.offered],
         guests: guestRuns.size ? [...guestRuns] : undefined,
+        github: login === undefined ? undefined : { login },
       });
       resend();
       connected.resolve();

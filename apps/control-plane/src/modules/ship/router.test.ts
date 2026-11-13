@@ -22,7 +22,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
   const sent: { userId: string; threadId: string; prompt: string }[] = [];
   let connected = true;
   let workspaceFiles: string[] = [];
-  const service = createShipService({} as RuntimeHub, {
+  const service = createShipService({ get: () => undefined } as unknown as RuntimeHub, {
     userTokens: {
       use: async () =>
         connected ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } } : null,
@@ -132,6 +132,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       ship: false,
       appKey: "platform",
       machine: false,
+      runnerGithub: null,
     });
     workspaceFiles = [".aven/ship.md"];
     expect(await (await readiness(owner.token)).json()).toEqual({
@@ -139,6 +140,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
       ship: true,
       appKey: "platform",
       machine: false,
+      runnerGithub: null,
     });
 
     expect((await readiness(undefined)).status).toBe(401);

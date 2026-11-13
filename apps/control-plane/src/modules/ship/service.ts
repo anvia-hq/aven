@@ -34,6 +34,7 @@ type ShipDeps = {
     defaultBranch: string | null;
     pullRequests: ThreadPullRequest[];
     lifetime: RuntimeLifetime;
+    runtimeId: string;
   }>;
   readShipFile: (organizationId: string, threadId: string) => Promise<FileContent | null>;
   hasFile: (organizationId: string, threadId: string, path: string) => Promise<boolean>;
@@ -75,6 +76,7 @@ export function createShipService(
         ...project,
         pullRequests: thread.pullRequests,
         lifetime: await runtimesService.lifetimeOf(thread.runtimeId),
+        runtimeId: thread.runtimeId,
       };
     });
   const readShipFile =
@@ -103,6 +105,7 @@ export function createShipService(
         ship,
         appKey,
         machine: project.githubInstallationId === null && project.lifetime === "persistent",
+        runnerGithub: hub.get(project.runtimeId)?.github ?? null,
       };
     },
 

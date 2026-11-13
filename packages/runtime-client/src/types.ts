@@ -559,6 +559,7 @@ export type RuntimeOptions = {
   token: string;
   build?: string;
   host?: boolean;
+  githubLogin?: () => Promise<string | null>;
   dirs?: string[];
   clone?: (repository: string) => Promise<{ path: string }>;
   update?: (release: string | undefined) => void;
