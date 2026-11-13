@@ -130,9 +130,9 @@ export function CommitFilters({
               label="Branch"
               anyLabel="Default branch"
               value={search.branch}
-              options={branches
-                .filter((branch) => !branch.isDefault)
-                .map((branch) => ({ value: branch.name, label: branch.name }))}
+              options={branches.flatMap((branch) =>
+                branch.isDefault ? [] : [{ value: branch.name, label: branch.name }],
+              )}
               onChange={(branch) => onChange({ branch })}
             />
           </Field>

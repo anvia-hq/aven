@@ -195,9 +195,9 @@ export class BotRunner {
   }
 
   workingOf(userId: string) {
-    return [...this.#channels.values()]
-      .filter((channel) => channel.userId === userId && channel.typing)
-      .map((channel) => channel.botId);
+    return [...this.#channels.values()].flatMap((channel) =>
+      channel.userId === userId && channel.typing ? [channel.botId] : [],
+    );
   }
 
   isWatching(userId: string) {

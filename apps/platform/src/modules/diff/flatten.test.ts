@@ -29,7 +29,7 @@ describe("the diff panel's flat list", () => {
       "file",
       "note",
     ]);
-    expect(items.filter((item) => item.kind === "unified").map((item) => item.last)).toEqual([
+    expect(items.flatMap((item) => (item.kind === "unified" ? [item.last] : []))).toEqual([
       false,
       false,
       true,

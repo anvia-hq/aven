@@ -346,7 +346,7 @@ test.describe("bots", () => {
       await expect(bubble(page, "Started the thread")).toBeVisible();
 
       await expect
-        .poll(() => events.filter((event) => event.type === "started").map((e) => e.prompt))
+        .poll(() => events.flatMap((event) => (event.type === "started" ? [event.prompt] : [])))
         .toContain("Fix the e2e build");
 
       await page.goto("/threads");

@@ -270,7 +270,7 @@ run("variablesService (postgres)", async () => {
         userId,
       });
       const mine = Object.fromEntries(
-        given.filter((v) => /^(M|S)_/.test(v.name)).map((v) => [v.name, v.value]),
+        given.flatMap((v) => (/^(M|S)_/.test(v.name) ? [[v.name, v.value]] : [])),
       );
       expect(mine).toEqual({
         M_ONLY_WORKSPACE: "w",

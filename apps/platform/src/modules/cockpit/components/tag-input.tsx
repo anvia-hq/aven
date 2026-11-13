@@ -29,8 +29,9 @@ export function TagInput({
   const emptyText = bare ? "Empty" : "Add tags…";
   const offered = typed
     ? known
-        .map((tag) => tag.name)
-        .filter((name) => name.startsWith(typed) && !value.includes(name))
+        .flatMap((tag) =>
+          tag.name.startsWith(typed) && !value.includes(tag.name) ? [tag.name] : [],
+        )
         .slice(0, 5)
     : [];
 

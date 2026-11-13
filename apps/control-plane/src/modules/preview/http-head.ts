@@ -94,8 +94,7 @@ function pathOf(url: string) {
 export function requestForPort(head: Head, port: number) {
   const upgrade = (headerOf(head, "upgrade") ?? "").toLowerCase() === "websocket";
   const cookies = [...cookiesOf(head)]
-    .filter(([name]) => !PREVIEW_COOKIES.includes(name))
-    .map(([name, value]) => `${name}=${value}`)
+    .flatMap(([name, value]) => (PREVIEW_COOKIES.includes(name) ? [] : [`${name}=${value}`]))
     .join("; ");
   const headers: Header[] = [];
 

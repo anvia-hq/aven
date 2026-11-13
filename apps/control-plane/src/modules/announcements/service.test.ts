@@ -23,7 +23,7 @@ run("announcements (real postgres)", () => {
 
     const rows = (await announcementsService.list()).filter((row) => made.includes(row.id));
 
-    expect(rows.filter((row) => row.active).map((row) => row.id)).toEqual([second.id]);
+    expect(rows.flatMap((row) => (row.active ? [row.id] : []))).toEqual([second.id]);
     expect((await announcementsService.active())?.id).toBe(second.id);
   });
 

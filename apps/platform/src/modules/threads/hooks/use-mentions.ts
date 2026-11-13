@@ -69,9 +69,9 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
   }, [loaded]);
   const skills = useRef<SkillOption[]>([]);
   skills.current = [
-    ...personal
-      .filter((skill) => skill.enabled)
-      .map(({ name, description }) => ({ name, detail: description })),
+    ...personal.flatMap(({ enabled, name, description }) =>
+      enabled ? [{ name, detail: description }] : [],
+    ),
     ...builtIn.map(({ name, description }) => ({ name, detail: description })),
   ];
   const repoSkills = useRef<Promise<SkillOption[]> | undefined>(undefined);
@@ -84,9 +84,9 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
 
       if (!folder?.available) return [];
 
-      return folder.entries
-        .filter((entry) => entry.type === "directory")
-        .map(({ name }) => ({ name, detail: "From the repository" }));
+      return folder.entries.flatMap(({ type, name }) =>
+        type === "directory" ? [{ name, detail: "From the repository" }] : [],
+      );
     };
 
     const skillTrigger: ComposerTriggerDefinition = {
@@ -126,9 +126,11 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
       char: "@",
       items: async ({ query, signal }) => {
         const wanted = query.toLowerCase();
-        const people = mentionable.current
-          .filter(({ name, email }) => `${name} ${email}`.toLowerCase().includes(wanted))
-          .map(personItem);
+        const people = mentionable.current.flatMap((person) =>
+          `${person.name} ${person.email}`.toLowerCase().includes(wanted)
+            ? [personItem(person)]
+            : [],
+        );
         const agent =
           mentionable.current.length > 0 && "agent".startsWith(wanted) ? [agentItem] : [];
         const teammates = [...agent, ...people];

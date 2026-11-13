@@ -26,9 +26,11 @@ export function ContinueThreadDialog({ thread }: { thread: Thread }) {
   const { continueOn, working } = useContinueThread(thread);
   const [target, setTarget] = useState<string | null>(null);
 
-  const options = runtimes
-    .filter((runtime) => runtime.online && runtime.id !== thread.runtimeId)
-    .map((runtime) => ({ value: runtime.id, label: runtime.name }));
+  const options = runtimes.flatMap((runtime) =>
+    runtime.online && runtime.id !== thread.runtimeId
+      ? [{ value: runtime.id, label: runtime.name }]
+      : [],
+  );
   const chosen = options.some((option) => option.value === target) ? target : null;
 
   if (options.length === 0 && !open) return null;

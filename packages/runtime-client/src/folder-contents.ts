@@ -99,10 +99,10 @@ function commitOf(record: string): FolderCommit {
   const [sha = "", parents = "", author = "", date = "", decoration = "", message = ""] = record
     .trim()
     .split(FIELD);
-  const names = decoration
-    .split(",")
-    .map((name) => name.trim().replace(/^HEAD -> /, ""))
-    .filter(Boolean);
+  const names = decoration.split(",").flatMap((name) => {
+    const ref = name.trim().replace(/^HEAD -> /, "");
+    return ref ? [ref] : [];
+  });
   return {
     sha,
     message: message.trim().slice(0, COMMIT_MESSAGE_MAX),
@@ -117,7 +117,7 @@ function commitOf(record: string): FolderCommit {
         name !== "HEAD" &&
         !name.startsWith("origin/"),
     ),
-    tags: names.filter((name) => name.startsWith("tag: ")).map((name) => name.slice(5)),
+    tags: names.flatMap((name) => (name.startsWith("tag: ") ? [name.slice(5)] : [])),
   };
 }
 

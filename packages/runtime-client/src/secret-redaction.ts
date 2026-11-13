@@ -7,9 +7,9 @@ export const REDACTED = "[redacted]";
 export function secretRedactor(variables: readonly RunEnvVar[] | undefined) {
   const secrets = [
     ...new Set(
-      (variables ?? [])
-        .filter(({ secret, value }) => secret && value.length >= MIN_REDACTED_LENGTH)
-        .map(({ value }) => value),
+      (variables ?? []).flatMap(({ secret, value }) =>
+        secret && value.length >= MIN_REDACTED_LENGTH ? [value] : [],
+      ),
     ),
   ].sort((a, b) => b.length - a.length);
 

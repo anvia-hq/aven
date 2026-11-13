@@ -115,7 +115,12 @@ function attachmentOf(value: unknown): MessageAttachment | undefined {
 }
 
 const listOf = <T>(value: unknown, read: (item: unknown) => T | undefined) =>
-  Array.isArray(value) ? value.map(read).filter((item) => item !== undefined) : [];
+  Array.isArray(value)
+    ? value.flatMap((entry) => {
+        const item = read(entry);
+        return item === undefined ? [] : [item];
+      })
+    : [];
 
 export function sentMessage(message: Extract<Message, { role: "user" }>): {
   text: string;

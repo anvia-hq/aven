@@ -83,9 +83,9 @@ export async function writeServerFiles(
   const before = parseEnv(existing);
   const updated = setEnv(existing, values);
   const after = parseEnv(updated);
-  const changed = Object.keys(values)
-    .filter((key) => after[key] !== before[key])
-    .map((key) => ({ key, from: before[key], to: after[key]! }));
+  const changed = Object.keys(values).flatMap((key) =>
+    after[key] !== before[key] ? [{ key, from: before[key], to: after[key]! }] : [],
+  );
 
   if (changed.length > 0) {
     await writeFile(envPath, updated);

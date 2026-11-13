@@ -743,8 +743,7 @@ function assistantText(messages: readonly Message[]) {
   if (typeof last.content === "string") return last.content;
 
   return last.content
-    .map((part) => (part.type === "text" ? part.text : ""))
-    .filter((text) => text.length > 0)
+    .flatMap((part) => (part.type === "text" && part.text.length > 0 ? [part.text] : []))
     .join("\n");
 }
 
@@ -767,8 +766,7 @@ function promptParts(prompt: AgentPrompt): ClaudeUserInput {
   }
   return {
     text: content
-      .map((part) => (part.type === "text" ? part.text : ""))
-      .filter((text) => text.length > 0)
+      .flatMap((part) => (part.type === "text" && part.text.length > 0 ? [part.text] : []))
       .join("\n"),
     images,
   };

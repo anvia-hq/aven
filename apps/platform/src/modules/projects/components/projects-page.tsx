@@ -35,7 +35,7 @@ export function ProjectsPage() {
   const filters = filtersOf(search);
   const me = session?.user.id;
   const running = useMemo(
-    () => new Set(threads.filter((thread) => thread.running).map((thread) => thread.projectId)),
+    () => new Set(threads.flatMap((thread) => (thread.running ? [thread.projectId] : []))),
     [threads],
   );
   const counts = useMemo(

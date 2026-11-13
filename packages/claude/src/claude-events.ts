@@ -89,8 +89,7 @@ function resultText(content: unknown) {
   if (typeof content === "string") return content;
 
   return blocksOf(content)
-    .map((part) => (typeof part.text === "string" ? part.text : ""))
-    .filter((text) => text.length > 0)
+    .flatMap((part) => (typeof part.text === "string" && part.text.length > 0 ? [part.text] : []))
     .join("\n");
 }
 

@@ -357,13 +357,12 @@ export class GithubClient {
       per_page: String(PAGE_SIZE),
     });
     const pulls = await this.#api<PullPayload[]>(`${repoPath(fullName)}/pulls?${query}`, token);
-    return pulls
-      .filter(
-        (pull) =>
-          (pull.head.ref === branchPrefix || pull.head.ref.startsWith(`${branchPrefix}-`)) &&
-          pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase(),
-      )
-      .map(asPullRequest);
+    return pulls.flatMap((pull) =>
+      (pull.head.ref === branchPrefix || pull.head.ref.startsWith(`${branchPrefix}-`)) &&
+      pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase()
+        ? [asPullRequest(pull)]
+        : [],
+    );
   }
 
   async branchPullRequests(installationId: number, fullName: string, branch: string) {
@@ -378,13 +377,11 @@ export class GithubClient {
       per_page: String(PAGE_SIZE),
     });
     const pulls = await this.#api<PullPayload[]>(`${repoPath(fullName)}/pulls?${query}`, token);
-    return pulls
-      .filter(
-        (pull) =>
-          pull.head.ref === branch &&
-          pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase(),
-      )
-      .map(asPullRequest);
+    return pulls.flatMap((pull) =>
+      pull.head.ref === branch && pull.head.repo?.full_name.toLowerCase() === fullName.toLowerCase()
+        ? [asPullRequest(pull)]
+        : [],
+    );
   }
 
   async canWrite(installationId: number) {

@@ -45,7 +45,7 @@ export const foldersService = {
     return folders.map((folder) =>
       view(
         folder,
-        members.filter((member) => member.folderId === folder.id).map((member) => member.threadId),
+        members.flatMap((member) => (member.folderId === folder.id ? [member.threadId] : [])),
       ),
     );
   },

@@ -48,8 +48,10 @@ const PATH_TOOLS = new Set<string>([
 const artifactTarget = (args: Record<string, unknown>) => {
   const items = Array.isArray(args.items) ? args.items : [];
   return items
-    .map((item) => asString(asRecord(item).path))
-    .filter(Boolean)
+    .flatMap((item) => {
+      const path = asString(asRecord(item).path);
+      return path ? [path] : [];
+    })
     .join(", ");
 };
 const COMMAND_TOOLS = new Set<string>([

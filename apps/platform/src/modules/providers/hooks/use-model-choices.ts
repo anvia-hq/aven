@@ -8,13 +8,17 @@ export function useModelChoices() {
 
   const choices: ModelChoice[] = providers.flatMap((item) => {
     const listed = byProvider[item.id]?.models ?? [];
-    return [...new Set([item.modelId, ...listed])]
-      .filter((id): id is string => Boolean(id))
-      .map((id) => ({
-        provider: item,
-        modelId: id,
-        label: byProvider[item.id]?.labels?.[id] ?? id,
-      }));
+    return [...new Set([item.modelId, ...listed])].flatMap((id) =>
+      id
+        ? [
+            {
+              provider: item,
+              modelId: id,
+              label: byProvider[item.id]?.labels?.[id] ?? id,
+            },
+          ]
+        : [],
+    );
   });
 
   const labelOf = (providerId: string | undefined, modelId: string) =>

@@ -63,12 +63,16 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
       url: String(form.get("url")).trim(),
       target,
       allowLocal,
-      headers: headers
-        .filter((row) => row.name.trim() !== "")
-        .map((row) => ({
-          name: row.name.trim(),
-          value: row.saved && row.value === "" ? null : row.value,
-        })),
+      headers: headers.flatMap((row) =>
+        row.name.trim() === ""
+          ? []
+          : [
+              {
+                name: row.name.trim(),
+                value: row.saved && row.value === "" ? null : row.value,
+              },
+            ],
+      ),
     };
     setBusy(true);
     try {

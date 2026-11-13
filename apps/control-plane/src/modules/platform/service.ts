@@ -17,10 +17,10 @@ import type { PutAwayThread } from "../threads/types";
 const REGISTRATION_KEY = "registration_enabled";
 
 function ownerEmails() {
-  return (process.env.PLATFORM_OWNER_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+  return (process.env.PLATFORM_OWNER_EMAILS ?? "").split(",").flatMap((email) => {
+    const owner = email.trim().toLowerCase();
+    return owner ? [owner] : [];
+  });
 }
 
 const isListedOwner = (email: string) => ownerEmails().includes(email.toLowerCase());
@@ -74,9 +74,9 @@ export const platformService = {
       ...person,
       owner: person.id === first || isListedOwner(person.email),
       lastActiveAt: lastSeen.get(person.id) ?? null,
-      workspaces: memberships
-        .filter((membership) => membership.userId === person.id)
-        .map(({ id, name, role }) => ({ id, name, role })),
+      workspaces: memberships.flatMap(({ userId, id, name, role }) =>
+        userId === person.id ? [{ id, name, role }] : [],
+      ),
     }));
   },
 

@@ -4,9 +4,9 @@ function withoutNulls(value: unknown): unknown {
   if (typeof value !== "object" || value === null) return value;
 
   return Object.fromEntries(
-    Object.entries(value)
-      .filter(([, field]) => field !== null)
-      .map(([key, field]) => [key, withoutNulls(field)]),
+    Object.entries(value).flatMap(([key, field]) =>
+      field === null ? [] : [[key, withoutNulls(field)]],
+    ),
   );
 }
 
