@@ -13,9 +13,7 @@ async function startThread(page: Page, projectId: string, title: string) {
 }
 
 test.describe("projects browser", () => {
-  test("shows the projects on the left and every thread on the right, and a project opens its page", async ({
-    page,
-  }) => {
+  test("shows each project with its threads, and a project opens its page", async ({ page }) => {
     await registerUser(page, "browser", "Browser Person");
     await addRunner(page);
     await connectGithub(page);
@@ -27,38 +25,37 @@ test.describe("projects browser", () => {
 
     await page.goto("/projects");
     const projects = page.getByRole("region", { name: "Project list" });
-    const threads = page.getByRole("region", { name: "Thread list" });
 
-    await expect(projects.getByRole("link", { name: /shiny-app/ })).toBeVisible();
-    await expect(projects.getByRole("link", { name: /docs-site/ })).toBeVisible();
-    await expect(threads.getByRole("link", { name: /Explain the project layout/ })).toBeVisible();
-    await expect(threads.getByRole("link", { name: /Write the readme/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^shiny-app/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^docs-site/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /Explain the project layout/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /Write the readme/ })).toBeVisible();
 
-    await projects.getByRole("link", { name: /shiny-app/ }).click();
+    await projects.getByRole("link", { name: /^shiny-app/ }).click();
     await expect(page).toHaveURL(new RegExp(`/projects/${shiny.id}$`));
     await page.goBack();
-    await expect(threads.getByRole("link", { name: /Write the readme/ })).toBeVisible();
-    await expect(threads.getByRole("link", { name: /Fix the login bug/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /Write the readme/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /Fix the login bug/ })).toBeVisible();
 
     const search = page.getByRole("searchbox", { name: "Search projects" });
     await search.fill("docs");
-    await expect(projects.getByRole("link", { name: /docs-site/ })).toBeVisible();
-    await expect(projects.getByRole("link", { name: /shiny-app/ })).toHaveCount(0);
+    await expect(projects.getByRole("link", { name: /^docs-site/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^shiny-app/ })).toHaveCount(0);
 
     await search.fill("");
     await search.pressSequentially("docs ");
     await expect(search).toHaveValue("docs ");
-    await expect(projects.getByRole("link", { name: /docs-site/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^docs-site/ })).toBeVisible();
 
     await search.fill("nothing here");
     await expect(projects.getByText("No projects match these filters.")).toBeVisible();
     await projects.getByRole("button", { name: "Clear filters" }).click();
-    await expect(projects.getByRole("link", { name: /shiny-app/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^shiny-app/ })).toBeVisible();
 
     await projects.getByRole("tab", { name: "Working" }).click();
     await expect(projects.getByText("No projects match these filters.")).toBeVisible();
     await projects.getByRole("button", { name: "Clear filters" }).click();
-    await expect(projects.getByRole("link", { name: /shiny-app/ })).toBeVisible();
+    await expect(projects.getByRole("link", { name: /^shiny-app/ })).toBeVisible();
   });
 
   test("keeps archived threads apart and reopens the page on them", async ({ page }) => {
@@ -71,7 +68,7 @@ test.describe("projects browser", () => {
     await page.request.patch(`/api/threads/${putAway.id}`, { data: { state: "archived" } });
 
     await page.goto("/projects");
-    const threads = page.getByRole("region", { name: "Thread list" });
+    const threads = page.getByRole("region", { name: "Project list" });
     await expect(threads.getByRole("link", { name: /Still going/ })).toBeVisible();
     await expect(threads.getByRole("link", { name: /Put away/ })).toHaveCount(0);
 
