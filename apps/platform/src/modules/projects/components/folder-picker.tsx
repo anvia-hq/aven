@@ -58,7 +58,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
               type="button"
               variant="ghost"
               aria-pressed={folder.path === path}
-              className="h-9 w-full justify-start gap-2 rounded-none px-3 font-normal select-none aria-pressed:bg-primary/15 aria-pressed:shadow-[inset_2px_0_0_var(--color-primary)]"
+              className="h-9 w-full justify-start gap-2 rounded-none px-3 font-normal select-none aria-pressed:bg-primary/15"
               onClick={() => onChange(folder.path)}
               onDoubleClick={() => openFolder(folder.path)}
               onKeyDown={(event) => {
@@ -133,7 +133,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
           </Button>
         </div>
       )}
-      <div className="h-56 overflow-y-auto rounded-md border">{body}</div>
+      <div className="h-48 overflow-y-auto rounded-md border">{body}</div>
     </div>
   );
 }

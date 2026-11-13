@@ -14,7 +14,7 @@ import {
 import { Form } from "@/components/form";
 import { Input } from "@/components/input";
 import { Label } from "@/components/label";
-import { LabeledSelect } from "@/components/labeled-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
 
 import { useAddProject } from "../hooks/use-add-project";
@@ -52,13 +52,25 @@ export function AddProjectDialog({ onAdded, variant, size }: Props) {
                   <TabsTrigger value="repository">Repository</TabsTrigger>
                 </TabsList>
               </Tabs>
-              <LabeledSelect
-                label="Computer"
-                options={state.runners}
-                value={state.chosenRunner}
-                onChange={state.chooseRunner}
-                placeholder="Choose a computer"
-              />
+              <div className="flex items-center gap-3 text-sm">
+                <span className="w-20 shrink-0 text-muted-foreground">Computer</span>
+                <Select
+                  items={state.runners}
+                  value={state.chosenRunner}
+                  onValueChange={(next) => next && state.chooseRunner(next)}
+                >
+                  <SelectTrigger aria-label="Computer" className="min-w-0 flex-1">
+                    <SelectValue className="min-w-0 truncate" placeholder="Choose a computer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {state.runners.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               {state.kind === "folder" ? (
                 <FolderPicker
                   key={state.chosenRunner}
@@ -91,7 +103,10 @@ export function AddProjectDialog({ onAdded, variant, size }: Props) {
               install --dir /path/to/code).
             </p>
           )}
-          <DialogFooter>
+          <DialogFooter className="flex-row items-center justify-between gap-3 sm:justify-between">
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
+              {state.footerNote}
+            </span>
             <Button type="submit" disabled={state.submitting || !state.canSubmit}>
               {state.kind === "folder" ? "Add" : "Clone and add"}
             </Button>

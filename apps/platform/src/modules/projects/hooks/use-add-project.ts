@@ -21,6 +21,12 @@ export function useAddProject(onAdded?: (project: Project) => void) {
     chosenRunner && (kind === "folder" ? path.startsWith("/") : repository.trim().length > 0),
   );
 
+  const chosenName = runtimes.find((runtime) => runtime.id === chosenRunner)?.name ?? "";
+  let footerNote = "No repository yet";
+
+  if (kind === "folder") footerNote = path ? `${chosenName}: ${path}` : "No folder chosen yet";
+  else if (repository.trim()) footerNote = `Clone ${repository.trim()} to ${chosenName}`;
+
   function handleOpenChange(next: boolean) {
     setOpen(next);
 
@@ -77,5 +83,6 @@ export function useAddProject(onAdded?: (project: Project) => void) {
     setKind,
     repository,
     setRepository,
+    footerNote,
   };
 }
