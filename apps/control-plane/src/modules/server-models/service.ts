@@ -9,6 +9,7 @@ import { DEFAULT_MODEL } from "../decision-model/jev";
 import { serverDecisionModel } from "../decision-model/server-default";
 import type { DecisionConfig, DecisionKind } from "../decision-model/types";
 import { serverSmallModel } from "../providers/server-small-model";
+import { checkSmallModel } from "./check-small-model";
 import type { SaveServerDecisionBody, SaveServerSmallBody } from "./schema";
 import { storedServerModel } from "./schema";
 import type {
@@ -152,11 +153,21 @@ export const serverModelsService = {
     return (await this.view(env)).decision;
   },
 
-  async saveSmall(body: SaveServerSmallBody, env: Env = process.env) {
+  async saveSmall(
+    body: SaveServerSmallBody,
+    env: Env = process.env,
+    check: (config: ModelConfig) => Promise<void> = checkSmallModel,
+  ) {
     refuseWhenEnv(env, "SMALL_MODEL_API_KEY", "default small model");
     const existing = await readStored(SMALL_KEY);
 
     if (!existing && !body.apiKey) throw new UnprocessableError("Enter the key of the small model");
+
+    await check({
+      provider: body.kind as SmallModelProvider,
+      modelId: body.modelId,
+      apiKey: body.apiKey ?? (existing ? keyOf(existing, "small model") : undefined),
+    });
 
     await writeStored(SMALL_KEY, {
       kind: body.kind,
