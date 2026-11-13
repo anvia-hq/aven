@@ -5,7 +5,6 @@ import { lastSubmission } from "@aven/protocol/submitter";
 import { postJson } from "@/lib/api";
 import { useFollowUpSettings } from "@/modules/settings/hooks/use-follow-up-settings";
 
-import { authorOf } from "../message-author";
 import type { ChatMessage, Viewer } from "../types";
 
 export function useFollowUps(
@@ -23,13 +22,8 @@ export function useFollowUps(
   const last = messages.at(-1);
   const answered = last?.role === "assistant" ? last.id : null;
   const submission = lastSubmission(messages);
-  const submitted =
-    submission === undefined ||
-    authorOf(
-      submission.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
-      viewer,
-      submission.senderId,
-    ).mine;
+  const sender = submission?.senderId;
+  const submitted = sender === undefined || sender === viewer.id;
 
   useEffect(() => {
     baseline.current = undefined;
