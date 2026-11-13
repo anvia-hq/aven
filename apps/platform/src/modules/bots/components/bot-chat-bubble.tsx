@@ -22,12 +22,14 @@ export function BotChatBubble({
   message,
   bots,
   onQuote,
+  joined,
 }: {
   botId: string;
   bot: Bot;
   message: BotChatMessage;
   bots: readonly Bot[];
   onQuote: (message: BotChatMessage) => void;
+  joined?: { above: boolean; below: boolean };
 }) {
   const mine = isPersons(message);
   const actions = (
@@ -73,7 +75,13 @@ export function BotChatBubble({
             align="start"
             className="*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_3%)]! dark:*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_7%)]!"
           >
-            <BubbleContent className="rounded-2xl">
+            <BubbleContent
+              className={cn(
+                "rounded-2xl",
+                joined?.above && "rounded-tl-md",
+                joined?.below && "rounded-bl-md",
+              )}
+            >
               {reply}
               {message.text && (
                 <Markdown
