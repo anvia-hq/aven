@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
@@ -166,7 +166,7 @@ test.describe("shipping a thread", () => {
     await expect(shipButton(page)).toHaveCount(0);
   });
 
-  test("keeps the action's place while the changes are still loading", async ({ page }) => {
+  test("shows no empty button while the changes are still loading", async ({ page }) => {
     await registerUser(page, "shp", "Ship User");
     const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
     runner = child;
@@ -178,20 +178,15 @@ test.describe("shipping a thread", () => {
     try {
       await page.goto(`/threads/${threadId}`);
       await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
-      const reading = page.getByRole("status", { name: "Reading the changes" });
-      await expect(reading).toBeAttached();
-      await expect(reading).toHaveCSS("opacity", "0");
       await expect(shipButton(page)).toHaveCount(0);
       await expect(changesBadge(page)).toHaveCount(0);
-      await expect(page.getByRole("status", { name: "Changes loading" })).toHaveCSS("opacity", "0");
     } finally {
       held.resolve();
     }
     await expect(shipButton(page)).toBeEnabled();
-    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
   });
 
-  test("a pull request chip is never left behind a blank gap while the readiness check is slow", async ({
+  test("a pull request chip stands alone, with no empty button beside it, while the readiness check is slow", async ({
     page,
   }) => {
     await registerUser(page, "shp", "Ship User");
@@ -219,22 +214,11 @@ test.describe("shipping a thread", () => {
       await page.reload();
       const chip = page.getByRole("link", { name: /#7/ });
       await expect(chip).toBeVisible();
-      const reading = page.getByRole("status", { name: "Reading the changes" });
-      await expect(reading).toBeAttached();
-      await expect
-        .poll(() => reading.evaluate((node) => Number(getComputedStyle(node).opacity)), {
-          timeout: 3_000,
-        })
-        .toBeGreaterThan(0.4);
-      const slot = await reading.boundingBox();
-      const chipBox = await chip.boundingBox();
-      expect(slot && slot.width > 0).toBe(true);
-      expect(chipBox && slot && chipBox.x >= slot.x + slot.width).toBe(true);
+      await expect(page.getByRole("button", { name: "Update PR" })).toHaveCount(0);
     } finally {
       held.resolve();
     }
     await expect(page.getByRole("button", { name: "Update PR" })).toBeEnabled();
-    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
   });
 
   test("a running thread with nothing to ship yet does not hold an empty place for the whole run", async ({
@@ -255,9 +239,7 @@ test.describe("shipping a thread", () => {
     expect(sent.ok()).toBe(true);
     await expect(page.getByRole("img", { name: "Working" })).toHaveCount(1);
 
-    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0, {
-      timeout: 5_000,
-    });
+    await expect(shipButton(page)).toHaveCount(0);
   });
 
   test("a changes request that failed says so, and Try again reads them again", async ({
@@ -281,6 +263,19 @@ test.describe("shipping a thread", () => {
     const again = page.getByRole("button", { name: "Try again" });
     await expect(again).toBeVisible();
     await expect(again).toHaveAttribute("title", "The runner could not read the changes");
+    const styleOf = (locator: Locator) =>
+      locator.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return [
+          style.fontFamily,
+          style.fontSize,
+          style.fontWeight,
+          style.height,
+          style.borderRadius,
+          style.paddingInline,
+        ];
+      });
+    expect(await styleOf(page.getByText("Changes unknown"))).toEqual(await styleOf(again));
 
     failing = false;
     await again.click();
@@ -370,7 +365,6 @@ test.describe("shipping a thread", () => {
     await page.goto(`/threads/${threadId}`);
 
     await expect(connectButton(page)).toBeVisible();
-    await expect(page.getByRole("status", { name: "Reading the changes" })).toHaveCount(0);
   });
 
   test("a change with no lines of its own reads as its files, not +0 -0", async ({ page }) => {
