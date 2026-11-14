@@ -126,7 +126,7 @@ describe("botsWorkingStore", () => {
     stop();
   });
 
-  test("an unchanged set is the same reference", () => {
+  test("the snapshot is stable between messages", () => {
     const stop = botsWorkingStore.subscribe(() => {});
     latest().say(JSON.stringify(["bot-a"]));
 

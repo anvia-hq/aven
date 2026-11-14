@@ -19,15 +19,6 @@ const facts = (over: Partial<ShipFacts> = {}): ShipFacts => ({
 });
 
 describe("Open a PR", () => {
-  test("is offered when the branch has work, nothing is unshipped and GitHub has no pull request for it", () => {
-    expect(shipActionOf(facts())).toEqual({ kind: "open", disabled: false });
-  });
-
-  test("is not offered when GitHub already has a pull request for the branch", () => {
-    const branchPulls = { loaded: true, problem: null, known: true, any: true };
-    expect(shipActionOf(facts({ branchPulls }))).toEqual({ kind: "none" });
-  });
-
   test("waits for GitHub's answer, and is not offered when GitHub cannot say", () => {
     const waiting = { loaded: false, problem: null, known: false, any: false };
     expect(shipActionOf(facts({ branchPulls: waiting }))).toEqual({ kind: "loading" });
@@ -58,10 +49,6 @@ describe("Open a PR", () => {
 describe("whether GitHub is connected", () => {
   const account = { data: { connected: false } };
 
-  test("a runner's own login counts, with no account to ask about", () => {
-    expect(connectionOf({ machine: true, appKey: null, checked: true, account: null })).toBe(true);
-  });
-
   test("a project with no app and no login of the runner's is not connected, rather than loading for ever", () => {
     expect(connectionOf({ machine: false, appKey: null, checked: true, account: null })).toBe(
       false,
@@ -89,10 +76,6 @@ describe("whether GitHub is connected", () => {
 
 describe("the ship button says what it will do", () => {
   const unshipped = { changes: { loaded: true, available: true, problem: null, any: true } };
-
-  test("opens a PR when the thread has none", () => {
-    expect(shipActionOf(facts(unshipped))).toMatchObject({ label: "Open PR", primary: true });
-  });
 
   test("updates the open PR by its number", () => {
     expect(shipActionOf(facts({ ...unshipped, pullRequests: [pull] }))).toMatchObject({

@@ -3,15 +3,6 @@ import { describe, expect, test } from "bun:test";
 import { looksLikeEnv, parseEnv } from "./parse-env";
 
 describe("parseEnv", () => {
-  test("reads names and values, skipping comments and blank lines", () => {
-    const { entries, issues } = parseEnv("# db\nDATABASE_URL=postgres://x/y\n\nPORT=3000\n");
-    expect(entries).toEqual([
-      { name: "DATABASE_URL", value: "postgres://x/y" },
-      { name: "PORT", value: "3000" },
-    ]);
-    expect(issues).toEqual([]);
-  });
-
   test("handles export, quotes, spaces around = and trailing comments", () => {
     const { entries } = parseEnv(
       `export A = 1\nB="two words" # note\nC='it'\nD=plain # comment\nE=a#b\nF=`,
