@@ -62,7 +62,13 @@ export function WorkingIndicator({
       data-role="working"
       className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
     >
-      <ProjectTile projectId={projectId} palette={palettes.get(projectId)} speed={2} working />
+      <ProjectTile
+        projectId={projectId}
+        palette={palettes.get(projectId)}
+        speed={2}
+        working
+        decorative
+      />
       <WorkingWord />
       {startedAt !== null && (
         <>
