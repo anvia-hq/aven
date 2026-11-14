@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { builtinSkills } from "./builtins";
+import { BUILTIN_SKILLS_DIR, builtinSkills } from "./builtins";
 import { packSkill, skillFolder } from "./package";
 
 const b64 = (text: string) => new TextEncoder().encode(text).toBase64();
@@ -64,7 +64,10 @@ describe("packSkill", () => {
   });
 });
 
-test("the built-in skills validate", async () => {
+test("every built-in skill folder packs", async () => {
+  const folders = (await readdir(BUILTIN_SKILLS_DIR, { withFileTypes: true })).flatMap((entry) =>
+    entry.isDirectory() ? [entry.name] : [],
+  );
   const skills = await builtinSkills();
-  expect(skills.map((skill) => skill.name)).toContain("writing-skills");
+  expect(skills.map((skill) => skill.name).sort()).toEqual(folders.sort());
 });

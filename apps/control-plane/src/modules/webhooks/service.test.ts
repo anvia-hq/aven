@@ -109,14 +109,17 @@ run("webhooks (postgres)", async () => {
     await expect(
       webhooks.receive(crypto.randomUUID(), { ...delivery, token: made.token }),
     ).rejects.toThrow(NotFoundError);
-    expect(await webhooks.remove(bob, made.id)).toBe(false);
     expect(sent).toEqual([]);
+
+    expect(await webhooks.setEnabled(bob, made.id, false)).toBeNull();
+    await webhooks.receive(made.id, { ...delivery, token: made.token });
+    expect(sent).toHaveLength(1);
 
     await webhooks.setEnabled(alice, made.id, false);
     await expect(webhooks.receive(made.id, { ...delivery, token: made.token })).rejects.toThrow(
       UnprocessableError,
     );
-    expect(sent).toEqual([]);
+    expect(sent).toHaveLength(1);
   });
 
   test("a webhook whose bot is full records a busy delivery and still fails the sender", async () => {

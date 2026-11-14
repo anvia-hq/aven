@@ -171,11 +171,18 @@ run("a thread's terminal (real postgres, real WebSockets)", async () => {
   });
 
   test("a size that is not a size is refused", async () => {
-    const { thread } = await setup();
+    const { thread, seen } = await setup();
+    const opened = () => seen.messages.filter((message) => message.type === "terminal.open");
     const { events } = view(thread.id, owner.token, { query: "cols=0&rows=30" });
     await until(() => events.failed || events.closed !== undefined);
     const { events: huge } = view(thread.id, owner.token, { query: "cols=99999&rows=30" });
     await until(() => huge.failed || huge.closed !== undefined);
+    expect(opened()).toEqual([]);
+
+    const sized = view(thread.id, owner.token, { query: "cols=99&rows=30" });
+    await until(() => opened().length > 0);
+    expect(opened()).toEqual([expect.objectContaining({ cols: 99, rows: 30 })]);
+    sized.ws.close();
   });
 
   test("is refused without a login, from another origin, and for another organization's thread", async () => {

@@ -198,8 +198,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
 
     const response = await ship(thread.id, owner.token, { mode: "force" });
 
-    expect(response.status).toBeGreaterThanOrEqual(400);
-    expect(response.status).toBeLessThan(500);
+    expect(response.status).toBe(422);
     expect(sent).toEqual([]);
   });
 });
