@@ -87,26 +87,29 @@ test.describe("bots", () => {
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
 
-    await page.getByRole("textbox", { name: "Message" }).fill("hello bot");
-    await page.getByRole("textbox", { name: "Message" }).press("Enter");
-    await expect(bubble(page, "hello bot")).toBeVisible();
+    const phrase = "hello bot";
+    const held = await page.request.post("http://localhost:8102/e2e/hold", {
+      data: { phrase },
+    });
+    expect(held.ok()).toBe(true);
 
     const tile = page.locator('a[aria-label="Aven, main bot"] svg[data-mood]');
-    await expect
-      .poll(() =>
-        page.evaluate(() => ({
-          typing: document
-            .querySelector('[role="status"][aria-label*="typing"] svg')
-            ?.getAttribute("data-mood"),
-          tile: document
-            .querySelector('a[aria-label="Aven, main bot"] svg[data-mood]')
-            ?.getAttribute("data-mood"),
-        })),
-      )
-      .toEqual({ typing: "working", tile: "working" });
+    const typing = page.locator('[role="status"] svg[data-mood]');
+
+    try {
+      await page.getByRole("textbox", { name: "Message" }).fill(phrase);
+      await page.getByRole("textbox", { name: "Message" }).press("Enter");
+      await expect(bubble(page, phrase)).toBeVisible();
+      await expect(typing).toHaveAttribute("data-mood", "working");
+      await expect(tile).toHaveAttribute("data-mood", "working");
+      expect(await bubble(page, "Hey there!").count()).toBe(0);
+    } finally {
+      await page.request.post("http://localhost:8102/e2e/release", { data: { phrase } });
+    }
+
     await expect(bubble(page, "Hey there!")).toBeVisible();
     await expect(bubble(page, "You said: hello bot")).toBeVisible();
-    await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
+    await expect(typing).toHaveCount(0);
     await expect(tile).toHaveAttribute("data-mood", "idle");
 
     await expect(page.getByRole("link", { name: "Projects" })).toBeHidden();
