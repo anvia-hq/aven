@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
+import { THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { dragThread } from "@/lib/thread-drag";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { FolderSection } from "@/modules/folders/components/folder-section";
@@ -117,7 +118,7 @@ function TitleField({ title, onDone }: { title: string; onDone: (title?: string)
       autoFocus
       aria-label="Thread title"
       defaultValue={title}
-      maxLength={200}
+      maxLength={THREAD_TITLE_MAX}
       className="h-6 flex-1 px-1.5 text-sm"
       onFocus={(event) => event.currentTarget.select()}
       onClick={(event) => event.preventDefault()}

@@ -12,7 +12,7 @@ import { FORK_TEXT_MAX } from "./forks";
 import { MCP_LIMIT, MCP_MAX_HEADERS, MCP_TARGETS } from "./mcp";
 import { MEMORY_NOTE_MAX } from "./memory";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "./schedules";
-import { BOT_THREAD_PROMPT_MAX } from "./threads";
+import { BOT_THREAD_PROMPT_MAX, THREAD_TITLE_MAX } from "./threads";
 import {
   BOT_DESCRIPTION_MAX,
   BOT_INSTRUCTION_MAX,
@@ -576,7 +576,7 @@ const botThreadParams = z.discriminatedUnion("op", [
     op: z.literal("start"),
     projectId: z.uuid(),
     prompt: threadPrompt,
-    title: z.string().trim().min(1).max(200).optional(),
+    title: z.string().trim().min(1).max(THREAD_TITLE_MAX).optional(),
     ...threadModel,
   }),
   z.object({
