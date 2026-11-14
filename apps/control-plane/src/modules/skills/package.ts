@@ -2,9 +2,8 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { MAX_SKILL_NAME, SKILL_NAME, readSkillFolder } from "@aven/agents/skills";
-
+import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "@aven/protocol/skills";
 import { UnprocessableError } from "@aven/server-kit/errors";
-import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "./schema";
 import type { PackedSkill, SkillFiles } from "./types";
 
 export class InvalidSkillError extends UnprocessableError {}
