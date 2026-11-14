@@ -61,7 +61,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         </span>
         <span
           className={cn(
-            "min-w-0 max-w-[36ch] truncate font-mono text-xs text-muted-foreground/60",
+            "min-w-0 truncate font-mono text-xs text-muted-foreground/60",
             tool.status === "running" && "shimmer",
           )}
         >
