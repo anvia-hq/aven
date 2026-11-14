@@ -25,8 +25,7 @@ export function namesAgent(text: string) {
 }
 
 export function fallbackAddressing(text: string): Addressing {
-  const mentioned = personMentions(text).length > 0;
-  return { agentAction: !mentioned || namesAgent(text), by: "fallback" };
+  return { agentAction: personMentions(text).length === 0, by: "fallback" };
 }
 
 export function addressingFrom(scores: AddressingScores): Addressing {
