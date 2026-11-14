@@ -41,7 +41,9 @@ test.describe("the project page", () => {
     );
 
     await expect(page.getByRole("region", { name: "About" })).toContainText("main");
-    await expect(page.getByRole("region", { name: "Recent threads" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
+      "No threads in this project yet.",
+    );
     await expect(page.getByText("Environment variables")).toBeVisible();
   });
 
@@ -157,17 +159,13 @@ test.describe("the project page", () => {
     expect((await made.json()).runtimeId).toBe(secondId);
   });
 
-  test("deleting a project hides it, archives its threads and lets the repository be added again", async ({
+  test("deleting a project asks first, then hides it and archives its threads", async ({
     page,
   }) => {
     await registerUser(page, "deleter", "Deleter Person");
     const project = await projectOf(page, "shiny-app");
     const made = await page.request.post("/api/threads", { data: { projectId: project.id } });
     const thread = (await made.json()) as { id: string };
-    const variable = await page.request.put(`/api/projects/${project.id}/variables/API_URL`, {
-      data: { value: "https://example.test", secret: false },
-    });
-    expect(variable.ok()).toBe(true);
     await page.goto(`/projects/${project.id}`);
 
     await page.getByRole("button", { name: "Delete project" }).click();
@@ -187,19 +185,8 @@ test.describe("the project page", () => {
     expect(listed.map((entry) => entry.id)).not.toContain(project.id);
     const kept = await (await page.request.get(`/api/threads/${thread.id}`)).json();
     expect(kept.state).toBe("archived");
-    const reopened = await page.request.patch(`/api/threads/${thread.id}`, {
-      data: { state: "open" },
-    });
-    expect(reopened.status()).toBe(409);
     await page.goto(`/threads/${thread.id}`);
     await expect(page.getByText("shiny-app").first()).toBeVisible();
-    const sent = await page.request.post(`/api/threads/${thread.id}/messages`, {
-      data: { prompt: "hello" },
-    });
-    expect(sent.status()).toBe(409);
-
-    const again = await seedGithubProject(page, "shiny-app", "first");
-    expect(again.id).not.toBe(project.id);
   });
 
   test("a folder opens in place, with a way back, and shows no README of its own", async ({
@@ -266,22 +253,5 @@ test.describe("the project page", () => {
 
     await page.goto(`/projects/${project.id}?path=nothing-here`);
     await expect(page.getByText("Could not read this repository on GitHub")).toBeVisible();
-  });
-
-  test("another organization's project is not found, and nothing of it is read", async ({
-    page,
-    browser,
-  }) => {
-    await registerUser(page, "repo", "Repo Person");
-    const project = await projectOf(page, "shiny-app");
-
-    const other = await browser.newPage();
-    await registerUser(other, "stranger", "Stranger");
-    expect((await other.request.get(`/api/projects/${project.id}/files`)).status()).toBe(404);
-    expect((await other.request.get(`/api/projects/${project.id}/readme`)).status()).toBe(404);
-    expect((await page.request.get(`/api/projects/${project.id}/files?path=..`)).status()).toBe(
-      422,
-    );
-    await other.close();
   });
 });

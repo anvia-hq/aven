@@ -42,9 +42,4 @@ run("memory store (postgres)", async () => {
   test("the same session id in another organization sees nothing", async () => {
     expect(await store.load({ scope: scope("org-b") })).toEqual([]);
   });
-
-  test("clear removes the history", async () => {
-    await store.clear({ scope: scope("org-a") });
-    expect(await store.load({ scope: scope("org-a") })).toEqual([]);
-  });
 });

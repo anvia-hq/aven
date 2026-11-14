@@ -91,12 +91,27 @@ describe("createGoogleTokens", () => {
     let answer = () => new Response("nope", { status: 400 });
     const fetchFn = (async () => answer()) as unknown as typeof fetch;
     const accessToken = createGoogleTokens(fetchFn);
-    await expect(accessToken(credential)).rejects.toThrow("refused the service account key (400)");
+    const failure = async (attempt: Promise<string>) => {
+      const error = await attempt.then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+      expect(error).toBeInstanceOf(GoogleAuthError);
+      const { message } = error as GoogleAuthError;
+      expect(message).not.toContain("PRIVATE KEY");
+      expect(message).not.toContain("not a key");
+      expect(message).not.toContain("abcdef123456");
+      return message;
+    };
+
+    expect(await failure(accessToken(credential))).toContain(
+      "refused the service account key (400)",
+    );
     answer = () => Response.json({ nothing: true });
-    await expect(accessToken(credential)).rejects.toBeInstanceOf(GoogleAuthError);
+    expect(await failure(accessToken(credential))).toContain("no access token");
     answer = () => Response.json({ access_token: "ya29.late" });
     expect(await accessToken(credential)).toBe("ya29.late");
     const broken = JSON.stringify({ ...JSON.parse(credential), private_key: "not a key" });
-    await expect(accessToken(broken)).rejects.toThrow("private key could not be read");
+    expect(await failure(accessToken(broken))).toContain("private key could not be read");
   });
 });

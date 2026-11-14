@@ -29,11 +29,17 @@ describe("folder cache patches", () => {
     expect(isTempId("a")).toBe(false);
   });
 
-  test("renames, opens and deletes one folder", () => {
-    const start = [folder("a"), folder("b")];
-    expect(withRename(start, { id: "a", name: "X" })[0]!.name).toBe("X");
-    expect(withOpen(start, { id: "b", open: false })[1]!.open).toBe(false);
-    expect(withoutFolder(start, "a").map((each) => each.id)).toEqual(["b"]);
+  test("renames, closes and deletes one folder and leaves the others as they were", () => {
+    const start = [folder("a", ["t"]), folder("b", ["u"])];
+    expect(withRename(start, { id: "a", name: "X" })).toEqual([
+      { ...start[0]!, name: "X" },
+      start[1]!,
+    ]);
+    expect(withOpen(start, { id: "b", open: false })).toEqual([
+      start[0]!,
+      { ...start[1]!, open: false },
+    ]);
+    expect(withoutFolder(start, "a")).toEqual([start[1]!]);
   });
 
   test("moves a thread into one folder only, or out of all", () => {

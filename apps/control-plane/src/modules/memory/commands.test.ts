@@ -81,9 +81,11 @@ run("runMemoryCommand (postgres)", async () => {
     await expect(ask({ command: "view", path: "/memories/bot" })).rejects.toThrow(
       "There is no such folder",
     );
+    await ask({ command: "create", path: "/memories/personal/x.md", fileText: "Mine only." });
     await expect(
       ask({ command: "view", path: "/memories/project/../personal/x.md" }),
-    ).rejects.toThrow();
+    ).rejects.toThrow("A folder holds notes, not other folders.");
+    await ask({ command: "delete", path: "/memories/personal/x.md" });
     await expect(ask({ command: "view", path: "/etc/passwd" })).rejects.toThrow(
       "Memory paths start with /memories/",
     );

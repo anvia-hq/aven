@@ -1,6 +1,12 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 
-import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import {
+  ConflictError,
+  NotFoundError,
+  UnavailableError,
+  UnprocessableError,
+} from "@aven/server-kit/errors";
+import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { serverModelsService } from "./service";
 
 const run =
@@ -16,8 +22,8 @@ run("serverModelsService (postgres)", async () => {
       .delete(platformSettings)
       .where(inArray(platformSettings.key, ["server_decision_model", "server_small_model"]));
 
-  await clear();
-  afterAll(clear);
+  keepPlatformSettings(["server_decision_model", "server_small_model"]);
+  beforeAll(clear);
 
   const accepted = async () => undefined;
 
@@ -137,7 +143,9 @@ run("serverModelsService (postgres)", async () => {
       })
       .where(eq(platformSettings.key, "server_small_model"));
     expect((await serverModelsService.view({})).small?.modelId).toBe("claude-haiku-5-5");
-    await expect(serverModelsService.small({})).rejects.toBeDefined();
+    const refused = serverModelsService.small({});
+    await expect(refused).rejects.toBeInstanceOf(UnavailableError);
+    await expect(refused).rejects.toThrow("enter it again");
     await serverModelsService.removeSmall({});
   });
 });

@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { git } from "./git-clone";
 import { currentBranch, markTurn, threadDiff } from "./thread-diff";
+import type { Git } from "./types";
 
 const roots: string[] = [];
 
@@ -210,10 +211,15 @@ describe("a thread's changes", () => {
   test("a project cloned from a server is not fetched from while its changes are read", async () => {
     const { root, sh } = await workspace({ branchClone: true });
     await sh(root, "remote", "set-url", "origin", "https://127.0.0.1:9/never.git");
-    const started = Date.now();
+    const ran: string[][] = [];
+    const recorded: Git = (args, options) => {
+      ran.push(args);
+      return git(args, options);
+    };
 
-    expect(await threadDiff(root, "all")).not.toBeNull();
-    expect(Date.now() - started).toBeLessThan(5_000);
+    expect(await threadDiff(root, "all", recorded)).not.toBeNull();
+    expect(ran.length).toBeGreaterThan(0);
+    expect(ran.filter((args) => args.includes("fetch"))).toEqual([]);
   });
 
   test("the whole branch shows every change, new files included", async () => {

@@ -93,6 +93,7 @@ describe("a setting the template adds", () => {
     expect(parseEnv(addMissingKeys("AVEN_BIND=0.0.0.0\n", "AVEN_BIND=127.0.0.1\n")).AVEN_BIND).toBe(
       "0.0.0.0",
     );
+    expect(parseEnv(addMissingKeys("AVEN_BIND=\n", "AVEN_BIND=127.0.0.1\n")).AVEN_BIND).toBe("");
   });
 });
 
@@ -117,19 +118,6 @@ describe("the address the web port is published on", () => {
     expect(parseEnv(newServerEnv(template, { ...base, bind: "127.0.0.1" })).AVEN_BIND).toBe(
       "127.0.0.1",
     );
-  });
-
-  test("an install from before the setting keeps behaving as it did: every address", () => {
-    const updated = addMissingKeys("AVEN_PORT=3000\n", template);
-    expect(parseEnv(updated).AVEN_BIND).toBe("");
-    expect(parseEnv(updated).AVEN_PORT).toBe("3000");
-  });
-
-  test("a value somebody set is kept", () => {
-    expect(parseEnv(addMissingKeys("AVEN_BIND=100.64.0.7\n", template)).AVEN_BIND).toBe(
-      "100.64.0.7",
-    );
-    expect(parseEnv(addMissingKeys("AVEN_BIND=\n", template)).AVEN_BIND).toBe("");
   });
 });
 

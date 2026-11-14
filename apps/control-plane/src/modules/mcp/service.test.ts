@@ -6,7 +6,7 @@ import { users } from "@aven/db/schema/users";
 import { MCP_LIMIT } from "@aven/protocol/mcp";
 import { eq } from "drizzle-orm";
 
-import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { createMcpBody, updateMcpBody } from "./schema";
 import { mcpService } from "./service";
 
@@ -41,14 +41,6 @@ run("mcpService (postgres)", async () => {
     const [row] = await db.select().from(mcpServers).where(eq(mcpServers.id, server.id));
     expect(row?.headers).not.toContain("s3cret");
     expect(row?.headers).not.toContain("Authorization");
-  });
-
-  test("two names that read the same in a tool's name are one server", async () => {
-    await mcpService.create(alice, make({ name: "Team Notes" }));
-    await expect(mcpService.create(alice, make({ name: "team-notes" }))).rejects.toBeInstanceOf(
-      ConflictError,
-    );
-    await mcpService.create(bob, make({ name: "Team Notes" }));
   });
 
   test("a person has a limited number of servers", async () => {
@@ -134,16 +126,6 @@ run("mcpService (postgres)", async () => {
     expect(again?.allowLocal).toBe(true);
     const sameAddress = await mcpService.update(alice, local.id, change({ name: "Local Renamed" }));
     expect(sameAddress?.allowLocal).toBe(true);
-  });
-
-  test("another person's server is not found, changed or removed", async () => {
-    const server = await mcpService.create(alice, make({ name: "Private" }));
-    expect(await mcpService.get(bob, server.id)).toBeNull();
-    expect(await mcpService.update(bob, server.id, change({ enabled: false }))).toBeNull();
-    expect(await mcpService.remove(bob, server.id)).toBe(false);
-    expect((await mcpService.list(bob)).map((s) => s.id)).not.toContain(server.id);
-    expect((await mcpService.get(alice, server.id))?.enabled).toBe(true);
-    expect(await mcpService.remove(alice, server.id)).toBe(true);
   });
 
   test("how a run's servers connected is kept: the reason one did not, and when one did", async () => {

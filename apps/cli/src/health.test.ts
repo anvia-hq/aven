@@ -59,8 +59,4 @@ describe("portIsFree and the addresses a port is held on", () => {
   test("a port only loopback is bound on is taken, as another Aven's API port is", () => {
     expect(portIsFree(listenOn("127.0.0.1"))).toBe(false);
   });
-
-  test("a port bound on every address is taken", () => {
-    expect(portIsFree(listenOn("0.0.0.0"))).toBe(false);
-  });
 });

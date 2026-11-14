@@ -221,6 +221,7 @@ test("the column keeps its height while another thread's usage arrives", async (
     const made = await page.request.post("/api/threads", { data: { projectId: project!.id } });
     ids.push(((await made.json()) as { id: string }).id);
   }
+  let secondServed = false;
   await page.route("**/api/threads/*/events", async (route) => {
     await new Promise((resolve) => setTimeout(resolve, 300));
     await route.fulfill({
@@ -228,10 +229,14 @@ test("the column keeps its height while another thread's usage arrives", async (
       contentType: "text/event-stream",
       body: `retry: 600000\n\ndata: ${JSON.stringify({ type: "snapshot", running: false, messages: [], usage })}\n\n`,
     });
+
+    if (route.request().url().includes(ids[1]!)) secondServed = true;
   });
   await page.setViewportSize({ width: 1500, height: 800 });
   await page.goto(`/threads/${ids[0]}`);
+  const overview = page.getByRole("complementary", { name: "Overview" });
   await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
+  await expect(overview).toContainText("docs-site · acme/docs-site");
 
   await page.evaluate(() => {
     const heights = new Set<number>();
@@ -245,8 +250,11 @@ test("the column keeps its height while another thread's usage arrives", async (
   });
   await page.locator(`a[href="/threads/${ids[1]}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/threads/${ids[1]}$`));
+  await expect.poll(() => secondServed).toBe(true);
   await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
-  await page.waitForTimeout(300);
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
 
   const heights = await page.evaluate(() => [
     ...(window as unknown as { __heights: Set<number> }).__heights,

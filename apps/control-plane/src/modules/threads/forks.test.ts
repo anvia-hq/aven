@@ -144,9 +144,10 @@ run("a thread's forks (postgres)", async () => {
 
   test("does not reach another workspace's thread", async () => {
     const main = await parent();
-    await expect(
-      forks.status({ id: main.id, organizationId: orgB }, crypto.randomUUID()),
-    ).rejects.toThrow();
+    const made = await forks.start(main, input);
+    await expect(forks.status({ id: main.id, organizationId: orgB }, made.id)).rejects.toThrow(
+      "not a fork of this thread",
+    );
   });
 
   test("a fork's note that comes while the parent awaits an answer is sent once the answer's run ends, not lost", async () => {

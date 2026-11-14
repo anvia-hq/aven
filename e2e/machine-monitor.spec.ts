@@ -78,7 +78,6 @@ test.describe("machine monitor", () => {
       machines.getByRole("listitem", { name: "hot-box" }).getByRole("meter"),
     ).toHaveAttribute("data-level", "high");
 
-    await machines.screenshot({ path: ".aven/proof/machine-row/after.png" });
     await expect(machines.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");
     await expect(machines.getByRole("listitem", { name: "sleeping-box" })).toContainText("Offline");
 

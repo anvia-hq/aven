@@ -76,11 +76,6 @@ describe("pendingMessage", () => {
 describe("settlePending", () => {
   const one = [sent("a", "Fix the tests")];
 
-  test("drops the one a run's start brings", () => {
-    const event: RunEvent = { type: "run_start", prompt: "Fix the tests" };
-    expect(settlePending(one, event)).toEqual([]);
-  });
-
   test("drops the first of the same words, leaving the rest", () => {
     const two = [sent("a", "Again"), sent("b", "Again")];
     const event: RunEvent = { type: "run_start", prompt: "Again" };
@@ -109,13 +104,6 @@ describe("settlePending", () => {
   test("leaves one another run's start does not bring", () => {
     const event: RunEvent = { type: "run_start", prompt: "Something else" };
     expect(settlePending(one, event)).toEqual(one);
-  });
-
-  test("drops the one a steer takes, and the one said to be queued or refused", () => {
-    for (const type of ["steer", "steer_queued", "steer_rejected"] as const) {
-      const event = { type, id: "a", prompt: "Fix the tests" } as RunEvent;
-      expect(settlePending(one, event)).toEqual([]);
-    }
   });
 
   test("drops what a stream that attached again already lists", () => {

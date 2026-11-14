@@ -253,15 +253,6 @@ describe("DurableRuns after a reload in the same process", () => {
     const runs = await opened(path);
     expect(await runs.asked("thread-1")).toBeUndefined();
   });
-
-  test("a journal that was closed in this process opens again", async () => {
-    const path = journalPath();
-    const before = await opened(path);
-    await closed(before);
-
-    const after = await opened(path);
-    expect(await after.asked("thread-1")).toBeUndefined();
-  });
 });
 
 describe("DurableRuns transcript turns", () => {

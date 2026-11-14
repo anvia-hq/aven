@@ -8,9 +8,13 @@ const run =
 
 run("decisionModelService (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
+  const { keepPlatformSettings } = await import("../../testing/kept-platform-settings");
   const { orgA, orgB, cleanup } = await seedOrgPair();
+  keepPlatformSettings(["server_decision_model"], { cleared: true });
 
-  afterAll(cleanup);
+  afterAll(async () => {
+    await cleanup();
+  });
 
   test("a workspace has none until one is saved, and the key is never returned", async () => {
     expect(await decisionModelService.get(orgA)).toBeNull();

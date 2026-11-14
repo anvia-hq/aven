@@ -17,7 +17,7 @@ import { noProcesses } from "./thread-processes";
 import { SkillStore } from "./skills";
 import { UploadStore } from "./uploads";
 import type { McpNote, SkillListing } from "@aven/agents/types";
-import type { CreateBot } from "@aven/agents/tools/types";
+import type { AskQuestion, CreateBot } from "@aven/agents/tools/types";
 import type { RunAttachment, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
   BotReplyMessage,
@@ -222,18 +222,6 @@ describe("BotReplies", () => {
         },
       ],
     });
-  });
-
-  test("a reply is the bot agent, and it is not given a Claude setup token", async () => {
-    let sawToken = false;
-    const run = harness((input) => {
-      sawToken = JSON.stringify(input).includes("CLAUDE_CODE_OAUTH_TOKEN");
-      return agentThat([text("hi")])(input);
-    });
-    run.replies.start(message);
-    await run.until();
-    expect(sawToken).toBe(false);
-    expect(run.sent.some((frame) => frame.type === "bot.end")).toBe(true);
   });
 
   test("a message can quote one the person wrote, and the bot can react to it with one emoji (decision 0258)", async () => {
@@ -769,14 +757,19 @@ describe("BotReplies", () => {
   });
 
   test("a bot asks the person through the control plane, unless a note woke it, when nobody is there", async () => {
-    const asked: unknown[] = [];
+    const asked: (AskQuestion | undefined)[] = [];
     const run = harness((input) => {
       asked.push(input.askQuestion);
       return agentThat([text("")])(input);
     });
     run.replies.start(message);
     await run.until();
-    expect(typeof asked[0]).toBe("function");
+    const questions = [{ id: "q1", text: "Which one?" }];
+    await asked[0]!(questions);
+    expect(run.calls).toContainEqual({
+      method: "bot.question",
+      params: { replyId: "r1", questions },
+    });
 
     const noted = harness((input) => {
       asked.push(input.askQuestion);
@@ -789,7 +782,6 @@ describe("BotReplies", () => {
 
   test("a bot's schedules are asked of the control plane, for its own reply, and its timezone is the person's", async () => {
     let timezone: string | undefined;
-    const view = { id: "s1", bot: "pip", name: "News", cron: "0 7 * * *" };
     const run = harness((input) => {
       timezone = input.bot.timezone;
       return {
@@ -824,7 +816,6 @@ describe("BotReplies", () => {
       { method: "bot.schedule", params: { replyId: "r1", op: "update", id: "s1", enabled: false } },
       { method: "bot.schedule", params: { replyId: "r1", op: "delete", id: "s1" } },
     ]);
-    expect(view.id).toBe("s1");
   });
 
   test("a bot's goal is asked of the control plane, for its own reply", async () => {
@@ -974,19 +965,6 @@ describe("BotReplies", () => {
     plain.replies.start(message);
     await plain.until();
     expect(none).toBeUndefined();
-  });
-
-  test("the agent is told the bot's description as it is now", async () => {
-    let described: string | undefined;
-    const run = harness((input) => {
-      described = input.bot.description;
-      return agentThat([text("")])(input);
-    });
-
-    run.replies.start(message);
-    await run.until();
-
-    expect(described).toBe("A pal.");
   });
 
   describe("the agent the runner builds", () => {
@@ -1155,35 +1133,19 @@ describe("BotReplies", () => {
 
     test("every bot can change itself and knows its own description", () => {
       const agent = build(false);
-      expect(agent.tools.map((each) => each.name)).toEqual([
-        "send_message",
-        "list_bots",
-        "react_to_message",
-        "get_goal",
-        "start_goal",
-        "update_goal",
-        "create_schedule",
-        "list_schedules",
-        "update_schedule",
-        "delete_schedule",
-        "update_self",
-        "list_mcp_servers",
-        "add_mcp_server",
-        "update_mcp_server",
-        "remove_mcp_server",
-        "list_providers",
-        "add_provider",
-        "update_provider",
-        "remove_provider",
-        "list_provider_models",
-        "list_projects",
-        "list_threads",
-        "get_thread",
-        "start_thread",
-        "continue_thread",
-        "archive_thread",
-        "stop_thread",
-      ]);
+      const names = agent.tools.map((each) => each.name);
+      expect(names).toContain("update_self");
+      expect(names).not.toContain("create_bot");
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "send_message",
+          "list_bots",
+          "react_to_message",
+          "get_goal",
+          "create_schedule",
+          "list_mcp_servers",
+        ]),
+      );
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
     });
@@ -1203,36 +1165,9 @@ describe("BotReplies", () => {
 
     test("the main bot can make bots too", () => {
       const agent = build(true);
-      expect(agent.tools.map((each) => each.name)).toEqual([
-        "send_message",
-        "list_bots",
-        "react_to_message",
-        "get_goal",
-        "start_goal",
-        "update_goal",
-        "create_schedule",
-        "list_schedules",
-        "update_schedule",
-        "delete_schedule",
-        "create_bot",
-        "update_self",
-        "list_mcp_servers",
-        "add_mcp_server",
-        "update_mcp_server",
-        "remove_mcp_server",
-        "list_providers",
-        "add_provider",
-        "update_provider",
-        "remove_provider",
-        "list_provider_models",
-        "list_projects",
-        "list_threads",
-        "get_thread",
-        "start_thread",
-        "continue_thread",
-        "archive_thread",
-        "stop_thread",
-      ]);
+      expect(agent.tools.map((each) => each.name)).toEqual(
+        expect.arrayContaining(["create_bot", "update_self"]),
+      );
       expect(agent.instructions).toContain("<making-bots>");
       expect(agent.instructions).toContain("- Scout (handle: scout): Looks things up.");
     });

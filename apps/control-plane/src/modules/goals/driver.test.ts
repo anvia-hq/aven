@@ -173,16 +173,26 @@ run("createGoalDriver (postgres)", async () => {
   });
 
   test("closing waits for a tick and stops the timer", async () => {
-    const { driver } = await setup();
+    const { bot } = await setup();
+    const waking = Promise.withResolvers<void>();
+    let wakes = 0;
+    const driver = createGoalDriver({
+      wake: () => (wakes++, waking.promise),
+      isIdle: (botId) => botId === bot.id,
+      intervalMs: 5,
+    });
     driver.start();
-    await driver.close();
-    await driver.close();
-  });
+    for (let tries = 0; wakes === 0 && tries < 2000; tries++) await Bun.sleep(1);
 
-  test("a tick that cannot wake a bot leaves the goal for the next", async () => {
-    const { bot, driver, state } = await setup();
-    state.refuse = true;
-    await driver.tick();
-    expect(await goalsService.get(bot.id)).toMatchObject({ phase: "active", round: 0 });
+    let closed = false;
+    const closing = driver.close().then(() => (closed = true));
+    await Bun.sleep(20);
+    expect(closed).toBe(false);
+
+    waking.resolve();
+    await closing;
+    await Bun.sleep(30);
+    expect(wakes).toBe(1);
+    await driver.close();
   });
 });

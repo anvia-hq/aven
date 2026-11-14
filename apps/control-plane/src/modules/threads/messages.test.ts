@@ -148,18 +148,20 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     await threadsService.update(owner, thread.id, { visibility: "workspace", driving: 7 });
     return thread;
   };
-  const mate = { organizationId: orgA, userId: mateId };
   const idOf = (extras: Record<string, unknown>) =>
     (extras.identity as { userId: string; driverId?: string }) ?? undefined;
 
   const connectGithub = (id: string, login: string, githubUserId: number) =>
-    db.insert(githubUserTokens).values({
-      userId: id,
-      githubUserId,
-      login,
-      name: login,
-      accessTokenEncrypted: encryptSecret(`ghu_${login}`),
-    });
+    db
+      .insert(githubUserTokens)
+      .values({
+        userId: id,
+        githubUserId,
+        login,
+        name: login,
+        accessTokenEncrypted: encryptSecret(`ghu_${login}`),
+      })
+      .onConflictDoNothing();
   const githubOf = (extras: Record<string, unknown>) =>
     extras.github as { token: string; login: string } | undefined;
 
@@ -188,6 +190,8 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
 
   test("a run on a runner in machine mode is sent no GitHub token, whoever sent it", async () => {
     const thread = await driven();
+    await connectGithub(userId, "creator", 1);
+    await connectGithub(mateId, "mate", 2);
     started.length = 0;
     await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
     await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
@@ -275,7 +279,17 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
       }),
     ).rejects.toThrow("Only the thread's creator");
     expect(answered).toEqual([]);
-    expect(mate.userId).toBe(mateId);
+
+    await threadsService.saveContinuation(thread.id, {
+      ...secretContinuation,
+      interaction: { ...secretContinuation.interaction, toolName: "ask_question" },
+    });
+    await messages(false).answer(orgA, mateId, thread.id, {
+      answers: [{ questionId: "TOKEN", value: "x" }],
+      secretScope: "project",
+    });
+    expect(answered).toHaveLength(1);
+    expect(idOf(answered[0]!)).toMatchObject({ userId, driverId: mateId });
   });
 });
 
@@ -342,9 +356,11 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
     const driven = await thread(7);
     started.length = 0;
     kept.length = 0;
+    keptBy.length = 0;
     const sent = await messages(false).send(orgA, userId, driven.id, { prompt: toRandy });
     expect(sent).toEqual({ steered: false, agentAction: false });
-    expect(kept).toEqual([`​${toRandy}`.replace("​", "")]);
+    expect(kept).toEqual([toRandy]);
+    expect(keptBy).toEqual([userId]);
     expect(started).toEqual([]);
   });
 

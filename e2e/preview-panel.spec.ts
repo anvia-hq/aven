@@ -16,7 +16,6 @@ test.describe("the Browser panel", () => {
 
       const panel = page.getByRole("region", { name: "Browser" });
       await expect(panel.getByLabel("Port")).toBeVisible();
-      await page.screenshot({ path: ".aven/proof/preview-panel/panel.png" });
 
       await panel.getByLabel("Port").fill("3000");
       await panel.getByRole("button", { name: "Open", exact: true }).click();
@@ -26,7 +25,6 @@ test.describe("the Browser panel", () => {
         "Anyone allowed to use this runner can open what is on port 3000",
       );
       await expect(confirm).toHaveCSS("opacity", "1");
-      await page.screenshot({ path: ".aven/proof/preview-panel/after.png" });
 
       await confirm.getByRole("button", { name: "Open", exact: true }).click();
       await expect(panel).toContainText("Previews are not set up on this server");

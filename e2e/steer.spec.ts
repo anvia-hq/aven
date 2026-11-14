@@ -55,6 +55,7 @@ test.describe("steering a running agent", () => {
     await expect(queued).toContainText("Queued");
     await expect(prompt).toHaveText("");
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
     await expect
       .poll(() =>
         events.some((event) => event.type === "steer" && event.prompt === "use the other API"),
@@ -96,20 +97,6 @@ test.describe("steering a running agent", () => {
     await expect(page.locator("[data-queued]")).toContainText("first");
     await expect(prompt).toHaveText("second");
     await expect(page.getByText("No thanks").first()).toBeVisible();
-  });
-
-  test("Enter sends it, and only Stop is shown while it works", async ({ page }) => {
-    const { events } = await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" });
-    const prompt = page.getByRole("textbox", { name: "Prompt" });
-    await prompt.click();
-    await page.keyboard.type("and add tests");
-    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
-    await page.keyboard.press("Enter");
-
-    await expect(page.locator("[data-queued]")).toContainText("and add tests");
-    await expect.poll(() => events.some((event) => event.type === "steer")).toBe(true);
-    await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);
   });
 
   test("a message the runner refuses goes away and says why", async ({ page }) => {

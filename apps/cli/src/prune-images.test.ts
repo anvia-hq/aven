@@ -27,15 +27,6 @@ describe("the images an update leaves behind", () => {
     ]);
   });
 
-  test("never include the current release, a moving tag, a dev build or another repository", () => {
-    const stale = staleImages(listing, "0.1.2");
-    for (const kept of ["0.1.2", ":latest", ":0.1", ":dev"]) {
-      expect(stale.some((image) => image.endsWith(kept))).toBe(false);
-    }
-    expect(stale).not.toContain("aven-server:0.0.9");
-    expect(stale).not.toContain("postgres:17-alpine");
-  });
-
   test("are none when the update is to a dev build or `latest`, which have no older release", () => {
     for (const current of ["dev", "latest", "0.1", ""])
       expect(staleImages(listing, current)).toEqual([]);

@@ -18,7 +18,10 @@ run("botsService (postgres)", async () => {
   const alice = `u-alice-${suffix}`;
   const bob = `u-bob-${suffix}`;
 
+  let previousCatalogUrl: string | undefined;
+
   beforeAll(async () => {
+    previousCatalogUrl = process.env.MODEL_CATALOG_URL;
     process.env.MODEL_CATALOG_URL = "";
     await db.insert(users).values([
       { id: alice, name: "Alice", email: `${alice}@aven.test` },
@@ -27,6 +30,9 @@ run("botsService (postgres)", async () => {
   });
 
   afterAll(async () => {
+    if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
+
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 

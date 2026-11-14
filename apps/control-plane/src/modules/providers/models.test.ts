@@ -102,6 +102,19 @@ describe("fetchModels", () => {
   });
 });
 
+test("a vendor's model efforts come from the SDK and leave out models without the control", async () => {
+  const catalogUrl = process.env.MODEL_CATALOG_URL;
+  process.env.MODEL_CATALOG_URL = "";
+  try {
+    expect(await effortsByModel({ kind: "openai" }, ["gpt-4o", "o3"])).toEqual({
+      o3: { options: ["low", "medium", "high"], defaultValue: "medium" },
+    });
+  } finally {
+    if (catalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = catalogUrl;
+  }
+});
+
 describe("the efforts of a gateway's models", () => {
   const levels = ["minimal", "low", "medium", "high", "xhigh", "max"];
   const asked: (string | null)[] = [];

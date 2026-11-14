@@ -5,7 +5,7 @@ import { environmentVariables } from "@aven/db/schema/environment-variables";
 import { variableEvents } from "@aven/db/schema/variable-events";
 import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnavailableError } from "@aven/server-kit/errors";
 import { encryptSecret } from "@aven/server-kit/crypto";
@@ -58,7 +58,13 @@ run("variablesService (postgres)", async () => {
     const [row] = await db
       .select()
       .from(environmentVariables)
-      .where(eq(environmentVariables.name, "API_KEY"));
+      .where(
+        and(
+          eq(environmentVariables.projectId, project.id),
+          eq(environmentVariables.name, "API_KEY"),
+        ),
+      );
+    expect(row!.valueEncrypted).toEqual(expect.any(String));
     expect(row!.valueEncrypted).not.toContain("super-secret");
   });
 
@@ -505,7 +511,7 @@ run("variablesService (postgres)", async () => {
             valueEncrypted: "x.y.z",
           });
         })(),
-      ).rejects.toThrow();
+      ).rejects.toMatchObject({ cause: { constraint_name: "environment_variables_one_scope" } });
     });
   });
 

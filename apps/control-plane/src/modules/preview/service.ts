@@ -20,7 +20,7 @@ function controlPlaneOwnPorts(env: Record<string, string | undefined>) {
   ];
 }
 
-export function previewRefusal(
+function previewRefusal(
   port: number,
   runtimeId: string,
   env: Record<string, string | undefined> = process.env,
@@ -38,7 +38,7 @@ export function previewRefusal(
     : undefined;
 }
 
-export function previewUrl(domain: string, claims: PreviewClaims, ticket: string, embed: boolean) {
+function previewUrl(domain: string, claims: PreviewClaims, ticket: string, embed: boolean) {
   const host = previewHostname(claims, domain);
   const mode = embed ? "&embed=1" : "";
   return `https://${host}${PREVIEW_ENTER_PATH}?ticket=${encodeURIComponent(ticket)}${mode}`;

@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 
 import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
-import { threadsService } from "../threads/service";
+import { ThreadNotFoundError, threadsService } from "../threads/service";
 import { FolderNotFoundError, foldersService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -96,7 +96,12 @@ run("foldersService (postgres)", async () => {
   test("a thread the person cannot read cannot be filed", async () => {
     const own = await foldersService.create(strangerId, "Theirs");
     const thread = await newThread();
-    await expect(foldersService.moveThread(strangerId, thread.id, own.id)).rejects.toThrow();
+    await expect(foldersService.moveThread(strangerId, thread.id, own.id)).rejects.toBeInstanceOf(
+      ThreadNotFoundError,
+    );
+    expect((await foldersService.list(strangerId)).flatMap((folder) => folder.threadIds)).toEqual(
+      [],
+    );
     await foldersService.remove(strangerId, own.id);
   });
 });

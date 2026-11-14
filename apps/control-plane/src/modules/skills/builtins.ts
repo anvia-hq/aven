@@ -8,9 +8,9 @@ export const BUILTIN_SKILLS_DIR = join(import.meta.dir, "../../../skills");
 
 let loaded: Promise<PackedSkill[]> | undefined;
 
-export function builtinSkills(dir = BUILTIN_SKILLS_DIR) {
+export function builtinSkills() {
   loaded ??= (async () => {
-    const { skills, problems } = await readSkillFolders(dir);
+    const { skills, problems } = await readSkillFolders(BUILTIN_SKILLS_DIR);
     for (const { folder, problem } of problems)
       console.error(`Built-in skill "${folder}" is left out: ${problem}`);
     return Promise.all(skills.map(async (skill) => packSkill(await readFolder(skill.directory))));

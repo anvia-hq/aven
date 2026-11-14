@@ -41,15 +41,15 @@ run("database client (postgres)", () => {
   });
 
   test("importing migrate.ts does not migrate, and migrateDatabase migrates the database it is given", async () => {
-    const previous = process.env.DATABASE_URL;
+    const previous = databaseUrl();
     process.env.DATABASE_URL = unreachable;
 
     try {
-      const { migrateDatabase } = await import("./migrate");
-      await expect(migrateDatabase()).rejects.toThrow("Failed query");
+      const imported = await import("./migrate");
+      process.env.DATABASE_URL = previous;
+      await expect(imported.migrateDatabase(unreachable)).rejects.toThrow("Failed query");
     } finally {
-      if (previous === undefined) delete process.env.DATABASE_URL;
-      else process.env.DATABASE_URL = previous;
+      process.env.DATABASE_URL = previous;
     }
   });
 });

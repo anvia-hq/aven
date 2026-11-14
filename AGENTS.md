@@ -44,6 +44,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **Dependencies** go in the workspace that uses them, not the root. Ask before adding a heavy or new one. Patched ones live in `patches/`.
 - **Secrets and config.** Never commit secrets or `.env`. Every variable is also listed in `.env.example` with a safe placeholder.
 - **Our own lint rules** are in `tooling/oxlint/rules/` (one file and one test each, `aven/<name>` in `.oxlintrc.json`; decisions 0149 and 0281). Beyond no comments, no barrel files and `padded-if`: no `Reflect.get`/`Reflect.apply`, no `.filter().map()` chains (use `flatMap`), no `as unknown as T` in source, no `type X = unknown`, no module mocking, and no copying the accumulator in `reduce`.
+- **Tests share the dev database.** A test that reads or changes a shared row (platform settings, the built-in runner) sets it up itself and puts it back (`apps/control-plane/src/testing/kept-platform-settings.ts`). Test support never copies a production class; runner tests use the shipped `DirectorySandbox`.
 - **Never edit generated files:** `apps/platform/src/routeTree.gen.ts`, and migrations in `packages/db/drizzle/` (generate them).
 
 ## By area

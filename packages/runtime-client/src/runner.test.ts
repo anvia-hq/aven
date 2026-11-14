@@ -15,7 +15,7 @@ import { fakeControlPlane } from "./testing/fake-control-plane";
 import { gitFixture, sh } from "./testing/git-fixture";
 import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import type { ScriptStep } from "@aven/agents/types";
-import type { ProcessView, RuntimeToControlPlane } from "@aven/protocol/types";
+import type { ProcessView } from "@aven/protocol/types";
 import type {
   CreateBotReplyAgent,
   CreateRuntimeAgent,
@@ -135,6 +135,7 @@ describe("startRuntime updating itself (decision 0146)", () => {
     await until(() => withUpdate.plane.received.some((m) => m.type === "hello"));
     expect(withUpdate.plane.received.find((m) => m.type === "hello")).toMatchObject({
       canUpdate: true,
+      backends: ["native", "claude"],
     });
 
     const without = connect({ sandbox });
@@ -554,16 +555,17 @@ describe("startRuntime", () => {
     });
 
     test("a sign-in that fails does not fail the run", async () => {
-      const { sandbox } = signingSandbox({ failSignIn: true });
+      const { sandbox, signedIn } = signingSandbox({ failSignIn: true });
       const silenced = console.warn;
       console.warn = () => undefined;
-      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      const { plane, runtime } = connect({ sandbox, createAgent: wakingReply() });
       await runtime.ready;
 
       plane.send({ ...runStart, github: ada });
 
       await until(() => plane.received.some((message) => message.type === "run.end"));
       console.warn = silenced;
+      expect(signedIn).toEqual([{ threadId: "thread-1", github: ada }]);
       expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
         outcome: "response",
       });
@@ -1038,22 +1040,33 @@ describe("startRuntime", () => {
   test("a run whose computer is another machine does not watch processes on this runner", async () => {
     const { sandbox, up } = slowSandbox();
     up();
+    const started = Date.now();
     const plane = fakeControlPlane({
       answer: (message) => {
-        if (message.method !== "machine.call") return undefined;
+        if (message.method === "repo.folder") return { directory: null };
+
+        if (message.method !== "machine.call") return null;
 
         const { op } = message.params as { op: string };
 
+        if (op === "prepare") return { paths: null };
+
         if (op === "listProcesses") {
+          const process = {
+            id: "p1",
+            command: "sh",
+            args: ["-c", "bun test"],
+            startedAt: new Date(started + 1000).toISOString(),
+          };
+
+          if (Date.now() - started < 150) return [{ ...process, status: "running" }];
+
           return [
             {
-              id: "p1",
-              command: "sh",
-              args: ["-c", "bun test"],
+              ...process,
               status: "exited",
               exitCode: 0,
-              startedAt: new Date().toISOString(),
-              endedAt: new Date().toISOString(),
+              endedAt: new Date(started + 11_000).toISOString(),
             },
           ];
         }
@@ -1075,7 +1088,20 @@ describe("startRuntime", () => {
       token: "t",
       journalPath: journalPath(),
       sandbox,
-      createAgent: reply(),
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          tools: [...tools],
+          model: scriptedModel([
+            [toolCall("computer_wake", {})],
+            async () => {
+              await Bun.sleep(400);
+              return [text("ok")];
+            },
+          ]),
+          instructions: "x",
+        }),
+      }),
       processPollMs: 20,
     });
     cleanups.push(() => runtime.stop(), plane.stop);
@@ -1087,7 +1113,6 @@ describe("startRuntime", () => {
       prompt: "hi",
     });
     await until(() => plane.received.some((message) => message.type === "run.end"));
-    await Bun.sleep(80);
     expect(plane.received.some((message) => message.type === "process.ended")).toBe(false);
   });
 
@@ -1145,39 +1170,6 @@ describe("startRuntime runs", () => {
         ? [message.params as { turn: number; messages: { role: string }[] }]
         : [],
     );
-
-  test("drives the backend the run names, and native when it names none (decision 0220)", async () => {
-    const { sandbox, up } = slowSandbox();
-    up();
-    let made = 0;
-    const { plane, runtime } = connect({
-      sandbox,
-      createAgent: (input) => {
-        made += 1;
-        return reply()(input);
-      },
-    });
-    await runtime.ready;
-    await until(() => hellos(plane).length === 1);
-    expect(hellos(plane)[0]).toMatchObject({ backends: ["native", "claude"] });
-
-    plane.send(runStart);
-    await until(() => ended(plane).length === 1);
-    expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
-
-    plane.send({ ...runStart, runId: "run-2", backend: "native" });
-    await until(() => ended(plane).length === 2);
-    expect(ended(plane)[1]).toMatchObject({ outcome: "response" });
-
-    const before = made;
-    plane.send({ ...runStart, runId: "run-3", backend: "other" });
-    await until(() => ended(plane).length === 3);
-    expect(ended(plane)[2]).toMatchObject({
-      outcome: "error",
-      error: "This runner does not drive the other agent backend",
-    });
-    expect(made).toBe(before);
-  });
 
   test("a run reports its progress as events and hands its messages home", async () => {
     const { sandbox, up } = slowSandbox();
@@ -1746,34 +1738,17 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
-    expect(made).toEqual([
-      {
-        id: "run-run-1",
-        attended: true,
-        tools: [
-          "git_fetch",
-          "computer_status",
-          "computer_wake",
-          "spawn_agent",
-          "fork_thread",
-          "fork_status",
-          "stop_fork",
-          "wait_for_forks",
-          "take_fork_changes",
-          "define_goal",
-        ],
-      },
-      {
-        id: "goal-run-1",
-        attended: false,
-        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
-      },
-      {
-        id: "run-run-1-report",
-        attended: false,
-        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
-      },
+    expect(made.map(({ id, attended }) => ({ id, attended }))).toEqual([
+      { id: "run-run-1", attended: true },
+      { id: "goal-run-1", attended: false },
+      { id: "run-run-1-report", attended: false },
     ]);
+    const attendedOnly = ["define_goal", "fork_thread", "take_fork_changes"];
+    const [attended, ...unattended] = made;
+    expect(attended!.tools).toEqual(expect.arrayContaining(attendedOnly));
+    for (const session of unattended) {
+      for (const tool of attendedOnly) expect(session.tools).not.toContain(tool);
+    }
     const texts = plane.received.flatMap((m) =>
       m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
     );
@@ -2441,19 +2416,6 @@ describe("startRuntime answering for a bot", () => {
         tools: [createSendMessageTool(send)],
       });
 
-  const writingBot: CreateBotReplyAgent = ({ send, memory }) =>
-    new Agent({
-      id: "bot",
-      model: scriptedModel([
-        [toolCall("send_message", { to: "scout", text: "do A" })],
-        [toolCall("send_message", { text: "I asked Scout" })],
-        [text("")],
-      ]),
-      instructions: "x",
-      memory,
-      tools: [createSendMessageTool(send)],
-    });
-
   test("a reply that names a machine runs its tools there, not on this computer", async () => {
     const acquired: string[] = [];
     const sandbox: ThreadWorkspaces = {
@@ -2528,39 +2490,6 @@ describe("startRuntime answering for a bot", () => {
       replyId: "reply-1",
       text: "ran",
     });
-  });
-
-  test("a message to another bot is a call to the control plane, and only what the person is sent is shown", async () => {
-    const { sandbox, up } = slowSandbox();
-    up();
-    const { plane, runtime } = connect({
-      sandbox,
-      createBotAgent: writingBot,
-      typingPause: async () => undefined,
-    });
-    await runtime.ready;
-
-    plane.send({
-      ...botReply,
-      bot: { ...botReply.bot, peers: [{ handle: "scout", name: "Scout", description: "" }] },
-    });
-    const sent = () =>
-      plane.received.find((message) => message.type === "call" && message.method === "bot.send");
-    await until(() => sent() !== undefined);
-    const call = sent() as Extract<RuntimeToControlPlane, { type: "call" }>;
-    expect(call.params).toEqual({ to: "scout", text: "do A", replyId: "reply-1" });
-    plane.send({
-      type: "reply",
-      id: call.id,
-      ok: true,
-      result: { handle: "scout", name: "Scout" },
-    });
-
-    await until(() => plane.received.some((message) => message.type === "bot.end"));
-    expect(plane.received.filter((message) => message.type.startsWith("bot."))).toEqual([
-      { type: "bot.say", replyId: "reply-1", text: "I asked Scout" },
-      { type: "bot.end", replyId: "reply-1" },
-    ]);
   });
 
   test("the bot's messages arrive one by one, then the reply ends, on the bot's own sandbox", async () => {

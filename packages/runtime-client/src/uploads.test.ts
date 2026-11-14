@@ -49,7 +49,7 @@ describe("UploadStore", () => {
   });
 
   test("never takes a thread id as a path", async () => {
-    expect(store().dir("../t1")).rejects.toThrow("Invalid thread id");
+    await expect(store().dir("../t1")).rejects.toThrow("Invalid thread id");
   });
 });
 

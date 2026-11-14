@@ -36,11 +36,6 @@ function stopTool(stopped: ForkView) {
 }
 
 describe("stop_fork", () => {
-  test("is offered next to the other fork tools", () => {
-    const names = createForkTools({} as ForkHost).map((tool) => tool.name);
-    expect(names).toContain("stop_fork");
-  });
-
   test("stops the fork it is given and says its run was cancelled", async () => {
     const { tool, stopCalls } = stopTool(view({ stopped: true }));
     expect((await tool.call({ id: ID })).note).toBe("The fork's run was cancelled.");

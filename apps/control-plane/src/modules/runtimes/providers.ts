@@ -1,7 +1,7 @@
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
 import { runtimesService } from "./service";
 import type { RuntimeProviderKind } from "@aven/protocol/types";
-import type { ProviderOf, RunnerPlace, RuntimeProvider, ThreadPlace } from "./types";
+import type { RunnerPlace, RuntimeProvider, ThreadPlace } from "./types";
 
 const RELEASE_TIMEOUT_MS = 30_000;
 
@@ -19,31 +19,24 @@ export const manualProvider: RuntimeProvider = {
 
 const PROVIDERS: Record<RuntimeProviderKind, RuntimeProvider> = { manual: manualProvider };
 
-const recordedProvider: ProviderOf = (id) => runtimesService.providerOf(id);
-
 export async function reachRunner(
   hub: Pick<RuntimeHub, "get">,
   place: RunnerPlace,
   offline?: string,
-  providerOf: ProviderOf = recordedProvider,
 ) {
   const connected = hub.get(place.runtimeId);
 
   if (connected) return connected;
 
-  const kind = await providerOf(place.runtimeId);
+  const kind = await runtimesService.providerOf(place.runtimeId);
 
   if (!kind) throw new RuntimeOfflineError(offline);
 
   return PROVIDERS[kind].start(place, offline);
 }
 
-export async function releaseThread(
-  hub: Pick<RuntimeHub, "get">,
-  place: ThreadPlace,
-  providerOf: ProviderOf = recordedProvider,
-) {
-  const kind = await providerOf(place.runtimeId);
+export async function releaseThread(hub: Pick<RuntimeHub, "get">, place: ThreadPlace) {
+  const kind = await runtimesService.providerOf(place.runtimeId);
 
   if (!kind) return;
 

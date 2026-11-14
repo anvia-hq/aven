@@ -39,7 +39,6 @@ test.describe("a thread's message draft", () => {
     await page.locator(`a[href="/threads/${threadId}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
     await expect(prompt).toHaveText("half a message");
-    await page.screenshot({ path: ".aven/proof/thread-draft/restored.png" });
 
     await prompt.press("Enter");
     await expect(prompt).toHaveText("");

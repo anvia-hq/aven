@@ -142,7 +142,8 @@ run("a bot's threads (postgres)", async () => {
     expect((await bot.list(userId, {})).length).toBe(before);
   });
 
-  test("a thread that could not be started is put away and the reason is given", async () => {
+  test("a thread that could not be started is archived, not watched, and the reason is given", async () => {
+    const before = watched.length;
     failSend = new Error("The runner is offline");
     try {
       await expect(bot.start(person, { projectId: projectA.id, prompt: "Doomed" })).rejects.toThrow(
@@ -155,6 +156,7 @@ run("a bot's threads (postgres)", async () => {
     expect((await bot.list(userId, { archived: true })).map((thread) => thread.title)).toContain(
       "Doomed",
     );
+    expect(watched.length).toBe(before);
   });
 
   test("archiving one puts it away: the run stops and the sandbox is freed, as when the person says so", async () => {
@@ -162,10 +164,9 @@ run("a bot's threads (postgres)", async () => {
     running.add(one.id);
     putAway.length = 0;
 
-    await bot.archive(person, one.id, true);
-
+    expect((await bot.archive(person, one.id, true)).state).toBe("archived");
     expect(putAway).toEqual([one.id]);
-    await bot.archive(person, one.id, false);
+    expect((await bot.archive(person, one.id, false)).state).toBe("open");
     expect(putAway).toEqual([one.id]);
   });
 
@@ -338,24 +339,5 @@ run("a bot's threads (postgres)", async () => {
     const before = watched.length;
     await expect(bot.continue(noted, one.id, { prompt: "x" })).rejects.toThrow("archived");
     expect(watched.length).toBe(before);
-  });
-
-  test("a thread that could not be started is not watched", async () => {
-    const before = watched.length;
-    failSend = new Error("The runner is offline");
-    try {
-      await expect(
-        bot.start(person, { projectId: projectA.id, prompt: "Unwatched" }),
-      ).rejects.toThrow("The runner is offline");
-    } finally {
-      failSend = undefined;
-    }
-    expect(watched.length).toBe(before);
-  });
-
-  test("archiving puts the thread away, and false brings it back, leaving it open", async () => {
-    const one = await bot.start(person, { projectId: projectA.id, prompt: "Archive me" });
-    expect((await bot.archive(person, one.id, true)).state).toBe("archived");
-    expect((await bot.archive(person, one.id, false)).state).toBe("open");
   });
 });

@@ -106,7 +106,7 @@ test.describe("project environment variables", () => {
     await section.getByRole("button", { name: "Add" }).click();
     await pasteIntoName(
       page,
-      '# app\nDATABASE_URL=postgres://localhost/app\nexport PORT=3000\nNAME="two words"\nGIT_DIR=x\n',
+      '# app\nDATABASE_URL=postgres://localhost/app\nexport PORT=3000\n\nNAME="two words"\nGIT_DIR=x\n',
     );
 
     await expect(page.getByLabel("Name 1")).toHaveValue("DATABASE_URL");

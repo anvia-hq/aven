@@ -94,18 +94,6 @@ test("says nothing about an update when none is pending and the server matches",
   expect(report(checks, "compose file")).toMatchObject({ ok: true });
 });
 
-test("warns when the runner service runs a binary that is gone", async () => {
-  await runnerEnv();
-  await writeUnit(join(home, "old", "aven"));
-
-  const unit = report(await doctor(), "runner unit");
-
-  expect(unit?.ok).toBe(false);
-  expect(unit?.warn).toBe(true);
-  expect(unit?.detail).toContain(join(home, "old", "aven"));
-  expect(unit?.detail).toContain("aven runner install");
-});
-
 test("warns when the runner service runs another aven, and passes for this one", async () => {
   await runnerEnv();
   await write(join(home, "old", "aven"), "#!/bin/sh\n");
@@ -113,8 +101,9 @@ test("warns when the runner service runs another aven, and passes for this one",
 
   const other = report(await doctor(), "runner unit");
   expect(other?.ok).toBe(false);
-  expect(other?.detail).toContain(join(home, "old", "aven"));
-  expect(other?.detail).toContain(aven);
+  expect(other?.warn).toBe(true);
+  expect(other?.detail).toContain("aven runner install");
+  expect(other?.detail).toContain(`${join(home, "old", "aven")}, not this aven at ${aven}`);
 
   await write(aven, "#!/bin/sh\n");
   await writeUnit(aven);

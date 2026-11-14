@@ -28,10 +28,8 @@ export function createScheduler(options: {
   fire(schedule: { userId: string; botId: string }, note: string): Promise<void>;
   isBusy(botId: string): boolean;
   intervalMs: number;
-  now?: () => Date;
 }) {
   const { fire, isBusy, intervalMs } = options;
-  const clock = options.now ?? (() => new Date());
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking: Promise<void> | undefined;
 
@@ -67,7 +65,7 @@ export function createScheduler(options: {
       .where(eq(botSchedules.id, schedule.id));
   }
 
-  async function tick(now = clock()) {
+  async function tick(now = new Date()) {
     const due = await db
       .select()
       .from(botSchedules)

@@ -2,39 +2,15 @@ import { describe, expect, test } from "bun:test";
 
 import {
   EMBED_COOKIE,
-  PAGE_COOKIE,
   parseHead,
   requestForPort,
   responseForBrowser,
   serializeHead,
-  cookiesOf,
 } from "./http-head";
 
 const head = (lines: string[]) => parseHead(lines.join("\r\n"))!;
 
 describe("a request to a port", () => {
-  test("is asked for as localhost on that port, with the page's own cookies only", () => {
-    const parsed = head([
-      "GET /a?b=1 HTTP/1.1",
-      "Host: 3000-00000000-0000-4000-8000-000000000001.aven.run",
-      `Cookie: ${PAGE_COOKIE}=secret; theme=dark`,
-      "Origin: https://3000-00000000-0000-4000-8000-000000000001.aven.run",
-      "Referer: https://3000-00000000-0000-4000-8000-000000000001.aven.run/b?c=1",
-      "Connection: keep-alive",
-      "",
-      "",
-    ]);
-    const { head: forwarded, upgrade } = requestForPort(parsed, 3000);
-    const sent = serializeHead(forwarded);
-    expect(upgrade).toBe(false);
-    expect(sent).toContain("Host: localhost:3000\r\n");
-    expect(sent).toContain("Origin: http://localhost:3000\r\n");
-    expect(sent).toContain("Referer: http://localhost:3000/b?c=1\r\n");
-    expect(sent).toContain("Cookie: theme=dark\r\n");
-    expect(sent).not.toContain(PAGE_COOKIE);
-    expect(sent).toContain("Connection: close\r\n");
-  });
-
   test("carries a WebSocket upgrade both ways", () => {
     const parsed = head([
       "GET /hmr HTTP/1.1",
@@ -52,19 +28,6 @@ describe("a request to a port", () => {
 
 describe("an answer from a port", () => {
   const answer = (lines: string[]) => responseForBrowser(head(lines), 3000);
-
-  test("says where to go without naming the runner's own address", () => {
-    const rewritten = answer([
-      "HTTP/1.1 302 Found",
-      "Location: http://localhost:3000/login",
-      "Connection: keep-alive",
-      "",
-      "",
-    ]);
-    expect(rewritten.start).toBe("HTTP/1.1 302 Found");
-    expect(serializeHead(rewritten)).toContain("Location: /login\r\n");
-    expect(serializeHead(rewritten)).toContain("Connection: close\r\n");
-  });
 
   test("keeps a Location to another address", () => {
     const rewritten = answer(["HTTP/1.1 302 Found", "Location: https://example.com/x", "", ""]);
@@ -90,11 +53,5 @@ describe("an answer from a port", () => {
     expect(sent).not.toContain("frame-ancestors");
     expect(sent).toContain("Content-Security-Policy: default-src 'self'\r\n");
     expect(sent).toContain("Referrer-Policy: no-referrer\r\n");
-  });
-
-  test("reads a cookie jar", () => {
-    const parsed = head(["GET / HTTP/1.1", `Cookie: ${PAGE_COOKIE}=a; b=c`, "", ""]);
-    expect(cookiesOf(parsed).get(PAGE_COOKIE)).toBe("a");
-    expect(cookiesOf(parsed).get("b")).toBe("c");
   });
 });

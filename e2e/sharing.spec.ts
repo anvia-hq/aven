@@ -264,7 +264,6 @@ test.describe("sharing a thread", () => {
     }).toPass({ timeout: 10_000 });
     await expect(stack).toContainText("2+");
     await expect(stack.locator('[data-slot="avatar"]').first()).toHaveCSS("opacity", "1");
-    await row.screenshot({ path: ".aven/proof/thread-avatars/after.png" });
     await expect(stack).toHaveAttribute(
       "aria-label",
       "In this thread: Owner Person, Randy Pamungkas, Dina Putri, Eko Santoso, Fitri Lestari",

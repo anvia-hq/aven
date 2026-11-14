@@ -225,8 +225,7 @@ describe("steering a run (decision 0098)", () => {
     finish();
     await Bun.sleep(30);
     listener.stop();
-    expect(listener.events.map((event) => event.type)).not.toContain("steer");
-    expect(listener.events.map((event) => event.type)).not.toContain("steer_applied");
+    expect(listener.events.map((event) => event.type)).toEqual(["snapshot", "done"]);
   });
 });
 

@@ -216,9 +216,6 @@ export function createThreadWatcher(options: {
   return {
     ended,
     tick,
-    pending() {
-      return { alerted: [...alerted.keys()], ending: [...ending] };
-    },
     start() {
       if (timer) return;
 

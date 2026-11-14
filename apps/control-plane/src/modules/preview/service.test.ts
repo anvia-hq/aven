@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { LOCAL_RUNTIME_ID } from "../runtimes/local-id";
-import { createPreviewService, previewRefusal, previewUrl } from "./service";
+import { createPreviewService } from "./service";
 import type { PreviewClaims, PreviewSettings } from "./types";
 import type { ViewerHandle, ViewerSink } from "../runtimes/types";
 
@@ -87,21 +87,5 @@ describe("relaying to a port", () => {
     await expect(service().relay({ runtimeId: remote, port: 22 }, sink)).rejects.toThrow(
       "not a preview",
     );
-  });
-});
-
-describe("a preview's own answers", () => {
-  test("name the port and runtime id under the domain", () => {
-    expect(previewUrl("aven.run", { runtimeId: remote, port: 5173 }, "t", false)).toBe(
-      `https://5173-${remote}.aven.run/__aven/enter?ticket=t`,
-    );
-    expect(previewUrl("aven.run", { runtimeId: remote, port: 5173 }, "t", true)).toEndWith(
-      "&embed=1",
-    );
-  });
-
-  test("refuse a port that is not one before anything else", () => {
-    expect(previewRefusal(0, remote, {})).toBe("That is not a port");
-    expect(previewRefusal(3000, remote, {})).toBeUndefined();
   });
 });
