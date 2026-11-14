@@ -165,7 +165,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                     overview.open && !split && "@4xl:pr-75",
                   )}
                 >
-                  <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
+                  <div className="pointer-events-auto mx-auto w-full max-w-3xl px-4 pb-6">
                     {owned && (
                       <ShipBar
                         thread={thread}

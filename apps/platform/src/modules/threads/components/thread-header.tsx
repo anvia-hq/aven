@@ -49,7 +49,7 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
   const shown = toggles.filter((toggle) => toggle.show);
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10 md:px-4">
+    <header className="flex h-11 shrink-0 items-center gap-2 px-3 md:h-10 md:px-4">
       <h1 className="min-w-0 flex-1 truncate text-sm font-medium">{thread.title}</h1>
       {owned && <ThreadShare thread={thread} />}
       {onClose && (
