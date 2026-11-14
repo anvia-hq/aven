@@ -41,10 +41,10 @@ function SidebarProjectTile({
   palette?: number;
   machine?: { name: string; online: boolean };
 }) {
-  if (!project) return <span className="size-5 shrink-0" aria-hidden />;
+  if (!project) return <span className="-mx-0.5 size-5 shrink-0" aria-hidden />;
 
   return (
-    <span className="relative shrink-0">
+    <span className="relative -mx-0.5 shrink-0">
       <ProjectTile projectId={project.id} palette={palette} working={thread.running} />
       {machine && (
         <span
