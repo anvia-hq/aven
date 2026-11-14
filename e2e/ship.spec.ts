@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
@@ -281,6 +281,19 @@ test.describe("shipping a thread", () => {
     const again = page.getByRole("button", { name: "Try again" });
     await expect(again).toBeVisible();
     await expect(again).toHaveAttribute("title", "The runner could not read the changes");
+    const styleOf = (locator: Locator) =>
+      locator.evaluate((node) => {
+        const style = getComputedStyle(node);
+        return [
+          style.fontFamily,
+          style.fontSize,
+          style.fontWeight,
+          style.height,
+          style.borderRadius,
+          style.paddingInline,
+        ];
+      });
+    expect(await styleOf(page.getByText("Changes unknown"))).toEqual(await styleOf(again));
 
     failing = false;
     await again.click();
