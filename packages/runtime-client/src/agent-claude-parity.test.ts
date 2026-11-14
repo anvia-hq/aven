@@ -156,6 +156,31 @@ describe("Claude parity with the native agent", () => {
     expect(end).toMatchObject({ type: "paused", reason: "no_progress" });
   });
 
+  test("a message sent to a goal is reported as applied once the goal takes it", async () => {
+    const { query } = scripted("still failing");
+    const runs = ClaudeRuns.open(journalPath(), query);
+    const events: { type: string; id?: string }[] = [];
+    const goal = await runs.startGoal({
+      runId: "goal-3",
+      request: {
+        objective: "Make the tests pass",
+        acceptanceCriteria: ["tests pass"],
+        verifyCommands: ["bun test"],
+        maxSessions: 2,
+      },
+      input: { claude: context({ questions: false }) },
+      verify: async () => [{ command: "bun test", exitCode: 1, output: "fail" }],
+      onEvent: (event) => void events.push(event),
+      onSession: async () => undefined,
+    });
+    await goal.steer("also keep commits atomic", "steer-1");
+    await goal.done;
+    await runs.close();
+    expect(events.filter((event) => event.type === "steer_applied")).toEqual([
+      { type: "steer_applied", id: "steer-1" },
+    ]);
+  });
+
   test("continues an interrupted run on the same Claude session", async () => {
     const { query, inputs } = scripted("hello");
     const runs = ClaudeRuns.open(journalPath(), query);
