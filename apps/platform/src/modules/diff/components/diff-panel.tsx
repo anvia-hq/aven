@@ -1,4 +1,4 @@
-import { Columns, GitDiff, Menu } from "@mynaui/icons-react";
+import { GitDiff, SquareHalf } from "@mynaui/icons-react";
 import { useMemo, useState } from "react";
 
 import { PanelNotice } from "@/components/panel-notice";
@@ -53,10 +53,10 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           <Tabs value={layout} onValueChange={(next) => isDiffLayout(next) && setLayout(next)}>
             <TabsList aria-label="Layout">
               <TabsTrigger value="unified" aria-label="Unified">
-                <Menu />
+                <SquareHalf className="rotate-90" />
               </TabsTrigger>
               <TabsTrigger value="split" aria-label="Split">
-                <Columns />
+                <SquareHalf />
               </TabsTrigger>
             </TabsList>
           </Tabs>
