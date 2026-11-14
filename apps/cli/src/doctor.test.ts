@@ -48,7 +48,15 @@ async function runnerEnv() {
 }
 
 const doctor = () =>
-  diagnose({ home, unitHome, binary: "0.3.0", execPath: aven, platform: "darwin" });
+  diagnose({
+    home,
+    unitHome,
+    binary: "0.3.0",
+    execPath: aven,
+    platform: "darwin",
+    checkDocker: () => Promise.resolve(undefined),
+    checkGit: () => Promise.resolve("git version 2.50.0"),
+  });
 
 const report = (checks: Awaited<ReturnType<typeof diagnose>>, name: string) =>
   checks.find((check) => check.name === name);

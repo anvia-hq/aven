@@ -38,6 +38,8 @@ export async function diagnose(
     binary?: string;
     execPath?: string;
     platform?: NodeJS.Platform;
+    checkDocker?: () => Promise<string | undefined>;
+    checkGit?: () => Promise<string | undefined>;
   } = {},
 ): Promise<Check[]> {
   const home = options.home ?? avenHome();
@@ -55,14 +57,14 @@ export async function diagnose(
 
   if (pending) warnUnless("update", false, pendingUpdateDetail(pending));
 
-  const git = await capture(["git", "--version"]);
+  const git = await (options.checkGit?.() ?? capture(["git", "--version"]));
   add("git", git !== undefined, git ?? "Not installed. A runner works on its folders with it.");
 
   const dir = serverDir(home);
   const serverEnv = await readEnv(join(dir, ".env"));
 
   if (serverEnv) {
-    const docker = await dockerProblem();
+    const docker = options.checkDocker ? await options.checkDocker() : await dockerProblem();
     add("docker", docker === undefined, docker ?? (await capture(["docker", "--version"])) ?? "");
     for (const check of await releaseChecks(dir, serverEnv, binary)) checks.push(check);
     const url = `http://localhost:${serverEnv.AVEN_API_PORT || API_PORT}/health`;
@@ -109,8 +111,9 @@ export async function diagnose(
     }
   }
 
-  if (!serverEnv && !runnerEnv)
+  if (!serverEnv && !runnerEnv) {
     add("install", false, "Neither a server nor a runner is installed here. Run: aven install");
+  }
 
   return checks;
 }
