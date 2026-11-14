@@ -350,7 +350,6 @@ export type RuntimeOptions = {
   typingPause?: BotRepliesContext["pause"];
   sandbox: ThreadWorkspaces;
   journalPath: string;
-  statePath?: string;
   onRefused?: (reason: string) => void;
   callTimeoutMs?: number;
   idleReleaseMs?: number;
