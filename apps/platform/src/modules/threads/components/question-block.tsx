@@ -1,5 +1,3 @@
-import { CheckCircle } from "@mynaui/icons-react";
-
 import { questionAnswers, SECRET_TOOL_NAME } from "@aven/protocol/events";
 import type { ToolPart } from "@aven/protocol/types";
 
@@ -21,33 +19,18 @@ export function QuestionBlock({ tool }: { tool: ToolPart }) {
   if (waiting) return null;
 
   return (
-    <section
-      aria-label="Answered questions"
-      className="min-w-0 overflow-hidden rounded-xl border bg-card/50 text-sm"
-    >
-      <header className="flex items-center gap-2 border-b px-3 py-2 text-xs text-muted-foreground">
-        <CheckCircle className="size-4 shrink-0 text-success" />
-        {headline(tool, prompts.length)}
-      </header>
-      <ol className="divide-y">
-        {prompts.map((prompt, index) => (
-          <li key={prompt.id} className="flex gap-3 px-3 py-2.5">
-            {prompts.length > 1 && (
-              <span className="mt-0.5 w-4 shrink-0 text-xs text-muted-foreground tabular-nums">
-                {index + 1}
-              </span>
+    <section aria-label="Answered questions" className="min-w-0 py-1 text-sm leading-6">
+      <p className="text-muted-foreground">{headline(tool, prompts.length)}</p>
+      <dl className="mt-2 flex flex-col gap-3">
+        {prompts.map((prompt) => (
+          <div key={prompt.id} className="flex min-w-0 flex-col gap-0.5">
+            <dt className="text-muted-foreground">{prompt.text}</dt>
+            {answers.has(prompt.id) && (
+              <dd className="break-words">{answerShown(prompt, answers.get(prompt.id) ?? "")}</dd>
             )}
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <p className="text-xs text-muted-foreground">{prompt.text}</p>
-              {answers.has(prompt.id) && (
-                <p className="font-medium break-words">
-                  {answerShown(prompt, answers.get(prompt.id) ?? "")}
-                </p>
-              )}
-            </div>
-          </li>
+          </div>
         ))}
-      </ol>
+      </dl>
     </section>
   );
 }

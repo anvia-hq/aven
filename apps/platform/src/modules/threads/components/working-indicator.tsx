@@ -1,36 +1,10 @@
 import { useEffect, useState } from "react";
 
 import { elapsed } from "@/lib/format";
+import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 
 import { useWorkingWord } from "../hooks/use-working-word";
-
-const STEPS = 4;
-const DOTS = Array.from({ length: 9 }, (_, index) => {
-  const step = Math.floor(index / 3) + (index % 3);
-  return { index, step };
-});
-
-export function WorkingDots({ label }: { label?: string }) {
-  return (
-    <span
-      className="grid shrink-0 grid-cols-3 gap-[2px]"
-      role={label ? "img" : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-    >
-      {DOTS.map(({ index, step }) => (
-        <span
-          key={index}
-          className="size-[3px] rounded-full motion-safe:animate-[working-dot_1.2s_ease-in-out_infinite]"
-          style={{
-            backgroundColor: `color-mix(in oklch, var(--working-from), var(--working-to) ${(step / STEPS) * 100}%)`,
-            animationDelay: `${step * 130}ms`,
-          }}
-        />
-      ))}
-    </span>
-  );
-}
 
 function WorkingWord() {
   const { current, previous } = useWorkingWord();
@@ -70,10 +44,17 @@ function WorkingTime({ startedAt }: { startedAt: number }) {
 }
 
 type Props = {
+  projectId: string;
   startedAt?: number | null;
 };
 
-export function WorkingIndicator({ running, startedAt = null }: Props & { running: boolean }) {
+export function WorkingIndicator({
+  running,
+  projectId,
+  startedAt = null,
+}: Props & { running: boolean }) {
+  const palettes = useProjectPalettes();
+
   if (!running) return null;
 
   return (
@@ -81,7 +62,7 @@ export function WorkingIndicator({ running, startedAt = null }: Props & { runnin
       data-role="working"
       className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
     >
-      <WorkingDots />
+      <ProjectTile projectId={projectId} palette={palettes.get(projectId)} speed={2} working />
       <WorkingWord />
       {startedAt !== null && (
         <>

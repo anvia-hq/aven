@@ -16,6 +16,7 @@ import { WorkingIndicator } from "./working-indicator";
 
 type Props = {
   threadId: string;
+  projectId: string;
   messages: ChatMessage[];
   earlier?: ChatMessage[];
   hidden?: number;
@@ -33,6 +34,7 @@ type Props = {
 
 export function ThreadMessages({
   threadId,
+  projectId,
   messages,
   earlier = [],
   hidden = 0,
@@ -131,7 +133,7 @@ export function ThreadMessages({
               </div>
             ))}
             <div className={cn(working.space, "empty:hidden")}>
-              <WorkingIndicator running={running} startedAt={startedAt} />
+              <WorkingIndicator running={running} projectId={projectId} startedAt={startedAt} />
             </div>
             {owned && (
               <div className="mt-4 empty:hidden">

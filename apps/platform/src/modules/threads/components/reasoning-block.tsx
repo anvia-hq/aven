@@ -5,13 +5,13 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/co
 export function ReasoningBlock({ text, thinking = false }: { text: string; thinking?: boolean }) {
   return (
     <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
-      <CollapsibleTrigger className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50">
+      <CollapsibleTrigger className="group flex w-fit max-w-full items-center gap-2 py-1 text-left text-muted-foreground transition-colors hover:text-foreground">
         <span className={cn("text-muted-foreground", thinking && "shimmer")}>
           {thinking ? "Thinking" : "Thoughts"}
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <p className="whitespace-pre-wrap px-2 pb-2 text-muted-foreground/80">{text}</p>
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
+        <p className="whitespace-pre-wrap pb-2 text-muted-foreground/80">{text}</p>
       </CollapsibleContent>
     </Collapsible>
   );
