@@ -82,6 +82,7 @@ test.describe("the agent's question", () => {
     await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByText("One question first.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Send" })).toBeVisible();
 
     await expect(page.getByRole("form", { name: "Answer the agent" })).toHaveCount(0);
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
