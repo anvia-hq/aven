@@ -102,7 +102,7 @@ describe("a runner that works on this machine", () => {
     expect(String(ran.stdout)).toContain("s3cret");
     expect(await readFile(join(workspace, "notes.txt"), "utf8")).toBe("hi");
     const refused = call(box.tools, "read_file", { path: "/etc/hosts" });
-    await expect(refused).rejects.toThrow();
+    await expect(refused).rejects.toThrow("cannot leave the workspace");
   });
 
   test("starts a fork from its parent's work, and keeps threads' folders apart", async () => {
@@ -130,13 +130,14 @@ describe("a runner that works on this machine", () => {
   });
 
   test("keeps uploads and skills in folders the agent can read by their real path", async () => {
-    const { sandbox } = await runner();
+    const { sandbox, home } = await runner();
 
     const uploaded = await sandbox.uploads.save("t1", "a.txt", new TextEncoder().encode("x"));
-    const { uploads } = sandbox.paths("t1");
+    const { uploads, skills } = sandbox.paths("t1");
 
     expect(uploaded).toBe(join(uploads, "a.txt"));
     expect(await readFile(uploaded, "utf8")).toBe("x");
+    expect(skills).toBe(join(home, "skills", "threads", "t1"));
   });
 
   test("says it is awake, has no desktop and opens a shell in the thread's folder", async () => {

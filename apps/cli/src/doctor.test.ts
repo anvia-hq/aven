@@ -113,8 +113,7 @@ test("warns when the runner service runs another aven, and passes for this one",
 
   const other = report(await doctor(), "runner unit");
   expect(other?.ok).toBe(false);
-  expect(other?.detail).toContain(join(home, "old", "aven"));
-  expect(other?.detail).toContain(aven);
+  expect(other?.detail).toContain(`${join(home, "old", "aven")}, not this aven at ${aven}`);
 
   await write(aven, "#!/bin/sh\n");
   await writeUnit(aven);

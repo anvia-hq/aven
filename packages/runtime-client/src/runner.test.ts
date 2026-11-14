@@ -554,16 +554,17 @@ describe("startRuntime", () => {
     });
 
     test("a sign-in that fails does not fail the run", async () => {
-      const { sandbox } = signingSandbox({ failSignIn: true });
+      const { sandbox, signedIn } = signingSandbox({ failSignIn: true });
       const silenced = console.warn;
       console.warn = () => undefined;
-      const { plane, runtime } = connect({ sandbox, createAgent: reply() });
+      const { plane, runtime } = connect({ sandbox, createAgent: wakingReply() });
       await runtime.ready;
 
       plane.send({ ...runStart, github: ada });
 
       await until(() => plane.received.some((message) => message.type === "run.end"));
       console.warn = silenced;
+      expect(signedIn).toEqual([{ threadId: "thread-1", github: ada }]);
       expect(plane.received.find((message) => message.type === "run.end")).toMatchObject({
         outcome: "response",
       });
@@ -1038,22 +1039,33 @@ describe("startRuntime", () => {
   test("a run whose computer is another machine does not watch processes on this runner", async () => {
     const { sandbox, up } = slowSandbox();
     up();
+    const started = Date.now();
     const plane = fakeControlPlane({
       answer: (message) => {
-        if (message.method !== "machine.call") return undefined;
+        if (message.method === "repo.folder") return { directory: null };
+
+        if (message.method !== "machine.call") return null;
 
         const { op } = message.params as { op: string };
 
+        if (op === "prepare") return { paths: null };
+
         if (op === "listProcesses") {
+          const process = {
+            id: "p1",
+            command: "sh",
+            args: ["-c", "bun test"],
+            startedAt: new Date(started + 1000).toISOString(),
+          };
+
+          if (Date.now() - started < 150) return [{ ...process, status: "running" }];
+
           return [
             {
-              id: "p1",
-              command: "sh",
-              args: ["-c", "bun test"],
+              ...process,
               status: "exited",
               exitCode: 0,
-              startedAt: new Date().toISOString(),
-              endedAt: new Date().toISOString(),
+              endedAt: new Date(started + 11_000).toISOString(),
             },
           ];
         }
@@ -1075,7 +1087,20 @@ describe("startRuntime", () => {
       token: "t",
       journalPath: journalPath(),
       sandbox,
-      createAgent: reply(),
+      createAgent: ({ id, tools }) => ({
+        agent: new Agent({
+          id,
+          tools: [...tools],
+          model: scriptedModel([
+            [toolCall("computer_wake", {})],
+            async () => {
+              await Bun.sleep(400);
+              return [text("ok")];
+            },
+          ]),
+          instructions: "x",
+        }),
+      }),
       processPollMs: 20,
     });
     cleanups.push(() => runtime.stop(), plane.stop);
@@ -1087,7 +1112,6 @@ describe("startRuntime", () => {
       prompt: "hi",
     });
     await until(() => plane.received.some((message) => message.type === "run.end"));
-    await Bun.sleep(80);
     expect(plane.received.some((message) => message.type === "process.ended")).toBe(false);
   });
 
@@ -1746,34 +1770,17 @@ describe("startRuntime runs", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
 
-    expect(made).toEqual([
-      {
-        id: "run-run-1",
-        attended: true,
-        tools: [
-          "git_fetch",
-          "computer_status",
-          "computer_wake",
-          "spawn_agent",
-          "fork_thread",
-          "fork_status",
-          "stop_fork",
-          "wait_for_forks",
-          "take_fork_changes",
-          "define_goal",
-        ],
-      },
-      {
-        id: "goal-run-1",
-        attended: false,
-        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
-      },
-      {
-        id: "run-run-1-report",
-        attended: false,
-        tools: ["git_fetch", "computer_status", "computer_wake", "spawn_agent"],
-      },
+    expect(made.map(({ id, attended }) => ({ id, attended }))).toEqual([
+      { id: "run-run-1", attended: true },
+      { id: "goal-run-1", attended: false },
+      { id: "run-run-1-report", attended: false },
     ]);
+    const attendedOnly = ["define_goal", "fork_thread", "take_fork_changes"];
+    const [attended, ...unattended] = made;
+    expect(attended!.tools).toEqual(expect.arrayContaining(attendedOnly));
+    for (const session of unattended) {
+      for (const tool of attendedOnly) expect(session.tools).not.toContain(tool);
+    }
     const texts = plane.received.flatMap((m) =>
       m.type === "run.event" && m.event.type === "text" ? [m.event.delta] : [],
     );

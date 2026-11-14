@@ -96,11 +96,17 @@ describe("TerminalSessions", () => {
   });
 
   test("output that a slow link cannot carry ends the terminal", async () => {
-    const { sessions, sent, link } = setup();
+    const { sessions, sent, frames, link } = setup();
     sessions.open(viewerId, "t1", size);
     link.buffered = 64 * 1024 * 1024;
     sessions.write(viewerId, type("echo hi\n"));
     await until(() => sent.some((message) => message.type === "terminal.closed"));
+    expect(sent.at(-1)).toEqual({
+      type: "terminal.closed",
+      viewerId,
+      reason: "The terminal's output was too fast to carry",
+    });
+    expect(frames).toEqual([]);
     expect(sessions.has(viewerId)).toBe(false);
   });
 });

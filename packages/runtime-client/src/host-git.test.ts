@@ -105,7 +105,9 @@ describe("git the runner runs on a workspace", () => {
     await symlink(join(other.root, ".git"), join(root, ".git"));
     expect((await hostGit()(["status"], { cwd: root })).code).toBe(128);
 
-    await writeFile(join(other.root, ".git", "commondir"), "..\n");
+    const third = await workspace();
+    await writeFile(join(other.root, ".git", "commondir"), `${join(third.root, ".git")}\n`);
+    expect((await git(["status"], { cwd: other.root })).code).toBe(0);
     expect((await hostGit()(["status"], { cwd: other.root })).code).toBe(128);
   });
 

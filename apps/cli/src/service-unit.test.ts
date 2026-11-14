@@ -93,8 +93,7 @@ test("warns when the unit runs another aven", async () => {
     home,
   });
 
-  expect(state?.problem).toContain(old);
-  expect(state?.problem).toContain("/usr/local/bin/aven");
+  expect(state?.problem).toBe(`${state?.file} runs ${old}, not this aven at /usr/local/bin/aven`);
 });
 
 test("a unit that names no program, and no unit at all", async () => {

@@ -158,7 +158,7 @@ describe("the Claude backend", () => {
       () => undefined,
     );
     await expect(refused).rejects.toThrow("The workspace is gone");
-    await backend.cancelRun("claude-run-1");
+    expect(await backend.steer("claude-run-1", "more", "s1")).toBe(false);
     await backend.close();
   });
 
