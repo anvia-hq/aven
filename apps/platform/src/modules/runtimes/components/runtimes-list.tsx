@@ -7,56 +7,111 @@ import { SettingsEmpty } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 
 import { useRuntimes } from "../hooks/use-runtimes";
+import { useRuntimeTrend } from "../hooks/use-runtime-trend";
 import { isStale, machineMetrics } from "../machine-metrics";
-import type { Runtime } from "../types";
+import type { MachineMetric, Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
+import { RuntimeSparkline } from "./runtime-sparkline";
 import { githubModeNote } from "../github-mode";
 import { GithubRuntimeDialog } from "./github-runtime-dialog";
 import { RenameRuntimeDialog } from "./rename-runtime-dialog";
 import { RotateRuntimeDialog } from "./rotate-runtime-dialog";
 import { UpdateRuntimeDialog } from "./update-runtime-dialog";
 
-const head = "px-3 py-2 text-left text-xs font-medium text-muted-foreground";
+function trendDirection(metric: MachineMetric, previous: number | null) {
+  if (previous === null || metric.percent === null) return "flat";
 
-function Status({ runtime }: { runtime: Runtime }) {
+  if (metric.percent > previous) return "up";
+
+  if (metric.percent < previous) return "down";
+
+  return "flat";
+}
+
+const trendLabel: Record<string, string> = { up: "▲", down: "▼", flat: "–" };
+
+function Trend({ metric, previous }: { metric: MachineMetric; previous: number | null }) {
+  if (previous === null || metric.percent === null)
+    return <span className="text-[10px] font-semibold text-muted-foreground">–</span>;
+
+  const direction = trendDirection(metric, previous);
+
   return (
-    <span className="inline-flex items-center gap-2 text-xs">
-      <span
-        role="img"
-        aria-label={runtime.online ? "Online" : "Offline"}
-        className={cn(
-          "size-2 rounded-full",
-          runtime.online ? "bg-success" : "bg-muted-foreground/40",
-        )}
-      />
-      {runtime.online ? "Online" : "Offline"}
+    <span
+      className={cn(
+        "text-[10px] font-semibold",
+        direction === "up" && "text-destructive",
+        direction === "down" && "text-success",
+        direction === "flat" && "text-muted-foreground",
+      )}
+    >
+      {trendLabel[direction]} {Math.abs(metric.percent - previous)}%
     </span>
   );
 }
 
-function Load({ runtime }: { runtime: Runtime }) {
-  const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
-
-  if (!stats) return <span className="text-xs text-muted-foreground">–</span>;
+function LoadTile({
+  runtime,
+  metric,
+  history,
+  previous,
+}: {
+  runtime: Runtime;
+  metric: MachineMetric;
+  history: number[];
+  previous: number | null;
+}) {
+  const empty = history.length === 0;
 
   return (
-    <span className="flex items-center gap-2.5">
-      {machineMetrics(stats).map((metric) => (
-        <span
-          key={metric.key}
-          role="meter"
-          aria-label={`${metric.label} of ${runtime.name}`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={metric.percent ?? undefined}
-          title={`${metric.label}: ${metric.detail}`}
-          className="flex items-center gap-1 text-xs"
-        >
-          <MeterBar percent={metric.percent} />
-          <span className="text-[10px] text-muted-foreground">{metric.short}</span>
-          <span className="tabular-nums">{metric.percent ?? "–"}</span>
+    <div className="rounded-lg border bg-card/40 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+          {metric.short} · {metric.detail}
         </span>
-      ))}
+        <Trend metric={metric} previous={previous} />
+      </div>
+      <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">
+        {metric.percent ?? "–"}
+        <span className="text-[11px] font-normal text-muted-foreground">%</span>
+      </div>
+      {empty ? (
+        <p className="mt-1.5 h-6 text-[11px] text-muted-foreground">
+          Trend appears after two reports.
+        </p>
+      ) : (
+        <div className="mt-1.5 flex items-end gap-2">
+          <MeterBar percent={metric.percent} />
+          <RuntimeSparkline
+            points={history}
+            className="h-6 min-w-0 flex-1"
+            aria-label={`${metric.label} trend of ${runtime.name}`}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Status({ runtime }: { runtime: Runtime }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
+        runtime.online
+          ? "border-success/30 bg-success/10 text-success"
+          : "border-muted-foreground/20 bg-muted/40 text-muted-foreground",
+      )}
+    >
+      <span
+        role="img"
+        aria-label={runtime.online ? "Online" : "Offline"}
+        className={cn(
+          "size-1.5 rounded-full",
+          runtime.online ? "animate-pulse bg-success" : "bg-muted-foreground/50",
+        )}
+      />
+      {runtime.online ? "Online" : "Offline"}
     </span>
   );
 }
@@ -69,100 +124,136 @@ export function RuntimesList() {
   if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
 
   return (
-    <div className="overflow-hidden rounded-xl border">
-      <table aria-label="Runtimes" className="w-full text-sm">
-        <thead className="border-b bg-muted/30">
-          <tr>
-            <th className={head}>Runtime</th>
-            <th className={head}>Status</th>
-            <th className={head}>Version</th>
-            <th className={head}>Load</th>
-            <th className={head}>Last seen</th>
-            <th className={cn(head, "w-40")}>
-              <span className="sr-only">Actions</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y">
-          {runtimes.map((runtime) => (
-            <tr key={runtime.id} aria-label={runtime.name}>
-              <td className="px-3 py-3">
-                <span className="flex items-center gap-2 font-medium">
-                  {runtime.name}
-                  {runtime.host && (
-                    <Badge
-                      variant="outline"
-                      title="Works on this computer itself, with no sandbox: the agent runs as the person who runs it"
-                    >
-                      This computer
-                    </Badge>
-                  )}
-                  <Badge
-                    variant="outline"
-                    title={githubModeNote(runtime.githubMode, runtime.github)}
-                  >
-                    {runtime.githubMode === "person"
-                      ? "GitHub: each person"
-                      : "GitHub: this machine"}
-                  </Badge>
-                  {runtime.ownerId === null && (
-                    <span
-                      role="img"
-                      aria-label="Built in"
-                      title="Built in: the runner of the control plane"
-                      className="flex shrink-0 text-muted-foreground"
-                    >
-                      <Servers className="size-4" />
-                    </span>
-                  )}
-                </span>
-              </td>
-              <td className="px-3 py-3">
-                <Status runtime={runtime} />
-              </td>
-              <td className="px-3 py-3">
-                <span className="flex items-center gap-2 font-mono text-xs">
-                  {runtime.build ? `v${runtime.build}` : "–"}
-                  {runtime.updateTo && (
-                    <Badge
-                      variant="outline"
-                      title="Update it here, or run `aven update` on that machine"
-                    >
-                      Update available
-                    </Badge>
-                  )}
-                </span>
-              </td>
-              <td className="px-3 py-3">
-                <Load runtime={runtime} />
-              </td>
-              <td className="px-3 py-3 text-xs text-muted-foreground">
+    <ul aria-label="Runtimes" className="flex flex-col gap-3">
+      {runtimes.map((runtime) => (
+        <RuntimeCard
+          key={runtime.id}
+          runtime={runtime}
+          canRename={canRename(runtime)}
+          ownedByMe={isOwnedByMe(runtime)}
+          onRevoke={() => void revoke(runtime)}
+        />
+      ))}
+    </ul>
+  );
+}
+
+function RuntimeCard({
+  runtime,
+  canRename,
+  ownedByMe,
+  onRevoke,
+}: {
+  runtime: Runtime;
+  canRename: boolean;
+  ownedByMe: boolean;
+  onRevoke: () => void;
+}) {
+  const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
+  const metrics = stats ? machineMetrics(stats) : [];
+  const trend = useRuntimeTrend(runtime, metrics);
+
+  return (
+    <li aria-label={runtime.name} className="rounded-xl border bg-card/30 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
+            <Servers className="size-4 text-muted-foreground" />
+          </span>
+          <span className="min-w-0">
+            <span className="block truncate font-medium">{runtime.name}</span>
+            <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+              <span className="font-mono">{runtime.build ? `v${runtime.build}` : "–"}</span>
+              {" · "}
+              <span className="whitespace-nowrap">
                 {runtime.lastSeenAt ? timeAgo(runtime.lastSeenAt, true) : "Never"}
-              </td>
-              <td className="px-3 py-3">
-                <span className="flex items-center justify-end gap-1">
-                  <UpdateRuntimeDialog runtime={runtime} />
-                  {canRename(runtime) && <GithubRuntimeDialog runtime={runtime} />}
-                  {canRename(runtime) && <RenameRuntimeDialog runtime={runtime} />}
-                  {isOwnedByMe(runtime) && (
-                    <>
-                      <RotateRuntimeDialog runtime={runtime} />
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        aria-label={`Revoke ${runtime.name}`}
-                        onClick={() => void revoke(runtime)}
-                      >
-                        <Trash />
-                      </Button>
-                    </>
-                  )}
-                </span>
-              </td>
-            </tr>
+              </span>
+              {stats
+                ? ` · ${stats.sandboxes} ${stats.sandboxes === 1 ? "sandbox" : "sandboxes"} running`
+                : null}
+            </span>
+          </span>
+        </div>
+        <Status runtime={runtime} />
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {runtime.host && (
+          <Badge
+            variant="outline"
+            title="Works on this computer itself, with no sandbox: the agent runs as the person who runs it"
+          >
+            This computer
+          </Badge>
+        )}
+        <Badge variant="outline" title={githubModeNote(runtime.githubMode, runtime.github)}>
+          {runtime.githubMode === "person" ? "GitHub: each person" : "GitHub: this machine"}
+        </Badge>
+        {runtime.ownerId === null && (
+          <span
+            role="img"
+            aria-label="Built in"
+            title="Built in: the runner of the control plane"
+            className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
+          >
+            <Servers className="size-3.5" />
+            Built in
+          </span>
+        )}
+        {runtime.updateTo && (
+          <Badge variant="outline" title="Update it here, or run `aven update` on that machine">
+            Update available
+          </Badge>
+        )}
+      </div>
+
+      {metrics.length > 0 ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {metrics.map((metric) => (
+            <LoadTile
+              key={metric.key}
+              runtime={runtime}
+              metric={metric}
+              history={trend.history[metric.key]}
+              previous={trend.previous[metric.key]}
+            />
           ))}
-        </tbody>
-      </table>
-    </div>
+          <div className="rounded-lg border bg-card/40 p-2.5">
+            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+              Sandbox
+            </span>
+            <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">
+              {stats?.sandboxes ?? "–"}
+              <span className="ml-1 text-[11px] font-normal text-muted-foreground">running</span>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-muted-foreground">
+          {runtime.online
+            ? "Waiting for the runner to report its load."
+            : "Offline: no load to show."}
+        </p>
+      )}
+
+      <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3">
+        <UpdateRuntimeDialog runtime={runtime} />
+        {canRename && <GithubRuntimeDialog runtime={runtime} />}
+        {canRename && <RenameRuntimeDialog runtime={runtime} />}
+        {ownedByMe && (
+          <>
+            <RotateRuntimeDialog runtime={runtime} />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Revoke ${runtime.name}`}
+              onClick={onRevoke}
+            >
+              <Trash />
+            </Button>
+          </>
+        )}
+      </div>
+    </li>
   );
 }
