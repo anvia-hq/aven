@@ -6,6 +6,7 @@ import type {
   DIFF_SCOPES,
   MACHINE_OPS,
   PROVIDERS,
+  BOAT_MACHINE_TYPES,
   RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
@@ -395,6 +396,8 @@ export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
 
 export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
+
+export type BoatMachineType = (typeof BOAT_MACHINE_TYPES)[number];
 
 export type RuntimeLifetime = (typeof RUNTIME_LIFETIMES)[number];
 
