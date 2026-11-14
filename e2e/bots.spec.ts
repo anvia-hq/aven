@@ -514,9 +514,11 @@ test.describe("bots", () => {
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
     await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
     await page.getByRole("link", { name: "Aven, main bot" }).click();
+    await expect(page.getByRole("heading", { name: "Aven" })).toBeVisible();
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
     await message.click();
@@ -552,6 +554,7 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
     await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(activity).toContainText("2 messages with");
     await expect(activity).toContainText("Aven");
@@ -795,6 +798,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
     await page.getByRole("link", { name: /Scout/ }).click();
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
