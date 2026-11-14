@@ -41,6 +41,7 @@ export type BotKeeper = {
   list(userId: string): Promise<Bot[]>;
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
+  remove(userId: string, id: string): Promise<void>;
   deliver(letter: BotLetter): Promise<BotSent>;
   timezone(userId: string): Promise<string>;
   schedules: {

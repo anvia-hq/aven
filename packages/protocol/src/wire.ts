@@ -35,6 +35,7 @@ import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "./mcp-schema";
 import { providerBaseUrl, providerModelId, providerName } from "./provider-schema";
 import type {
   BotCreateParams,
+  BotDeleteParams,
   BotGoalParams,
   BotMcpParams,
   BotMemoryParams,
@@ -70,6 +71,7 @@ const callMethods = [
   "mcp.report",
   "bot.memory",
   "bot.create",
+  "bot.delete",
   "bot.update",
   "bot.send",
   "bot.react",
@@ -343,6 +345,11 @@ const botCreateParams = z.object({
   description: z.string().trim().max(BOT_DESCRIPTION_MAX).optional(),
 });
 
+const botDeleteParams = z.object({
+  replyId,
+  handle: z.string().trim().min(1).max(64),
+});
+
 const botQuestionParams = z.object({
   replyId,
   questions: botQuestionsSchema.transform(toQuestions),
@@ -612,6 +619,8 @@ export const parseBotMemoryParams = (params: unknown) =>
   parseParams(botMemoryParams, params) as BotMemoryParams;
 export const parseBotCreateParams = (params: unknown) =>
   parseParams(botCreateParams, params) as BotCreateParams;
+export const parseBotDeleteParams = (params: unknown) =>
+  parseParams(botDeleteParams, params) as BotDeleteParams;
 export const parseBotQuestionParams = (params: unknown) =>
   parseParams(botQuestionParams, params) as BotQuestionParams;
 export const parseBotScheduleParams = (params: unknown) =>

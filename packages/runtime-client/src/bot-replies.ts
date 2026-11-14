@@ -47,6 +47,7 @@ export const defaultCreateBotAgent =
     memory,
     computer,
     createBot,
+    deleteBot,
     askQuestion,
     goals,
     schedules,
@@ -80,6 +81,7 @@ export const defaultCreateBotAgent =
       memory,
       computer,
       createBot,
+      deleteBot,
       askQuestion,
       goals,
       schedules,
@@ -477,6 +479,16 @@ export class BotReplies {
               description: input.description ?? "",
             });
             return made;
+          }
+        : undefined,
+      deleteBot: bot.canCreateBots
+        ? async (input) => {
+            const gone = await call("bot.delete", { ...input, replyId });
+            const at = peers.findIndex((peer) => peer.handle === gone.handle);
+
+            if (at >= 0) peers.splice(at, 1);
+
+            return gone;
           }
         : undefined,
     });

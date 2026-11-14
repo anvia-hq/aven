@@ -2,7 +2,7 @@ import { getDefaultStore, useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@aven/ui/toast";
-import { attempt, postJson } from "@/lib/api";
+import { api, attempt, postJson } from "@/lib/api";
 import { createListStore } from "@/lib/list-store";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
@@ -39,10 +39,24 @@ export function useBots() {
     return true;
   }
 
+  async function remove(bot: Bot) {
+    const removed = await attempt("Could not delete the bot", () =>
+      api<{ ok: true }>(`/bots/${bot.id}`, { method: "DELETE" }),
+    );
+
+    if (!removed) return false;
+
+    await botsStore.refresh();
+    toast.add({ title: "Bot deleted", description: bot.name });
+
+    return true;
+  }
+
   return {
     bots: bots ?? [],
     main: bots?.find((bot) => bot.isMain),
     loaded: bots !== null,
     update,
+    remove,
   };
 }

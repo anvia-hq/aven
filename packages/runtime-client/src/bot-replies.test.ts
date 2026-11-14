@@ -144,6 +144,11 @@ function harness(
         return { id: "b2", name, handle: name.toLowerCase() };
       }
 
+      if (method === "bot.delete") {
+        const { handle } = params as { handle: string };
+        return { name: "Scout", handle };
+      }
+
       if (method === "bot.send") {
         if (options.failSend) throw new Error('No bot with the handle "ghost"');
 
@@ -679,6 +684,37 @@ describe("BotReplies", () => {
       { type: "bot.say", replyId: "r1", text: "Scout is ready" },
       { type: "bot.end", replyId: "r1" },
     ]);
+  });
+
+  test("the main bot deletes a bot by asking the control plane, and only the main bot is given the tool", async () => {
+    const asked: string[] = [];
+    const main = harness(({ deleteBot, memory }) => ({
+      generate: async () => {
+        await memory.store.load({ scope: { sessionId: "bot-1" } });
+        const gone = await deleteBot?.({ handle: "scout" });
+        asked.push(gone ? `${gone.name}:${gone.handle}` : "no tool");
+        return { type: "response" } as never;
+      },
+    }));
+
+    main.replies.start({ ...message, bot: { ...message.bot, canCreateBots: true } });
+    await main.until();
+
+    expect(asked[0]).toBe("Scout:scout");
+    expect(main.calls).toContainEqual({
+      method: "bot.delete",
+      params: { replyId: "r1", handle: "scout" },
+    });
+
+    let offered: boolean | undefined;
+    const other = harness((input) => {
+      offered = Boolean(input.deleteBot);
+      return agentThat([text("hi")])(input);
+    });
+    other.replies.start(message);
+    await other.until();
+
+    expect(offered).toBe(false);
   });
 
   test("a bot writes to another by asking the control plane, for its own reply, and what it writes to the person is typed", async () => {

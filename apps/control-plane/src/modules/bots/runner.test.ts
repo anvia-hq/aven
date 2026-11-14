@@ -113,6 +113,29 @@ const stopped = (events: BotEvent[]) =>
   events.some((event) => event.type === "typing" && !event.typing);
 
 describe("BotRunner", () => {
+  test("forgetting a bot clears its chat, and is refused while it is at work", async () => {
+    const store = fakeStore();
+    const release = Promise.withResolvers<void>();
+    const replier: BotReplier = {
+      ready: () => undefined,
+      answer: async () => release.promise,
+    };
+    const runner = new BotRunner({ store, replier });
+    await store.append({
+      scope: { sessionId: bot.id, userId: USER },
+      messages: [{ role: "user", content: "hi" }],
+    } as never);
+
+    await runner.send(bot, USER, "hello", model);
+    await expect(runner.forget(bot.id, USER)).rejects.toBeInstanceOf(ConflictError);
+    release.resolve();
+    await until(() => runner.isIdle(bot.id));
+
+    await runner.forget(bot.id, USER);
+
+    expect(await store.load({ scope: { sessionId: bot.id, userId: USER } })).toEqual([]);
+  });
+
   test("a message with files shows them in the chat without their bytes, and the reply is given the bytes (decision 0080)", async () => {
     const answered: BotReplyInput[] = [];
     const replier: BotReplier = {

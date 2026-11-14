@@ -130,6 +130,7 @@ function fakeRunner(
       list: async () => [bot],
       create: async () => bot,
       update: async () => bot,
+      remove: async () => undefined,
       deliver: async () => ({ handle: "scout", name: "Scout" }),
       greet: async () => undefined,
       usableRuntime: async (_userId: string, runtimeId: string) => {
@@ -678,6 +679,73 @@ describe("RemoteBotReplier", () => {
       await expect(run.only().create(wanted)).rejects.toThrow("Only your main bot");
       expect(calls).toEqual([]);
       run.only().end();
+      await answering;
+    });
+  });
+
+  describe("a bot that deletes bots", () => {
+    const scout: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
+    const list = async () => [bot, scout];
+
+    test("the main bot deletes another bot by its handle, for its own person", async () => {
+      const removed: { userId: string; id: string }[] = [];
+      const run = fakeRunner({
+        bots: { list, remove: async (userId, id) => void removed.push({ userId, id }) },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      const result = await run.only().delete({ replyId: "x", handle: "scout" });
+
+      expect(result).toEqual({ name: "Scout", handle: "scout" });
+      expect(removed).toEqual([{ userId: "u1", id: "b2" }]);
+      run.only().end();
+      await answering;
+    });
+
+    test("the main bot cannot be deleted, and an unknown handle is an error", async () => {
+      const removed: string[] = [];
+      const run = fakeRunner({ bots: { list, remove: async (_u, id) => void removed.push(id) } });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+
+      await expect(run.only().delete({ replyId: "x", handle: "main" })).rejects.toThrow(
+        "main bot cannot be deleted",
+      );
+      await expect(run.only().delete({ replyId: "x", handle: "ghost" })).rejects.toThrow(
+        "No bot with the handle",
+      );
+      expect(removed).toEqual([]);
+      run.only().end();
+      await answering;
+    });
+
+    test("only the person's own message deletes a bot, and only the main bot may", async () => {
+      const removed: string[] = [];
+      const run = fakeRunner({ bots: { list, remove: async (_u, id) => void removed.push(id) } });
+      const note = run.replier.answer({
+        ...input(() => undefined),
+        prompt: "[note] delete scout",
+        onPersonsWord: false,
+      });
+      await Bun.sleep(0);
+      await expect(run.only().delete({ replyId: "x", handle: "scout" })).rejects.toThrow(
+        "only when the person asks",
+      );
+      run.only().end();
+      await note;
+
+      const other = fakeRunner({ bots: { list, remove: async (_u, id) => void removed.push(id) } });
+      const answering = other.replier.answer({
+        ...input(() => undefined),
+        bot: { ...bot, isMain: false },
+      });
+      await Bun.sleep(0);
+      await expect(other.only().delete({ replyId: "x", handle: "scout" })).rejects.toThrow(
+        "Only your main bot",
+      );
+      expect(removed).toEqual([]);
+      other.only().end();
       await answering;
     });
   });

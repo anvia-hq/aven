@@ -771,6 +771,7 @@ export type SkillsCallMethod = "skills.get";
 export type BotCallMethod =
   | "bot.memory"
   | "bot.create"
+  | "bot.delete"
   | "bot.update"
   | "bot.send"
   | "bot.react"
@@ -1002,9 +1003,14 @@ export type BotGoaled = BotGoalView | null;
 
 export type BotCreated = { id: string; name: string; handle: string };
 
+export type BotDeleteParams = { replyId: string; handle: string };
+
+export type BotDeleted = { name: string; handle: string };
+
 export type RuntimeCalls = {
   "bot.memory": { params: BotMemoryParams; result: unknown };
   "bot.create": { params: BotCreateParams; result: BotCreated };
+  "bot.delete": { params: BotDeleteParams; result: BotDeleted };
   "bot.update": { params: BotUpdateParams; result: BotUpdated };
   "bot.send": { params: BotSendParams; result: BotSent };
   "bot.react": { params: BotReactParams; result: BotReacted };

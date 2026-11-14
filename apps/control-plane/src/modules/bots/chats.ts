@@ -78,6 +78,16 @@ export const createBotChats = (runner: BotRunner) => ({
     return { handle: target.handle, name: target.name };
   },
 
+  async remove(userId: string, botId: string) {
+    const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
+
+    if (bot.isMain) throw new UnprocessableError("The main bot cannot be deleted");
+
+    await runner.forget(bot.id, userId);
+    orNotFound(await botsService.remove(userId, bot.id), "Bot not found");
+    return bot;
+  },
+
   async greet(userId: string, botId: string, hops: number) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
     await runner.wake(bot, userId, GREETING, hops, await modelOf(userId, bot));

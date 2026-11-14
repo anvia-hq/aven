@@ -184,6 +184,7 @@ export const botRunner = new BotRunner({
       list: (userId) => botsService.list(userId),
       create: (userId, bot) => botsService.create(userId, bot),
       update: (userId, id, changes) => botsService.update(userId, id, changes),
+      remove: async (userId, id) => void (await botChats.remove(userId, id)),
       deliver: (letter) => botChats.deliver(letter),
       greet: (userId, botId, hops) => botChats.greet(userId, botId, hops),
       usableRuntime: requireUsableRuntime,

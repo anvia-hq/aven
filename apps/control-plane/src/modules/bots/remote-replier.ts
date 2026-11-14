@@ -38,6 +38,8 @@ import type {
   BotReactParams,
   BotScheduled,
   BotScheduleParams,
+  BotDeleted,
+  BotDeleteParams,
   BotSendParams,
   BotSkillParams,
   BotThreaded,
@@ -158,6 +160,21 @@ export class RemoteBotReplier implements BotReplier {
           console.warn(`Bot ${made.id} could not greet its person:`, error);
         });
         return { id: made.id, name: made.name, handle: made.handle };
+      },
+      delete: async ({ handle }: Omit<BotDeleteParams, "replyId">): Promise<BotDeleted> => {
+        if (!bot.isMain) throw new Error("Only your main bot can delete bots");
+
+        if (!makesBotsOnTheirWord)
+          throw new Error("Delete a bot only when the person asks you to, in their own message");
+
+        const target = (await this.bots.list(userId)).find((each) => each.handle === handle);
+
+        if (!target) throw new Error(`No bot with the handle "${handle}". Use list_bots.`);
+
+        if (target.isMain) throw new Error("The main bot cannot be deleted");
+
+        await this.bots.remove(userId, target.id);
+        return { name: target.name, handle: target.handle };
       },
       send: ({ to, text }: Omit<BotSendParams, "replyId">) => sendToBot(to, text),
       question: async ({

@@ -1,4 +1,5 @@
 import type { NewBotInput } from "./create-bot";
+import type { DeleteBotInput } from "./delete-bot";
 import type { McpServerInput, McpServerPatch } from "./mcp-servers";
 import type { ProviderInput, ProviderPatch } from "./providers";
 import type { ScheduleInput, SchedulePatch } from "./schedules";
@@ -56,6 +57,8 @@ export type CockpitHost = (command: CockpitCommand) => Promise<string>;
 export type CreateBot = (
   input: NewBotInput,
 ) => Promise<{ id: string; name: string; handle: string }>;
+
+export type DeleteBot = (input: DeleteBotInput) => Promise<{ name: string; handle: string }>;
 
 export type EditableFiles = {
   workdir: string;

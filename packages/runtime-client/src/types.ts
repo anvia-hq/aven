@@ -30,6 +30,7 @@ import type {
   CockpitHost,
   ComputerHost,
   CreateBot,
+  DeleteBot,
   ForkHost,
   GoalHost,
   McpServersHost,
@@ -89,6 +90,7 @@ export type CreateBotReplyAgent = (input: {
   computer: readonly AnyTool[];
   paths?: SandboxPaths;
   createBot?: CreateBot;
+  deleteBot?: DeleteBot;
   askQuestion?: AskQuestion;
   goals: GoalHost;
   schedules: ScheduleHost;
