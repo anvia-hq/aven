@@ -37,7 +37,7 @@ const until = async (condition: () => boolean) => {
   expect(condition()).toBe(true);
 };
 
-function fakeBackend() {
+function fakeBackend(kind: AgentBackend["kind"] = "native") {
   const calls: { method: string; id: string }[] = [];
   const emitted: { current?: (event: RunEvent) => void } = {};
   const steered: string[] = [];
@@ -52,8 +52,8 @@ function fakeBackend() {
     };
   };
   const backend: AgentBackend = {
-    kind: "native",
-    capabilities: AGENT_BACKEND_CAPABILITIES.native,
+    kind,
+    capabilities: AGENT_BACKEND_CAPABILITIES[kind],
     asked: async () => parked,
     async start(runId, _thread, _prompt, _input, emit) {
       emitted.current = emit as (event: RunEvent) => void;
@@ -292,6 +292,25 @@ describe("a long run is told to hand off to a goal", () => {
     await until(() => native.steered.length === 1);
     expect(native.steered).toEqual([HAND_OFF_NOTICE]);
     native.finish("run-1");
+    await running;
+  });
+});
+
+describe("a long Claude run counts its tool calls as turns", () => {
+  test("the notice is sent at the hand-off turn", async () => {
+    const claude = fakeBackend("claude");
+    const { driver, records } = harness(Promise.resolve(claude.backend));
+    const running = driver.start(start("run-1"));
+    await until(() => records.get("run-1")?.durableId === "durable-run-1");
+    const usage = { type: "usage", turn: {} } as unknown as RunEvent;
+    const tool = { type: "tool_start", tool: {} } as unknown as RunEvent;
+
+    for (let i = 0; i < HAND_OFF_TURN; i++) claude.emitted.current?.(usage);
+    expect(claude.steered).toEqual([]);
+
+    for (let i = 0; i < HAND_OFF_TURN; i++) claude.emitted.current?.(tool);
+    await until(() => claude.steered.length === 1);
+    claude.finish("run-1");
     await running;
   });
 });
