@@ -579,11 +579,12 @@ export function createRunDriver(context: DriverContext) {
         : Promise.resolve(build(id, attended));
     let followed: FollowedRun | undefined;
     let turns = 0;
+    const counted = backend.kind === "claude" ? "tool_start" : "usage";
     const send = scope.forward;
     const forward: Emit = (event, source) => {
       send(event, source);
 
-      if (event.type !== "usage" || ++turns !== HAND_OFF_TURN || !followed) return;
+      if (event.type !== counted || ++turns !== HAND_OFF_TURN || !followed) return;
 
       void backend
         .steer(followed.durableId, HAND_OFF_NOTICE, `hand-off-${runId}`)
