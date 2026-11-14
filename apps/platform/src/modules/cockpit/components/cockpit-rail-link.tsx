@@ -9,7 +9,7 @@ export function CockpitRailLink() {
   });
   return (
     <RailLink to="/cockpit/inbox" label="Cockpit" active={active}>
-      <Grid className="size-5" strokeWidth={1.7} />
+      <Grid className="size-[17px]" strokeWidth={1.7} />
     </RailLink>
   );
 }

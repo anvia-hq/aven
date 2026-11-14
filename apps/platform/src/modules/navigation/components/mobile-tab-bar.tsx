@@ -62,6 +62,9 @@ export function MobileTabBar() {
       <Tab to="/threads" label="Threads" active={isThreadsSection(pathname)}>
         <AvenMark className="w-5 text-brand" />
       </Tab>
+      <Tab to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
+        <Grid className="size-5" strokeWidth={1.7} />
+      </Tab>
       <Tab to="/bot" label="Bot" active={pathname.startsWith("/bot")}>
         {main ? (
           <BotAvatar
@@ -72,9 +75,6 @@ export function MobileTabBar() {
         ) : (
           <span className="size-5 rounded-md bg-sidebar-accent" />
         )}
-      </Tab>
-      <Tab to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
-        <Grid className="size-5" strokeWidth={1.7} />
       </Tab>
     </nav>
   );

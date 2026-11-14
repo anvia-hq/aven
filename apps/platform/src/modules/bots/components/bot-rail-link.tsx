@@ -15,9 +15,9 @@ export function BotRailLink() {
   return (
     <RailLink to="/bot" label="Bot" tooltip={main?.name ?? "Bot"} active={active}>
       {main ? (
-        <BotAvatar bot={main} mood={working.has(main.id) ? "working" : "idle"} className="size-6" />
+        <BotAvatar bot={main} mood={working.has(main.id) ? "working" : "idle"} className="size-5" />
       ) : (
-        <span className="size-6 rounded-lg bg-sidebar-accent" />
+        <span className="size-5 rounded-lg bg-sidebar-accent" />
       )}
     </RailLink>
   );

@@ -4,7 +4,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
 const tabs = [
-  { to: "/threads", label: "Threads", icon: Chat, exact: true },
+  { to: "/threads", label: "New thread", icon: Chat, exact: true },
   { to: "/projects", label: "Projects", icon: Folder, exact: false },
 ] as const;
 

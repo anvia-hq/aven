@@ -6,6 +6,7 @@ import {
   previews,
   runsService,
   scheduler,
+  threadRetention,
   threadWatcher,
 } from "./composition";
 import { editionInUse } from "./edition/current";
@@ -46,6 +47,7 @@ export async function startControlPlane(edition: Edition) {
     await scheduler.close();
     await goalDriver.close();
     await threadWatcher.close();
+    await threadRetention.close();
     runsService.dispose();
     process.exit(0);
   };
@@ -55,6 +57,7 @@ export async function startControlPlane(edition: Edition) {
   scheduler.start();
   goalDriver.start();
   threadWatcher.start();
+  threadRetention.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

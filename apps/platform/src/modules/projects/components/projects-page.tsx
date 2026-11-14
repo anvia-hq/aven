@@ -102,7 +102,7 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-1rem-2px)]">
+    <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-2px)]">
       <PageHeader
         title="Projects"
         description="Each project with its threads. Open one to see its files, README and commits."

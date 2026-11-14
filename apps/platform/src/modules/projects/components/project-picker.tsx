@@ -1,4 +1,4 @@
-import { Folder } from "@mynaui/icons-react";
+import { Folder, FolderSolid } from "@mynaui/icons-react";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
@@ -23,7 +23,7 @@ export function ProjectPicker({ value, onChange }: Props) {
         aria-label="Project"
         className="max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-muted-foreground dark:bg-muted/50"
       >
-        <Folder />
+        <FolderSolid />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
       <SelectContent

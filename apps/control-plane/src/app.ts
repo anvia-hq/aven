@@ -38,7 +38,6 @@ import { githubRouter } from "./modules/github/router";
 import { announcementsRouter } from "./modules/announcements/router";
 import { platformRouter } from "./modules/platform/router";
 import { serverModelsRouter } from "./modules/server-models/router";
-import { foldersRouter } from "./modules/folders/router";
 import { preferencesRouter } from "./modules/preferences/router";
 import { previewRouter } from "./modules/preview/router";
 import { avatarsRouter } from "./modules/avatars/router";
@@ -83,7 +82,6 @@ export const app = new Elysia()
   .use(platformRouter(putAwayThread))
   .use(announcementsRouter)
   .use(serverModelsRouter)
-  .use(foldersRouter)
   .use(preferencesRouter)
   .use(profileRouter)
   .use(avatarsRouter)

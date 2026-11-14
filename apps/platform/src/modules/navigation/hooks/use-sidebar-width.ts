@@ -7,7 +7,7 @@ const DEFAULT_WIDTH = 240;
 const MIN_WIDTH = 192;
 const MAX_WIDTH = 448;
 const KEY_STEP = 16;
-const RAIL_WIDTH = 56;
+const RAIL_WIDTH = 48;
 
 const clamp = (width: number) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, width));
 

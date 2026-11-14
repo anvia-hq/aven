@@ -16,13 +16,7 @@ import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
 import { updateEnd } from "../updating";
 
-export function UpdateRuntimeDialog({
-  runtime,
-  compact = false,
-}: {
-  runtime: Runtime;
-  compact?: boolean;
-}) {
+export function UpdateRuntimeDialog({ runtime }: { runtime: Runtime }) {
   const { canUpdate, update, isUpdating, asked, finishUpdating, updateWaitMs } = useRuntimes();
   const [open, setOpen] = useState(false);
   const [working, setWorking] = useState(false);
@@ -47,11 +41,7 @@ export function UpdateRuntimeDialog({
   }, [was?.at, finished]);
 
   if (isUpdating(runtime)) {
-    return compact ? (
-      <span className="shrink-0 px-1 text-[11px] text-muted-foreground">Updating…</span>
-    ) : (
-      <Badge variant="outline">Updating…</Badge>
-    );
+    return <Badge variant="outline">Updating…</Badge>;
   }
 
   if (!canUpdate || !runtime.online || !runtime.updateTo || !runtime.canUpdate) return null;
@@ -72,8 +62,8 @@ export function UpdateRuntimeDialog({
       <DialogTrigger
         render={
           <Button
-            variant={compact ? "secondary" : "outline"}
-            size={compact ? "xs" : "sm"}
+            variant="outline"
+            size="sm"
             aria-label={`Update ${runtime.name}`}
             className="shrink-0"
           />

@@ -1,23 +1,13 @@
-import { GitBranch, Plus, Share } from "@mynaui/icons-react";
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { GitBranch, Share } from "@mynaui/icons-react";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { dragThread } from "@/lib/thread-drag";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
-import { FolderSection } from "@/modules/folders/components/folder-section";
-import { ThreadActionsMenu } from "@/modules/folders/components/thread-actions-menu";
-import { NewFolderButton } from "@/modules/folders/components/new-folder-button";
-import { NewFolderRow } from "@/modules/folders/components/new-folder-row";
-import { UnfiledArea } from "@/modules/folders/components/unfiled-area";
-import { groupThreads, rootOf } from "@/modules/folders/folder-groups";
-import { useFolderActions } from "@/modules/folders/hooks/use-folder-actions";
-import { useFolders } from "@/modules/folders/hooks/use-folders";
-import type { FolderDraft } from "@/modules/folders/types";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
@@ -31,10 +21,12 @@ import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
-import { newTempId } from "@/modules/folders/folder-cache";
+import { recencyGroups } from "../recency-groups";
 import { crowdOf } from "../thread-crowd";
 import type { Thread } from "../types";
 import { ParticipantStack } from "./participant-stack";
+import { RecencyGroupSection } from "./recency-group-section";
+import { ThreadActionsMenu } from "./thread-actions-menu";
 
 const RUNNING_REFRESH_MS = 5000;
 
@@ -164,7 +156,6 @@ function ThreadTitle({
 }
 
 export function SidebarThreads() {
-  const navigate = useNavigate();
   const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   const shared = others.filter((thread) => thread.state === "open");
@@ -178,14 +169,7 @@ export function SidebarThreads() {
   const mentioned = useMentionedThreads();
   const { pairs, partnerOf } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
-  const [draft, setDraft] = useState<FolderDraft | null>(null);
-  const [renaming, setRenaming] = useState<string | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const { folders } = useFolders();
-  const folderActions = useFolderActions();
-  const { groups, unfiled } = groupThreads(threads, folders);
-  const folderOfThread = (thread: Thread) =>
-    folders.find((folder) => folder.threadIds.includes(rootOf(thread, threads).id))?.id;
+  const groups = recencyGroups(threads);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const anyRunning = [...own, ...others].some((thread) => thread.running);
@@ -195,27 +179,6 @@ export function SidebarThreads() {
     const timer = setInterval(() => void refresh(), RUNNING_REFRESH_MS);
     return () => clearInterval(timer);
   }, [anyRunning, refresh]);
-
-  useEffect(() => {
-    if (!dragging) return;
-
-    const stop = () => setDragging(false);
-    window.addEventListener("dragend", stop, true);
-    return () => window.removeEventListener("dragend", stop, true);
-  }, [dragging]);
-
-  function file(threadId: string, folderId: string | null) {
-    setDragging(false);
-    const thread = threads.find((candidate) => candidate.id === threadId);
-
-    if (!thread) return;
-
-    const root = rootOf(thread, threads);
-    folderActions.move({ threadId: root.id, folderId });
-    const target = folders.find((folder) => folder.id === folderId);
-
-    if (target && !target.open) folderActions.setOpen({ id: target.id, open: true });
-  }
 
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
@@ -243,11 +206,7 @@ export function SidebarThreads() {
             <Link
               to="/threads/$threadId"
               params={{ threadId: thread.id }}
-              onDragStart={(event) => {
-                dragThread(event, thread.id);
-                setDragging(true);
-              }}
-              onDragEnd={() => setDragging(false)}
+              onDragStart={(event) => dragThread(event, thread.id)}
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
@@ -273,14 +232,7 @@ export function SidebarThreads() {
           />
           <CrowdMark thread={thread} />
         </SidebarMenuButton>
-        <ThreadActionsMenu
-          title={thread.title}
-          folders={folders}
-          currentFolderId={folderOfThread(thread)}
-          onMove={(folderId) => file(thread.id, folderId)}
-          onNewFolder={() => setDraft({ threadId: thread.id })}
-          onArchive={() => void archive(thread)}
-        />
+        <ThreadActionsMenu title={thread.title} onArchive={() => void archive(thread)} />
       </SidebarMenuItem>
     );
   }
@@ -352,68 +304,14 @@ export function SidebarThreads() {
     });
   }
 
-  function finishDraft(name?: string) {
-    const current = draft;
-    setDraft(null);
-    const trimmed = name?.trim();
-
-    if (!current || !trimmed) return;
-
-    folderActions.create({ tempId: newTempId(), name: trimmed, threadId: current.threadId });
-  }
-
-  function finishRename(id: string, previous: string, name?: string) {
-    setRenaming(null);
-    const trimmed = name?.trim();
-
-    if (trimmed && trimmed !== previous) folderActions.rename({ id, name: trimmed });
-  }
-
   return (
     <>
-      <div className="flex items-center justify-between pr-3 pl-4 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
-        <span>Threads</span>
-        <div className="flex items-center">
-          <NewFolderButton onClick={() => setDraft({})} />
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="New thread"
-            onClick={() => navigate({ to: "/threads" })}
-          >
-            <Plus />
-          </Button>
-        </div>
-      </div>
       <div className="px-2 group-data-[collapsible=icon]:hidden">
-        {draft && <NewFolderRow onDone={finishDraft} />}
         {groups.map((group) => (
-          <FolderSection
-            key={group.folder.id}
-            group={group}
-            editing={renaming === group.folder.id}
-            onToggle={() =>
-              folderActions.setOpen({ id: group.folder.id, open: !group.folder.open })
-            }
-            onEdit={() => setRenaming(group.folder.id)}
-            onRenamed={(name) => finishRename(group.folder.id, group.folder.name, name)}
-            onDelete={() => folderActions.remove(group.folder.id)}
-            onDropThread={(threadId) => file(threadId, group.folder.id)}
-          >
+          <RecencyGroupSection key={group.id} group={group}>
             <SidebarMenu>{rows(group.threads)}</SidebarMenu>
-          </FolderSection>
+          </RecencyGroupSection>
         ))}
-        {(groups.length > 0 || draft) && (
-          <div data-slot="folder-separator" className="mx-2 my-1.5 h-px bg-sidebar-border" />
-        )}
-        <UnfiledArea dragging={dragging} onDropThread={(threadId) => file(threadId, null)}>
-          <SidebarMenu>
-            {rows(unfiled)}
-            {threads.length === 0 && (
-              <p className="px-2 py-1 text-xs text-muted-foreground">Nothing here.</p>
-            )}
-          </SidebarMenu>
-        </UnfiledArea>
       </div>
       {shared.length > 0 && (
         <>

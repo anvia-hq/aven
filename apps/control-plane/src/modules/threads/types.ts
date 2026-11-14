@@ -100,3 +100,18 @@ export type MentionEntry = {
   createdAt: string;
   read: boolean;
 };
+
+export type StaleThread = {
+  id: string;
+  organizationId: string;
+  createdBy: string;
+  runtimeId: string;
+};
+
+export type ThreadRetentionOptions = {
+  archive(thread: StaleThread): Promise<void>;
+  isRunning(threadId: string): boolean;
+  intervalMs: number;
+  afterMs?: number;
+  limit?: number;
+};
