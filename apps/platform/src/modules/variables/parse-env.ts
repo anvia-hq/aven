@@ -1,5 +1,6 @@
+import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES } from "@aven/protocol/variables";
+
 import type { EnvIssue, ParsedEnv } from "./types";
-import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES } from "./types";
 
 const LINE = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$/;
 

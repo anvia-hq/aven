@@ -5,10 +5,12 @@ import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
 import { SectionCard } from "@/components/section-card";
+import { MAX_VARIABLES } from "@aven/protocol/variables";
 
 import { useCanChangeVariables } from "../hooks/use-can-change-variables";
 import { useVariables } from "../hooks/use-variables";
-import { MAX_VARIABLES, type Variable, type VariableScope } from "../types";
+
+import type { Variable, VariableScope } from "../types";
 import { VariableDialog } from "./variable-dialog";
 import { VariableHistoryDialog } from "./variable-history-dialog";
 

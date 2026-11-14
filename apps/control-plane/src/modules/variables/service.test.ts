@@ -9,8 +9,8 @@ import { asc, eq } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnavailableError } from "@aven/server-kit/errors";
 import { encryptSecret } from "@aven/server-kit/crypto";
+import { MAX_VARIABLES } from "@aven/protocol/variables";
 import { runtimesService } from "../runtimes/service";
-import { MAX_VARIABLES } from "./schema";
 import { TooManyVariablesError, variablesService } from "./service";
 
 const run =
