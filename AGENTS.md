@@ -9,7 +9,7 @@ Bun workspace monorepo (TypeScript, ESM).
 ```
 apps/              control-plane (API), platform (web), runtime (runner), cli (`aven`)
 clients/           Native clients (macos, ios: Swift, no TypeScript)
-packages/          Shared internal packages: db, agents, protocol, runtime-client
+packages/          Shared internal packages: db, agents, protocol, agent-backend, claude, runtime-client, server-kit, github, ui
 docs/              Project knowledge (see docs/README.md)
 deploy/            Self-hosting: compose file, env template
 ```
@@ -24,7 +24,7 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
-bun test apps packages # unit tests; the Postgres ones need `createdb aven` and DATABASE_URL
+bun test apps packages tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
 bun run test:macos     # AvenKit's Swift tests
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
@@ -37,20 +37,21 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **License: MIT.** Raise it before adding a dependency whose license asks more of Aven than MIT does (a copyleft one).
 - **Bun only.** Use `bun`/`bunx`, never npm, yarn or pnpm, and no other lockfiles. Prefer Bun built-ins (`Bun.serve`, `Bun.file`, `bun:test`, `bun:sqlite`).
 - **TypeScript strict.** Avoid `any`; where it cannot be avoided, say why in the pull request.
-- **No comments in TypeScript.** Names, types and tests say what code does; why goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay.
+- **No comments in TypeScript.** Names, types and tests say what code does; why goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay. `aven/no-comments` in lint enforces it.
 - **Types live in `types.ts`.** Every exported `type` or `interface` goes in its module's `types.ts`, imported with `import type`. Component `Props` and zod-inferred types stay beside their code.
 - **No barrel files** (an `index.ts` that only re-exports): import from the exact file.
 - **Internal packages** are `@aven/<name>`, `"workspace:*"`, shipped as TS source with no build step. Apps never import from another app; shared code goes in `packages/`.
 - **Dependencies** go in the workspace that uses them, not the root. Ask before adding a heavy or new one. Patched ones live in `patches/`.
 - **Secrets and config.** Never commit secrets or `.env`. Every variable is also listed in `.env.example` with a safe placeholder.
+- **Our own lint rules** are in `tooling/oxlint/rules/` (one file and one test each, `aven/<name>` in `.oxlintrc.json`; decisions 0149 and 0281). Beyond no comments, no barrel files and `padded-if`: no `Reflect.get`/`Reflect.apply`, no `.filter().map()` chains (use `flatMap`), no `as unknown as T` in source, no `type X = unknown`, no module mocking, and no copying the accumulator in `reduce`.
 - **Never edit generated files:** `apps/platform/src/routeTree.gen.ts`, and migrations in `packages/db/drizzle/` (generate them).
 
 ## By area
 
-- **apps/platform** (React, Vite, Tailwind 4, Base UI, TanStack Router, jotai): routes stay thin and layer `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms; mutations and their toasts live in hooks. Code goes in `src/modules/<name>/{components,hooks,atoms}` plus `types.ts`; shared primitives in `src/components/` (vendored shadcn: re-run the CLI, do not hand-edit). Use Base UI primitives, semantic color tokens (`bg-background`, never raw palette colors) and `@mynaui/icons-react` only. Rules: `docs/rules/0001`, `0003`, `0004`.
+- **apps/platform** (React, Vite, Tailwind 4, Base UI, TanStack Router, jotai): routes stay thin and layer `routes -> module components -> module hooks -> module atoms`; routes and components never import atoms; mutations and their toasts live in hooks. Code goes in `src/modules/<name>/{components,hooks,atoms}` plus `types.ts`; shared primitives in `packages/ui/src/` (`@aven/ui/<name>`, vendored shadcn: re-run the CLI, do not hand-edit; app-specific components stay in `src/components/`). Use Base UI primitives, semantic color tokens (`bg-background`, never raw palette colors) and `@mynaui/icons-react` only. Rules: `docs/rules/0001`, `0003`, `0004`.
 - **apps/control-plane** (Elysia, zod): modules in `src/modules/<name>/` with `router.ts`, `schema.ts`, `service.ts`. Routers use method chaining and call services; services own DB access; throw the typed errors of `src/errors.ts`. Scope everything to the session's organization. Rules: `docs/rules/0002`.
 - **packages/db** (Drizzle, Postgres): one table per file in `src/schema/`, plural snake_case, uuid `id`, `created_at`/`updated_at`. Change a schema, then `bun run db:generate` from the package. Never call `drizzle-kit` directly.
-- **packages/protocol**: the wire shared by the control plane, runners and clients, with no runtime imports. Changing the runtime wire changes `WIRE_VERSION` and refuses older runners: prefer an optional field, and see `docs/rules/0005-releasing.md` and `docs/products/0005-runtime-wire-versions.md`. A new run event type must also be added to the control plane's allow-list.
+- **packages/protocol**: the wire shared by the control plane, runners and clients, with no imports but zod (and `@anvia/core` types). Changing the runtime wire changes `WIRE_VERSION` and refuses older runners: prefer an optional field, and see `docs/rules/0005-releasing.md` and `docs/products/0005-runtime-wire-versions.md`. A new run event type must also be added to the control plane's allow-list.
 - **packages/agents**: tools live in `src/tools/<name>.ts` (`createTool`, zod input), free of app and HTTP concerns, with `fetch` injectable so tests never hit the network.
 - **packages/runtime-client / apps/runtime**: a runner works on its own machine and needs git. Tests use `src/testing/directory-workspaces.ts`. Nothing secret (tokens, variables) is stored in a journal or on disk.
 - **apps/cli** (`aven`): changes must keep `aven update` working for installed machines (`docs/rules/0005-releasing.md`). Tests use a throwaway `HOME` and `AVEN_HOME`, never the real ones.

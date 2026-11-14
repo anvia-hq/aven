@@ -1,4 +1,4 @@
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { useElapsed } from "@/hooks/use-elapsed";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
 import { SLOW_LOAD_MS } from "@/lib/slow-load";

@@ -28,12 +28,10 @@ import type {
   Emit,
   FollowedGoal,
   FollowedRun,
-  FollowOptions,
-  GoalContext,
-  GoalJournal,
   GoalSpec,
   RunInput,
-} from "./types";
+} from "@aven/agent-backend/types";
+import type { FollowOptions, GoalContext, GoalJournal } from "./types";
 
 const AGENT_VERSION = "2";
 
@@ -380,9 +378,9 @@ export class DurableRuns implements AgentBackend {
         modelRetry: MODEL_RETRY,
         compaction: input.compaction,
         toolRecovery: Object.fromEntries(
-          agent.tools
-            .filter((tool) => SAFE_TOOLS.has(tool.name))
-            .map((tool) => [tool.name, "safe" as const]),
+          agent.tools.flatMap((tool) =>
+            SAFE_TOOLS.has(tool.name) ? [[tool.name, "safe" as const]] : [],
+          ),
         ),
       },
     ]);

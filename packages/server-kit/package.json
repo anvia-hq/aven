@@ -1,0 +1,19 @@
+{
+  "name": "@aven/server-kit",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@aven/agents": "workspace:*",
+    "@aven/protocol": "workspace:*",
+    "elysia": "^1.4.30",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,7 +1,7 @@
 import { Search, X } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
-import { SidebarTrigger, useSidebar } from "@/components/sidebar";
+import { Button } from "@aven/ui/button";
+import { SidebarTrigger, useSidebar } from "@aven/ui/sidebar";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 

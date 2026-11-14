@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { Elysia } from "elysia";
 
-import { errorsRouter } from "../../errors";
+import { errorsRouter } from "@aven/server-kit/errors";
 import { mcpRouter } from "./router";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;

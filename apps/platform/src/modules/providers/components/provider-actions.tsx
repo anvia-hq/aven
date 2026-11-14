@@ -1,7 +1,7 @@
 import { Trash } from "@mynaui/icons-react";
 import type { ReactNode } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 
 import { useProviders } from "../hooks/use-providers";
 import { useRefetchModels } from "../hooks/use-refetch-models";

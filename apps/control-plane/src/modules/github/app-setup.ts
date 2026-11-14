@@ -1,4 +1,4 @@
-import { ConflictError, ForbiddenError, UnprocessableError } from "../../errors";
+import { ConflictError, ForbiddenError, UnprocessableError } from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { platformService } from "../platform/service";
 import {
@@ -10,9 +10,10 @@ import {
   readSetupState,
 } from "./app-manifest";
 import { saveGithubApp, saveOrganizationApp } from "./app-store";
-import { github, type GithubClient } from "./client";
+import { github, type GithubClient } from "@aven/github/client";
 import { githubClients, PLATFORM_APP } from "./clients";
-import type { GithubClients, GithubConfig, GithubUrls } from "./types";
+import type { GithubClients, GithubUrls } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 type Person = { id: string; email: string };
 

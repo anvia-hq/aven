@@ -7,8 +7,8 @@ import { members } from "@aven/db/schema/members";
 import { users } from "@aven/db/schema/users";
 import { asc, eq } from "drizzle-orm";
 
-import { ForbiddenError, NotFoundError, UnavailableError } from "../../errors";
-import { encryptSecret } from "../../crypto";
+import { ForbiddenError, NotFoundError, UnavailableError } from "@aven/server-kit/errors";
+import { encryptSecret } from "@aven/server-kit/crypto";
 import { runtimesService } from "../runtimes/service";
 import { MAX_VARIABLES } from "./schema";
 import { TooManyVariablesError, variablesService } from "./service";
@@ -270,7 +270,7 @@ run("variablesService (postgres)", async () => {
         userId,
       });
       const mine = Object.fromEntries(
-        given.filter((v) => /^(M|S)_/.test(v.name)).map((v) => [v.name, v.value]),
+        given.flatMap((v) => (/^(M|S)_/.test(v.name) ? [[v.name, v.value]] : [])),
       );
       expect(mine).toEqual({
         M_ONLY_WORKSPACE: "w",

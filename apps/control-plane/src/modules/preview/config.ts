@@ -22,9 +22,10 @@ export function previewDomain(value: string | undefined) {
 }
 
 function trustOrigins(env: Record<string, string | undefined>) {
-  return [env.BETTER_AUTH_URL, ...(env.TRUSTED_ORIGINS ?? "").split(",")]
-    .map((origin) => origin?.trim())
-    .filter((origin): origin is string => Boolean(origin));
+  return [env.BETTER_AUTH_URL, ...(env.TRUSTED_ORIGINS ?? "").split(",")].flatMap((origin) => {
+    const trimmed = origin?.trim();
+    return trimmed ? [trimmed] : [];
+  });
 }
 
 export function refusePreviewInTrustedOrigins(

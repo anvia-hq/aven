@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { chmodSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { RuntimeToControlPlane } from "@aven/protocol/types";
-import type { Source } from "./types";
+import type { Source } from "@aven/agent-backend/types";
 
 const MAX_ENTRIES = 20_000;
 

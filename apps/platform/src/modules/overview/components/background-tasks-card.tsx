@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 
 import { useFixProcess } from "../hooks/use-fix-process";
 import { useThreadProcesses } from "../hooks/use-thread-processes";

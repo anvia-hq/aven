@@ -2,7 +2,7 @@ import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { eq } from "drizzle-orm";
 
-import { decryptSecret, encryptSecret } from "../../crypto";
+import { decryptSecret, encryptSecret } from "@aven/server-kit/crypto";
 import type { IssuerKeyStore, IssuerOptions } from "./types";
 
 const ALGORITHM = { name: "ECDSA", namedCurve: "P-256" } as const;

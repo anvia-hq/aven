@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 class ApiError extends Error {
   constructor(

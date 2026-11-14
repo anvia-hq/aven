@@ -1,8 +1,8 @@
 import { Servers, Trash } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SettingsEmpty } from "@/components/settings-section";
 import { timeAgo } from "@/lib/format";
 

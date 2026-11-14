@@ -2,7 +2,7 @@ import { Elysia, status } from "elysia";
 
 import { WEBHOOK_BODY_MAX } from "@aven/protocol/webhooks";
 
-import { NotFoundError, orNotFound } from "../../errors";
+import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { WEBHOOK_HEADERS } from "./note";
 import {

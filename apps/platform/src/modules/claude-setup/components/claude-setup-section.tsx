@@ -1,11 +1,11 @@
 import { Check, Copy } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
 import { useClipboard } from "@/hooks/use-clipboard";
 import { SettingsSection } from "@/components/settings-section";
-import { TextField } from "@/components/text-field";
+import { TextField } from "@aven/ui/text-field";
 
 import { useClaudeSetup } from "../hooks/use-claude-setup";
 

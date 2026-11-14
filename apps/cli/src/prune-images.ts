@@ -10,15 +10,13 @@ const RELEASE_TAG = /^\d+\.\d+\.\d+(-[0-9A-Za-z.]+)?$/;
 export function staleImages(listing: string, current: string) {
   if (!RELEASE_TAG.test(current)) return [];
 
-  return listing
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((image) => {
-      const [repository, tag] = image.split(":");
-      return (
-        REPOSITORIES.includes(repository ?? "") && RELEASE_TAG.test(tag ?? "") && tag !== current
-      );
-    });
+  return listing.split("\n").flatMap((line) => {
+    const image = line.trim();
+    const [repository, tag] = image.split(":");
+    return REPOSITORIES.includes(repository ?? "") && RELEASE_TAG.test(tag ?? "") && tag !== current
+      ? [image]
+      : [];
+  });
 }
 
 export async function removeStaleImages(current: string) {

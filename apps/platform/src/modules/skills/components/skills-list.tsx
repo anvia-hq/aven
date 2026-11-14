@@ -1,11 +1,11 @@
 import { Archive, FolderOne, Trash } from "@mynaui/icons-react";
 import { useRef, useState, type DragEvent } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 import { SettingsSection } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
+import { Switch } from "@aven/ui/switch";
 import { fileSize } from "@/lib/format";
 
 import { useSkills } from "../hooks/use-skills";
@@ -129,7 +129,7 @@ export function SkillsList() {
 
   if (!loaded) return null;
 
-  const replaced = new Set(personal.filter((skill) => skill.enabled).map((skill) => skill.name));
+  const replaced = new Set(personal.flatMap((skill) => (skill.enabled ? [skill.name] : [])));
 
   return (
     <>

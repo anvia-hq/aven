@@ -1,7 +1,7 @@
 import type { Provider } from "@aven/agents/model";
 import { providerNeedsKey } from "@aven/protocol/providers";
 
-import { UnavailableError, UnprocessableError } from "../../errors";
+import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
 import { gatewayModel } from "./gateway-info";

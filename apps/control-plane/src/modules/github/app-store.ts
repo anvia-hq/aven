@@ -3,10 +3,11 @@ import { githubApps } from "@aven/db/schema/github-apps";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { eq } from "drizzle-orm";
 
-import { decryptSecret, encryptSecret } from "../../crypto";
-import { ConflictError } from "../../errors";
+import { decryptSecret, encryptSecret } from "@aven/server-kit/crypto";
+import { ConflictError } from "@aven/server-kit/errors";
 import { githubUrlsFromEnv } from "./app-manifest";
-import type { GithubConfig, GithubUrls } from "./types";
+import type { GithubUrls } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 const KEY = "github_app";
 

@@ -3,8 +3,8 @@ import { ChevronRight } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useMemo, useRef } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 
 import { useFileColours } from "../hooks/use-file-colours";
 import { widestLine } from "../flatten";

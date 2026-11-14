@@ -2,8 +2,8 @@ import { GitPullRequest } from "@mynaui/icons-react";
 import type { ReactNode } from "react";
 
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Skeleton } from "@aven/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { TrackedRow } from "@/modules/projects/components/repo-tracked";
 import type { Project } from "@/modules/projects/types";
 

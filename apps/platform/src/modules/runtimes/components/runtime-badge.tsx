@@ -1,4 +1,4 @@
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 
 import { useRuntime } from "../hooks/use-runtime";
 import { runtimeLabel } from "../runtime-label";

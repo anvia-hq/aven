@@ -4,7 +4,7 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
 import { assessGoal, verifyWith } from "./goal-assessment";
-import type { CommandResult } from "./types";
+import type { CommandResult } from "@aven/agent-backend/types";
 
 const assistant = (text: string): Message => ({
   role: "assistant",

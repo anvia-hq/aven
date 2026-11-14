@@ -2,7 +2,7 @@ import { Plus, Trash } from "@mynaui/icons-react";
 import { MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,13 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/field";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Switch } from "@/components/switch";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "@aven/ui/field";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Switch } from "@aven/ui/switch";
+import { TextField } from "@aven/ui/text-field";
 
 import { useMcpServers } from "../hooks/use-mcp-servers";
 import type { McpServer, McpTarget } from "../types";
@@ -63,12 +63,16 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
       url: String(form.get("url")).trim(),
       target,
       allowLocal,
-      headers: headers
-        .filter((row) => row.name.trim() !== "")
-        .map((row) => ({
-          name: row.name.trim(),
-          value: row.saved && row.value === "" ? null : row.value,
-        })),
+      headers: headers.flatMap((row) =>
+        row.name.trim() === ""
+          ? []
+          : [
+              {
+                name: row.name.trim(),
+                value: row.saved && row.value === "" ? null : row.value,
+              },
+            ],
+      ),
     };
     setBusy(true);
     try {

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, errorMessage, postJson } from "@/lib/api";
 
 import { withFolder, withMove, withOpen, withoutFolder, withRename } from "../folder-cache";

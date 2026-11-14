@@ -2,7 +2,7 @@ import { BookOpen } from "@mynaui/icons-react";
 
 import { Markdown } from "@/components/markdown";
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 
 import { useProjectReadme } from "../hooks/use-project-readme";
 import { isAbsoluteUrl, resolveRepoUrl } from "../repo-links";

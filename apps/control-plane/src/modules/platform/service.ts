@@ -11,16 +11,16 @@ import { sessions } from "@aven/db/schema/sessions";
 import { users } from "@aven/db/schema/users";
 import { and, asc, eq, gt, inArray, max, ne, notInArray, sql } from "drizzle-orm";
 
-import { ConflictError, ForbiddenError, NotFoundError } from "../../errors";
+import { ConflictError, ForbiddenError, NotFoundError } from "@aven/server-kit/errors";
 import type { PutAwayThread } from "../threads/types";
 
 const REGISTRATION_KEY = "registration_enabled";
 
 function ownerEmails() {
-  return (process.env.PLATFORM_OWNER_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+  return (process.env.PLATFORM_OWNER_EMAILS ?? "").split(",").flatMap((email) => {
+    const owner = email.trim().toLowerCase();
+    return owner ? [owner] : [];
+  });
 }
 
 const isListedOwner = (email: string) => ownerEmails().includes(email.toLowerCase());
@@ -74,9 +74,9 @@ export const platformService = {
       ...person,
       owner: person.id === first || isListedOwner(person.email),
       lastActiveAt: lastSeen.get(person.id) ?? null,
-      workspaces: memberships
-        .filter((membership) => membership.userId === person.id)
-        .map(({ id, name, role }) => ({ id, name, role })),
+      workspaces: memberships.flatMap(({ userId, id, name, role }) =>
+        userId === person.id ? [{ id, name, role }] : [],
+      ),
     }));
   },
 

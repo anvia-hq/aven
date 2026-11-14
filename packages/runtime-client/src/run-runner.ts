@@ -7,10 +7,10 @@ import { journalPathIn } from "./runtime-home";
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export const servedFolders = (value: string | undefined) =>
-  (value ?? "")
-    .split(delimiter)
-    .map((dir) => dir.trim())
-    .filter(Boolean);
+  (value ?? "").split(delimiter).flatMap((dir) => {
+    const trimmed = dir.trim();
+    return trimmed ? [trimmed] : [];
+  });
 
 export const runtimeConnectUrl = (base: string) =>
   `${base.replace(/^http/, "ws").replace(/\/$/, "")}/runtimes/connect`;

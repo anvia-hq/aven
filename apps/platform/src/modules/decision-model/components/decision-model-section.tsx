@@ -1,11 +1,11 @@
 import { Field } from "@base-ui/react/field";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Form as DecisionForm } from "@/components/form";
-import { NativeSelect, NativeSelectOption } from "@/components/native-select";
+import { Button } from "@aven/ui/button";
+import { Form as DecisionForm } from "@aven/ui/form";
+import { NativeSelect, NativeSelectOption } from "@aven/ui/native-select";
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
-import { TextField } from "@/components/text-field";
+import { TextField } from "@aven/ui/text-field";
 
 import { useCanChangeDecisionModel } from "../hooks/use-can-change-decision-model";
 import { useDecisionModel } from "../hooks/use-decision-model";

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "cn";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { ChevronRight as ChevronRightIcon } from "@mynaui/icons-react";
 
 function Trace({ className, ...props }: React.ComponentProps<"div">) {

@@ -459,9 +459,9 @@ export class RemoteBotReplier implements BotReplier {
 
   async #peersOf(userId: string, selfId: string): Promise<BotPeer[]> {
     const bots = await this.bots.list(userId);
-    return bots
-      .filter((other) => other.id !== selfId)
-      .map(({ handle, name, description }) => ({ handle, name, description }));
+    return bots.flatMap(({ id, handle, name, description }) =>
+      id === selfId ? [] : [{ handle, name, description }],
+    );
   }
 
   #runtimeOf(bot: Pick<Bot, "runtimeId">) {

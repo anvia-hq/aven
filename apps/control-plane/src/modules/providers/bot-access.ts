@@ -1,6 +1,6 @@
 import { providerNeedsKey } from "@aven/protocol/providers";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { keylessProviderBody } from "./schema";
 import { providersService } from "./service";
 import type { BotProviders, ProviderView } from "./types";

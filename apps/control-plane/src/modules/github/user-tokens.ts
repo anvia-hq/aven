@@ -2,9 +2,10 @@ import { db } from "@aven/db/client";
 import { githubUserTokens } from "@aven/db/schema/github-user-tokens";
 import { and, eq } from "drizzle-orm";
 
-import { decryptSecret, encryptSecret } from "../../crypto";
+import { decryptSecret, encryptSecret } from "@aven/server-kit/crypto";
 import { githubClients, PLATFORM_APP } from "./clients";
-import type { GithubClients, GithubIdentity, GithubUserGrant, GithubUserToken } from "./types";
+import type { GithubClients } from "./types";
+import type { GithubIdentity, GithubUserGrant, GithubUserToken } from "@aven/github/types";
 import type { GithubUserTokenRow } from "@aven/db/schema/types";
 import type { RunGithub } from "@aven/protocol/types";
 

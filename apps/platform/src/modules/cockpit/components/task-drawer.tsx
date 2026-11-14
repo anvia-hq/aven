@@ -1,11 +1,11 @@
 import { Calendar, CircleDashed, Flag, Tag, Trash, X } from "@mynaui/icons-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { Button } from "@/components/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/drawer";
-import { DropdownMenuItem } from "@/components/dropdown-menu";
-import { Input } from "@/components/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
+import { Button } from "@aven/ui/button";
+import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@aven/ui/drawer";
+import { DropdownMenuItem } from "@aven/ui/dropdown-menu";
+import { Input } from "@aven/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { timeAgo } from "@/lib/format";
 
 import { useAutosave } from "../hooks/use-autosave";

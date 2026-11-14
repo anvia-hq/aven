@@ -23,12 +23,9 @@ export function vertexPartsOf(baseUrl: string | null | undefined) {
 
   if (!match) return null;
 
-  const [, hostRegion, project, location] = match as unknown as [
-    string,
-    string | undefined,
-    string,
-    string,
-  ];
+  const hostRegion: string | undefined = match[1];
+  const project = match[2] as string;
+  const location = match[3] as string;
 
   if ((hostRegion ?? "global") !== location) return null;
 

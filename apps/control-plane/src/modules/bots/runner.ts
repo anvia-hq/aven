@@ -12,8 +12,13 @@ import {
   sentMessageId,
 } from "@aven/protocol/bots";
 
-import { withoutBytes } from "../../attachments";
-import { ConflictError, describeError, UnavailableError, UnprocessableError } from "../../errors";
+import { withoutBytes } from "@aven/server-kit/attachments";
+import {
+  ConflictError,
+  describeError,
+  UnavailableError,
+  UnprocessableError,
+} from "@aven/server-kit/errors";
 import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
 import type {
@@ -190,9 +195,9 @@ export class BotRunner {
   }
 
   workingOf(userId: string) {
-    return [...this.#channels.values()]
-      .filter((channel) => channel.userId === userId && channel.typing)
-      .map((channel) => channel.botId);
+    return [...this.#channels.values()].flatMap((channel) =>
+      channel.userId === userId && channel.typing ? [channel.botId] : [],
+    );
   }
 
   isWatching(userId: string) {

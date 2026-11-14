@@ -6,7 +6,7 @@ import { organizations } from "@aven/db/schema/organizations";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { errorsRouter } from "../../errors";
+import { errorsRouter } from "@aven/server-kit/errors";
 import { auth, authService } from "../auth/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";

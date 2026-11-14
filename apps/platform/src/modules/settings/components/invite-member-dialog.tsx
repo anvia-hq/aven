@@ -1,7 +1,7 @@
 import { UserPlus } from "@mynaui/icons-react";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,11 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Field, FieldLabel } from "@/components/field";
-import { Form } from "@/components/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Field, FieldLabel } from "@aven/ui/field";
+import { Form } from "@aven/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { TextField } from "@aven/ui/text-field";
 
 import { useMembers } from "../hooks/use-members";
 import { isInvitableRole, ROLE_LABELS, ROLES, type InvitableRole } from "../types";

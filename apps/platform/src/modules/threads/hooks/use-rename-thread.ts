@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { attempt, postJson } from "@/lib/api";
 
 import type { Thread } from "../types";

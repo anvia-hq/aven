@@ -80,7 +80,16 @@ describe("the files of a folder project", () => {
 
   describe("its commits", () => {
     const git = (cwd: string, ...args: string[]) =>
-      Bun.$`git -c user.name=Ana -c user.email=ana@example.com ${args}`.cwd(cwd).quiet();
+      Bun.$`git -c user.name=Ana -c user.email=ana@example.com ${args}`
+        .cwd(cwd)
+        .env({
+          ...process.env,
+          GIT_AUTHOR_NAME: "Ana",
+          GIT_AUTHOR_EMAIL: "ana@example.com",
+          GIT_COMMITTER_NAME: "Ana",
+          GIT_COMMITTER_EMAIL: "ana@example.com",
+        })
+        .quiet();
 
     async function repo(commits: number) {
       const { root, project } = await served();

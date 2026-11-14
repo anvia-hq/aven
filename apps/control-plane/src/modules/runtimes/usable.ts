@@ -3,7 +3,7 @@ import { members } from "@aven/db/schema/members";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, eq, isNull } from "drizzle-orm";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { LOCAL_RUNTIME_ID } from "./service";
 
 export async function requireUsableRuntime(userId: string, runtimeId: string) {

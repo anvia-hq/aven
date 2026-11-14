@@ -1,4 +1,4 @@
-import { decryptOrUnavailable } from "../../crypto";
+import { decryptOrUnavailable } from "@aven/server-kit/crypto";
 import type { ProviderRow } from "@aven/db/schema/types";
 
 export function readKey(row: ProviderRow) {

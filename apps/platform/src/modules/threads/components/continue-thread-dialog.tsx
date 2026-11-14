@@ -1,7 +1,7 @@
 import { ArrowRight } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+} from "@aven/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
@@ -26,9 +26,11 @@ export function ContinueThreadDialog({ thread }: { thread: Thread }) {
   const { continueOn, working } = useContinueThread(thread);
   const [target, setTarget] = useState<string | null>(null);
 
-  const options = runtimes
-    .filter((runtime) => runtime.online && runtime.id !== thread.runtimeId)
-    .map((runtime) => ({ value: runtime.id, label: runtime.name }));
+  const options = runtimes.flatMap((runtime) =>
+    runtime.online && runtime.id !== thread.runtimeId
+      ? [{ value: runtime.id, label: runtime.name }]
+      : [],
+  );
   const chosen = options.some((option) => option.value === target) ? target : null;
 
   if (options.length === 0 && !open) return null;

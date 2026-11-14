@@ -1,7 +1,7 @@
 import { File as FileIcon, FileText, Image as ImageIcon } from "@mynaui/icons-react";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { fileSize } from "@/lib/format";
 
 import { kindOf } from "../artifacts";

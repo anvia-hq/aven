@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
 
-import { ForbiddenError } from "../../errors";
+import { ForbiddenError } from "@aven/server-kit/errors";
 import { ACTING_HEADER } from "../auth/acting";
 import { authRouter } from "../auth/router";
 import { runtimeParams } from "../runtimes/schema";

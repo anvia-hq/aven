@@ -6,7 +6,7 @@ import { members } from "@aven/db/schema/members";
 import { sessions } from "@aven/db/schema/sessions";
 import { eq } from "drizzle-orm";
 
-import { errorsRouter } from "../../errors";
+import { errorsRouter } from "@aven/server-kit/errors";
 import { createMemoryStore } from "../../memory-store";
 import { artifactsRouter } from "../artifacts/router";
 import { computerRouter } from "../computer/router";

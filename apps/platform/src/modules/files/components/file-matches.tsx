@@ -15,7 +15,7 @@ export function FileMatches({ folders, query, active, onOpenFile }: Props) {
   const needle = query.trim().toLowerCase();
   const matches = Object.entries(folders)
     .flatMap(([folder, entries]) =>
-      entries.filter((entry) => entry.type === "file").map((entry) => join(folder, entry.name)),
+      entries.flatMap((entry) => (entry.type === "file" ? [join(folder, entry.name)] : [])),
     )
     .filter((path) => path.toLowerCase().includes(needle))
     .sort()

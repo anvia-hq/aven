@@ -1,4 +1,4 @@
-import { withoutRunnerSecrets } from "./runner-secrets";
+import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, posix } from "node:path";
 

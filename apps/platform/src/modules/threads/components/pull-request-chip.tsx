@@ -1,8 +1,8 @@
 import { ExternalLink } from "@mynaui/icons-react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
-import { ButtonGroup } from "@/components/button-group";
+import { ButtonGroup } from "@aven/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
+} from "@aven/ui/dropdown-menu";
 
 import type { ThreadPullRequest } from "../types";
 

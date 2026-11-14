@@ -1,6 +1,6 @@
 import { PREVIEW_ENTER_PATH, previewPortRefusal } from "@aven/protocol/preview";
 
-import { ForbiddenError, UnavailableError, UnprocessableError } from "../../errors";
+import { ForbiddenError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { LOCAL_RUNTIME_ID } from "../runtimes/local-id";
 import { previewHostname } from "./host";
 import { signPreviewToken } from "./token";

@@ -144,9 +144,9 @@ test.describe("an agent on the control plane", () => {
   test.afterAll(async () => {
     for (const proc of [...procs].reverse()) await stop(proc);
     await Promise.all(
-      [hostHome, machineHome, folder]
-        .filter(Boolean)
-        .map((dir) => rm(dir, { recursive: true, force: true })),
+      [hostHome, machineHome, folder].flatMap((dir) =>
+        dir ? [rm(dir, { recursive: true, force: true })] : [],
+      ),
     );
     const drop = spawn("bun", ["e2e/setup-agent-db.ts", "--drop"], {
       env: { ...process.env, DATABASE_URL: databaseUrl },

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { backendFor } from "./agent-backends";
-import type { AgentBackend } from "./types";
+import type { AgentBackend } from "@aven/agent-backend/types";
 
 const installedBackend = (kind: string) => Promise.resolve({ kind } as unknown as AgentBackend);
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
+} from "@aven/ui/dialog";
 
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";

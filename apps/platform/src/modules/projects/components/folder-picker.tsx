@@ -1,10 +1,10 @@
 import { ArrowUp, Folder, FolderPlus, GitBranch } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 import { PanelNotice } from "@/components/panel-notice";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 
 import { useFolderBrowser } from "../hooks/use-folder-browser";
 

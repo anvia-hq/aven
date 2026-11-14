@@ -4,7 +4,7 @@ import { ATTACHMENT_LIMITS, MENTION_LIMIT, mentionToken } from "@aven/protocol/e
 import { AGENT_BACKENDS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 
-import { attachmentBody } from "../../attachments";
+import { attachmentBody } from "@aven/server-kit/attachments";
 
 export const threadParams = z.object({ id: z.uuid() });
 

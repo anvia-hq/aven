@@ -1,7 +1,7 @@
 import { Plus } from "@mynaui/icons-react";
 import type { ComponentProps } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,12 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Label } from "@/components/label";
-import { LabeledSelect } from "@/components/labeled-select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+} from "@aven/ui/dialog";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Label } from "@aven/ui/label";
+import { LabeledSelect } from "@aven/ui/labeled-select";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
 import { useAddProject } from "../hooks/use-add-project";
 import { FolderPicker } from "./folder-picker";

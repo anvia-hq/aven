@@ -2,7 +2,7 @@ import { Plus } from "@mynaui/icons-react";
 import { MEMORY_NOTE_MAX } from "@aven/protocol/memory";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -11,12 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Field, FieldDescription, FieldLabel } from "@/components/field";
-import { Form } from "@/components/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Textarea } from "@/components/textarea";
-import { TextField } from "@/components/text-field";
+} from "@aven/ui/dialog";
+import { Field, FieldDescription, FieldLabel } from "@aven/ui/field";
+import { Form } from "@aven/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Textarea } from "@aven/ui/textarea";
+import { TextField } from "@aven/ui/text-field";
 
 import { useMemory } from "../hooks/use-memory";
 import type { FolderChoice, MemoryNote } from "../types";

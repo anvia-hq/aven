@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { ActivityHeatmap } from "@/modules/profile/components/activity-heatmap";
 import { ProfileHeader } from "@/modules/profile/components/profile-header";
 import { ProfileStats } from "@/modules/profile/components/profile-stats";

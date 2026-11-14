@@ -8,7 +8,7 @@ import { ArrowUp, MessageReply, X } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { AttachButton } from "@/modules/threads/components/attach-button";
 import { MentionMenu } from "@/modules/threads/components/mention-menu";
 import { PendingAttachments } from "@/modules/threads/components/pending-attachments";
@@ -16,7 +16,7 @@ import { useAttachmentDrop } from "@/modules/threads/hooks/use-attachment-drop";
 import { useAttachments } from "@/modules/threads/hooks/use-attachments";
 import { useComposerChat } from "@/modules/threads/hooks/use-composer-chat";
 import type { AttachmentUpload } from "@/modules/threads/types";
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { BotMentionChip } from "./bot-mention-chip";

@@ -1,6 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt } from "@/lib/api";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 

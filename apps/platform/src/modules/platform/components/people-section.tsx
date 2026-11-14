@@ -10,10 +10,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/alert-dialog";
-import { Avatar, AvatarFallback } from "@/components/avatar";
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+} from "@aven/ui/alert-dialog";
+import { Avatar, AvatarFallback } from "@aven/ui/avatar";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SettingsList, SettingsRow } from "@/components/settings-section";
 import { authClient } from "@/lib/auth-client";
 import { initials, timeAgo } from "@/lib/format";

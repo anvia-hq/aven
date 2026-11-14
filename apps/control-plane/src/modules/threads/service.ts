@@ -10,7 +10,12 @@ import { isDriving } from "@aven/protocol/drivers";
 import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
 import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
 
-import { ConflictError, ForbiddenError, NotFoundError, UnprocessableError } from "../../errors";
+import {
+  ConflictError,
+  ForbiddenError,
+  NotFoundError,
+  UnprocessableError,
+} from "@aven/server-kit/errors";
 import { claudeSetupService } from "../claude-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";

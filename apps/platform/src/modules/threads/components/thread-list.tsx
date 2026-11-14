@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 import { authClient } from "@/lib/auth-client";
 import { timeAgo } from "@/lib/format";
 import { ProjectTile } from "@/modules/projects/components/project-tile";

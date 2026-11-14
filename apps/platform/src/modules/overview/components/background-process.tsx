@@ -2,8 +2,8 @@ import { Check, DangerCircle, StopSolid } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Button } from "@aven/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { shortTimeAgo, timeAgo } from "@/lib/format";
 
 import { useProcessLogs } from "../hooks/use-process-logs";

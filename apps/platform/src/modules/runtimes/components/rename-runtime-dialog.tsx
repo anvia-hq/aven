@@ -1,7 +1,7 @@
 import { Edit } from "@mynaui/icons-react";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
+} from "@aven/ui/dialog";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
 
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";

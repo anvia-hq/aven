@@ -2,10 +2,10 @@ import { Check, Tag } from "@mynaui/icons-react";
 import { normalizeTag, TAG_PATTERN } from "@aven/protocol/cockpit";
 import { useState, type FormEvent } from "react";
 
-import { Button } from "@/components/button";
-import { Form } from "@/components/form";
-import { Input } from "@/components/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/popover";
+import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
+import { Input } from "@aven/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { colors, paletteColor } from "@/modules/bots/avatar";
 
 import { useTagColors, useTags } from "../hooks/use-tags";
@@ -33,7 +33,7 @@ function usedBy(tag: CockpitTag) {
     [tag.tasks, "task", "tasks"],
     [tag.notes, "note", "notes"],
   ] as const;
-  const used = parts.filter(([n]) => n > 0).map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  const used = parts.flatMap(([n, one, many]) => (n > 0 ? [`${n} ${n === 1 ? one : many}`] : []));
   return used.length > 0 ? used.join(" · ") : "Not used yet";
 }
 

@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 
 import { cn } from "cn";
 
-import { Badge } from "@/components/badge";
+import { Badge } from "@aven/ui/badge";
 
 import { useTagColors } from "../hooks/use-tags";
 

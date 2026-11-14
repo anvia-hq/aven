@@ -7,7 +7,7 @@ import {
 } from "@shadcn/react/message-scroller";
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { ArrowDown as ArrowDownIcon } from "@mynaui/icons-react";
 
 function MessageScrollerProvider(

@@ -1,12 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  ASK_QUESTION_TOOL_NAME,
-  askQuestionSchema,
-  botQuestionsSchema,
-  createAskQuestionTool,
-  toQuestions,
-} from "./ask-question";
+import { ASK_QUESTION_TOOL_NAME, askQuestionSchema, createAskQuestionTool } from "./ask-question";
+import { botQuestionsSchema, toQuestions } from "@aven/protocol/ask-question";
 import type { BotQuestion } from "@aven/protocol/types";
 
 const question = {

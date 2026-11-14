@@ -3,9 +3,9 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
 
-import { Button } from "@/components/button";
-import { Input } from "@/components/input";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { FolderSection } from "@/modules/folders/components/folder-section";
 import { ThreadActionsMenu } from "@/modules/folders/components/thread-actions-menu";

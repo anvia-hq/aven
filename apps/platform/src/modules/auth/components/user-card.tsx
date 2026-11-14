@@ -1,7 +1,7 @@
 import { ChevronsUpDown, Command, Logout, User } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,8 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@/components/dropdown-menu";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/components/sidebar";
+} from "@aven/ui/dropdown-menu";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { initials } from "@/lib/format";
 import { OrganizationMenu } from "@/modules/organizations/components/organization-menu";
 import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";

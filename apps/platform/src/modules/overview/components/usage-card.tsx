@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";

@@ -1,8 +1,8 @@
 import { ArrowDown, ArrowUp, Lock } from "@mynaui/icons-react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import { Skeleton } from "@/components/skeleton";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Skeleton } from "@aven/ui/skeleton";
 import type { useRequest } from "@/hooks/use-request";
 import { timeAgo } from "@/lib/format";
 

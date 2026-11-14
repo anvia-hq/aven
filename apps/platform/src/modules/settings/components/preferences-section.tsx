@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 import { SettingsRow, SettingsSection } from "@/components/settings-section";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/select";
-import { Switch } from "@/components/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
+import { Switch } from "@aven/ui/switch";
 
 import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { FontPicker } from "@/modules/theme/components/font-picker";

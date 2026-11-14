@@ -7,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/breadcrumb";
+} from "@aven/ui/breadcrumb";
 
 import type { Project } from "../types";
 

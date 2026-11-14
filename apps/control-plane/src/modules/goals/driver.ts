@@ -1,6 +1,6 @@
 import { GOAL_ROUND_NOTE_PREFIX, isGoalRoundNote } from "@aven/protocol/goals";
 
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import { goalsService } from "./service";
 import type { BotGoalRow } from "@aven/db/schema/types";
 

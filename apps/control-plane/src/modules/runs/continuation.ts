@@ -1,6 +1,6 @@
 import { parseAgentContinuation } from "@anvia/core/agent/interactions";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 
 export function parseSaved(continuation: unknown) {
   try {

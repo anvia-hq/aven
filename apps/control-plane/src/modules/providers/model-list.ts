@@ -1,6 +1,6 @@
 import { reasoningControlsFor } from "@aven/agents/model";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { assertProviderAddress } from "./address-guard";
 import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
@@ -125,7 +125,7 @@ export async function fetchModels(source: ModelSource, fetchFn: typeof fetch = f
 export async function listAgentModels(source: ModelSource, fetchFn?: typeof fetch) {
   if (source.kind === "vertex") {
     const known = await modelCatalog.knownChatModels("vertex");
-    const ids = known.filter((id) => id.startsWith("gemini-")).map((id) => `google/${id}`);
+    const ids = known.flatMap((id) => (id.startsWith("gemini-") ? [`google/${id}`] : []));
 
     if (ids.length === 0) throw new ModelListError("Could not load the Vertex AI model list");
 

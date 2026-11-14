@@ -11,7 +11,7 @@ import * as z from "zod/v4";
 
 import { startRuntime } from "./runner";
 import { fakeControlPlane } from "./testing/fake-control-plane";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type { McpNote } from "@aven/agents/types";
 import type { RunMcpServer } from "@aven/protocol/types";

@@ -15,10 +15,15 @@ COPY apps/cli/package.json apps/cli/
 COPY apps/control-plane/package.json apps/control-plane/
 COPY apps/platform/package.json apps/platform/
 COPY apps/runtime/package.json apps/runtime/
+COPY packages/agent-backend/package.json packages/agent-backend/
+COPY packages/claude/package.json packages/claude/
 COPY packages/agents/package.json packages/agents/
 COPY packages/db/package.json packages/db/
+COPY packages/github/package.json packages/github/
 COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
+COPY packages/server-kit/package.json packages/server-kit/
+COPY packages/ui/package.json packages/ui/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./

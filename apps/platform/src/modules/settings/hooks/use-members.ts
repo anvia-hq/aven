@@ -1,4 +1,4 @@
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { authClient } from "@/lib/auth-client";
 import { copyToClipboard } from "@/lib/clipboard";
 
@@ -21,15 +21,19 @@ export function useMembers() {
       image: member.user.image ?? null,
       status: "active" as const,
     })),
-    ...(organization?.invitations ?? [])
-      .filter((invitation) => invitation.status === "pending")
-      .map((invitation) => ({
-        id: invitation.id,
-        name: invitation.email,
-        email: invitation.email,
-        role: invitation.role,
-        status: "pending" as const,
-      })),
+    ...(organization?.invitations ?? []).flatMap((invitation) =>
+      invitation.status === "pending"
+        ? [
+            {
+              id: invitation.id,
+              name: invitation.email,
+              email: invitation.email,
+              role: invitation.role,
+              status: "pending" as const,
+            },
+          ]
+        : [],
+    ),
   ];
 
   async function invite(email: string, role: InvitableRole) {

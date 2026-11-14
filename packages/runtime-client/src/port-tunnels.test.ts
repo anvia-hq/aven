@@ -41,9 +41,10 @@ async function waitFor<T>(read: () => T | undefined) {
 
 const received = (sent: Sent) =>
   sent.frames
-    .map((frame) => decodeViewerFrame(frame))
-    .filter((frame) => frame !== null)
-    .map((frame) => decoder.decode(frame.payload))
+    .flatMap((raw) => {
+      const frame = decodeViewerFrame(raw);
+      return frame === null ? [] : [decoder.decode(frame.payload)];
+    })
     .join("");
 
 describe("a port of a runner", () => {

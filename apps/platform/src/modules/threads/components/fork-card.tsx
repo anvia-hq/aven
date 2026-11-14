@@ -2,7 +2,7 @@ import { GitBranch } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials, shortTimeAgo, timeAgo } from "@/lib/format";
 
 import { useThreads } from "../hooks/use-threads";

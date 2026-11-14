@@ -2,8 +2,8 @@ import { Kanban, List, Plus } from "@mynaui/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
+import { Button } from "@aven/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { CockpitPage, withTag } from "@/modules/cockpit/components/cockpit-page";
 import { TaskBoard } from "@/modules/cockpit/components/task-board";
 import { TaskDrawer } from "@/modules/cockpit/components/task-drawer";

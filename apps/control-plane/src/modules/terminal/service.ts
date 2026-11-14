@@ -1,4 +1,4 @@
-import { ForbiddenError } from "../../errors";
+import { ForbiddenError } from "@aven/server-kit/errors";
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadsService } from "../threads/service";

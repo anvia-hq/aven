@@ -8,7 +8,7 @@ import {
 } from "@aven/protocol/events";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { toast } from "@/components/toast";
+import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 

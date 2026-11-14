@@ -7,7 +7,7 @@ import * as z from "zod/v4";
 import { DurableRuns } from "./durable-runs";
 
 import { connectMcpServers, mcpPrefix } from "./mcp-servers";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import type { RunEvent, RunMcpServer } from "@aven/protocol/types";
 
 const seen: { authorization: string | null; note: string }[] = [];

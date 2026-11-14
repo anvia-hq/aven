@@ -28,7 +28,7 @@ describe("COMPATIBLE_PRESETS", () => {
   });
 
   test("only a server on the person's own machine goes without a key", () => {
-    expect(COMPATIBLE_PRESETS.filter((preset) => !preset.needsKey).map((p) => p.id)).toEqual([
+    expect(COMPATIBLE_PRESETS.flatMap((preset) => (preset.needsKey ? [] : [preset.id]))).toEqual([
       "ollama",
     ]);
   });

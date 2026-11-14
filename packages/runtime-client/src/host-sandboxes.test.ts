@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { lstat, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -277,6 +277,22 @@ describe("a runner that works on this machine", () => {
 
 describe("a person's GitHub on a run (decision 0276)", () => {
   const ada = { token: "ghu_adasecret", id: 42, login: "ada", name: "Ada L" };
+  const ambient = ["GH_TOKEN", "GITHUB_TOKEN", "GIT_CONFIG_COUNT", "GIT_AUTHOR_EMAIL"].concat(
+    Object.keys(process.env).filter((name) => /^GIT_CONFIG_(KEY|VALUE)_\d+$/.test(name)),
+  );
+  const saved: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    for (const name of ambient) {
+      saved[name] = process.env[name];
+      delete process.env[name];
+    }
+  });
+  afterEach(() => {
+    for (const name of ambient) {
+      if (saved[name] === undefined) delete process.env[name];
+      else process.env[name] = saved[name];
+    }
+  });
   const show =
     'echo "token=$GH_TOKEN"; echo "email=$GIT_AUTHOR_EMAIL"; git config --get-all credential.https://github.com.helper; echo "dir=$GH_CONFIG_DIR"';
 

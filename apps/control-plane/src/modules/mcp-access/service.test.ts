@@ -5,7 +5,7 @@ import { users } from "@aven/db/schema/users";
 import { ACCESS_LIMIT } from "@aven/protocol/mcp-access";
 import { eq } from "drizzle-orm";
 
-import { ConflictError } from "../../errors";
+import { ConflictError } from "@aven/server-kit/errors";
 import { createAccessTokenBody } from "./schema";
 import { mcpAccessService } from "./service";
 

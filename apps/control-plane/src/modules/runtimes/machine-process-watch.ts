@@ -1,4 +1,4 @@
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import type { RunOutcome } from "@aven/protocol/types";
 import type { RuntimeConnection } from "./hub";
 

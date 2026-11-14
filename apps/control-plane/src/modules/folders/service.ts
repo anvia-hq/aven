@@ -3,7 +3,7 @@ import { threadFolderThreads } from "@aven/db/schema/thread-folder-threads";
 import { threadFolders } from "@aven/db/schema/thread-folders";
 import { and, asc, desc, eq } from "drizzle-orm";
 
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { threadsService } from "../threads/service";
 
 export class FolderNotFoundError extends NotFoundError {
@@ -45,7 +45,7 @@ export const foldersService = {
     return folders.map((folder) =>
       view(
         folder,
-        members.filter((member) => member.folderId === folder.id).map((member) => member.threadId),
+        members.flatMap((member) => (member.folderId === folder.id ? [member.threadId] : [])),
       ),
     );
   },

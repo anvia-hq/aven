@@ -1,4 +1,4 @@
-import { orNotFound } from "../../errors";
+import { orNotFound } from "@aven/server-kit/errors";
 import { runnerVia } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { reachRunner } from "../runtimes/providers";

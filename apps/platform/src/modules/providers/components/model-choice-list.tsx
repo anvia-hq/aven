@@ -5,7 +5,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/command";
+} from "@aven/ui/command";
 
 import type { ReactNode } from "react";
 
@@ -43,20 +43,22 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
               </span>
             }
           >
-            {choices
-              .filter((choice) => choice.provider.id === item.id)
-              .map((choice) => (
-                <CommandItem
-                  key={choice.modelId}
-                  value={`${choice.label} ${choice.modelId} ${item.name} ${item.id}`}
-                  data-checked={
-                    item.id === selected?.providerId && choice.modelId === selected.modelId
-                  }
-                  onSelect={() => onSelect(choice)}
-                >
-                  <span className="truncate">{choice.label}</span>
-                </CommandItem>
-              ))}
+            {choices.flatMap((choice) =>
+              choice.provider.id === item.id
+                ? [
+                    <CommandItem
+                      key={choice.modelId}
+                      value={`${choice.label} ${choice.modelId} ${item.name} ${item.id}`}
+                      data-checked={
+                        item.id === selected?.providerId && choice.modelId === selected.modelId
+                      }
+                      onSelect={() => onSelect(choice)}
+                    >
+                      <span className="truncate">{choice.label}</span>
+                    </CommandItem>,
+                  ]
+                : [],
+            )}
           </CommandGroup>
         ))}
         {extra && (

@@ -8,12 +8,12 @@ import {
 } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "@/components/tabs";
-import { ToggleGroup, ToggleGroupItem } from "@/components/toggle-group";
+import { Skeleton } from "@aven/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@aven/ui/toggle-group";
 import { timeAgo } from "@/lib/format";
 
 import { useProjectTracked } from "../hooks/use-project-tracked";

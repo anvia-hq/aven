@@ -1,10 +1,10 @@
 import { GitBranch, GitCommit, Tag } from "@mynaui/icons-react";
 import { useMemo, type ReactNode } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
-import { Badge } from "@/components/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
+import { Badge } from "@aven/ui/badge";
 import { SectionCard } from "@/components/section-card";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { timeAgo } from "@/lib/format";
 import { commitUrl } from "@/modules/projects/repo-links";
 import type { Project } from "@/modules/projects/types";

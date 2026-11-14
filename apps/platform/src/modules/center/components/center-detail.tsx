@@ -1,10 +1,10 @@
 import { Check, CircleDashed, ExternalLink, X, XCircle } from "@mynaui/icons-react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@/components/drawer";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@aven/ui/drawer";
 import { Markdown } from "@/components/markdown";
-import { Skeleton } from "@/components/skeleton";
+import { Skeleton } from "@aven/ui/skeleton";
 import { useRequest } from "@/hooks/use-request";
 import { timeAgo } from "@/lib/format";
 import { DiffFileCard } from "@/modules/diff/components/diff-file-card";
@@ -106,13 +106,15 @@ function People({ pull }: { pull: PullDetail }) {
             </Badge>
           </li>
         ))}
-        {pull.requestedReviewers
-          .filter((login) => !pull.reviews.some((review) => review.login === login))
-          .map((login) => (
-            <li key={login}>
-              <Badge variant="outline">{login} · Review requested</Badge>
-            </li>
-          ))}
+        {pull.requestedReviewers.flatMap((login) =>
+          pull.reviews.some((review) => review.login === login)
+            ? []
+            : [
+                <li key={login}>
+                  <Badge variant="outline">{login} · Review requested</Badge>
+                </li>,
+              ],
+        )}
       </ul>
     </section>
   );

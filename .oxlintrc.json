@@ -9,10 +9,12 @@
     "dist",
     "**/routeTree.gen.ts",
     "packages/db/drizzle",
-    "apps/platform/src/components"
+    "apps/platform/src/components",
+    "packages/ui/src"
   ],
   "jsPlugins": ["./tooling/oxlint/aven-plugin.mjs"],
   "rules": {
+    "aven/no-comments": "error",
     "aven/no-conditional-spread": "error",
     "aven/no-barrel-file": "error",
     "aven/no-native-primitives": "error",
@@ -31,6 +33,22 @@
     "unicorn/prefer-node-protocol": "error",
     "unicorn/prefer-number-properties": "error",
     "unicorn/prefer-structured-clone": "error",
-    "unicorn/throw-new-error": "error"
-  }
+    "unicorn/throw-new-error": "error",
+    "aven/no-reduce-accumulator-copy": "error",
+    "aven/no-reflect-apply": "error",
+    "aven/no-reflect-get": "error",
+    "aven/no-array-filter-map": "error",
+    "aven/no-chained-type-assertions": "error",
+    "aven/no-unknown-type-aliases": "error",
+    "aven/no-module-mocking": "error",
+    "oxc/no-accumulating-spread": "error"
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx", "e2e/**", "**/testing/**"],
+      "rules": {
+        "aven/no-chained-type-assertions": "off"
+      }
+    }
+  ]
 }

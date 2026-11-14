@@ -1,7 +1,7 @@
 export function startedOnUse<T extends object>(target: T, start: () => Promise<void>): T {
   return new Proxy(target, {
     get(object, property) {
-      const value = Reflect.get(object, property, object);
+      const value = object[property as keyof T];
 
       if (typeof value !== "function") return value;
 

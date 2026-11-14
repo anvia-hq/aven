@@ -143,9 +143,9 @@ describe("the built-in skills", () => {
     const { skills } = await readSkillFolders(BUILTIN_SKILLS_DIR);
     const names = new Set(skills.map((skill) => skill.name));
     const help = await text("aven-help");
-    const pointed = [...help.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)]
-      .map((match) => match[1]!)
-      .filter((name) => !name.includes("_"));
+    const pointed = [...help.matchAll(/`([a-z0-9]+(?:-[a-z0-9]+)+)`/g)].flatMap((match) =>
+      match[1]!.includes("_") ? [] : [match[1]!],
+    );
     expect(pointed.length).toBeGreaterThan(0);
     for (const name of pointed) expect(names.has(name)).toBe(true);
     for (const name of names) {

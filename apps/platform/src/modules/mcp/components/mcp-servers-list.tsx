@@ -1,9 +1,9 @@
 import { Pencil, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
-import { Switch } from "@/components/switch";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Switch } from "@aven/ui/switch";
 import { timeAgo } from "@/lib/format";
 
 import { useMcpServers } from "../hooks/use-mcp-servers";

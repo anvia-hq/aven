@@ -4,7 +4,7 @@ import { systemNoteOf } from "@aven/protocol/system-notes";
 import { cn } from "cn";
 import { memo } from "react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
 import { elapsed } from "@/lib/format";
 

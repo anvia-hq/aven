@@ -1,6 +1,6 @@
 import { Elysia, sse, status } from "elysia";
 
-import { orNotFound } from "../../errors";
+import { orNotFound } from "@aven/server-kit/errors";
 import { threadAccess } from "./access";
 import type { RunManager } from "../runs/service";
 import {

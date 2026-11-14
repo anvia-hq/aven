@@ -2,7 +2,7 @@ import { FORKS_PER_THREAD, forkPrompt } from "@aven/protocol/forks";
 import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
-import { ConflictError, UnprocessableError } from "../../errors";
+import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";
 import type { ThreadForks, ThreadMessages } from "./types";

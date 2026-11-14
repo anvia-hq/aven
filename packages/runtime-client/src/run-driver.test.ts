@@ -6,17 +6,11 @@ import { backendFor } from "./agent-backends";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type { RuntimeToControlPlane } from "@aven/protocol/types";
-import type {
-  AgentBackend,
-  DurableEnd,
-  FollowedRun,
-  RunMessage,
-  RunRecord,
-  ThreadWorkspaces,
-} from "./types";
+import type { AgentBackend, DurableEnd, FollowedRun } from "@aven/agent-backend/types";
+import type { RunMessage, RunRecord, ThreadWorkspaces } from "./types";
 
 const thread = { id: "thread-1", organizationId: "org-1" };
 

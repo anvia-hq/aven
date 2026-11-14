@@ -1,7 +1,7 @@
 import { Refresh } from "@mynaui/icons-react";
 import { useState } from "react";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/dialog";
+} from "@aven/ui/dialog";
 
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { CreatedRuntime, Runtime } from "../types";

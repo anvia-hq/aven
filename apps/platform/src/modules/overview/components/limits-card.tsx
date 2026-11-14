@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import { Progress } from "@/components/progress";
+import { Progress } from "@aven/ui/progress";
 import { resetsIn } from "@/lib/format";
 
 import { OverviewCard } from "./overview-card";

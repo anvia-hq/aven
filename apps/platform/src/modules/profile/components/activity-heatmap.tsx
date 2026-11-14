@@ -1,4 +1,4 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import { compactNumber } from "@/lib/format";
 
 import { chartDate, heatmapWeeks, levelOf } from "../activity";

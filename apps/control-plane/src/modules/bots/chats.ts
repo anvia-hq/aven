@@ -1,7 +1,7 @@
 import { BOT_MAX_HOPS } from "@aven/protocol/bots";
 
-import { prepareAttachments, type AttachmentBody } from "../../attachments";
-import { orNotFound, UnprocessableError } from "../../errors";
+import { prepareAttachments, type AttachmentBody } from "@aven/server-kit/attachments";
+import { orNotFound, UnprocessableError } from "@aven/server-kit/errors";
 import { assertSeesImages, environmentModel, resolveModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";

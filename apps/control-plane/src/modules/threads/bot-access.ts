@@ -1,7 +1,7 @@
 import { pendingQuestion } from "@aven/protocol/events";
 import { BOT_THREADS_LISTED, threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
 import { threadsService } from "./service";

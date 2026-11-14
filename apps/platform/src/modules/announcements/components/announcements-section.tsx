@@ -3,19 +3,19 @@ import { useState } from "react";
 
 import { cn } from "cn";
 
-import { Form } from "@/components/form";
-import { Label } from "@/components/label";
-import { Badge } from "@/components/badge";
-import { Button } from "@/components/button";
+import { Form } from "@aven/ui/form";
+import { Label } from "@aven/ui/label";
+import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import {
   SettingsEmpty,
   SettingsList,
   SettingsRow,
   SettingsSection,
 } from "@/components/settings-section";
-import { Switch } from "@/components/switch";
-import { Textarea } from "@/components/textarea";
-import { TextField } from "@/components/text-field";
+import { Switch } from "@aven/ui/switch";
+import { Textarea } from "@aven/ui/textarea";
+import { TextField } from "@aven/ui/text-field";
 
 import { useAnnouncements } from "../hooks/use-announcements";
 import { ANNOUNCEMENT_TEMPLATES, templateBackground } from "../templates";

@@ -1,6 +1,6 @@
 import { ChevronRight } from "@mynaui/icons-react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 
 import { activitySummary, peerBots, peerName } from "../activity";
 import type { Bot, BotChatMessage } from "../types";

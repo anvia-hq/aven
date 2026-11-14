@@ -2,7 +2,7 @@ import { useMemo, type ReactNode } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@/components/button";
+import { Button } from "@aven/ui/button";
 import { useTextSize } from "@/modules/theme/hooks/use-text-size";
 
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";

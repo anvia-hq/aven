@@ -1,7 +1,8 @@
-import { NotFoundError } from "../../errors";
+import { NotFoundError } from "@aven/server-kit/errors";
 import { loadAppById, loadOrganizationApp } from "./app-store";
-import { github as platformClient, GithubClient } from "./client";
-import type { GithubClients, GithubConfig } from "./types";
+import { github as platformClient, GithubClient } from "@aven/github/client";
+import type { GithubClients } from "./types";
+import type { GithubConfig } from "@aven/github/types";
 
 export const PLATFORM_APP = "platform";
 

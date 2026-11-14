@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { RunOutbox, openRunDatabase } from "./run-outbox";
-import { journalPath } from "./testing/journal-path";
+import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import type { RuntimeToControlPlane } from "@aven/protocol/types";
 
 const event = (runId: string, seq: number, delta: string): RuntimeToControlPlane => ({

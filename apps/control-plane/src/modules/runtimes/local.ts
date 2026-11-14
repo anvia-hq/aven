@@ -4,7 +4,7 @@ import { delimiter } from "node:path";
 import { HostSandboxes } from "@aven/runtime-client/host-sandboxes";
 import { journalPathIn } from "@aven/runtime-client/runtime-home";
 
-import { describeError } from "../../errors";
+import { describeError } from "@aven/server-kit/errors";
 import { localRunnerToken, runtimesService } from "./service";
 import type { LocalRunnerMode } from "./types";
 

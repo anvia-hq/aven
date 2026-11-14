@@ -3,7 +3,7 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 import { threadTurns } from "@aven/protocol/threads";
 import type { ContinuationPatch } from "@aven/protocol/types";
 
-import { ConflictError, UnprocessableError } from "../../errors";
+import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import type { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import type { RunManager } from "../runs/service";

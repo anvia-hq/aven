@@ -1,6 +1,6 @@
 import { Sparkles } from "@mynaui/icons-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials } from "@/lib/format";
 
 import type { MentionPerson } from "../types";

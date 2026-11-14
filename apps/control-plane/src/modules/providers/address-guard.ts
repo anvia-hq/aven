@@ -1,7 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 
-import { UnprocessableError } from "../../errors";
+import { UnprocessableError } from "@aven/server-kit/errors";
 
 export class ProviderAddressError extends UnprocessableError {}
 
@@ -37,10 +37,10 @@ for (const [address, prefix] of [
 
 export function allowedProviderHosts(env: Record<string, string | undefined> = process.env) {
   return new Set(
-    (env.PROVIDER_ALLOWED_HOSTS ?? "")
-      .split(",")
-      .map((host) => host.trim().toLowerCase())
-      .filter((host) => host !== ""),
+    (env.PROVIDER_ALLOWED_HOSTS ?? "").split(",").flatMap((host) => {
+      const name = host.trim().toLowerCase();
+      return name === "" ? [] : [name];
+    }),
   );
 }
 
