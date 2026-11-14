@@ -19,7 +19,7 @@ export function createAskQuestionTool(ask: AskQuestion) {
     description:
       "Ask the person one or more multiple-choice questions. Use it only when you cannot go on without their decision. Give two to five short, distinct choices and set allowCustom when another answer is plausible. The question appears as a card in the chat and your turn ends there; their answer arrives as their next message.",
     inputSchema: askQuestionSchema,
-    async execute({ questions }) {
+    async handler({ questions }) {
       const { relayed: via } = await ask(toQuestions(questions));
 
       if (!via) return { shown: true, note: SHOWN };

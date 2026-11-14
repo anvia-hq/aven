@@ -10,7 +10,7 @@ export function createListBotsTool(list: () => readonly BotPeer[]) {
     description:
       "List the person's other bots you can write to with send_message, with each one's handle and what it does.",
     inputSchema: z.object({}),
-    async execute() {
+    async handler() {
       return { bots: list() };
     },
   });

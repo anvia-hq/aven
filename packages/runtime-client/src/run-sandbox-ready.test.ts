@@ -37,7 +37,7 @@ function slowSandbox() {
     name: "probe",
     description: "probe",
     inputSchema: z.object({}),
-    execute: async () => {
+    handler: async () => {
       events.push("tool ran");
       return "ok";
     },

@@ -30,7 +30,7 @@ export function createWaitForForksTool(
         .optional()
         .describe(`How long to wait at most; ${DEFAULT_WAIT_SECONDS} when not given.`),
     }),
-    async execute({ ids, timeoutSeconds = DEFAULT_WAIT_SECONDS }, context) {
+    async handler({ ids, timeoutSeconds = DEFAULT_WAIT_SECONDS }, context) {
       const started = clock.now();
       const deadline = started + timeoutSeconds * 1000;
       for (;;) {

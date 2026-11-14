@@ -189,7 +189,7 @@ describe("createBotAgent", () => {
       name: "run_it",
       description: "Runs something on the computer.",
       inputSchema: z.object({}),
-      execute: async () => "42",
+      handler: async () => "42",
     });
     const delivered: string[] = [];
     const agent = createBotAgent({

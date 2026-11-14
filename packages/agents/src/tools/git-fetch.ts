@@ -18,7 +18,7 @@ export function createGitFetchTool(fetchRemote: FetchRemote) {
           "The branch to fetch, such as main or feature/x. Defaults to the default branch.",
         ),
     }),
-    async execute({ branch }, context) {
+    async handler({ branch }, context) {
       const fetched = await fetchRemote(branch, context?.abortSignal);
       const ref = `origin/${fetched.branch}`;
       const updated = fetched.commit !== fetched.previous;

@@ -368,7 +368,7 @@ describe("steering a goal (decision 0210)", () => {
       name: "slow",
       description: "Takes a while",
       inputSchema: z.object({}),
-      execute: async () => {
+      handler: async () => {
         await gate.promise;
         return "done";
       },
@@ -431,7 +431,7 @@ describe("DurableRuns tool concurrency", () => {
       name: "slow",
       description: "Takes a moment.",
       inputSchema: z.object({ n: z.number() }),
-      async execute() {
+      async handler() {
         running += 1;
         most = Math.max(most, running);
         await new Promise((resolve) => setTimeout(resolve, 50));
@@ -468,8 +468,8 @@ describe("DurableRuns tool concurrency", () => {
     expect(await mostAtOnce(false)).toBe(3);
   });
 
-  test("a run that can ask a question still calls its tools one at a time", async () => {
-    expect(await mostAtOnce(true)).toBe(1);
+  test("a run that can ask a question still calls its tools side by side in a turn that does not ask", async () => {
+    expect(await mostAtOnce(true)).toBe(3);
   });
 });
 
@@ -592,7 +592,7 @@ describe("steering a run that is going (decision 0098)", () => {
       name: "slow",
       description: "Takes a while",
       inputSchema: z.object({}),
-      execute: async () => {
+      handler: async () => {
         await gate.promise;
         return "done";
       },
@@ -644,7 +644,7 @@ describe("steering a run that is going (decision 0098)", () => {
       name: "slow",
       description: "Takes a while",
       inputSchema: z.object({}),
-      execute: async () => {
+      handler: async () => {
         await toolGate.promise;
         return "done";
       },
@@ -702,7 +702,7 @@ describe("a long run", () => {
       name: "run",
       description: "A command",
       inputSchema: z.object({}),
-      execute: async () => output,
+      handler: async () => output,
     });
     const call = (index: number): ScriptStep => [
       { type: "tool-call", toolCallId: `c${index}`, toolName: "run", input: {} },

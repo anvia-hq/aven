@@ -11,10 +11,10 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@anvia/core": "^1.18.0",
-    "@anvia/durable": "^0.14.0",
-    "@anvia/mcp": "1.2.6",
-    "@anvia/sandbox": "1.3.3",
+    "@anvia/core": "^1.19.2",
+    "@anvia/durable": "^0.17.0",
+    "@anvia/mcp": "1.2.7",
+    "@anvia/sandbox": "1.3.4",
     "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
     "@aven/claude": "workspace:*",

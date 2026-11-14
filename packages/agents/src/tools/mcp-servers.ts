@@ -77,27 +77,27 @@ export function createMcpServerTools(host: McpServersHost) {
     description:
       "List the person's MCP servers: their names, addresses, who uses them, whether they are enabled, the names of their headers (never the values) and why the last attempt to connect failed, if it did.",
     inputSchema: z.object({}),
-    execute: async () => ({ servers: await host.list() }),
+    handler: async () => ({ servers: await host.list() }),
   });
   const add = createTool({
     name: ADD_MCP_SERVER_TOOL_NAME,
     description:
       "Add a remote MCP server for the person, when they ask you to connect one and give you its address. It is used from the next message on. Tell the person what you added.",
     inputSchema: addSchema,
-    execute: async (input) => ({ server: await host.add(input) }),
+    handler: async (input) => ({ server: await host.add(input) }),
   });
   const update = createTool({
     name: UPDATE_MCP_SERVER_TOOL_NAME,
     description:
       "Change an MCP server. Give only what changes. Use enabled: false to switch it off and enabled: true to switch it on.",
     inputSchema: updateSchema,
-    execute: async ({ id, ...patch }) => ({ server: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => ({ server: await host.update(id, patch) }),
   });
   const remove = createTool({
     name: REMOVE_MCP_SERVER_TOOL_NAME,
     description: "Remove an MCP server for good. Switch it off instead if unsure.",
     inputSchema: z.object({ id: z.uuid().describe("The server id from list_mcp_servers.") }),
-    execute: async ({ id }) => {
+    handler: async ({ id }) => {
       await host.remove(id);
       return { removed: true };
     },

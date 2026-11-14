@@ -11,8 +11,8 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@anvia/core": "^1.18.0",
-    "@anvia/durable": "^0.14.0",
+    "@anvia/core": "^1.19.2",
+    "@anvia/durable": "^0.17.0",
     "@aven/agents": "workspace:*",
     "@aven/protocol": "workspace:*",
     "zod": "^4.6.7"

@@ -42,7 +42,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
         .optional()
         .describe("A short name shown in the sidebar."),
     }),
-    execute: async (input) => ({
+    handler: async (input) => ({
       ...(await host.start(input)),
       note: "The fork is working. It is a thread of its own, shown under this one. Carry on; look at it with fork_status when you need it.",
     }),
@@ -53,7 +53,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     description:
       "Look at a fork of this thread: whether it is working, why it failed if it did, and the last thing its agent said, which is its report once it is done.",
     inputSchema: z.object({ id: forkId }),
-    execute: async ({ id }) => host.status(id),
+    handler: async ({ id }) => host.status(id),
   });
 
   const stopFork = createTool({
@@ -61,7 +61,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     description:
       "Stop a fork of this thread that is working, as the person's Stop button does: its current run is cancelled. The fork stays as a thread under this one, what it already did stays in its folder (take_fork_changes still reads it), and it can be given a new message later. Use it when the user asks you to stop, cancel or abandon a fork.",
     inputSchema: z.object({ id: forkId }),
-    execute: async ({ id }) => {
+    handler: async ({ id }) => {
       const view = await host.stop(id);
       let note = "The fork was not working, so nothing was stopped.";
 
@@ -79,7 +79,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     name: TAKE_FORK_CHANGES_TOOL_NAME,
     description: `Take what a fork changed: everything it changed since it was forked, committed or not, as a patch file in your workspace. Read it, and apply it with \`git apply --3way <patchPath>\` (or \`git apply --check\` first) in /workspace; nothing is applied for you. It can be called while the fork still works, and again for what it has done since.`,
     inputSchema: z.object({ id: forkId }),
-    execute: async ({ id }) => host.take(id),
+    handler: async ({ id }) => host.take(id),
   });
 
   return [

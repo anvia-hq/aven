@@ -526,7 +526,7 @@ describe("Claude runs with the same preparation as native", () => {
           command: z.string().optional(),
           path: z.string().optional(),
         }),
-        async execute(args) {
+        async handler(args) {
           if (name === "show_artifact") {
             return {
               artifacts: [

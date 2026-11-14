@@ -38,7 +38,7 @@ export function createDefineGoalTool(onDefine: (goal: GoalRequest) => void) {
 Use it for work that needs many edit-and-verify cycles (a feature, a migration, a refactor across many files) or a long look around before you can start (setting an environment up), and when you are running low on turns for the message. Not for a quick change you can finish now.
 After calling it, end your turn with one short sentence saying what you started. Do not keep working: the goal takes over, you will not be able to ask the user questions while it runs, and you are asked to report on it when it ends.`,
     inputSchema: goalRequestSchema,
-    execute: (goal) => {
+    handler: (goal) => {
       onDefine(goal);
       return "Goal recorded. It starts when you end this turn.";
     },

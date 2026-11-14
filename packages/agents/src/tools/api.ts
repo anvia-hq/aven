@@ -18,7 +18,7 @@ export function createApiTools(host: ApiHost) {
         .optional()
         .describe("Words the route's method and path should contain, e.g. 'POST threads'."),
     }),
-    execute: async ({ query }) => host({ op: "search", query }),
+    handler: async ({ query }) => host({ op: "search", query }),
   });
 
   const call = createTool({
@@ -42,7 +42,7 @@ export function createApiTools(host: ApiHost) {
         .optional()
         .describe("Only after the person said yes to a route marked 'confirm'."),
     }),
-    execute: async (input) => host({ op: "call", ...input }),
+    handler: async (input) => host({ op: "call", ...input }),
   });
 
   return [search, call];

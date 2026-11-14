@@ -216,7 +216,7 @@ export class DurableRuns implements AgentBackend {
     } catch (error) {
       const agent = input.agent;
 
-      if (agent) this.#runtime.unregisterAgent(agent.id);
+      if (agent) await this.#runtime.unregisterAgent(agent.id).catch(() => undefined);
 
       throw error;
     }
@@ -402,9 +402,9 @@ export class DurableRuns implements AgentBackend {
       compacting: input.compacting,
     });
 
-    if (after) this.#replay(run.id, after, mapper);
-
     const done = (async (): Promise<DurableEnd> => {
+      if (after) await this.#replay(run.id, after, mapper);
+
       for await (const event of run.stream({ after })) {
         const { events, end } = mapper.map(await this.#withOutcome(run, event));
         for (const mapped of events) onEvent(mapped, { id: run.id, sequence: event.sequence });
@@ -412,7 +412,7 @@ export class DurableRuns implements AgentBackend {
         if (event.type === "status") await this.#resolveInterrupted(run, event);
 
         if (end) {
-          if (!keepAgent) this.#release(agentId, end);
+          if (!keepAgent) await this.#release(agentId, end);
 
           return end;
         }
@@ -437,9 +437,9 @@ export class DurableRuns implements AgentBackend {
     return { ...event, data: { ...data, outcome: record.outcome } } as DurableEvent;
   }
 
-  #replay(runId: string, upTo: number, mapper: ReturnType<typeof createDurableEventMapper>) {
+  async #replay(runId: string, upTo: number, mapper: ReturnType<typeof createDurableEventMapper>) {
     for (let at = 0; at < upTo;) {
-      const page = this.#runtime.events(runId, at);
+      const page = await this.#runtime.events(runId, at);
 
       if (page.length === 0) return;
 
@@ -460,11 +460,11 @@ export class DurableRuns implements AgentBackend {
     await run.resolveTool(operationId, { type: "error-text", value: INTERRUPTED });
   }
 
-  #release(agentId: string, end: DurableEnd) {
+  async #release(agentId: string, end: DurableEnd) {
     if (end.type === "interaction") return;
 
     try {
-      this.#runtime.unregisterAgent(agentId);
+      await this.#runtime.unregisterAgent(agentId);
     } catch {}
   }
 }

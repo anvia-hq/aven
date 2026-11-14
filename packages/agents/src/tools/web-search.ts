@@ -47,7 +47,7 @@ export function createWebSearchTool(options: WebSearchOptions) {
     description:
       "Search the web for current information. Returns a short synthesized answer and the top results (title, url, content). Cite urls when you use them.",
     inputSchema: webSearchInput,
-    async execute(args, context): Promise<WebSearchOutput> {
+    async handler(args, context): Promise<WebSearchOutput> {
       const response = await request(TAVILY_SEARCH_URL, {
         method: "POST",
         headers: {

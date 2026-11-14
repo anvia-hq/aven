@@ -27,7 +27,7 @@ import type {
 } from "./types";
 
 const tool = (name: string): AnyTool =>
-  createTool({ name, description: name, inputSchema: z.object({}), execute: async () => "ok" });
+  createTool({ name, description: name, inputSchema: z.object({}), handler: async () => "ok" });
 
 const model = { provider: "openai", gatewayPath: "/g", gatewayToken: "t" } as const;
 const message: BotReplyMessage = {
@@ -74,7 +74,7 @@ const exec = (
     name: "exec_command",
     description: "run",
     inputSchema: z.object({ command: z.string(), timeoutMs: z.number().optional() }),
-    execute: async ({ command }) => run(command),
+    handler: async ({ command }) => run(command),
   });
 
 const sandboxWith = (
