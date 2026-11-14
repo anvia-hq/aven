@@ -28,6 +28,20 @@ test.describe("Settings > Profile", () => {
       "Your first thread starts this chart.",
     );
   });
+  test("the profile page offers a 4:5 PNG download of the person's profile", async ({ page }) => {
+    await registerUser(page, "download", "Download Person");
+    await page.goto("/settings/profile");
+
+    const download = page.getByRole("button", { name: "Download PNG" });
+    await expect(download).toBeVisible();
+    await expect(download).toBeEnabled();
+
+    const capture = page.waitForEvent("download");
+    await download.click();
+    const file = await capture;
+    expect(file.suggestedFilename()).toMatch(/downloadperson-profile-4x5\.png$/);
+  });
+
   test("the profile page is the person's own, with what they have done so far", async ({
     page,
   }) => {
