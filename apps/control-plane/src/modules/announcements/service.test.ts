@@ -2,17 +2,25 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { announcements } from "@aven/db/schema/announcements";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 import { announcementsService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
-run("announcements (real postgres)", () => {
+run("announcements (real postgres)", async () => {
   const made: string[] = [];
+  const wasActive = await announcementsService.active();
 
   afterAll(async () => {
     await db.delete(announcements).where(inArray(announcements.id, made));
+
+    if (wasActive) {
+      await db
+        .update(announcements)
+        .set({ active: true })
+        .where(eq(announcements.id, wasActive.id));
+    }
   });
 
   test("only one announcement stays active", async () => {

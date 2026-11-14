@@ -153,13 +153,16 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     (extras.identity as { userId: string; driverId?: string }) ?? undefined;
 
   const connectGithub = (id: string, login: string, githubUserId: number) =>
-    db.insert(githubUserTokens).values({
-      userId: id,
-      githubUserId,
-      login,
-      name: login,
-      accessTokenEncrypted: encryptSecret(`ghu_${login}`),
-    });
+    db
+      .insert(githubUserTokens)
+      .values({
+        userId: id,
+        githubUserId,
+        login,
+        name: login,
+        accessTokenEncrypted: encryptSecret(`ghu_${login}`),
+      })
+      .onConflictDoNothing();
   const githubOf = (extras: Record<string, unknown>) =>
     extras.github as { token: string; login: string } | undefined;
 
@@ -188,6 +191,8 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
 
   test("a run on a runner in machine mode is sent no GitHub token, whoever sent it", async () => {
     const thread = await driven();
+    await connectGithub(userId, "creator", 1);
+    await connectGithub(mateId, "mate", 2);
     started.length = 0;
     await messages(false).send(orgA, mateId, thread.id, { prompt: "one" });
     await messages(false).send(orgA, userId, thread.id, { prompt: "two" });
