@@ -493,6 +493,7 @@ test.describe("a message sent to an idle agent", () => {
 
     await expect(shown).toContainText("make the tests pass", { timeout: 500 });
     await expect(shown).toHaveAttribute("aria-busy", "true");
+    await expect(shown).toHaveCSS("opacity", "1");
     await expect(prompt).toHaveText("");
 
     await expect(shown).not.toHaveAttribute("aria-busy", "true", { timeout: 8000 });
