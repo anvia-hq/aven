@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { authClient } from "@/lib/auth-client";
 import { clearUserState } from "@/lib/user-state";
 import { resetBots } from "@/modules/bots/hooks/use-bots";
+import { resetMentions } from "@/modules/mentions/hooks/use-mentions";
 import { resetMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
 import { resetAccessTokens } from "@/modules/mcp-access/hooks/use-access-tokens";
 import { resetMemory } from "@/modules/memory/hooks/use-memory";
@@ -22,6 +23,7 @@ export function useSignOut() {
     await authClient.signOut();
     resetOrganizationData();
     resetBots();
+    resetMentions();
     resetProviders();
     resetSkills();
     resetMcpServers();

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { api, postJson } from "@/lib/api";
 import { finishedSoundOn, playMention } from "@/lib/chime";
+import { refreshMentions } from "@/modules/mentions/hooks/use-mentions";
 
 import { newMentions, unopened } from "../mentioned-threads";
 
@@ -49,7 +50,11 @@ export function useMentionedThreads() {
 
     known.current = (known.current ?? []).filter((id) => !seen.includes(id));
     setWaiting((current) => current.filter((id) => !seen.includes(id)));
-    for (const id of seen) void postJson(`/threads/${id}/mentions/seen`, {}).catch(() => undefined);
+    for (const id of seen) {
+      void postJson(`/threads/${id}/mentions/seen`, {})
+        .then(refreshMentions)
+        .catch(() => undefined);
+    }
   }, [openKey, waiting]);
 
   return new Set(unopened(waiting, open));
