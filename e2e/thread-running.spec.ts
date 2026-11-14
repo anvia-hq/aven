@@ -67,10 +67,7 @@ test.describe("a thread that is running", () => {
     });
     expect(sent.ok()).toBe(true);
 
-    await page
-      .getByRole("link", { name: /shiny-app/ })
-      .first()
-      .click();
+    await page.locator(`a[href="/threads/${threadId}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
     await expect(page.getByRole("img", { name: "Working" })).toHaveCount(1, { timeout: 3000 });
   });
@@ -82,10 +79,7 @@ test.describe("a thread that is running", () => {
     await page.getByRole("link", { name: "Projects", exact: true }).click();
     await expect.poll(() => runningOnServer(page, threadId), { timeout: 15_000 }).toBe(false);
 
-    await page
-      .getByRole("link", { name: /shiny-app/ })
-      .first()
-      .click();
+    await page.locator(`a[href="/threads/${threadId}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
     await expect(page.getByText("Shown after the agent's first reply")).toBeVisible();
     expect(await page.getByRole("img", { name: "Working" }).count()).toBe(0);
