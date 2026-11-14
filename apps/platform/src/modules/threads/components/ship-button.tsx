@@ -7,7 +7,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 
 import type { ShipAct } from "../types";
 import { ShipMenu } from "./ship-menu";
-import { ShipPlaceholder } from "./ship-placeholder";
 
 type Props = {
   action: ShipAct;
@@ -21,9 +20,7 @@ const UNKNOWN_GATE =
   "Could not check whether the repository is set up to ship. Is its runner online?";
 
 export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props) {
-  if (action.kind === "loading") {
-    return <ShipPlaceholder />;
-  }
+  if (action.kind === "loading") return null;
 
   if (action.kind === "failed") {
     return (
