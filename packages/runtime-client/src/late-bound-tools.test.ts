@@ -9,7 +9,7 @@ const tool = (name: string, answer: string) =>
     name,
     description: name,
     inputSchema: z.object({}),
-    execute: () => answer,
+    handler: () => answer,
   });
 
 test("calls the sandbox the thread has now, not the one the agent was built with", async () => {

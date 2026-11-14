@@ -52,7 +52,7 @@ Use it to search or understand a large codebase, to look into several independen
 - The user does not see what a subagent sends you. Read it, check what matters, and tell the user the result yourself.
 - A subagent cannot ask the user anything or start subagents of its own.`,
     inputSchema: spawnAgentSchema,
-    async execute({ tasks }, context) {
+    async handler({ tasks }, context) {
       const results = await Promise.all(
         tasks.map(async (task, index): Promise<SubagentResult> => {
           const { description, type } = task;

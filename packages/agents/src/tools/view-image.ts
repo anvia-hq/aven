@@ -15,7 +15,7 @@ export function createViewImageTool(files: ImageFiles) {
     inputSchema: z.object({
       path: z.string().min(1).describe("The image file, relative to the workspace or absolute."),
     }),
-    async execute({ path }, context) {
+    async handler({ path }, context) {
       const bytes = await files.readFile({ path, abortSignal: context?.abortSignal });
       const mediaType = imageType(bytes);
 

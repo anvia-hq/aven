@@ -59,9 +59,9 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
 
   journal.registerOrKeep(input);
   journal.contexts.set(agentId, { verify });
-  const finished = () => {
+  const finished = async () => {
     journal.contexts.delete(agentId);
-    journal.release(agentId, { type: "response", messages: [] });
+    await journal.release(agentId, { type: "response", messages: [] });
   };
   const maxSessions = request.maxSessions ?? DEFAULT_GOAL_SESSIONS;
   let handle: DurableTaskHandle<GoalResult>;
@@ -81,7 +81,7 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
     state.taskId = handle.id;
     saveState(state);
   } catch (error) {
-    finished();
+    await finished();
     throw error;
   }
   const tracker = { state, saveState, cursorOf };
@@ -127,7 +127,7 @@ async function followGoal(
   const sessions: Promise<void>[] = [];
   const settled = () => Promise.all(sessions).then(() => undefined);
 
-  const sessionStarted = (runId: string) => {
+  const sessionStarted = async (runId: string) => {
     if (seen.has(runId)) return;
 
     seen.add(runId);
@@ -138,6 +138,7 @@ async function followGoal(
     const number = known?.number ?? Object.keys(state.sessions).length + 1;
 
     if (!known) {
+      await settled();
       state.sessions[runId] = { number, filed: false };
       tracker.saveState(state);
       onEvent({ type: "text", delta: goalSessionMarker(number) });
@@ -154,7 +155,7 @@ async function followGoal(
     const wait = asRecord(data.wait);
 
     if (data.status === "waiting" && wait.type === "agent" && typeof wait.runId === "string") {
-      sessionStarted(wait.runId);
+      await sessionStarted(wait.runId);
       continue;
     }
 

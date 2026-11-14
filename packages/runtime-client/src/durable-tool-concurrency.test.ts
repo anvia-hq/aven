@@ -11,14 +11,13 @@ import {
 } from "./durable-tool-concurrency";
 import type { ToolConcurrencyProbe } from "./types";
 
-const unpatched: ToolConcurrencyProbe = () => {};
+const ignoring: ToolConcurrencyProbe = () => {};
 
 test("a durable build that drops toolConcurrency fails the check and says how to fix it", () => {
-  const check = () => assertDurableToolConcurrency(unpatched);
+  const check = () => assertDurableToolConcurrency(ignoring);
   expect(check).toThrow(TOOL_CONCURRENCY_NOT_HONOURED);
   expect(check).toThrow(/bun install/);
-  expect(check).toThrow(/patchedDependencies/);
-  expect(check).toThrow(/patches\/@anvia%2Fdurable@0\.14\.0\.patch/);
+  expect(check).toThrow(/0.17.0 or later/);
 });
 
 test("a durable build that fails another way reports its own error", () => {

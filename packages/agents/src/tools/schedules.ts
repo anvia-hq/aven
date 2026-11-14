@@ -63,27 +63,27 @@ export function createScheduleTools(host: ScheduleHost) {
     description:
       "Schedule a task to run again and again, like cron, when the person asks for something on a schedule (for example every morning). At each time the app wakes the bot with the task. Tell the person what you scheduled and when it runs next.",
     inputSchema: createSchema,
-    execute: async (input) => ({ schedule: await host.create(input) }),
+    handler: async (input) => ({ schedule: await host.create(input) }),
   });
   const list = createTool({
     name: LIST_SCHEDULES_TOOL_NAME,
     description:
       "List every schedule: which bot runs it, when, whether it is enabled, and how the last run went.",
     inputSchema: z.object({}),
-    execute: async () => ({ schedules: await host.list() }),
+    handler: async () => ({ schedules: await host.list() }),
   });
   const update = createTool({
     name: UPDATE_SCHEDULE_TOOL_NAME,
     description:
       "Change a schedule. Give only what changes. Use enabled: false to pause it and enabled: true to resume it.",
     inputSchema: updateSchema,
-    execute: async ({ id, ...patch }) => ({ schedule: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => ({ schedule: await host.update(id, patch) }),
   });
   const remove = createTool({
     name: DELETE_SCHEDULE_TOOL_NAME,
     description: "Delete a schedule for good. Pause it instead if unsure.",
     inputSchema: z.object({ id: z.uuid().describe("The schedule id from list_schedules.") }),
-    execute: async ({ id }) => {
+    handler: async ({ id }) => {
       await host.remove(id);
       return { deleted: true };
     },

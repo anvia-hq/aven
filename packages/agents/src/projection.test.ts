@@ -17,7 +17,7 @@ const readFile = createTool({
   name: "read_file",
   description: "Reads a file.",
   inputSchema: z.object({ path: z.string() }),
-  execute: ({ path }) => {
+  handler: ({ path }) => {
     const content = files.get(path);
 
     if (content === undefined) throw new Error(`File not found: ${path}`);

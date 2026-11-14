@@ -12,7 +12,7 @@ export function createComputerTools(host: ComputerHost) {
     description:
       "Say whether your computer, where your commands, files and processes are, is asleep, waking or awake. Your command and file tools start it themselves, so you need this only to know before you rely on something that was running in it.",
     inputSchema: z.object({}),
-    async execute() {
+    async handler() {
       return { state: await host.status() };
     },
   });
@@ -21,7 +21,7 @@ export function createComputerTools(host: ComputerHost) {
     description:
       "Wake your computer and wait until it is awake. It answers at once when the computer is awake already. Your command and file tools wake it themselves, so call this only when you want it up before you need it.",
     inputSchema: z.object({}),
-    async execute() {
+    async handler() {
       const { before, state } = await host.wake();
 
       if (before === "asleep") {

@@ -13,7 +13,7 @@ import type { RunEvent } from "@aven/protocol/types";
 import type { CreateSubagent } from "./types";
 
 const named = (name: string): AnyTool =>
-  createTool({ name, description: name, inputSchema: z.object({}), execute: () => name });
+  createTool({ name, description: name, inputSchema: z.object({}), handler: () => name });
 const parentTools = ["read_file", "write_file", "exec_command", "ask_user", "spawn_agent"].map(
   named,
 );
@@ -48,7 +48,7 @@ describe("subagentRunner", () => {
       name: "read_file",
       description: "Reads a file.",
       inputSchema: z.object({ path: z.string() }),
-      execute: ({ path }) => `contents of ${path}`,
+      handler: ({ path }) => `contents of ${path}`,
     });
     const { create } = scripted({
       "subagent-explore-3": [

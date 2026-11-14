@@ -11,7 +11,7 @@ const named = (name: string): AnyTool =>
     name,
     description: name,
     inputSchema: z.object({}),
-    execute: () => name,
+    handler: () => name,
   });
 
 const parentTools = [

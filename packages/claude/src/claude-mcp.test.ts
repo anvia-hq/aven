@@ -10,7 +10,7 @@ const command = createTool({
   name: "exec_command",
   description: "Run a command",
   inputSchema: z.object({ command: z.string() }),
-  async execute({ command: line }, context) {
+  async handler({ command: line }, context) {
     context?.abortSignal?.throwIfAborted();
     return { status: "exited", exitCode: 0, stdout: line, stderr: "" };
   },
@@ -115,7 +115,7 @@ describe("Aven tools on the Claude agent's MCP server", () => {
       name: "show_artifact",
       description: "Show a file",
       inputSchema: z.object({ path: z.string() }),
-      async execute() {
+      async handler() {
         return { artifacts: [{ name: "chart.png", mediaType: "image/png" }], paths: ["chart.png"] };
       },
     });

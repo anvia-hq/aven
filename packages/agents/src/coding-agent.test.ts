@@ -10,7 +10,7 @@ const echo = createTool({
   name: "echo",
   description: "Returns its input.",
   inputSchema: z.object({ text: z.string() }),
-  execute: ({ text }) => text,
+  handler: ({ text }) => text,
 });
 
 describe("createCodingAgent", () => {

@@ -50,14 +50,14 @@ export function createGoalTools(host: GoalHost) {
     name: GET_GOAL_TOOL_NAME,
     description: "Read your current goal, or null when you have none.",
     inputSchema: z.object({}),
-    execute: async () => ({ goal: await host.get() }),
+    handler: async () => ({ goal: await host.get() }),
   });
   const start = createTool({
     name: START_GOAL_TOOL_NAME,
     description:
       "Start a long-running goal for big or multi-step work you do on your own computer. After this reply ends, the app keeps waking you for round after round in the background, without the person, until your checks pass and you call update_goal complete, you are blocked, or the round cap is reached. Use it for work that will not fit one reply; not for questions or small tasks. You can have one goal at a time.",
     inputSchema: startSchema,
-    execute: async (input) => ({
+    handler: async (input) => ({
       goal: await host.start({ ...input, checks: input.checks ?? [] }),
       next: "Goal started. Tell the person in one short message what you will work on in the background, then stop; the first round starts after this reply.",
     }),
@@ -67,7 +67,7 @@ export function createGoalTools(host: GoalHost) {
     description:
       "Change your goal. complete: the whole objective is achieved (its checks run first on your computer). blocked: you cannot go on without the person; give the reason. pause, resume and clear: only when the person asks, in a chat reply.",
     inputSchema: updateSchema,
-    execute: async ({ action, reason }, { abortSignal }) => {
+    handler: async ({ action, reason }, { abortSignal }) => {
       if (action === "complete") {
         const goal = await host.get();
 

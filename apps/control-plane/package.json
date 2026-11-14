@@ -11,7 +11,7 @@
     "backfill:active-organizations": "bun --env-file=../../.env scripts/backfill-active-organizations.ts"
   },
   "dependencies": {
-    "@anvia/core": "^1.18.0",
+    "@anvia/core": "^1.19.2",
     "@anvia/jev": "^0.2.1",
     "@anvia/memory-drizzle": "^1.2.0",
     "@aven/agent-backend": "workspace:*",

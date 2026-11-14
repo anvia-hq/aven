@@ -79,7 +79,7 @@ describe("verifyWith", () => {
       name: "exec_command",
       description: "run",
       inputSchema: z.object({ command: z.string(), timeoutMs: z.number().optional() }),
-      execute: ({ command }) => results[command],
+      handler: ({ command }) => results[command],
     });
 
   test("runs the commands in order and reports exit codes and output", async () => {

@@ -90,7 +90,7 @@ export function createMemoryTool(host: MemoryHost) {
     name: MEMORY_TOOL_NAME,
     description: `Your memory: notes that outlive this conversation, kept as files in ${MEMORY_ROOT}. view lists a folder or shows a note with numbered lines; create writes a note (replacing one of that name); str_replace, insert, delete and rename change one. It is not a file system: the sandbox's commands cannot reach it.`,
     inputSchema: memorySchema,
-    async execute(input) {
+    async handler(input) {
       return host(memoryCommandOf(input));
     },
   });

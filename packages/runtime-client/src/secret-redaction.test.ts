@@ -68,7 +68,7 @@ describe("redactingTools", () => {
       name: "exec_command",
       description: "Runs a command",
       inputSchema: z.object({ command: z.string() }),
-      execute: async ({ command }) => ({ stdout: `ran ${command}: sk-live-abcdef`, exitCode: 0 }),
+      handler: async ({ command }) => ({ stdout: `ran ${command}: sk-live-abcdef`, exitCode: 0 }),
     });
     const [wrapped] = redactingTools([tool], secretRedactor([secret("sk-live-abcdef")])!);
 

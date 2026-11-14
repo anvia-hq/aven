@@ -653,7 +653,7 @@ describe("startRuntime", () => {
         name: "exec_command",
         description: "Runs a command",
         inputSchema: z.object({}),
-        execute: async () => ({ stdout: "DB=postgres://very-secret-value MODE=development-mode" }),
+        handler: async () => ({ stdout: "DB=postgres://very-secret-value MODE=development-mode" }),
       });
       const { sandbox } = envSandbox();
       const { plane, runtime } = connect({
@@ -810,7 +810,7 @@ describe("startRuntime", () => {
       name: "screenshot",
       description: "A big result",
       inputSchema: z.object({}),
-      execute: async () => ({ png: "A".repeat(450_000) }),
+      handler: async () => ({ png: "A".repeat(450_000) }),
     });
     const { sandbox } = slowSandbox();
     const { plane, runtime } = connect({
@@ -1178,7 +1178,7 @@ describe("startRuntime runs", () => {
       name: "lookup",
       description: "Looks something up",
       inputSchema: z.object({ key: z.string() }),
-      execute: ({ key }) => `value of ${key}`,
+      handler: ({ key }) => `value of ${key}`,
     });
     const { plane, runtime } = connect({
       sandbox,
@@ -1276,7 +1276,7 @@ describe("startRuntime runs", () => {
         name: "slow",
         description: "Takes a while",
         inputSchema: z.object({}),
-        execute: async () => {
+        handler: async () => {
           await gate;
           return "done";
         },
@@ -1417,7 +1417,7 @@ describe("startRuntime runs", () => {
       name: "lookup",
       description: "Looks something up",
       inputSchema: z.object({ key: z.string() }),
-      execute: ({ key }) => `value of ${key}`,
+      handler: ({ key }) => `value of ${key}`,
     });
     const { plane, runtime } = connect({
       sandbox,
@@ -1461,7 +1461,7 @@ describe("startRuntime runs", () => {
       name: "lookup",
       description: "Looks something up",
       inputSchema: z.object({ key: z.string() }),
-      execute: ({ key }) => `value of ${key}`,
+      handler: ({ key }) => `value of ${key}`,
     });
     const { plane, runtime } = connect({
       sandbox,
@@ -1830,7 +1830,7 @@ describe("startRuntime runs", () => {
       name: "slow",
       description: "Takes a while",
       inputSchema: z.object({}),
-      execute: async () => {
+      handler: async () => {
         working.resolve();
         await gate.promise;
         return "done";
@@ -1964,7 +1964,7 @@ describe("startRuntime runs", () => {
       name: "wait",
       description: "Waits.",
       inputSchema: z.object({}),
-      execute: async (_input, context) => {
+      handler: async (_input, context) => {
         waiting.resolve();
         await new Promise<void>((resolve) =>
           context?.abortSignal?.addEventListener("abort", () => resolve(), { once: true }),
@@ -2146,7 +2146,7 @@ describe("startRuntime runs", () => {
         name: "lookup",
         description: "Looks something up",
         inputSchema: z.object({ key: z.string() }),
-        execute: ({ key }) => `value of ${++lookups} for ${key}`,
+        handler: ({ key }) => `value of ${++lookups} for ${key}`,
       });
       const hold = Promise.withResolvers<void>();
       const reached = Promise.withResolvers<void>();
@@ -2259,7 +2259,7 @@ describe("startRuntime runs", () => {
         name: "exec_command",
         description: "run",
         inputSchema: z.object({ command: z.string(), timeoutMs: z.number().optional() }),
-        execute: () => ({
+        handler: () => ({
           status: "exited",
           exitCode: ++checks === 1 ? 1 : 0,
           stdout: "",

@@ -4,7 +4,7 @@ import type { DurableAgentRegistration } from "@anvia/durable";
 import type { ToolConcurrencyProbe } from "./types";
 
 export const TOOL_CONCURRENCY_NOT_HONOURED =
-  'The installed @anvia/durable drops toolConcurrency on an agent registration, so every run would silently make its tool calls one at a time. This build is missing patches/@anvia%2Fdurable@0.14.0.patch: run `bun install` at the repository root, and check that the root package.json still lists "@anvia/durable@0.14.0" in patchedDependencies.';
+  "The installed @anvia/durable drops toolConcurrency on an agent registration, so every run would silently make its tool calls one at a time. Use a version of @anvia/durable that supports it (0.17.0 or later) and run `bun install` at the repository root.";
 
 const PROBE_AGENT_ID = "tool-concurrency-probe";
 

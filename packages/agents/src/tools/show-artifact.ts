@@ -64,7 +64,7 @@ export function createShowArtifactTool(files: ArtifactFiles) {
         .max(MAX_ARTIFACTS_PER_CALL)
         .describe("The files to show, in the order to show them."),
     }),
-    async execute({ items }, context) {
+    async handler({ items }, context) {
       const shown: ShownArtifacts = { artifacts: [], paths: [], failed: [] };
       for (const item of items) {
         try {

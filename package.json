@@ -22,8 +22,5 @@
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "typescript": "^5"
-  },
-  "patchedDependencies": {
-    "@anvia/durable@0.14.0": "patches/@anvia%2Fdurable@0.14.0.patch"
   }
 }

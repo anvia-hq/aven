@@ -67,28 +67,28 @@ export function createProviderTools(host: ProvidersHost) {
     description:
       "List the person's model providers: their kinds, names, addresses, default models, which is the default, and whether each has its API key (never the key).",
     inputSchema: z.object({}),
-    execute: async () => ({ providers: await host.list() }),
+    handler: async () => ({ providers: await host.list() }),
   });
   const add = createTool({
     name: ADD_PROVIDER_TOOL_NAME,
     description:
       "Add a model provider for the person, when they ask. It starts with no API key: right after, call ask_provider_key so the person can type it. Never ask for the key in a message, and never make up an address, a model or a name.",
     inputSchema: addSchema,
-    execute: async (input) => ({ provider: await host.add(input) }),
+    handler: async (input) => ({ provider: await host.add(input) }),
   });
   const update = createTool({
     name: UPDATE_PROVIDER_TOOL_NAME,
     description:
       "Change a provider's name, address or default model, or make it the default. Give only what changes. Moving a provider to another address removes its key: call ask_provider_key afterwards.",
     inputSchema: updateSchema,
-    execute: async ({ id, ...patch }) => ({ provider: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => ({ provider: await host.update(id, patch) }),
   });
   const remove = createTool({
     name: REMOVE_PROVIDER_TOOL_NAME,
     description:
       "Remove a provider and its saved key for good: the person would have to type the key again. Make sure that is what they asked for.",
     inputSchema: z.object({ id }),
-    execute: async ({ id }) => {
+    handler: async ({ id }) => {
       await host.remove(id);
       return { removed: true };
     },
@@ -98,7 +98,7 @@ export function createProviderTools(host: ProvidersHost) {
     description:
       "List the models a provider offers, asked with its saved key. For Azure these are the deployments of the resource. It needs the key to be saved.",
     inputSchema: z.object({ id }),
-    execute: async ({ id }) => ({ models: await host.models(id) }),
+    handler: async ({ id }) => ({ models: await host.models(id) }),
   });
   const askKey = host.askKey?.bind(host);
   const ask = askKey
@@ -108,7 +108,7 @@ export function createProviderTools(host: ProvidersHost) {
           description:
             "Show the person a masked form for a provider's API key, which is saved to the provider without passing through you. Use it after add_provider, or when a provider has no key. Your turn ends there; they tell you when it is saved.",
           inputSchema: z.object({ id }),
-          execute: async ({ id }) => ({ provider: await askKey(id), note: KEY_SHOWN }),
+          handler: async ({ id }) => ({ provider: await askKey(id), note: KEY_SHOWN }),
         }),
       ]
     : [];

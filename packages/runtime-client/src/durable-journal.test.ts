@@ -17,7 +17,7 @@ test("a run resumes after the runtime closes, reusing committed tool results", a
     name: "count",
     description: "Counts",
     inputSchema: z.object({ n: z.number() }),
-    execute: async () => ({ ran: ++ran }),
+    handler: async () => ({ ran: ++ran }),
   });
   const hold = Promise.withResolvers<void>();
   const reached = Promise.withResolvers<void>();

@@ -36,7 +36,7 @@ export function createEditTool(files: EditableFiles) {
       newString: z.string().describe("Replacement text; must differ from oldString."),
       replaceAll: z.boolean().optional().describe("Replace every occurrence (default false)."),
     }),
-    async execute({ path, oldString, newString, replaceAll = false }, context) {
+    async handler({ path, oldString, newString, replaceAll = false }, context) {
       if (oldString === "") {
         throw new Error("oldString must not be empty; use `write_file` to create files");
       }

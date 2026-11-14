@@ -28,7 +28,7 @@ export function createReactToMessageTool(react: ReactToMessage) {
     description:
       "React to a message in the chat with one emoji, as you would tap one in a messaging app. The reaction shows on that message and says nothing else, so send a message as well when you have something to say.",
     inputSchema: reactToMessageSchema,
-    async execute(input) {
+    async handler(input) {
       return react(input);
     },
   });

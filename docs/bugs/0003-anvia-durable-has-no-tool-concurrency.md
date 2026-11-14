@@ -1,6 +1,6 @@
 # `@anvia/durable` has no way to set `toolConcurrency`
 
-Status: worked around with a local patch (`patches/@anvia%2Fdurable@0.14.0.patch`, decision 0070). Still absent upstream in 0.14.0.
+Status: fixed upstream in `@anvia/durable` 0.17.0 (`DurableAgentRegistration.toolConcurrency`); the local patch is removed (decision 0296).
 
 ## Symptom
 
