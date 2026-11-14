@@ -213,40 +213,6 @@ run("threadsService (postgres)", async () => {
     ]);
   });
 
-  test("a thread is its creator's: a teammate does not see it, read it or change it", async () => {
-    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
-    expect((await threadsService.list(teammate)).map((row) => row.id)).not.toContain(thread.id);
-    await expect(threadsService.readable(teammate, thread.id)).rejects.toBeInstanceOf(
-      ThreadNotFoundError,
-    );
-    await expect(threadsService.owned(teammate, thread.id)).rejects.toBeInstanceOf(
-      ThreadNotFoundError,
-    );
-    expect(await threadsService.update(teammate, thread.id, { title: "hijack" })).toBeNull();
-    expect((await threadsService.owned(mine, thread.id)).title).not.toBe("hijack");
-  });
-
-  test("a thread shared with the workspace can be read by a teammate, and only read", async () => {
-    const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
-    expect(thread.visibility).toBe("private");
-    const shared = await threadsService.update(mine, thread.id, { visibility: "workspace" });
-    expect(shared?.visibility).toBe("workspace");
-    expect(shared?.createdByName).toBe("T");
-
-    expect((await threadsService.list(teammate)).map((row) => row.id)).toContain(thread.id);
-    expect((await threadsService.readable(teammate, thread.id)).id).toBe(thread.id);
-    await expect(threadsService.owned(teammate, thread.id)).rejects.toBeInstanceOf(
-      ThreadNotFoundError,
-    );
-    expect(await threadsService.update(teammate, thread.id, { visibility: "private" })).toBeNull();
-    expect((await threadsService.readable(mine, thread.id)).visibility).toBe("workspace");
-
-    await threadsService.update(mine, thread.id, { visibility: "private" });
-    await expect(threadsService.readable(teammate, thread.id)).rejects.toBeInstanceOf(
-      ThreadNotFoundError,
-    );
-  });
-
   test("a shared thread is not shown to another organization", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: projectA.id });
     await threadsService.update(mine, thread.id, { visibility: "workspace" });

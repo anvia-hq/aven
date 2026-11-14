@@ -6,7 +6,7 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 run("createBotChats (postgres)", async () => {
   const { db } = await import("@aven/db/client");
   const { users } = await import("@aven/db/schema/users");
-  const { inArray } = await import("drizzle-orm");
+  const { eq, inArray } = await import("drizzle-orm");
   const { createBotAgent } = await import("@aven/agents/bot-agent");
   const { botMessagesToChat } = await import("@aven/agents/bot-projection");
   const { scriptedModel, text, toolCall } = await import("@aven/agents/testing/scripted-model");
@@ -511,7 +511,7 @@ run("createBotChats (postgres)", async () => {
     expect(made).toEqual([{ name: "Pip", instruction: "Talk like a pirate." }]);
   });
 
-  test("the bot runs on the model it was given, else the person's default", async () => {
+  test("the bot runs on the model it was given, else its provider's own, else the person's default", async () => {
     const [mine] = await botsService.list(alice);
     const [provider] = await db
       .insert(providers)
@@ -547,11 +547,28 @@ run("createBotChats (postgres)", async () => {
     await chats.send(alice, mine!.id, "one");
     await botsService.update(alice, mine!.id, { providerId: provider!.id });
     await chats.send(alice, mine!.id, "two");
+    const [preferred] = await db
+      .insert(providers)
+      .values({
+        userId: alice,
+        kind: "openai-compatible",
+        name: "Default",
+        baseUrl: "http://localhost:1/v1",
+        modelId: "default-model",
+        isDefault: true,
+      })
+      .returning();
+    try {
+      await botsService.update(alice, mine!.id, { providerId: null });
+      await chats.send(alice, mine!.id, "three");
+    } finally {
+      await db.delete(providers).where(eq(providers.id, preferred!.id));
+    }
     expect(used).toEqual([
       { provider: "openai-compatible", modelId: "chosen-1" },
       { provider: "openai-compatible", modelId: "provider-model" },
+      { provider: "openai-compatible", modelId: "default-model" },
     ]);
-    await botsService.update(alice, mine!.id, { providerId: null });
   });
 
   test("the bot's effort and its compaction size reach the agent", async () => {

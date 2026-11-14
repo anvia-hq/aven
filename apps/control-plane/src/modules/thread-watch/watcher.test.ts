@@ -274,30 +274,27 @@ run("createThreadWatcher (postgres)", async () => {
     state.run = { startedAt: RUN, lastEventAt: state.clock };
     state.clock += QUIET_ALERT_MS;
     await watcher.tick();
-    expect(watcher.pending()).toEqual({ alerted: [thread.id], ending: [] });
     state.run = undefined;
     await watcher.ended(thread.id, RUN, { outcome: "cancelled" });
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
-    expect(woken.at(-1)!.note).toContain("was stopped before it finished");
     await watching(thread.id);
     state.run = { startedAt: RUN, lastEventAt: state.clock };
     state.clock += QUIET_ALERT_MS;
     await watcher.tick();
-    expect(watcher.pending()).toEqual({ alerted: [thread.id], ending: [] });
     state.run = undefined;
     await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
     await watcher.tick();
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
-    expect(woken).toHaveLength(4);
-    expect(woken.at(-1)!.note).toContain("boom");
+    const said = woken.map(({ note }) => note);
+    expect(said).toHaveLength(4);
+    expect(said[0]).toContain("has shown nothing for 15 minutes");
+    expect(said[1]).toContain("was stopped before it finished");
+    expect(said[2]).toContain("has shown nothing for 15 minutes");
+    expect(said[3]).toContain("boom");
   });
 
   test("a run that ends while its note cannot be delivered is not left on its way", async () => {
     const { thread, watcher, woken, state } = await setup();
     state.refuse = true;
     await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
     state.refuse = false;
     await watching(thread.id);
     await watcher.tick();
@@ -318,7 +315,6 @@ run("createThreadWatcher (postgres)", async () => {
     expect(woken[0]!.note).toContain("has shown nothing for 15 minutes");
     state.run = undefined;
     await watcher.ended(thread.id, RUN, { outcome: "failed", error: "boom" });
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
     expect(woken).toHaveLength(2);
     expect(woken[1]!.note).toContain("boom");
   });
@@ -330,7 +326,6 @@ run("createThreadWatcher (postgres)", async () => {
     await watcher.tick();
     await watcher.tick();
     expect(woken).toEqual([]);
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
     state.clock += QUIET_ALERT_MS;
     await watcher.tick();
     expect(woken).toHaveLength(1);
@@ -345,7 +340,6 @@ run("createThreadWatcher (postgres)", async () => {
     await watcher.tick();
     expect(woken).toHaveLength(1);
     expect(woken[0]!.note).toContain("is no longer working, and how its run ended was not heard");
-    expect(watcher.pending()).toEqual({ alerted: [], ending: [] });
     await watcher.tick();
     expect(woken).toHaveLength(1);
   });

@@ -75,25 +75,18 @@ function runtime({
 }
 
 describe("a run's message to its runtime", () => {
-  test("carries the GitHub account the run acts as, when it has one", async () => {
+  test("carries the GitHub account the run acts as, and none for a person who has not connected it", async () => {
     const { posted, remote } = runtime();
 
     await remote.start({ thread, prompt: "hi", github });
     await remote.resume({ thread, continuation: {}, response: {}, github });
-
-    expect(posted.map((message) => message.type)).toEqual(["run.start", "run.resume"]);
-    for (const message of posted) {
-      expect(message).toMatchObject({ github });
-    }
-  });
-
-  test("has none for a person who has not connected GitHub", async () => {
-    const { posted, remote } = runtime();
-
     await remote.start({ thread, prompt: "hi" });
 
-    expect(posted[0]).not.toHaveProperty("github", expect.anything());
-    expect(JSON.stringify(posted[0])).not.toContain("ghu_");
+    expect(posted.map((message) => message.type)).toEqual(["run.start", "run.resume", "run.start"]);
+    expect(posted[0]).toMatchObject({ github });
+    expect(posted[1]).toMatchObject({ github });
+    expect(posted[2]).not.toHaveProperty("github", expect.anything());
+    expect(JSON.stringify(posted[2])).not.toContain("ghu_");
   });
 
   test("carries the sender's MCP servers, and none when they have none", async () => {

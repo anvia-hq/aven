@@ -115,24 +115,6 @@ run("goalsService (postgres)", async () => {
     await expect(goalsService.update(id, "clear")).rejects.toThrow("You have no goal");
   });
 
-  test("resuming a goal that ran out of rounds gives it more", async () => {
-    const id = await botFor(alice);
-    await goalsService.start(alice, id, { ...input, maxRounds: 2 });
-    await goalsService.claimRound(id);
-    await goalsService.claimRound(id);
-    expect(await goalsService.claimRound(id)).toBeNull();
-    await goalsService.block(id, "It reached its 2-round limit.");
-
-    const resumed = await goalsService.update(id, "resume");
-
-    expect(resumed).toMatchObject({
-      phase: "active",
-      round: 2,
-      maxRounds: 2 + GOAL_DEFAULT_ROUNDS,
-    });
-    expect(await goalsService.claimRound(id)).toMatchObject({ roundsStarted: 3 });
-  });
-
   test("resuming a goal that stopped with rounds left keeps its cap, and one at the most there may be gets more", async () => {
     const id = await botFor(alice);
     await goalsService.start(alice, id, { ...input, maxRounds: 5 });
@@ -160,11 +142,14 @@ run("goalsService (postgres)", async () => {
     const id = await botFor(alice);
     await goalsService.start(alice, id, { ...input, maxRounds: 10 });
     for (let round = 0; round < 10; round++) await goalsService.claimRound(id);
+    expect(await goalsService.claimRound(id)).toBeNull();
     await goalsService.block(id, "Out of rounds.");
     expect(await goalsService.update(id, "resume")).toMatchObject({
+      phase: "active",
       round: 10,
       maxRounds: 10 + GOAL_DEFAULT_ROUNDS,
     });
+    expect(await goalsService.claimRound(id)).toMatchObject({ roundsStarted: 11 });
 
     await goalsService.update(id, "clear");
     await goalsService.start(alice, id, { ...input, maxRounds: GOAL_MAX_ROUNDS - 5 });
