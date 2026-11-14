@@ -30,6 +30,8 @@ function trendDirection(metric: MachineMetric, previous: number | null) {
 
 const trendLabel: Record<string, string> = { up: "▲", down: "▼", flat: "–" };
 
+const baselineOf = (percent: number | null) => (percent === null ? [] : [percent]);
+
 function Trend({ metric, previous }: { metric: MachineMetric; previous: number | null }) {
   if (previous === null || metric.percent === null)
     return <span className="text-[10px] font-semibold text-muted-foreground">–</span>;
@@ -61,7 +63,7 @@ function LoadTile({
   history: number[];
   previous: number | null;
 }) {
-  const empty = history.length === 0;
+  const points = history.length > 0 ? history : baselineOf(metric.percent);
 
   return (
     <div>
@@ -75,20 +77,14 @@ function LoadTile({
         {metric.percent ?? "–"}
         <span className="text-[11px] font-normal text-muted-foreground">%</span>
       </div>
-      {empty ? (
-        <p className="mt-1.5 h-6 text-[11px] text-muted-foreground">
-          Trend appears after two reports.
-        </p>
-      ) : (
-        <div className="mt-1.5 flex items-end gap-2">
-          <MeterBar percent={metric.percent} />
-          <RuntimeSparkline
-            points={history}
-            className="h-6 min-w-0 flex-1"
-            aria-label={`${metric.label} trend of ${runtime.name}`}
-          />
-        </div>
-      )}
+      <div className="mt-1.5 flex items-end gap-2">
+        <MeterBar percent={metric.percent} />
+        <RuntimeSparkline
+          points={points}
+          className="h-6 min-w-0 flex-1"
+          aria-label={`${metric.label} trend of ${runtime.name}`}
+        />
+      </div>
     </div>
   );
 }

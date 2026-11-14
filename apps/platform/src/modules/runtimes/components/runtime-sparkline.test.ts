@@ -8,8 +8,8 @@ describe("lineOf", () => {
     expect(lineOf([10, 10]).split(" ")).toHaveLength(2);
   });
 
-  test("draws nothing with fewer than two points", () => {
+  test("draws a flat baseline for a single reading, and nothing for none", () => {
     expect(lineOf([])).toBe("");
-    expect(lineOf([42])).toBe("");
+    expect(lineOf([0])).toContain("L120.0");
   });
 });
