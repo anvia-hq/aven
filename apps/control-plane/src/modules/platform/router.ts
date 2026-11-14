@@ -1,8 +1,9 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
 import { authService, emailLoginEnabled, githubLoginEnabled } from "../auth/service";
 import type { PutAwayThread } from "../threads/types";
+import { requirePlatformOwner } from "./owner";
 import { personParams, updateSettingsBody } from "./schema";
 import { platformService } from "./service";
 
@@ -21,7 +22,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
     .get(
       "/users",
       async ({ user }) => {
-        if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+        await requirePlatformOwner(user);
 
         return platformService.listPeople();
       },
@@ -30,7 +31,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
     .delete(
       "/users/:id",
       async ({ params, user }) => {
-        if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+        await requirePlatformOwner(user);
 
         await platformService.removePerson(user, params.id, putAway);
         return { removed: true };
@@ -40,7 +41,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
     .patch(
       "/settings",
       async ({ body, user }) => {
-        if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+        await requirePlatformOwner(user);
 
         await platformService.setRegistrationEnabled(body.registrationEnabled);
         return { registrationEnabled: body.registrationEnabled };

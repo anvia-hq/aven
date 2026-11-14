@@ -645,3 +645,5 @@ export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpit
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
 export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);
+
+export type WireRunEvent = z.infer<typeof runEvent>;

@@ -1,15 +1,4 @@
-import type { DragEvent } from "react";
-
 import type { SplitPair, SplitSide } from "./types";
-
-export const THREAD_DRAG = "application/x-aven-thread";
-
-export const dragThread = (event: DragEvent, id: string) => {
-  event.dataTransfer.setData(THREAD_DRAG, id);
-  event.dataTransfer.effectAllowed = "move";
-};
-
-export const dragsThread = (event: DragEvent) => event.dataTransfer.types.includes(THREAD_DRAG);
 
 export const sideOf = (x: number, left: number, width: number): SplitSide =>
   x - left < width / 2 ? "left" : "right";

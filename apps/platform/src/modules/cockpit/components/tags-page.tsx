@@ -8,7 +8,8 @@ import { Input } from "@aven/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { colors, paletteColor } from "@/modules/bots/avatar";
 
-import { useTagColors, useTags } from "../hooks/use-tags";
+import { useTagColors } from "../hooks/use-tag-colors";
+import { useTags } from "../hooks/use-tags";
 import type { CockpitTag } from "../types";
 import { TagBadge, tagStyle } from "./tag-badge";
 

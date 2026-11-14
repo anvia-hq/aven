@@ -37,7 +37,7 @@ routes/        thin pages: read params, compose components, no state logic
 - **Hooks own mutations.** Creating, removing or archiving something, and the toast that confirms it, live in a hook, not in a component or route.
 - Keep one hook per file, named `use-<thing>.ts`.
 - Dependencies between modules are one-directional (e.g. `projects` -> `threads`, `navigation` -> `projects`/`threads`, `auth` -> `navigation`). Do not create cycles.
-- Shared, feature-agnostic helpers go in `src/lib/` (`format.ts`: `timeAgo`, `initials`). Shared, feature-agnostic UI goes in `src/components/` (`page-header`, `stat-card`, `text-field`, `form`).
+- Shared, feature-agnostic helpers go in `src/lib/` (`format.ts`: `timeAgo`, `initials`). Shared, feature-agnostic UI goes in `src/components/` (`page-header`, `section-card`, `settings-section`).
 
 ## Imports
 
@@ -47,7 +47,7 @@ routes/        thin pages: read params, compose components, no state logic
 
 ## `src/components/`
 
-Shared, feature-agnostic UI primitives (`button.tsx`, `text-field.tsx`, ...) live in `src/components/`, **not** in a module. They are the only place that imports `@base-ui/react`. Feature components still go in `src/modules/<name>/components/`.
+Shared, feature-agnostic UI primitives live in `@aven/ui` (`button.tsx`, `text-field.tsx`, ...). That package is the only place that imports `@base-ui/react`. App-specific shared UI stays in `src/components/`. Feature components still go in `src/modules/<name>/components/`.
 
 ## `src/lib/`
 

@@ -14,7 +14,7 @@ import { useBotChanges } from "../hooks/use-bot-changes";
 import { useCockpitTags } from "../hooks/use-collection";
 import { useInbox } from "../hooks/use-inbox";
 import { useNotes } from "../hooks/use-notes";
-import { useTagColors } from "../hooks/use-tags";
+import { useTagColors } from "../hooks/use-tag-colors";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTag } from "../types";
 import { tagStyle } from "./tag-badge";

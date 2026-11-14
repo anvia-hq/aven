@@ -3,7 +3,9 @@ import { useState, type DragEvent, type ReactNode } from "react";
 
 import { cn } from "cn";
 
-import { dragsThread, sideOf, splitWith, THREAD_DRAG } from "../split";
+import { dragsThread, THREAD_DRAG } from "@/lib/thread-drag";
+
+import { sideOf, splitWith } from "../split";
 import type { SplitSide } from "../types";
 
 type Props = { threadId: string; split?: string; enabled: boolean; children: ReactNode };

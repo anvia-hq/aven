@@ -1,6 +1,6 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 const PLUGIN = resolve(import.meta.dir, "../aven-plugin.mjs");
 const OXLINT = resolve(import.meta.dir, "../../../node_modules/.bin/oxlint");
@@ -17,7 +17,9 @@ const run = (ruleName, code, filename, fix) => {
         rules: { [`aven/${ruleName}`]: "error" },
       }),
     );
-    writeFileSync(join(dir, filename), code);
+    const file = join(dir, filename);
+    mkdirSync(dirname(file), { recursive: true });
+    writeFileSync(file, code);
 
     const args = ["-c", ".oxlintrc.json", "--format", "json"];
 

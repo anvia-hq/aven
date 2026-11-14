@@ -13,18 +13,17 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { initials } from "@/lib/format";
 import { OrganizationMenu } from "@/modules/organizations/components/organization-menu";
-import { useCommandMenu } from "@/modules/navigation/hooks/use-command-menu";
 
 type Props = {
   name: string;
   email?: string | null;
   image?: string | null;
   onSignOut: () => void;
+  onOpenCommand: () => void;
 };
 
-export function UserCard({ name, email, image, onSignOut }: Props) {
+export function UserCard({ name, email, image, onSignOut, onOpenCommand }: Props) {
   const navigate = useNavigate();
-  const { setOpen: setCommandOpen } = useCommandMenu();
 
   return (
     <SidebarMenu>
@@ -60,7 +59,7 @@ export function UserCard({ name, email, image, onSignOut }: Props) {
               <User /> Personal settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setCommandOpen(true)}>
+            <DropdownMenuItem onClick={onOpenCommand}>
               <Command /> Command palette
               <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
             </DropdownMenuItem>

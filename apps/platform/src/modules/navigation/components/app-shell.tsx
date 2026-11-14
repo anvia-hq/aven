@@ -99,6 +99,7 @@ export function AppShell({ user, sidebar }: Props) {
                   email={user.email}
                   image={user.image}
                   onSignOut={signOut}
+                  onOpenCommand={() => setCommandOpen(true)}
                 />
               </div>
               <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">

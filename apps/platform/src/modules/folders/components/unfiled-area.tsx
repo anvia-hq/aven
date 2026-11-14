@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { useState, type ReactNode } from "react";
 
-import { dragsThread, THREAD_DRAG } from "@/modules/threads/split";
+import { dragsThread, THREAD_DRAG } from "@/lib/thread-drag";
 
 type Props = {
   dragging: boolean;

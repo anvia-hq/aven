@@ -1,7 +1,7 @@
-import { Elysia, status } from "elysia";
+import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { platformService } from "../platform/service";
+import { requirePlatformOwner } from "../platform/owner";
 import { announcementParams, createAnnouncementBody, updateAnnouncementBody } from "./schema";
 import { announcementsService } from "./service";
 
@@ -11,7 +11,7 @@ export const announcementsRouter = new Elysia({ prefix: "/announcements" })
   .get(
     "/",
     async ({ user }) => {
-      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+      await requirePlatformOwner(user);
 
       return announcementsService.list();
     },
@@ -20,7 +20,7 @@ export const announcementsRouter = new Elysia({ prefix: "/announcements" })
   .post(
     "/",
     async ({ body, user }) => {
-      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+      await requirePlatformOwner(user);
 
       return announcementsService.create(body);
     },
@@ -29,7 +29,7 @@ export const announcementsRouter = new Elysia({ prefix: "/announcements" })
   .patch(
     "/:id",
     async ({ params, body, user }) => {
-      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+      await requirePlatformOwner(user);
 
       return announcementsService.update(params.id, body);
     },
@@ -38,7 +38,7 @@ export const announcementsRouter = new Elysia({ prefix: "/announcements" })
   .delete(
     "/:id",
     async ({ params, user }) => {
-      if (!(await platformService.isOwner(user))) return status(403, "Platform owners only");
+      await requirePlatformOwner(user);
 
       await announcementsService.remove(params.id);
       return { removed: true };

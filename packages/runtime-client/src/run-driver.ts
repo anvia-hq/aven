@@ -11,7 +11,7 @@ import { forPaths, SANDBOX_PATHS } from "@aven/agents/sandbox-paths";
 import { mcpInstructions } from "@aven/agents/mcp";
 import { memoryInstructions } from "@aven/agents/memory";
 import { skillsInstructions } from "@aven/agents/skills";
-import type { ComputerHost } from "@aven/agents/tools/computer";
+import type { ComputerHost } from "@aven/agents/tools/types";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
 import { errorMessage } from "@aven/agents/values";

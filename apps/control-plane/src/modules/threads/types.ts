@@ -1,7 +1,6 @@
 import type { RunEnding } from "../runs/types";
 import type { createThreadContinuation } from "./continuation";
 import type { acting, createThreadMessages } from "./messages";
-import type { SendMessageBody } from "./schema";
 import type {
   BotProjectView,
   BotThreadDetail,
@@ -66,8 +65,6 @@ export type ThreadPullRequest = {
 export type ThreadPerson = { id: string; name: string; image: string | null };
 
 export type Viewer = { organizationId: string; userId: string };
-
-export type ModelSelection = Pick<SendMessageBody, "providerId" | "modelId" | "reasoningEffort">;
 
 export type PatchOf = (
   organizationId: string,

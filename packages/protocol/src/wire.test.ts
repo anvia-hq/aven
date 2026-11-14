@@ -14,12 +14,18 @@ import {
   parseMachineRelayParams,
   parseRuntimeFrame,
 } from "./wire";
+import type { WireRunEvent } from "./wire";
 import type { RunEvent } from "./types";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
 describe("run events from a runtime", () => {
   const turn = { inputTokens: 1, outputTokens: 2, cacheWriteTokens: 3, cacheReadTokens: 4 };
+
+  test("every event the wire accepts is a thread event", () => {
+    const fits: WireRunEvent extends RunEvent ? true : never = true;
+    expect(fits).toBe(true);
+  });
 
   test("a usage event is accepted, with or without the context", () => {
     const event = {

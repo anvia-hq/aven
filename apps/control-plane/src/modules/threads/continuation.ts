@@ -4,12 +4,13 @@ import { threadTurns } from "@aven/protocol/threads";
 import type { ContinuationPatch } from "@aven/protocol/types";
 
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
+import type { ModelSelection } from "../providers/types";
 import type { RuntimeHub } from "../runtimes/hub";
 import { runtimesService } from "../runtimes/service";
 import type { RunManager } from "../runs/service";
 import type { SendMessageBody } from "./schema";
 import { threadsService } from "./service";
-import type { ModelSelection, PatchOf, ThreadMessages, Viewer } from "./types";
+import type { PatchOf, ThreadMessages, Viewer } from "./types";
 
 const PATCH_MAX_BYTES = 4 * 1024 * 1024;
 

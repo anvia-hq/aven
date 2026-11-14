@@ -4,7 +4,7 @@ import { cn } from "cn";
 
 import { Badge } from "@aven/ui/badge";
 
-import { useTagColors } from "../hooks/use-tags";
+import { useTagColors } from "../hooks/use-tag-colors";
 
 function inkOn(hex: string) {
   const channel = (at: number) => {
