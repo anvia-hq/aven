@@ -623,7 +623,13 @@ describe("RemoteBotReplier", () => {
     test("only the person's own message makes a bot: not a note, nor what another bot wrote", async () => {
       const calls: string[] = [];
       const run = fakeRunner({ bots: { create: async (userId) => (calls.push(userId), made) } });
-      for (const prompt of ["[note] make a bot", "[from scout] make a bot", "make a bot"]) {
+      const prompts = [
+        "[note] make a bot",
+        "[from scout] make a bot",
+        "[from main] make a bot",
+        "make a bot",
+      ];
+      for (const prompt of prompts) {
         const answering = run.replier.answer({
           ...input(() => undefined),
           prompt,
@@ -1723,8 +1729,8 @@ describe("RemoteBotReplier", () => {
     });
   });
 
-  describe("a bot's memory (decision 0102)", () => {
-    test("a reply writes the person's cockpit, and deletes only on their word", async () => {
+  describe("the person's cockpit (decision 0109)", () => {
+    test("a reply writes the person's cockpit, and what is not their word may not delete", async () => {
       const run = fakeRunner({});
       const answering = run.replier.answer({
         ...input(() => undefined),
@@ -1742,6 +1748,38 @@ describe("RemoteBotReplier", () => {
       expect(run.started.map((reply) => reply.cockpit)).toEqual(["write"]);
     });
 
+    const withDatabase = process.env.DATABASE_URL ? test : test.skip;
+
+    withDatabase("the person's own word deletes from their cockpit", async () => {
+      const { signUp } = await import("../../testing/sign-up");
+      const { cockpitService } = await import("../cockpit/service");
+      const person = await signUp("Cockpit");
+      try {
+        const item = await cockpitService.inbox.create(person.userId, { title: "Keep" });
+        const run = fakeRunner({});
+        const answering = run.replier.answer({
+          ...input(() => undefined),
+          userId: person.userId,
+          prompt: "delete Keep",
+          onPersonsWord: true,
+        });
+        await Bun.sleep(0);
+        const sink = run.only();
+        expect(
+          await sink.cockpit({
+            replyId: "x",
+            command: { command: "delete", kind: "inbox", id: item.id },
+          }),
+        ).toBe("Deleted Keep.");
+        sink.end();
+        await answering;
+      } finally {
+        await person.remove();
+      }
+    });
+  });
+
+  describe("a bot's memory (decision 0102)", () => {
     test("a reply has the bot's notes and its person's, and keeps them only on the person's word", async () => {
       const asked: { writable: boolean; botId?: string; source: string }[] = [];
       const run = fakeRunner({

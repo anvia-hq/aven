@@ -114,13 +114,14 @@ run("a thread continued on another runner (postgres, decision 0152)", async () =
   test("archives the new thread when it could not start", async () => {
     const old = await oldThread();
     failStart = true;
-    const before = (await threadsService.list(viewer)).length;
+    freed.length = 0;
+    const before = new Set((await threadsService.list(viewer)).map((thread) => thread.id));
     await expect(continuation.continueOn(viewer, old.id, to.id)).rejects.toThrow("no model");
     failStart = false;
-    const listed = await threadsService.list(viewer);
-    expect(listed.length).toBe(before + 1);
-    expect(
-      listed.filter((thread) => thread.runtimeId === to.id && thread.state === "archived").length,
-    ).toBeGreaterThan(0);
+    const made = (await threadsService.list(viewer)).filter((thread) => !before.has(thread.id));
+    expect(made.map(({ runtimeId, state }) => ({ runtimeId, state }))).toEqual([
+      { runtimeId: to.id, state: "archived" },
+    ]);
+    expect(freed).toEqual([{ id: made[0]!.id, runtimeId: to.id }]);
   });
 });

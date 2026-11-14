@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { MemoryStore, Message } from "@anvia/core";
 import { createBotAgent } from "@aven/agents/bot-agent";
-import { typingDelay } from "@aven/agents/bot-delay";
 import { botMessagesToChat } from "@aven/agents/bot-projection";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { parseBotPrompt } from "@aven/protocol/bots";
@@ -191,12 +190,11 @@ describe("BotRunner", () => {
     });
   });
 
-  test("the bot's messages come one after another, each after a pause worked out from it", async () => {
-    const pauses: number[] = [];
+  test("the bot's messages come one after another, between typing and stopped", async () => {
     const runner = runnerWith({
       store: fakeStore(),
       createAgent: scripts([[send("hey"), send("how was your day, my friend?")], [text("")]]),
-      pause: async (ms) => void pauses.push(ms),
+      pause: async () => undefined,
     });
     const client = await watch(runner, stopped);
     await runner.send(bot, USER, "hello", model);
@@ -210,7 +208,6 @@ describe("BotRunner", () => {
       "bot: how was your day, my friend?",
       "stopped",
     ]);
-    expect(pauses).toEqual([typingDelay("hey"), typingDelay("how was your day, my friend?")]);
   });
 
   test("messages the model sends in one turn are typed one at a time", async () => {

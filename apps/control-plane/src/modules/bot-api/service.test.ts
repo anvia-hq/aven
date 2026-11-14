@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { ACTING_HEADER } from "../auth/acting";
+import { ACTING_HEADER, actingSession } from "../auth/acting";
 import { createBotApi } from "./service";
 import type { KnownRoute } from "./types";
 
@@ -28,7 +28,7 @@ const call = (path: string, extra: object = {}, method = "GET") =>
   ({ replyId: "r", op: "call", method, path, ...extra }) as never;
 
 describe("bot api", () => {
-  test("a call that never answers is cut off after the time limit, and the grant ends", async () => {
+  test("a call that never answers is cut off after the time limit", async () => {
     const hung = createBotApi({
       routes: () => routes,
       organizationsOf: async () => [{ id: "org1", name: "One" }],
@@ -38,6 +38,37 @@ describe("bot api", () => {
     await expect(
       hung.answer({ userId: "u", params: call("/threads"), onPersonsWord: true }),
     ).rejects.toThrow("too long");
+  });
+
+  const withDatabase = process.env.DATABASE_URL ? test : test.skip;
+
+  withDatabase("the person's grant of a call that was cut off ends", async () => {
+    const { signUp } = await import("../../testing/sign-up");
+    const person = await signUp("Acting");
+    try {
+      const reached = Promise.withResolvers<Headers>();
+      const hung = createBotApi({
+        routes: () => routes,
+        organizationsOf: async () => [{ id: "org1", name: "One" }],
+        handle: (request) => {
+          reached.resolve(request.headers);
+          return new Promise<Response>(() => undefined);
+        },
+        timeoutMs: 300,
+      });
+      const answering = hung.answer({
+        userId: person.userId,
+        params: call("/threads"),
+        onPersonsWord: true,
+      });
+      const headers = await reached.promise;
+      const during = await actingSession(headers);
+      await expect(answering).rejects.toThrow("too long");
+      expect(during?.user.id).toBe(person.userId);
+      expect(await actingSession(headers)).toBeUndefined();
+    } finally {
+      await person.remove();
+    }
   });
 
   test("search lists what is allowed with its tier, never a blocked route, and the workspaces", async () => {
