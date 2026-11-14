@@ -17,7 +17,7 @@ function Profile() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-10 px-4 py-10 md:py-14">
-      <ProfileHeader name={user.name} email={user.email} image={user.image} />
+      <ProfileHeader name={user.name} email={user.email} image={user.image} stats={stats} />
       {failed && (
         <p className="text-sm text-muted-foreground">
           Your activity could not be loaded. Reload the page to try again.
