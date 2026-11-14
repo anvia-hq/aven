@@ -6,8 +6,6 @@ import { DiffStat } from "./diff-stat";
 
 type Props = { diff: ThreadDiff; onOpen: () => void };
 
-const PILL = `h-7 gap-1 rounded-lg border px-2.5 text-[0.8rem] font-medium ${FLOATING_BUTTON}`;
-
 export function ChangesBadge({ diff, onOpen }: Props) {
   if (!diff.loaded) return null;
 
