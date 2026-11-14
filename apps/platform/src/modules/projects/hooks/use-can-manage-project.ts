@@ -1,5 +1,5 @@
+import { isOwnerOrAdminRole } from "@aven/protocol/roles";
 import { authClient } from "@/lib/auth-client";
-import { isOwnerOrAdminRole } from "@/lib/member-role";
 
 import type { Project } from "../types";
 

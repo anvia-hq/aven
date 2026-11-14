@@ -1,5 +1,6 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
+import { isOwnerOrAdminRole } from "@aven/protocol/roles";
 import { and, eq } from "drizzle-orm";
 
 export async function isOwnerOrAdmin(organizationId: string, userId: string) {
@@ -7,6 +8,5 @@ export async function isOwnerOrAdmin(organizationId: string, userId: string) {
     .select({ role: members.role })
     .from(members)
     .where(and(eq(members.organizationId, organizationId), eq(members.userId, userId)));
-  const roles = member?.role.split(",").map((role) => role.trim()) ?? [];
-  return roles.some((role) => role === "owner" || role === "admin");
+  return isOwnerOrAdminRole(member?.role);
 }

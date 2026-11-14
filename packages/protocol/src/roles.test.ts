@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { isOwnerOrAdminRole } from "./member-role";
+import { isOwnerOrAdminRole } from "./roles";
 
 describe("isOwnerOrAdminRole", () => {
   test.each(["owner", "admin", "member,admin", "member, owner", " admin "])(

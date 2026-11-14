@@ -2,11 +2,11 @@ import { useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@aven/ui/toast";
+import { isOwnerOrAdminRole } from "@aven/protocol/roles";
 import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 import { createListStore } from "@/lib/list-store";
 
-import { isOwnerOrAdminRole } from "@/lib/member-role";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
 import { runtimesAtom } from "../atoms/runtimes-atom";
