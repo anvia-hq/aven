@@ -3,12 +3,13 @@ import { describe, expect, test } from "bun:test";
 import { AGENT_BACKEND_CAPABILITIES } from "@aven/protocol/runtime-wire";
 
 import { backendFor } from "./agent-backends";
+import { HAND_OFF_NOTICE, HAND_OFF_TURN } from "@aven/agents/turn-limits";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
 import { RunRecords } from "./run-records";
 import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
-import type { RuntimeToControlPlane } from "@aven/protocol/types";
+import type { RunEvent, RuntimeToControlPlane } from "@aven/protocol/types";
 import type { AgentBackend, DurableEnd, FollowedRun } from "@aven/agent-backend/types";
 import type { RunMessage, RunRecord, ThreadWorkspaces } from "./types";
 
@@ -38,6 +39,8 @@ const until = async (condition: () => boolean) => {
 
 function fakeBackend() {
   const calls: { method: string; id: string }[] = [];
+  const emitted: { current?: (event: RunEvent) => void } = {};
+  const steered: string[] = [];
   const pending = new Map<string, (end: DurableEnd) => void>();
   let parked: { runId: string; agentId: string } | undefined;
   const followed = (id: string): FollowedRun => {
@@ -52,7 +55,8 @@ function fakeBackend() {
     kind: "native",
     capabilities: AGENT_BACKEND_CAPABILITIES.native,
     asked: async () => parked,
-    async start(runId) {
+    async start(runId, _thread, _prompt, _input, emit) {
+      emitted.current = emit as (event: RunEvent) => void;
       const run = followed(runId);
       calls.push({ method: "start", id: runId });
       return run;
@@ -67,7 +71,8 @@ function fakeBackend() {
       calls.push({ method: "answer", id: asked.runId });
       return run;
     },
-    async steer(durableId) {
+    async steer(durableId, prompt) {
+      steered.push(String(prompt));
       calls.push({ method: "steer", id: durableId });
       return true;
     },
@@ -84,6 +89,8 @@ function fakeBackend() {
   return {
     backend,
     calls,
+    steered,
+    emitted,
     park(run: { runId: string; agentId: string }) {
       parked = run;
     },
@@ -266,5 +273,25 @@ describe("the run driver chooses the thread's backend (decision 0220)", () => {
 
     expect(native.calls).toEqual([{ method: "rejoin", id: "durable-old" }]);
     expect(other.calls).toEqual([{ method: "rejoin", id: "durable-named" }]);
+  });
+});
+
+describe("a long run is told to hand off to a goal", () => {
+  test("the notice is sent once, at the hand-off turn", async () => {
+    const native = fakeBackend();
+    const { driver, records } = harness(Promise.resolve(native.backend));
+    const running = driver.start(start("run-1"));
+    await until(() => records.get("run-1")?.durableId === "durable-run-1");
+    const usage = { type: "usage", turn: {} } as unknown as RunEvent;
+
+    for (let i = 0; i < HAND_OFF_TURN - 1; i++) native.emitted.current?.(usage);
+    expect(native.steered).toEqual([]);
+
+    native.emitted.current?.(usage);
+    native.emitted.current?.(usage);
+    await until(() => native.steered.length === 1);
+    expect(native.steered).toEqual([HAND_OFF_NOTICE]);
+    native.finish("run-1");
+    await running;
   });
 });
