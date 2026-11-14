@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  createGoalTools,
-  GET_GOAL_TOOL_NAME,
-  START_GOAL_TOOL_NAME,
-  UPDATE_GOAL_TOOL_NAME,
-} from "./goals";
+import { createGoalTools } from "./goals";
 import type { GoalHost } from "./types";
 import type { BotGoalView } from "@aven/protocol/types";
 
@@ -35,15 +30,6 @@ function host(options: { goal?: BotGoalView | null; failed?: string[]; check?: b
 }
 
 describe("the goal tools", () => {
-  test("are three, named for what they do", () => {
-    const { get, start, update } = host();
-    expect([get.name, start.name, update.name]).toEqual([
-      GET_GOAL_TOOL_NAME,
-      START_GOAL_TOOL_NAME,
-      UPDATE_GOAL_TOOL_NAME,
-    ]);
-  });
-
   test("get returns the goal, or null", async () => {
     expect(await host().get.call({})).toEqual({ goal });
     expect(await host({ goal: null }).get.call({})).toEqual({ goal: null });

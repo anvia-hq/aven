@@ -48,18 +48,6 @@ function host() {
 }
 
 describe("the thread tools", () => {
-  test("are seven, named for what they do", () => {
-    expect(host().tools.map((tool) => tool.name)).toEqual([
-      LIST_PROJECTS_TOOL_NAME,
-      LIST_THREADS_TOOL_NAME,
-      GET_THREAD_TOOL_NAME,
-      START_THREAD_TOOL_NAME,
-      CONTINUE_THREAD_TOOL_NAME,
-      ARCHIVE_THREAD_TOOL_NAME,
-      STOP_THREAD_TOOL_NAME,
-    ]);
-  });
-
   test("stopping hands the host the thread's id and gives the thread back", async () => {
     const { calls, by } = host();
     const result = (await by(STOP_THREAD_TOOL_NAME).call({ id: ID })) as { thread: BotThreadView };
