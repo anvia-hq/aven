@@ -291,7 +291,12 @@ private struct BotCompactRow: View {
     }
 
     private func save() async {
-        let tokens = Int(compact)
+        let trimmed = compact.trimmingCharacters(in: .whitespaces)
+        let tokens = Int(trimmed)
+        if !trimmed.isEmpty && tokens == nil {
+            error = "Enter a whole number."
+            return
+        }
         do {
             _ = try await model.client?.updateBot(
                 bot.id, body: jsonObject(("compactAfterTokens", tokens.map { .int($0) } ?? .null)))
@@ -365,7 +370,9 @@ private struct SkillsSettings: View {
 
 private func skillPayload(_ directory: URL) throws -> [(String, String)] {
     let root = directory.path
-    guard let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: [.isRegularFileKey]) else {
+    guard let enumerator = FileManager.default.enumerator(
+        at: directory, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
+    ) else {
         return []
     }
     var files: [(String, String)] = []

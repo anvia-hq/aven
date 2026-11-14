@@ -184,7 +184,15 @@ public final class APIClient: @unchecked Sendable {
                     configuration.timeoutIntervalForResource = 60 * 60 * 24
                     let streaming = URLSession(configuration: configuration, delegate: pump, delegateQueue: nil)
                     let dataTask = streaming.dataTask(with: request)
+                    defer {
+                        dataTask.cancel()
+                        streaming.invalidateAndCancel()
+                    }
                     let (bytes, byteContinuation) = AsyncThrowingStream.makeStream(of: UInt8.self, throwing: Error.self)
+                    byteContinuation.onTermination = { _ in
+                        dataTask.cancel()
+                        streaming.invalidateAndCancel()
+                    }
                     let response: URLResponse = try await withTaskCancellationHandler {
                         try await withCheckedThrowingContinuation { wait in
                             pump.attach(bytes: byteContinuation, response: wait)
@@ -192,10 +200,6 @@ public final class APIClient: @unchecked Sendable {
                         }
                     } onCancel: {
                         dataTask.cancel()
-                    }
-                    byteContinuation.onTermination = { _ in
-                        dataTask.cancel()
-                        streaming.invalidateAndCancel()
                     }
                     _ = try Self.check(response, data: nil)
                     var parser = ServerSentEventParser()

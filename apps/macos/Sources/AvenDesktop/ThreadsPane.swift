@@ -305,11 +305,17 @@ struct ThreadDetailView: View {
         var attempt = 0
         while !Task.isCancelled {
             do {
+                var payloads = 0
                 for try await payload in api.serverSentPayloads("/threads/\(id)/events") {
+                    payloads += 1
                     attempt = 0
                     guard let event = try? JSONDecoder().decode(RunEvent.self, from: Data(payload.utf8)) else { continue }
                     transcript.apply(event)
                 }
+                if Task.isCancelled { return }
+                if payloads == 0 { attempt += 1 }
+                if attempt > 4 { return }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
             } catch {
                 if Task.isCancelled { return }
                 if let failure = error as? APIError, failure.isUnauthorized {
