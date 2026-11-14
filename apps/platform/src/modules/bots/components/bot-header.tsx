@@ -27,15 +27,9 @@ export function BotHeader({ bot }: { bot: Bot }) {
         className="flex max-w-full"
       >
         <h1 className="sr-only">{bot.name}</h1>
-        {bot.isMain ? (
-          <div className={PILL}>
-            <BotPill bot={bot} />
-          </div>
-        ) : (
-          <BotSettingsDialog bot={bot} className={`${PILL} hover:bg-card/90 dark:hover:bg-card/90`}>
-            <BotPill bot={bot} />
-          </BotSettingsDialog>
-        )}
+        <BotSettingsDialog bot={bot} className={`${PILL} hover:bg-card/90 dark:hover:bg-card/90`}>
+          <BotPill bot={bot} />
+        </BotSettingsDialog>
       </header>
     </div>
   );
