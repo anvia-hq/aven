@@ -8,13 +8,12 @@ const run =
 
 run("decisionModelService (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
-  const { setAsidePlatformSettings } = await import("../../testing/set-aside-platform-settings");
+  const { keepPlatformSettings } = await import("../../testing/kept-platform-settings");
   const { orgA, orgB, cleanup } = await seedOrgPair();
-  const restoreServerModel = await setAsidePlatformSettings(["server_decision_model"]);
+  keepPlatformSettings(["server_decision_model"], { cleared: true });
 
   afterAll(async () => {
     await cleanup();
-    await restoreServerModel();
   });
 
   test("a workspace has none until one is saved, and the key is never returned", async () => {

@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { followUpModel } from "./model";
 
@@ -8,10 +8,8 @@ const run =
   process.env.DATABASE_URL && process.env.PROVIDER_ENCRYPTION_KEY ? describe : describe.skip;
 
 run("followUpModel (postgres)", async () => {
-  const { setAsidePlatformSettings } = await import("../../testing/set-aside-platform-settings");
-  const restoreSmallModel = await setAsidePlatformSettings(["server_small_model"]);
-
-  afterAll(restoreSmallModel);
+  const { keepPlatformSettings } = await import("../../testing/kept-platform-settings");
+  keepPlatformSettings(["server_small_model"], { cleared: true });
 
   test("a person with no provider of their own gets the server's small model", async () => {
     expect(

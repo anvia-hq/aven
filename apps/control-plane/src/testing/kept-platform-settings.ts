@@ -4,11 +4,13 @@ import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { inArray } from "drizzle-orm";
 
-export function keepPlatformSettings(keys: string[]) {
+export function keepPlatformSettings(keys: string[], { cleared = false } = {}) {
   let kept: (typeof platformSettings.$inferSelect)[] = [];
 
   beforeAll(async () => {
     kept = await db.select().from(platformSettings).where(inArray(platformSettings.key, keys));
+
+    if (cleared) await db.delete(platformSettings).where(inArray(platformSettings.key, keys));
   });
 
   afterAll(async () => {
