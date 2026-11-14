@@ -45,7 +45,7 @@ export function Question({
           {prompt.choices?.map((choice) => (
             <Label
               key={choice.value}
-              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-success has-data-checked:bg-success/10"
+              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-primary/10"
             >
               <RadioGroupItem value={choice.value} className="absolute size-px opacity-0" />
               {choice.label}
@@ -60,9 +60,9 @@ export function Question({
           value={current.custom}
           onChange={(event) => onChange({ choice: "", custom: event.target.value })}
           className={cn(
-            "h-auto rounded-lg px-3 py-2.5 font-normal hover:bg-muted/50",
+            "h-9 rounded-lg border-border px-3 py-0 font-normal hover:bg-muted/50 dark:bg-transparent",
             current.custom.trim() &&
-              "border-success bg-success/10 hover:bg-success/10 dark:bg-success/10",
+              "border-primary bg-primary/10 hover:bg-primary/10 dark:bg-primary/10",
           )}
         />
       )}

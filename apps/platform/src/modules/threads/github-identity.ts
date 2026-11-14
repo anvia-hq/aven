@@ -15,7 +15,7 @@ export function githubIdentityNote(
 
   if (runnerGithub.login === null)
     return {
-      label: "GitHub: this machine, not signed in",
+      label: "No GitHub",
       detail:
         "Runs on this runner use the machine's own GitHub login, not your connected account. gh is not signed in here; git may still push with its own credentials.",
     };

@@ -1696,12 +1696,6 @@
   --chart: var(--primary);
 }
 
-/* The dots of the working indicator run from pale mint to green (modules/threads/components/working-indicator.tsx). */
-:root {
-  --working-from: oklch(0.88 0.1 160);
-  --working-to: oklch(0.62 0.17 152);
-}
-
 /* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
 :root {
   --brand: oklch(0.22 0.01 160);
@@ -1785,19 +1779,6 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-/* A dot of the working indicator swells and brightens as the wave passes it. */
-@keyframes working-dot {
-  0%,
-  100% {
-    opacity: 0.25;
-    transform: scale(0.6);
-  }
-  45% {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 /* A highlight that sweeps across running text from left to right (a tool call or a subagent at work). */

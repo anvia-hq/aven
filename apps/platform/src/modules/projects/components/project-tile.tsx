@@ -9,12 +9,21 @@ type Props = {
   projectId: string;
   palette?: number;
   working?: boolean;
+  speed?: number;
+  decorative?: boolean;
   className?: string;
 };
 
 const COLOR_MS = 450;
 
-export function ProjectTile({ projectId, palette, working = false, className }: Props) {
+export function ProjectTile({
+  projectId,
+  palette,
+  working = false,
+  speed = 1,
+  decorative = false,
+  className,
+}: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const shape = useMemo(() => orbShape(tileSeed(projectId)), [projectId]);
   const colors = tileColors(projectId, palette);
@@ -73,7 +82,7 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
     const tick = (now: number) => {
       const step = Math.min((now - last) / 1000, 0.1);
       last = now;
-      turned.current += step;
+      turned.current += step * speed;
       color.current +=
         Math.sign(target - color.current) *
         Math.min((step * 1000) / COLOR_MS, Math.abs(target - color.current));
@@ -87,14 +96,14 @@ export function ProjectTile({ projectId, palette, working = false, className }: 
       cancelAnimationFrame(frame);
       stop();
     };
-  }, [shape, first, second, third, working]);
+  }, [shape, first, second, third, working, speed]);
 
   return (
     <canvas
       ref={canvas}
-      role={working ? "img" : undefined}
-      aria-label={working ? "Working" : undefined}
-      aria-hidden={working ? undefined : true}
+      role={working && !decorative ? "img" : undefined}
+      aria-label={working && !decorative ? "Working" : undefined}
+      aria-hidden={working && !decorative ? undefined : true}
       className={cn("size-5 shrink-0 text-muted-foreground", className)}
     />
   );

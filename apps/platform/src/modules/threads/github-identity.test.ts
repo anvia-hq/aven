@@ -11,7 +11,7 @@ describe("what the ship bar says about the runner's GitHub", () => {
 
   test("says gh is not signed in, without claiming git cannot push", () => {
     const note = githubIdentityNote({ login: null });
-    expect(note?.label).toBe("GitHub: this machine, not signed in");
+    expect(note?.label).toBe("No GitHub");
     expect(note?.detail).toContain("git may still push");
   });
 
