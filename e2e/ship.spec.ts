@@ -135,6 +135,13 @@ test.describe("shipping a thread", () => {
     expect(prompt).not.toContain("#8");
 
     await expect(page.getByRole("link", { name: /#8/ })).toBeVisible({ timeout: 15_000 });
+
+    await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
+    await page.reload();
+
+    await expect(page.getByRole("link", { name: /#8/ })).toBeVisible();
+    await expect(shipButton(page)).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
     await page.getByRole("button", { name: "+1" }).click();
     await expect(page.getByRole("menuitem", { name: /#7.*Add the export button/ })).toBeVisible();
     await expect(page.getByRole("menuitem", { name: /#8.*Fix the docs/ })).toBeVisible();
@@ -223,15 +230,6 @@ test.describe("shipping a thread", () => {
       const chipBox = await chip.boundingBox();
       expect(slot && slot.width > 0).toBe(true);
       expect(chipBox && slot && chipBox.x >= slot.x + slot.width).toBe(true);
-      await page.screenshot({
-        path: ".aven/proof/ship-gap/after.png",
-        clip: {
-          x: Math.max(0, slot!.x - 24),
-          y: Math.max(0, slot!.y - 24),
-          width: 520,
-          height: slot!.height + 48,
-        },
-      });
     } finally {
       held.resolve();
     }
@@ -335,37 +333,6 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
     await expect(shipButton(page)).toHaveCount(0);
-  });
-
-  test("two pull requests sit behind the newest one's +1, with no Ship", async ({ page }) => {
-    await registerUser(page, "shp", "Ship User");
-    await provider(page);
-    const { child, threadId } = await threadOnFakeRunner(page, {
-      FAKE_RUN_ENDS: "1",
-      FAKE_AVEN_FILES: "setup,ship",
-    });
-    runner = child;
-    const branch = `aven/${threadId.slice(0, 8)}`;
-
-    await page.goto(`/threads/${threadId}`);
-    await page.request.post(pullsUrl(), { data: { head: branch, title: "Add the export button" } });
-    await shipButton(page).click();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
-    await page.request.post(pullsUrl(), {
-      data: { head: `${branch}-docs`, title: "Fix the docs" },
-    });
-    await page.getByRole("button", { name: "More ways to ship" }).click();
-    await page.getByRole("menuitem", { name: "Ship as a new PR" }).click();
-    await expect(page.getByRole("link", { name: /#8/ })).toBeVisible({ timeout: 15_000 });
-
-    await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
-    await page.reload();
-
-    await expect(page.getByRole("link", { name: /#8/ })).toBeVisible();
-    await expect(shipButton(page)).toHaveCount(0);
-    await page.getByRole("button", { name: "+1" }).click();
-    await expect(page.getByRole("menuitem", { name: /#7.*Add the export button/ })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: /#8.*Fix the docs/ })).toBeVisible();
   });
 
   test("a project with no GitHub app ships with the persistent runner's own login", async ({

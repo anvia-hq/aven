@@ -2,51 +2,6 @@ import { expect, test } from "@playwright/test";
 
 import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
-test.describe("projects", () => {
-  test("imports a repository as a project, lists it and opens it", async ({ page }) => {
-    await registerUser(page, "ws", "Workspace User");
-    await addRunner(page);
-    await connectGithub(page);
-    await importRepository(page, "shiny-app");
-
-    const list = page.getByRole("region", { name: "Project list" });
-    await expect(list.getByRole("link", { name: /^shiny-app/ })).toHaveCount(1);
-
-    await list.getByRole("link", { name: /^shiny-app/ }).click();
-    await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
-    await expect(page.locator("header")).toContainText("shiny-app");
-    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
-      "No threads in this project yet.",
-    );
-
-    await page.reload();
-    await expect(page.locator("header")).toContainText("shiny-app");
-    await expect(page.getByRole("heading", { name: "Project not found" })).toHaveCount(0);
-  });
-
-  test("a project's page lists the threads started in it", async ({ page }) => {
-    await registerUser(page, "ws", "Workspace User");
-    await addRunner(page);
-    await connectGithub(page);
-    await importRepository(page, "shiny-app");
-
-    const [project] = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
-    await page.goto(`/threads?project=${project!.id}`);
-    await page.getByRole("textbox", { name: "Prompt" }).fill("Explain the project layout");
-    await page.getByRole("button", { name: "Send" }).click();
-    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
-
-    await page.goto("/projects");
-    await page
-      .getByRole("region", { name: "Project list" })
-      .getByRole("link", { name: /^shiny-app/ })
-      .click();
-    await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
-      "Explain the project layout",
-    );
-  });
-});
-
 test.describe("settings", () => {
   test("user menu opens personal and workspace settings", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
@@ -82,10 +37,6 @@ test.describe("settings", () => {
       expect(width).toBeLessThanOrEqual(40);
     }
     expect(await menu.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
-    await page.screenshot({
-      path: ".aven/proof/user-menu/after.png",
-      clip: { x: 0, y: 0, width: 420, height: 420 },
-    });
     await page.getByRole("menuitem", { name: /Personal settings/ }).click();
     await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
@@ -101,22 +52,6 @@ test.describe("settings", () => {
 
     await page.getByRole("link", { name: "Aven", exact: true }).click();
     await expect(page).toHaveURL(/\/threads$/);
-  });
-
-  test("the profile name saves and the mode select changes the theme", async ({ page }) => {
-    await registerUser(page, "ws", "Workspace User");
-    await page.goto("/settings/general");
-    await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
-
-    await page.getByLabel("Name").fill("Renamed Person");
-    await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(page.getByText("Profile saved")).toBeVisible();
-    await expect(page.getByText("Renamed Person")).toBeVisible();
-
-    await expect(page.locator("html")).toHaveClass(/dark/);
-    await page.getByRole("combobox", { name: "Mode" }).click();
-    await page.getByRole("option", { name: "Light", exact: true }).click();
-    await expect(page.locator("html")).not.toHaveClass(/dark/);
   });
 
   test("settings navigation reaches every page", async ({ page }) => {

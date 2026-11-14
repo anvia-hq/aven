@@ -1,39 +1,11 @@
 import { expect, test, type Page } from "@playwright/test";
 
 import { DEFAULT_PALETTE, PALETTES } from "../apps/platform/src/modules/theme/types";
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { registerUser } from "./helpers";
 
 async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {
   await page.getByRole("combobox", { name: "Mode" }).click();
   await page.getByRole("option", { name, exact: true }).click();
-}
-
-async function choosePalette(page: Page, palette: string, mode: "light" | "dark") {
-  await page.evaluate(
-    ({ palette, mode }) => {
-      for (const [key, value] of [
-        ["palette", palette],
-        ["theme", mode],
-      ] as const) {
-        const stored = JSON.stringify(value);
-        localStorage.setItem(key, stored);
-        window.dispatchEvent(
-          new StorageEvent("storage", { key, newValue: stored, storageArea: localStorage }),
-        );
-      }
-    },
-    { palette, mode },
-  );
-  const html = page.locator("html");
-  await expect(html).toHaveAttribute("data-theme", palette);
-
-  if (mode === "dark") {
-    await expect(html).toHaveClass(/dark/);
-  } else {
-    await expect(html).not.toHaveClass(/dark/);
-  }
-
-  await page.waitForTimeout(600);
 }
 
 test.describe("themes", () => {
@@ -110,9 +82,11 @@ test.describe("themes", () => {
     page,
   }) => {
     await page.emulateMedia({ colorScheme: "light" });
+    const html = page.locator("html");
+    await page.goto("/register");
+    await expect(html).toHaveClass(/dark/);
     await registerUser(page, "mode", "Mode User");
     await page.goto("/settings/general");
-    const html = page.locator("html");
     const mode = page.getByRole("combobox", { name: "Mode" });
 
     await expect(mode).toContainText("Dark");
@@ -146,6 +120,14 @@ test.describe("themes", () => {
     await registerUser(page, "notoggle", "No Toggle User");
     await page.goto("/threads");
     await expect(page.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
+    await expect(
+      page.locator("[data-slot=sidebar]").getByRole("button", { name: "Settings" }),
+    ).toBeHidden();
+    await page
+      .getByRole("navigation", { name: "Aven" })
+      .getByRole("link", { name: "Settings" })
+      .click();
+    await expect(page).toHaveURL(/\/settings\/general/);
     await page.setViewportSize({ width: 390, height: 800 });
     await expect(page.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
   });
@@ -193,56 +175,5 @@ test.describe("themes", () => {
       "Large",
     );
     await expect(page.getByRole("combobox", { name: "Thread text size" })).toContainText("Default");
-  });
-
-  test("screenshots of every theme", async ({ page }) => {
-    test.skip(!process.env.THEME_SHOTS, "only when recording proof");
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await registerUser(page, "shots", "Theme User");
-    await page.goto("/settings/general");
-    for (const mode of ["light", "dark"] as const) {
-      await chooseMode(page, mode === "light" ? "Light" : "Dark");
-      for (const { id, label } of PALETTES) {
-        await page.getByRole("combobox", { name: "Theme" }).click();
-        await page.getByRole("option", { name: label, exact: true }).click();
-        await page.keyboard.press("Escape");
-        await page.screenshot({
-          path: `.aven/proof/themes/${id}-${mode}.png`,
-        });
-      }
-    }
-  });
-
-  test("screenshots of the new themes on a thread", async ({ page }) => {
-    test.skip(!process.env.THEME_SHOTS, "only when recording proof");
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await registerUser(page, "shotthread", "Theme User");
-    await page.request.post("/api/providers", {
-      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
-    });
-    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_SUBAGENTS: "1" });
-
-    try {
-      await page.goto(`/threads/${threadId}`);
-      await page
-        .getByRole("textbox", { name: "Prompt" })
-        .fill("Where does the auth middleware live, and can you add a test for it?");
-      await page.getByRole("button", { name: "Send" }).click();
-      await expect(
-        page.getByText("Auth is in src/auth.ts; the test could not be written."),
-      ).toBeVisible({ timeout: 30_000 });
-      await page.locator('[data-role="worked"]').first().click();
-
-      for (const mode of ["light", "dark"] as const) {
-        for (const id of ["codex", "claude", "devin", "t3"]) {
-          await choosePalette(page, id, mode);
-          await page.screenshot({
-            path: `.aven/proof/themes/${id}-${mode}-thread.png`,
-          });
-        }
-      }
-    } finally {
-      child.kill();
-    }
   });
 });

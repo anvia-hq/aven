@@ -54,17 +54,6 @@ test.describe("the Limits card", () => {
       "title",
       /Claude subscription/,
     );
-
-    const panel = page.getByRole("complementary", { name: "Overview" });
-    await panel.screenshot({ path: ".aven/proof/limits/panel-dark.png" });
-    await page
-      .getByRole("button", { name: "Model and reasoning effort" })
-      .screenshot({ path: ".aven/proof/limits/chip-dark.png" });
-    await page.evaluate(() => document.documentElement.classList.remove("dark"));
-    await panel.screenshot({ path: ".aven/proof/limits/panel-light.png" });
-    await page
-      .getByRole("button", { name: "Model and reasoning effort" })
-      .screenshot({ path: ".aven/proof/limits/chip-light.png" });
   });
 
   test("is not shown on a thread that runs on an API model", async ({ page }) => {

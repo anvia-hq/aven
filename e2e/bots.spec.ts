@@ -49,26 +49,6 @@ test.describe("bots", () => {
     expect(first.bottomLeft).toBeLessThan(first.topLeft);
   });
 
-  test("the main bot greets its person by itself once it exists, and the greeting is its model's words", async ({
-    page,
-  }) => {
-    await registerUser(page, "greet", "Greet Person");
-    const provider = await page.request.post("/api/providers", {
-      data: {
-        kind: "openai-compatible",
-        name: "Fake",
-        baseUrl: "http://localhost:8102/v1",
-        modelId: "fake-model",
-      },
-    });
-    expect(provider.ok()).toBe(true);
-
-    await page.goto("/bot");
-
-    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
-    await expect(page.getByText("You were just created")).toHaveCount(0);
-  });
-
   test("the main bot is under the logo, and it answers in several messages", async ({ page }) => {
     await registerUser(page, "bot", "Bot Person");
     const provider = await page.request.post("/api/providers", {
@@ -85,6 +65,7 @@ test.describe("bots", () => {
     await expect(page).toHaveURL(/\/bot$/);
     await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    await expect(page.getByText("You were just created")).toHaveCount(0);
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
 
     const phrase = "hello bot";
@@ -1075,9 +1056,6 @@ test.describe("bots", () => {
     await input.press("Shift+Enter");
     await input.pressSequentially("second line");
     await expect.poll(async () => (await top(send)) - (await top(input))).toBeGreaterThan(30);
-    await page.screenshot({
-      path: process.env.SHOT_DIR ? `${process.env.SHOT_DIR}/multi.png` : undefined,
-    });
 
     await input.press("ControlOrMeta+a");
     await input.press("Backspace");

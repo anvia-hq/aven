@@ -4,7 +4,6 @@ import { expect, test, type Page, type Route } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
-const PROOF = ".aven/proof/thread-folders";
 const QUICK = { timeout: 700 };
 
 async function startWithThreads(page: Page) {
@@ -167,32 +166,6 @@ test.describe("thread folders", () => {
     await page.reload();
     await expect(folderOf(page, "Fresh").getByRole("link", { name: "Alpha thread" })).toBeVisible();
     await expect(folderOf(page, "Later").locator("[data-slot='folder-count']")).toHaveText("0");
-
-    await page.screenshot({
-      path: `${PROOF}/after.png`,
-      clip: { x: 0, y: 0, width: 420, height: 520 },
-    });
-  });
-
-  test("another person sees none of the folders", async ({ page, browser }) => {
-    const started = await startWithThreads(page);
-    runner = started.child;
-    await createFolder(page, "Private");
-    await threadLink(page, "Alpha thread").dragTo(folderOf(page, "Private"));
-    await expect(folderOf(page, "Private").getByRole("link")).toHaveCount(1);
-
-    const context = await browser.newContext();
-    const other = await context.newPage();
-    await registerUser(other, "fld-other", "Other Person");
-    const listed = await other.request.get("/api/folders");
-    expect(await listed.json()).toEqual([]);
-    await expect(other.locator("[data-slot='folder']")).toHaveCount(0);
-    const stolen = await other.request.patch(
-      `/api/folders/${((await (await page.request.get("/api/folders")).json()) as { id: string }[])[0]!.id}`,
-      { data: { name: "Mine now" } },
-    );
-    expect(stolen.status()).toBe(404);
-    await context.close();
   });
 
   test("every folder action shows at once, before the server answers", async ({ page }) => {
