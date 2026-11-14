@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 
 import {
   accountKey,
@@ -54,12 +54,68 @@ describe("registerUserState", () => {
   });
 });
 
+class MemoryStorage implements Storage {
+  private readonly items = new Map<string, string>();
+
+  get length() {
+    return this.items.size;
+  }
+
+  key(index: number) {
+    return [...this.items.keys()][index] ?? null;
+  }
+
+  getItem(key: string) {
+    return this.items.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string) {
+    this.items.set(key, value);
+  }
+
+  removeItem(key: string) {
+    this.items.delete(key);
+  }
+
+  clear() {
+    this.items.clear();
+  }
+}
+
+function storeWith(keys: readonly string[]) {
+  const store = new MemoryStorage();
+  for (const key of keys) store.setItem(key, "x");
+  Object.defineProperty(globalThis, "localStorage", { value: store, configurable: true });
+  return store;
+}
+
+function keysOf(store: Storage) {
+  return Array.from({ length: store.length }, (_, at) => store.key(at));
+}
+
 describe("stored keys", () => {
-  test("forgets the keys it is given without a browser store", () => {
-    expect(() => forgetStoredKeys(["aven.model-selection", "aven.threads.unread"])).not.toThrow();
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, "localStorage");
   });
 
-  test("forgets what starts with a prefix without a browser store", () => {
+  test("forgets only the keys it is given", () => {
+    const store = storeWith(["aven.model-selection", "aven.threads.unread", "aven.theme"]);
+    forgetStoredKeys(["aven.model-selection", "aven.threads.unread"]);
+    expect(keysOf(store)).toEqual(["aven.theme"]);
+  });
+
+  test("forgets every key that starts with the prefix, and nothing else", () => {
+    const store = storeWith([
+      "aven.actions.favorites.a",
+      "aven.actions.favorites.b",
+      "aven.other",
+      "aven.actions.favorites.c",
+    ]);
+    forgetStoredKeysStartingWith("aven.actions.favorites.");
+    expect(keysOf(store)).toEqual(["aven.other"]);
+  });
+
+  test("does nothing without a browser store", () => {
     expect(() => forgetStoredKeysStartingWith("aven.actions.favorites.")).not.toThrow();
   });
 });

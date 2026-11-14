@@ -43,6 +43,9 @@ describe("tilePalettes", () => {
   });
 
   test("a palette given to the tile is the one drawn", () => {
-    expect(tileColors("x", 0)).not.toEqual(tileColors("x", 1));
+    const palettes = tilePalettes(twins);
+    const drawn = twins.map((id) => tileColors(id, palettes.get(id)));
+    expect(drawn[0]).not.toEqual(drawn[1]);
+    expect(tileColors("x", palettes.get(twins[1]!))).toEqual(drawn[1]!);
   });
 });

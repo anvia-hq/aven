@@ -37,8 +37,13 @@ describe("the diff panel's flat list", () => {
   });
 
   test("split pairs a removed line with the added one", () => {
-    const rows = flatten(files, "split", {}).filter((item) => item.kind === "split");
-    expect(rows).toHaveLength(2);
+    const rows = flatten(files, "split", {}).flatMap((item) =>
+      item.kind === "split" ? [[item.pair.old?.text, item.pair.new?.text, item.last]] : [],
+    );
+    expect(rows).toEqual([
+      ["keep", "keep", false],
+      ["old line is long", "new", true],
+    ]);
   });
 
   test("a closed file keeps only its header", () => {

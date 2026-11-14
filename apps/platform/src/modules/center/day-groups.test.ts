@@ -23,6 +23,13 @@ test("groups commits under Today, Yesterday and the date, keeping the order", ()
   ).toEqual([
     ["Today", ["a", "b"]],
     ["Yesterday", ["c"]],
-    [expect.stringContaining("3"), ["d"]],
+    [
+      new Date(2026, 10, 3).toLocaleDateString(undefined, {
+        weekday: "short",
+        day: "numeric",
+        month: "short",
+      }),
+      ["d"],
+    ],
   ]);
 });
