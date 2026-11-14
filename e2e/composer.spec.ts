@@ -12,6 +12,9 @@ async function createProject(page: Page) {
 async function pickModel(page: Page, model: string) {
   await page.getByRole("button", { name: /^(Provider default|gpt-4o|o3)$/ }).click();
   await page.getByRole("option", { name: model }).click();
+  await page.evaluate(
+    () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+  );
 }
 
 test.describe("prompt composer", () => {
