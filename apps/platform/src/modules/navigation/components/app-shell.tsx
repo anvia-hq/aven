@@ -19,7 +19,6 @@ import { TooltipProvider } from "@aven/ui/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
-import { CenterRailLink } from "@/modules/center/components/center-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { AnnouncementBanner } from "@/modules/announcements/components/announcement-banner";
 import { MentionsButton } from "@/modules/mentions/components/mentions-button";
@@ -70,7 +69,6 @@ export function AppShell({ user, sidebar }: Props) {
           <div className="flex flex-col items-center gap-1.5">
             <BotRailLink />
             <CockpitRailLink />
-            <CenterRailLink />
           </div>
           <div className="mt-auto flex flex-col items-center gap-1.5">
             <RailLink

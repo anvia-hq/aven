@@ -1,4 +1,4 @@
-import { GitBranch, Grid } from "@mynaui/icons-react";
+import { Grid } from "@mynaui/icons-react";
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -75,9 +75,6 @@ export function MobileTabBar() {
       </Tab>
       <Tab to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
         <Grid className="size-5" strokeWidth={1.7} />
-      </Tab>
-      <Tab to="/center" label="Center" active={pathname.startsWith("/center")}>
-        <GitBranch className="size-5" strokeWidth={1.7} />
       </Tab>
     </nav>
   );
