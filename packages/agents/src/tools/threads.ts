@@ -1,5 +1,5 @@
 import { createTool } from "@anvia/core";
-import { BOT_THREAD_PROMPT_MAX } from "@aven/protocol/threads";
+import { BOT_THREAD_PROMPT_MAX, THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { z } from "zod";
 import type { ThreadsHost } from "./types";
 
@@ -50,7 +50,7 @@ const startSchema = z.object({
     .string()
     .trim()
     .min(1)
-    .max(200)
+    .max(THREAD_TITLE_MAX)
     .optional()
     .describe("A short title. Leave it out to use the start of the prompt."),
   ...model,

@@ -13,6 +13,7 @@ import {
 } from "@aven/ui/dialog";
 import { Form } from "@aven/ui/form";
 import { Input } from "@aven/ui/input";
+import { RUNTIME_NAME_MAX } from "@aven/protocol/runtimes";
 
 import { useRuntimes } from "../hooks/use-runtimes";
 import type { Runtime } from "../types";
@@ -61,7 +62,7 @@ export function RenameRuntimeDialog({ runtime }: { runtime: Runtime }) {
           <Input
             aria-label="Runtime name"
             value={name}
-            maxLength={100}
+            maxLength={RUNTIME_NAME_MAX}
             autoFocus
             onChange={(event) => setName(event.target.value)}
           />

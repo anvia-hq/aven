@@ -1,15 +1,12 @@
 import {
+  isReservedName,
   MAX_NAME_LENGTH,
   MAX_VALUE_LENGTH,
   MAX_VARIABLES,
-  isReservedName,
-  type ParsedEntry,
-  type RowProblem,
-  type RowState,
-  type VariableRow,
-} from "./types";
+  VARIABLE_NAME,
+} from "@aven/protocol/variables";
 
-const NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+import type { ParsedEntry, RowProblem, RowState, VariableRow } from "./types";
 
 export const PROBLEM_TEXT: Record<RowProblem, string> = {
   name: "Use letters, digits and underscores, not starting with a digit",
@@ -23,7 +20,7 @@ function problemOf(row: VariableRow, rows: readonly VariableRow[]): RowProblem |
 
   if (name === "") return null;
 
-  if (name.length > MAX_NAME_LENGTH || !NAME.test(name)) return "name";
+  if (name.length > MAX_NAME_LENGTH || !VARIABLE_NAME.test(name)) return "name";
 
   if (isReservedName(name)) return "reserved";
 

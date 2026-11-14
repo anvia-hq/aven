@@ -1,9 +1,7 @@
+import { MAX_SKILL_FILES } from "@aven/protocol/skills";
 import { z } from "zod";
 
 export const skillParams = z.object({ id: z.uuid() });
-
-export const MAX_SKILL_FILES = 200;
-export const MAX_SKILL_BYTES = 5 * 1024 * 1024;
 
 export const uploadSkillBody = z.object({
   files: z

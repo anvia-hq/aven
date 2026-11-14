@@ -3,15 +3,13 @@ import { useAtom } from "jotai";
 import { useEffect } from "react";
 
 import { toast } from "@aven/ui/toast";
+import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "@aven/protocol/skills";
 import { api, attempt, postJson } from "@/lib/api";
 import { fileSize } from "@/lib/format";
 import { createListStore } from "@/lib/list-store";
 
 import { builtinSkillsAtom, skillsAtom } from "../atoms/skills-atom";
 import type { BuiltinSkill, Skill, SkillUploadFile } from "../types";
-
-const MAX_FILES = 200;
-const MAX_BYTES = 5 * 1024 * 1024;
 
 class UploadRefused extends Error {}
 
@@ -28,9 +26,11 @@ function base64Of(blob: Blob) {
 }
 
 function checkLimits(count: number, bytes: number) {
-  if (count > MAX_FILES) throw new UploadRefused(`A skill can have at most ${MAX_FILES} files`);
+  if (count > MAX_SKILL_FILES)
+    throw new UploadRefused(`A skill can have at most ${MAX_SKILL_FILES} files`);
 
-  if (bytes > MAX_BYTES) throw new UploadRefused(`A skill can be at most ${fileSize(MAX_BYTES)}`);
+  if (bytes > MAX_SKILL_BYTES)
+    throw new UploadRefused(`A skill can be at most ${fileSize(MAX_SKILL_BYTES)}`);
 }
 
 async function readUpload(picked: File[]): Promise<SkillUploadFile[]> {

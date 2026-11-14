@@ -1,7 +1,8 @@
 import type { AnyTool } from "@anvia/core";
+import { MIN_REDACTED_LENGTH } from "@aven/protocol/variables";
 import type { RunEnvVar } from "@aven/protocol/types";
 
-export const MIN_REDACTED_LENGTH = 8;
+export { MIN_REDACTED_LENGTH };
 export const REDACTED = "[redacted]";
 
 export function secretRedactor(variables: readonly RunEnvVar[] | undefined) {

@@ -6,9 +6,11 @@ import { and, asc, count, desc, eq, isNull, or, sql } from "drizzle-orm";
 
 import { ForbiddenError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
+import { MAX_VARIABLES } from "@aven/protocol/variables";
 import { isOwnerOrAdmin } from "../auth/members";
 import { projectsService } from "../projects/service";
-import { MAX_VARIABLES, type SetVariableBody } from "./schema";
+
+import type { SetVariableBody } from "./schema";
 import type { Scope } from "./types";
 import type { EnvironmentVariableRow, NewVariableEventRow } from "@aven/db/schema/types";
 import type { RunEnvVar } from "@aven/protocol/types";

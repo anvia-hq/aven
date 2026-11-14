@@ -13,10 +13,11 @@ import {
 import { Form } from "@aven/ui/form";
 import { Switch } from "@aven/ui/switch";
 import { TextField } from "@aven/ui/text-field";
+import { MAX_VALUE_LENGTH, MIN_REDACTED_LENGTH } from "@aven/protocol/variables";
 
 import { useVariableForm } from "../hooks/use-variable-form";
+import type { Variable, VariableScope } from "../types";
 import { VariableRows } from "./variable-rows";
-import { MAX_VALUE_LENGTH, MIN_REDACTED_LENGTH, type Variable, type VariableScope } from "../types";
 
 type Props = {
   scope: VariableScope;

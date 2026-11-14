@@ -16,6 +16,11 @@ import {
 import { Switch } from "@aven/ui/switch";
 import { Textarea } from "@aven/ui/textarea";
 import { TextField } from "@aven/ui/text-field";
+import {
+  ANNOUNCEMENT_DETAILS_MAX,
+  ANNOUNCEMENT_SUMMARY_MAX,
+  ANNOUNCEMENT_TITLE_MAX,
+} from "@aven/protocol/announcements";
 
 import { useAnnouncements } from "../hooks/use-announcements";
 import { ANNOUNCEMENT_TEMPLATES, templateBackground } from "../templates";
@@ -76,20 +81,20 @@ export function AnnouncementsSection() {
           <TextField
             label="Title"
             value={draft.title}
-            maxLength={60}
+            maxLength={ANNOUNCEMENT_TITLE_MAX}
             onChange={(event) => setDraft({ ...draft, title: event.target.value })}
           />
           <TextField
             label="Summary"
             value={draft.summary}
-            maxLength={160}
+            maxLength={ANNOUNCEMENT_SUMMARY_MAX}
             onChange={(event) => setDraft({ ...draft, summary: event.target.value })}
           />
           <Label className="flex-col items-start gap-1 font-normal">
             Details (markdown, shown in the dialog)
             <Textarea
               value={draft.details}
-              maxLength={4000}
+              maxLength={ANNOUNCEMENT_DETAILS_MAX}
               onChange={(event) => setDraft({ ...draft, details: event.target.value })}
             />
           </Label>

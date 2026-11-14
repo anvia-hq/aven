@@ -1,4 +1,5 @@
 import { toast } from "@aven/ui/toast";
+import { THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { attempt, postJson } from "@/lib/api";
 
 import type { Thread } from "../types";
@@ -8,7 +9,7 @@ export function useRenameThread() {
   const { setTitle } = useThreads();
 
   return async function rename(thread: Thread, title: string) {
-    const next = title.trim().slice(0, 200);
+    const next = title.trim().slice(0, THREAD_TITLE_MAX);
 
     if (!next || next === thread.title) return;
 
