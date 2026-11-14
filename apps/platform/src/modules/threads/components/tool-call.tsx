@@ -84,7 +84,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
             ) : (
               <pre
                 className={cn(
-                  "max-h-60 overflow-auto rounded-lg border bg-muted/30 px-3 py-2 font-mono text-xs leading-5",
+                  "max-h-60 overflow-auto rounded-lg border bg-muted/30 px-3 py-2 font-mono text-xs leading-5 whitespace-pre-wrap break-words",
                   tool.status === "error" && "border-destructive/30 text-destructive",
                 )}
               >

@@ -14,7 +14,7 @@ export function DiffBlock({ lines }: { lines: DiffLine[] }) {
       {lines.map((line, index) => (
         <div key={index} className={`flex px-3 ${styles[line.type]}`}>
           <span className="w-4 shrink-0 select-none">{marks[line.type]}</span>
-          <span className="whitespace-pre">{line.text}</span>
+          <span className="min-w-0 whitespace-pre-wrap break-words">{line.text}</span>
         </div>
       ))}
     </pre>
