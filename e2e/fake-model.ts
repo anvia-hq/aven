@@ -162,6 +162,49 @@ type Turn = ChatMessage & { tool_calls?: { function: { name: string; arguments?:
 const calledTool = (message: Turn | undefined, name: string) =>
   message?.tool_calls?.some((call) => call.function.name === name) ?? false;
 
+const GATE_WAIT_MS = 20_000;
+
+const gates = new Map<string, PromiseWithResolvers<void>>();
+
+const armGate = (phrase: string) => {
+  if (gates.has(phrase)) return;
+
+  gates.set(phrase, Promise.withResolvers<void>());
+};
+
+const releaseGate = (phrase: string) => {
+  const gate = gates.get(phrase);
+
+  if (!gate) return;
+
+  gates.delete(phrase);
+  gate.resolve();
+};
+
+const phraseOf = async (request: Request) => {
+  try {
+    const body = (await request.json()) as { phrase?: unknown };
+    return typeof body.phrase === "string" && body.phrase !== "" ? body.phrase : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const waitForGate = async (phrase: string, signal: AbortSignal) => {
+  const gate = gates.get(phrase);
+
+  if (!gate) return;
+
+  const aborted = new Promise<void>((resolve) => {
+    if (signal.aborted) resolve();
+    else signal.addEventListener("abort", () => resolve(), { once: true });
+  });
+
+  await Promise.race([gate.promise, aborted, Bun.sleep(GATE_WAIT_MS)]);
+
+  if (gates.get(phrase) === gate) gates.delete(phrase);
+};
+
 const askedABot = (message: Turn) =>
   (message.tool_calls ?? []).some(
     (call) =>
@@ -177,6 +220,19 @@ Bun.serve({
     const { pathname } = new URL(request.url);
 
     if (pathname === "/health") return new Response("ok");
+
+    if (pathname === "/e2e/hold" || pathname === "/e2e/release") {
+      if (request.method !== "POST") return new Response("not found", { status: 404 });
+
+      const phrase = await phraseOf(request);
+
+      if (!phrase) return new Response("missing phrase", { status: 400 });
+
+      if (pathname === "/e2e/hold") armGate(phrase);
+      else releaseGate(phrase);
+
+      return new Response("ok");
+    }
 
     if (!pathname.endsWith("/chat/completions")) return new Response("not found", { status: 404 });
 
@@ -399,6 +455,8 @@ Bun.serve({
         "tool_calls",
       );
     }
+
+    await waitForGate(heard, request.signal);
 
     return reply(
       {
