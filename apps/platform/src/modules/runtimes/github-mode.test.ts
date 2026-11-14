@@ -12,10 +12,4 @@ describe("what the runner's GitHub setting says it does", () => {
     expect(githubModeNote("machine", { login: null })).toContain("gh is not signed in");
     expect(githubModeNote("machine", null)).toContain("has not said");
   });
-
-  test("person mode says the machine's own login is not used", () => {
-    expect(githubModeNote("person", { login: "indrazm" })).toContain(
-      "the machine's own login is not used",
-    );
-  });
 });

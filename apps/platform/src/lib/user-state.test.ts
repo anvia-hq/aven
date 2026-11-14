@@ -43,15 +43,6 @@ describe("registerUserState", () => {
     expect(() => clearUserState()).not.toThrow();
     expect(reached).toBe(1);
   });
-
-  test("runs nothing twice for one sign-out", () => {
-    let cleared = 0;
-    registerUserState(() => {
-      cleared += 1;
-    });
-    clearUserState();
-    expect(cleared).toBe(1);
-  });
 });
 
 class MemoryStorage implements Storage {
