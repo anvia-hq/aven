@@ -39,6 +39,7 @@ run("providersService (postgres)", async () => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
   const bob = `u-bob-${suffix}`;
+  const previousCatalogUrl = process.env.MODEL_CATALOG_URL;
   beforeAll(async () => {
     process.env.MODEL_CATALOG_URL = "";
     await db.insert(users).values([
@@ -48,6 +49,9 @@ run("providersService (postgres)", async () => {
   });
 
   afterAll(async () => {
+    if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
+
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 

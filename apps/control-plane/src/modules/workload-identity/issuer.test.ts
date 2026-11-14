@@ -1,9 +1,10 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { eq } from "drizzle-orm";
 
+import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { Issuer, workloadIdentityKeyStore } from "./issuer";
 import type { IssuerKeyStore } from "./types";
 
@@ -153,8 +154,8 @@ run("the kept signing key (real postgres)", () => {
   withoutEnvironmentKey();
   const keptRow = () => db.select().from(platformSettings).where(eq(platformSettings.key, setting));
 
+  keepPlatformSettings([setting]);
   beforeAll(() => db.delete(platformSettings).where(eq(platformSettings.key, setting)));
-  afterAll(() => db.delete(platformSettings).where(eq(platformSettings.key, setting)));
 
   test("is made once, encrypted, and two issuers share its key id", async () => {
     const first = await Issuer.create(url, { store: workloadIdentityKeyStore });

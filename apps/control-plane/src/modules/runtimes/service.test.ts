@@ -57,14 +57,21 @@ run("runtimes service (real postgres)", async () => {
     expect(await runtimesService.stillCurrent(rotatedRow)).toBe(false);
   });
 
-  test("the control plane's own runner is visible to every organization and cannot be changed", async () => {
+  test("the control plane's own runner is visible to every organization and cannot be revoked or rotated", async () => {
     await runtimesService.ensureLocal();
-    await runtimesService.ensureLocal();
+    const original = (await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID))!;
+    const renamed = `renamed-${crypto.randomUUID()}`;
+    await runtimesService.rename(seed.orgA, LOCAL_RUNTIME_ID, renamed);
+    try {
+      await runtimesService.ensureLocal();
 
-    for (const org of [seed.orgA, seed.orgB]) {
-      const listed = await runtimesService.list(org, seed.userId);
-      expect(listed.map((runtime) => runtime.id)).toContain(LOCAL_RUNTIME_ID);
-      expect((await runtimesService.get(org, LOCAL_RUNTIME_ID))?.name).toBe("Control plane");
+      for (const org of [seed.orgA, seed.orgB]) {
+        const listed = await runtimesService.list(org, seed.userId);
+        expect(listed.map((runtime) => runtime.id)).toContain(LOCAL_RUNTIME_ID);
+        expect((await runtimesService.get(org, LOCAL_RUNTIME_ID))?.name).toBe(renamed);
+      }
+    } finally {
+      await runtimesService.rename(seed.orgA, LOCAL_RUNTIME_ID, original.name);
     }
     expect(await runtimesService.revoke(seed.orgA, seed.userId, LOCAL_RUNTIME_ID)).toBeNull();
     expect(await runtimesService.rotate(seed.orgA, seed.userId, LOCAL_RUNTIME_ID)).toBeNull();
@@ -88,11 +95,15 @@ run("runtimes service (real postgres)", async () => {
 
   test("the control plane's own runner has no owner, so it is the workspace's", async () => {
     await runtimesService.ensureLocal();
+    const { host } = (await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID))!;
     await runtimesService.setHost(LOCAL_RUNTIME_ID, true);
-
-    expect((await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID, "a-teammate"))?.id).toBe(
-      LOCAL_RUNTIME_ID,
-    );
+    try {
+      expect((await runtimesService.get(seed.orgA, LOCAL_RUNTIME_ID, "a-teammate"))?.id).toBe(
+        LOCAL_RUNTIME_ID,
+      );
+    } finally {
+      await runtimesService.setHost(LOCAL_RUNTIME_ID, host);
+    }
   });
 
   test("a runner in a container is the workspace's", async () => {

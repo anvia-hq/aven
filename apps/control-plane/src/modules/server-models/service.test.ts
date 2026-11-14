@@ -1,6 +1,7 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 
 import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { serverModelsService } from "./service";
 
 const run =
@@ -16,8 +17,8 @@ run("serverModelsService (postgres)", async () => {
       .delete(platformSettings)
       .where(inArray(platformSettings.key, ["server_decision_model", "server_small_model"]));
 
-  await clear();
-  afterAll(clear);
+  keepPlatformSettings(["server_decision_model", "server_small_model"]);
+  beforeAll(clear);
 
   const accepted = async () => undefined;
 
