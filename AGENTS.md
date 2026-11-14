@@ -57,6 +57,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **packages/runtime-client / apps/runtime**: a runner works on its own machine and needs git. Tests use `src/testing/directory-workspaces.ts`. Nothing secret (tokens, variables) is stored in a journal or on disk.
 - **apps/cli** (`aven`): changes must keep `aven update` working for installed machines (`docs/rules/0005-releasing.md`). Tests use a throwaway `HOME` and `AVEN_HOME`, never the real ones.
 - **clients/macos, clients/ios** (Swift): `AvenKit` has the models and the transcript reducer and is tested against the same fixtures as the TypeScript reducer (`packages/protocol/fixtures/`). Both apps need full Xcode; `docs/products/0004-native-client-contract.md`.
+- **apps/macos** (`AvenDesktop`): the native macOS control plane. It mirrors the web app's screens and uses the same API. `AvenDesktopCore` is Foundation-only (`swift test` in `apps/macos`); the SwiftUI app needs macOS 14 and Xcode. It does not replace `clients/macos`. Decision 0297.
 
 ## Docs
 

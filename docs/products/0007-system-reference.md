@@ -24,6 +24,10 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 - Never edit `src/routeTree.gen.ts` (generated).
 - Full rules: `docs/rules/0001-platform-structure.md`.
 
+## apps/macos
+
+Aven Desktop (`apps/macos`, decision 0297) is a native macOS control plane. It is a Swift package: `AvenDesktopCore` is Foundation-only (the API client, models, transcript reducer and the screen catalog) and `AvenDesktop` is the SwiftUI app, compiled only when the package is evaluated on macOS. It talks to the same control plane as the web app, with the email session of `docs/products/0004-native-client-contract.md` and its own Keychain service (`dev.anvia.aven.desktop`). It does not replace the thread client in `clients/macos`. `swift test` in `apps/macos` checks the core. The app needs macOS 14. There is no `package.json`, so the Bun workspaces do not include it.
+
 ## Self-hosting (deploy/)
 
 `deploy/docker-compose.yml` runs Postgres, `server` (`apps/control-plane/Dockerfile`, migrations on start, `AVEN_LOCAL_RUNNER=host`: the built-in runner is a process on the machine that connects with `AVEN_LOCAL_RUNNER_TOKEN`, decision 0073) and `web` (`apps/platform/Dockerfile`: the built platform behind Caddy, which proxies `/api/*` to the server with the prefix stripped and is the one published port). `deploy/docker-compose.build.yml` builds the images from the checkout (`docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`); `deploy/env.example` is the install's `.env`, apart from the development `.env.example`. Both Dockerfiles build from the repository root and copy every workspace's `package.json` (a frozen lockfile needs them all). Runners are separate machines that connect out; install, update and the release pipeline are described in `docs/decision/0073-install-and-update-with-a-script.md`, and making a release, versions and what a change must keep true for `aven update` in `docs/rules/0005-releasing.md`.
