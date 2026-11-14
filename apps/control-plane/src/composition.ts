@@ -48,6 +48,7 @@ import { followUpDecider, jevModel } from "./modules/decision-model/jev";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
+import { createThreadRetention } from "./modules/threads/retention";
 import { threadsService } from "./modules/threads/service";
 
 export const runtimeHub = new RuntimeHub(
@@ -231,6 +232,15 @@ export const goalDriver = createGoalDriver({
   wake: (userId, botId, note) => botChats.fire(userId, botId, note),
   isIdle: (botId) => botRunner.isIdle(botId),
   intervalMs: 30_000,
+});
+
+export const threadRetention = createThreadRetention({
+  archive: async ({ id, organizationId, createdBy, runtimeId }) => {
+    await threadsService.update({ organizationId, userId: createdBy }, id, { state: "archived" });
+    putAwayThread({ id, runtimeId });
+  },
+  isRunning: (threadId) => runsService.isRunning(threadId),
+  intervalMs: 60 * 60_000,
 });
 
 export const threadWatcher = createThreadWatcher({

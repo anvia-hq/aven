@@ -6,6 +6,7 @@ export type ThemeOption = {
 };
 
 export type Palette =
+  | "aven"
   | "mint"
   | "catppuccin"
   | "tokyo-night"
@@ -55,9 +56,15 @@ export const THEMES: ThemeOption[] = [
 ];
 
 export const PALETTE_STORAGE_KEY = "palette";
-export const DEFAULT_PALETTE: Palette = "mint";
+export const DEFAULT_PALETTE: Palette = "aven";
 
 export const PALETTES: PaletteOption[] = [
+  {
+    id: "aven",
+    label: "Aven",
+    light: "oklch(0.22 0.01 160)",
+    dark: "oklch(0.93 0.004 240)",
+  },
   {
     id: "mint",
     label: "Mint",

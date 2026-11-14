@@ -7,6 +7,7 @@ export const BOT_TURN_TOOLS_MAX = 12;
 export const BOT_THREAD_PROMPT_MAX = 20_000;
 export const BOT_THREAD_RUNS_PER_REPLY = 5;
 export const THREAD_TITLE_MAX = 200;
+export const THREAD_ARCHIVE_AFTER_DAYS = 30;
 
 const oneLine = (text: string, max: number) => {
   const line = text.replace(/\s+/g, " ").trim();

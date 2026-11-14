@@ -22,7 +22,7 @@ import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { AnnouncementBanner } from "@/modules/announcements/components/announcement-banner";
 import { MentionsButton } from "@/modules/mentions/components/mentions-button";
-import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
+import { MachinesRailIcon } from "@/modules/runtimes/components/machines-rail-icon";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
@@ -49,13 +49,20 @@ export function AppShell({ user, sidebar }: Props) {
 
   return (
     <SidebarProvider
-      className="bg-frame"
-      style={{ "--sidebar-width": `${sidebarSize.width}px` } as CSSProperties}
+      className="bg-(--chrome)"
+      style={
+        {
+          "--sidebar-width": `${sidebarSize.width}px`,
+          "--chrome": "color-mix(in oklch, var(--frame), black 28%)",
+          "--sidebar": "var(--chrome)",
+          "--sidebar-accent": "color-mix(in oklch, var(--chrome), var(--foreground) 9%)",
+        } as CSSProperties
+      }
     >
       <TooltipProvider delay={300}>
         <nav
           aria-label="Aven"
-          className="sticky top-0 hidden h-svh w-14 shrink-0 flex-col items-center py-2.5 md:flex"
+          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center py-2.5 md:flex"
         >
           <RailLink
             to="/threads"
@@ -63,31 +70,29 @@ export function AppShell({ user, sidebar }: Props) {
             tooltip="Aven · threads"
             active={pathname.startsWith("/threads") || pathname.startsWith("/projects")}
           >
-            <AvenMark className="w-5 text-brand" />
+            <AvenMark className="w-[17px] text-brand" />
           </RailLink>
           <span aria-hidden="true" className="my-2.5 h-px w-4.5 bg-input" />
           <div className="flex flex-col items-center gap-1.5">
-            <BotRailLink />
             <CockpitRailLink />
+            <BotRailLink />
           </div>
           <div className="mt-auto flex flex-col items-center gap-1.5">
+            <MachinesRailIcon width={sidebarSize.width} />
             <RailLink
               to="/settings/general"
               label="Settings"
               active={pathname.startsWith("/settings")}
             >
-              <Cog className="size-5" />
+              <Cog className="size-[17px]" />
             </RailLink>
           </div>
         </nav>
       </TooltipProvider>
-      <div className="flex min-w-0 flex-1 md:my-2 md:mr-2">
+      <div className="flex min-w-0 flex-1">
         <Sidebar
           collapsible="icon"
-          className={cn(
-            "text-sidebar-foreground/80 data-[side=left]:left-14 md:inset-y-2 md:h-[calc(100svh-1rem)] md:*:rounded-xl md:rounded-xl md:border md:border-sidebar-border",
-            drawsOwnCards && "md:bg-background",
-          )}
+          className="text-sidebar-foreground/80 data-[side=left]:left-12 md:border-l md:border-foreground/10"
         >
           <SidebarHeader>
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
@@ -118,7 +123,6 @@ export function AppShell({ user, sidebar }: Props) {
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
             <AnnouncementBanner />
-            <MachineMonitor />
             <div className="flex items-center gap-1 md:hidden">
               <Button
                 variant="ghost"
@@ -136,10 +140,10 @@ export function AppShell({ user, sidebar }: Props) {
         </Sidebar>
         <SidebarInset
           className={cn(
-            "pb-(--mobile-tab-bar) md:ml-1 md:pb-0",
+            "pb-(--mobile-tab-bar) md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
-              : "md:h-[calc(100svh-1rem)] md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:rounded-xl md:border md:border-sidebar-border",
+              : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:border md:border-sidebar-border",
           )}
         >
           <MobileAppBar />

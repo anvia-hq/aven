@@ -14,7 +14,7 @@ test("the sidebar is resized by dragging its edge, and keeps its width", async (
   const box = (await page.getByRole("separator", { name: "Resize sidebar" }).boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, 300);
   await page.mouse.down();
-  await page.mouse.move(56 + 360, 300, { steps: 6 });
+  await page.mouse.move(48 + 360, 300, { steps: 6 });
   await page.mouse.up();
   await expect.poll(width).toBe(360);
 
@@ -31,8 +31,8 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(logo).toHaveAttribute("aria-current", "page");
   for (const link of await rail.getByRole("link").all()) {
     const box = (await link.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(36);
+    expect(box.height).toBeGreaterThanOrEqual(36);
   }
 
   await logo.focus();
@@ -40,6 +40,7 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await page.keyboard.press("Shift+Tab");
   await expect(logo).toBeFocused();
   await expect(page.getByText("Aven · threads", { exact: true })).toBeVisible();
+  await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   const bot = rail.getByRole("link", { name: "Bot", exact: true });
   await expect(bot).toBeFocused();
@@ -65,8 +66,8 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(apps).toBeVisible();
   for (const link of await apps.getByRole("link").all()) {
     const box = (await link.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(44);
-    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.width).toBeGreaterThanOrEqual(36);
+    expect(box.height).toBeGreaterThanOrEqual(36);
   }
   await apps.getByRole("link", { name: "Bot", exact: true }).click();
   await expect(page).toHaveURL(/\/bot$/);

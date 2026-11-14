@@ -63,8 +63,93 @@
   --sidebar-ring: oklch(0.7 0.06 160);
 }
 
-/* Charcoal dark theme with a faint indigo tint (default). */
+/* Aven, the default dark theme: Mint lifted and turned to a cool gray. */
 .dark {
+  --background: oklch(0.18 0.006 240);
+  --foreground: oklch(0.9 0.004 240);
+  --card: oklch(0.21 0.006 240);
+  --card-foreground: oklch(0.9 0.004 240);
+  --popover: oklch(0.23 0.006 240);
+  --popover-foreground: oklch(0.9 0.004 240);
+  --primary: oklch(0.93 0.004 240);
+  --primary-foreground: oklch(0.18 0.004 240);
+  --secondary: oklch(0.25 0.006 240);
+  --secondary-foreground: oklch(0.9 0.004 240);
+  --muted: oklch(0.23 0.006 240);
+  --muted-foreground: oklch(0.62 0.004 240);
+  --accent: oklch(0.265 0.006 240);
+  --accent-foreground: oklch(0.92 0.004 240);
+  --destructive: oklch(0.68 0.19 22);
+  --success: oklch(0.76 0.17 155);
+  --meter-low: oklch(0.7 0.14 245);
+  --meter: oklch(0.72 0.18 50);
+  --graph-1: oklch(0.74 0.16 250);
+  --graph-2: oklch(0.74 0.15 150);
+  --graph-3: oklch(0.74 0.19 330);
+  --graph-4: oklch(0.8 0.15 70);
+  --graph-5: oklch(0.76 0.12 200);
+  --graph-6: oklch(0.76 0.19 25);
+  --code: oklch(0.8 0.14 155);
+  --effort: oklch(0.74 0.2 160);
+  --frame: oklch(0.225 0.006 240);
+  --border: oklch(1 0 0 / 5%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.5 0.012 240);
+  --sidebar: var(--background);
+  --sidebar-foreground: oklch(0.86 0.004 240);
+  --sidebar-primary: oklch(0.93 0.004 240);
+  --sidebar-primary-foreground: oklch(0.18 0.004 240);
+  --sidebar-accent: oklch(0.24 0.006 240);
+  --sidebar-accent-foreground: oklch(0.92 0.004 240);
+  --sidebar-border: oklch(1 0 0 / 3%);
+  --sidebar-ring: oklch(0.5 0.012 240);
+}
+
+/* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Aven, the default, is :root and .dark above; Mint is the palette it was made from (decision 0292). */
+
+:root[data-theme="mint"] {
+  --radius: 0.5rem;
+  --background: oklch(0.99 0.003 90);
+  --foreground: oklch(0.2 0.006 80);
+  --card: oklch(0.995 0.002 90);
+  --card-foreground: oklch(0.2 0.009 160);
+  --popover: oklch(0.995 0.002 90);
+  --popover-foreground: oklch(0.2 0.009 160);
+  --primary: oklch(0.22 0.01 160);
+  --primary-foreground: oklch(0.98 0.003 160);
+  --secondary: oklch(0.955 0.008 88);
+  --secondary-foreground: oklch(0.25 0.02 160);
+  --muted: oklch(0.955 0.008 88);
+  --muted-foreground: oklch(0.5 0.01 80);
+  --accent: oklch(0.945 0.015 90);
+  --accent-foreground: oklch(0.25 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --success: oklch(0.55 0.15 150);
+  --meter-low: oklch(0.6 0.15 250);
+  --meter: oklch(0.66 0.19 48);
+  --graph-1: oklch(0.6 0.16 250);
+  --graph-2: oklch(0.6 0.15 150);
+  --graph-3: oklch(0.6 0.19 330);
+  --graph-4: oklch(0.68 0.15 70);
+  --graph-5: oklch(0.62 0.12 200);
+  --graph-6: oklch(0.62 0.19 25);
+  --code: oklch(0.48 0.13 155);
+  --effort: oklch(0.7 0.19 160);
+  --frame: oklch(0.955 0.006 85);
+  --border: oklch(0.89 0.007 85);
+  --input: oklch(0.89 0.007 85);
+  --ring: oklch(0.7 0.06 160);
+  --sidebar: var(--background);
+  --sidebar-foreground: oklch(0.2 0.009 160);
+  --sidebar-primary: oklch(0.22 0.01 160);
+  --sidebar-primary-foreground: oklch(0.98 0.003 160);
+  --sidebar-accent: oklch(0.935 0.015 90);
+  --sidebar-accent-foreground: oklch(0.25 0 0);
+  --sidebar-border: oklch(0.91 0.007 85);
+  --sidebar-ring: oklch(0.7 0.06 160);
+}
+
+:root[data-theme="mint"].dark {
   --background: oklch(0.17 0.014 195);
   --foreground: oklch(0.9 0.008 195);
   --card: oklch(0.2 0.014 195);
@@ -104,8 +189,6 @@
   --sidebar-border: oklch(1 0 0 / 3%);
   --sidebar-ring: oklch(0.5 0.03 195);
 }
-
-/* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Mint, the default, is :root and .dark above. */
 
 :root[data-theme="catppuccin"] {
   --background: #eff1f5;

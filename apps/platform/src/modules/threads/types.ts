@@ -186,3 +186,7 @@ export type ClaudeControl = {
   onChange: (choice: ClaudeChoice | null) => void;
   only?: boolean;
 };
+
+export type RecencyGroupId = "today" | "week" | "month";
+
+export type RecencyGroup = { id: RecencyGroupId; label: string; threads: Thread[] };

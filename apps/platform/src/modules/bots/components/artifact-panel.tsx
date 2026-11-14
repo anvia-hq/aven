@@ -28,7 +28,7 @@ export function ArtifactPanel({
     <section
       aria-label={group.title}
       data-role="artifact-panel"
-      className="flex size-full min-w-0 flex-col overflow-hidden bg-background md:rounded-xl md:border md:border-sidebar-border"
+      className="flex size-full min-w-0 flex-col overflow-hidden bg-background md:border md:border-sidebar-border"
     >
       <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10">
         <FileIcon className="size-4 shrink-0 text-muted-foreground" />

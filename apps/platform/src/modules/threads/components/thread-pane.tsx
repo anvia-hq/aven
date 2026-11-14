@@ -107,7 +107,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   );
 
   return (
-    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-[calc(100svh-1rem)]">
+    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-svh">
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup
           orientation={wide ? "horizontal" : "vertical"}
@@ -117,7 +117,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div
               className={cn(
-                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:rounded-xl md:border md:border-sidebar-border",
+                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border md:border-sidebar-border",
               )}
             >
               <ThreadHeader thread={thread} panels={panels} owned={owned} onClose={onClose} />
