@@ -1,6 +1,8 @@
 import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
+import { PROVIDERS } from "@aven/protocol/runtime-wire";
+
 import { users } from "./users";
 
 export const providers = pgTable(
@@ -10,9 +12,7 @@ export const providers = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    kind: text("kind", {
-      enum: ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure", "openai-compatible"],
-    }).notNull(),
+    kind: text("kind", { enum: PROVIDERS }).notNull(),
     name: text("name").notNull(),
     baseUrl: text("base_url"),
     modelId: text("model_id"),

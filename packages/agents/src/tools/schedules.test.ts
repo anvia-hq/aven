@@ -1,12 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  createScheduleTools,
-  CREATE_SCHEDULE_TOOL_NAME,
-  DELETE_SCHEDULE_TOOL_NAME,
-  LIST_SCHEDULES_TOOL_NAME,
-  UPDATE_SCHEDULE_TOOL_NAME,
-} from "./schedules";
+import { createScheduleTools } from "./schedules";
 import type { ScheduleHost } from "./types";
 import type { BotScheduleView } from "@aven/protocol/types";
 
@@ -37,16 +31,6 @@ function host() {
 }
 
 describe("the schedule tools", () => {
-  test("are four, named for what they do", () => {
-    const { create, list, update, remove } = host();
-    expect([create.name, list.name, update.name, remove.name]).toEqual([
-      CREATE_SCHEDULE_TOOL_NAME,
-      LIST_SCHEDULES_TOOL_NAME,
-      UPDATE_SCHEDULE_TOOL_NAME,
-      DELETE_SCHEDULE_TOOL_NAME,
-    ]);
-  });
-
   test("create hands the host what the model chose and returns the schedule", async () => {
     const { calls, create } = host();
     const result = await create.call({

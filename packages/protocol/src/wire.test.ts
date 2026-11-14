@@ -61,12 +61,13 @@ describe("run events from a runtime", () => {
   });
 
   test("a usage event with nonsense numbers is refused", () => {
-    expect(
-      parseRuntimeFrame(frame({ type: "context", usedTokens: -1, contextWindow: 1000 })),
-    ).toBeNull();
-    expect(
-      parseRuntimeFrame(frame({ type: "context", usedTokens: 1, contextWindow: 0 })),
-    ).toBeNull();
+    const turn = { inputTokens: 1, outputTokens: 1, cacheWriteTokens: 0, cacheReadTokens: 0 };
+    const usage = (event: object) => parseRuntimeFrame(frame({ type: "usage", turn, ...event }));
+
+    expect(usage({ context: { usedTokens: 1, contextWindow: 1000 } })).not.toBeNull();
+    expect(usage({ context: { usedTokens: -1, contextWindow: 1000 } })).toBeNull();
+    expect(usage({ context: { usedTokens: 1, contextWindow: 0 } })).toBeNull();
+    expect(usage({ turn: { ...turn, inputTokens: -1 } })).toBeNull();
   });
 
   test("a subagent's activity is accepted, and a spawn_agent tool part keeps its subagents", () => {

@@ -14,14 +14,17 @@ describe(`aven/${rule}`, () => {
     expect(lint(rule, "const a = 1;\n\nif (a) {\n  f();\n}\n\nconst b = 2;\n")).toHaveLength(0);
   });
 
-  it("allows an if at the start or end of a block and after a case label", () => {
+  it("allows an if at the start or end of a block or case", () => {
     expect(lint(rule, "function f() {\n  if (a) {\n    g();\n  }\n}\n")).toHaveLength(0);
-    expect(
-      lint(rule, "switch (a) {\n  case 1:\n    if (b) {\n      g();\n    }\n    break;\n}\n"),
-    ).toHaveLength(1);
     expect(
       lint(rule, "switch (a) {\n  case 1:\n    if (b) {\n      g();\n    }\n}\n"),
     ).toHaveLength(0);
+  });
+
+  it("reports an if followed by more statements in a case", () => {
+    expect(
+      lint(rule, "switch (a) {\n  case 1:\n    if (b) {\n      g();\n    }\n    break;\n}\n"),
+    ).toHaveLength(1);
   });
 
   it("ignores an else-if, which is not a statement of a block", () => {

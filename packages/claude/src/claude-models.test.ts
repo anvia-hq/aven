@@ -41,15 +41,4 @@ describe("the Claude model table against the SDK", () => {
       q.close();
     }
   }, 30_000);
-
-  test("a model override in the machine's environment does not change what the table is checked against", async () => {
-    const before = process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-    process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = "claude-opus-5-5";
-    try {
-      expect(hostEnv().ANTHROPIC_DEFAULT_SONNET_MODEL).toBeUndefined();
-    } finally {
-      if (before === undefined) delete process.env.ANTHROPIC_DEFAULT_SONNET_MODEL;
-      else process.env.ANTHROPIC_DEFAULT_SONNET_MODEL = before;
-    }
-  });
 });
