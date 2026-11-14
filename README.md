@@ -9,6 +9,7 @@ pull request as you. The server, the machines the agents run on and the model ke
 - Runs on your laptop, a build machine or a VM, on the machine itself, in the folders you give it. Nothing is isolated, so use machines you own.
 - Bring your own OpenAI, Anthropic, Azure OpenAI or OpenAI-compatible key. It stays encrypted on your server.
 - One server, any number of machines: add a runner with one command.
+- A [boat.dev](https://boat.dev) sandbox is a runtime too. Paste an API key in Settings > Runtimes; it stays encrypted on your server, and the sandbox has to reach that server at a public address.
 
 ## Install
 

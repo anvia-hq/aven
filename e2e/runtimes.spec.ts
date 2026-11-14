@@ -159,3 +159,83 @@ test.describe("renaming a runtime", () => {
     expect(listed.map((runtime) => runtime.githubMode)).toEqual(["person"]);
   });
 });
+
+test.describe("a boat.dev runtime", () => {
+  test("asks for an API key and does not show a runner command", async ({ page }) => {
+    await registerUser(page, "rtboat", "Boat User");
+    await page.goto("/settings/runtimes");
+    await page.getByRole("button", { name: "Add runtime" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add runtime" });
+    await dialog.getByRole("combobox", { name: "Kind" }).click();
+    await page.getByRole("option", { name: "boat.dev sandbox" }).click();
+    await expect(dialog.getByLabel("boat.dev API key")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Add runtime" })).toBeDisabled();
+    await dialog.getByLabel("Name").fill("cloud");
+    await dialog.getByLabel("boat.dev API key").fill("boat_e2e_key");
+    await dialog.getByRole("combobox", { name: "Size" }).click();
+    await page.getByRole("option", { name: "Small · 2 vCPU, 4 GB" }).click();
+    await expect(dialog).toContainText("AVEN_BOAT_RUNNER_URL");
+
+    const posted = page.waitForRequest(
+      (request) => request.method() === "POST" && request.url().endsWith("/api/runtimes"),
+    );
+    await page.route("**/api/runtimes", (route) => {
+      if (route.request().method() !== "POST") return route.continue();
+
+      return route.fulfill({
+        json: {
+          token: "avrt_should_not_be_shown",
+          runtime: { name: "cloud", provider: "boat" },
+        },
+      });
+    });
+    await dialog.getByRole("button", { name: "Add runtime" }).click();
+    const request = await posted;
+    expect(request.postDataJSON()).toEqual({
+      name: "cloud",
+      provider: "boat",
+      apiKey: "boat_e2e_key",
+      machineType: "small",
+    });
+    await expect(page.getByRole("dialog", { name: "cloud is saved" })).toBeVisible();
+    await expect(page.getByLabel("Runtime command")).toHaveCount(0);
+    await expect(page.getByText("avrt_should_not_be_shown")).toHaveCount(0);
+
+    await page.route("**/api/runtimes", (route) => {
+      if (route.request().method() !== "GET") return route.continue();
+
+      return route.fulfill({
+        json: [
+          {
+            id: "00000000-0000-4000-8000-000000000099",
+            name: "cloud",
+            ownerId: "someone",
+            host: false,
+            shared: false,
+            githubMode: "person",
+            github: null,
+            provider: "boat",
+            boatMachineType: "small",
+            boatSandboxId: null,
+            boatKeyHint: "2key",
+            directories: [],
+            tokenHint: "oken",
+            online: false,
+            build: null,
+            outdated: false,
+            updateTo: null,
+            isControlPlane: false,
+            canUpdate: false,
+            stats: null,
+            lastSeenAt: null,
+            createdAt: new Date().toISOString(),
+          },
+        ],
+      });
+    });
+    await page.reload();
+    const row = page.getByRole("listitem", { name: "cloud" });
+    await expect(row.getByText("boat.dev")).toBeVisible();
+    await expect(row).toContainText("Asleep until a thread needs it.");
+  });
+});
