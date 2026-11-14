@@ -1136,6 +1136,16 @@ describe("BotReplies", () => {
       const names = agent.tools.map((each) => each.name);
       expect(names).toContain("update_self");
       expect(names).not.toContain("create_bot");
+      expect(names).toEqual(
+        expect.arrayContaining([
+          "send_message",
+          "list_bots",
+          "react_to_message",
+          "get_goal",
+          "create_schedule",
+          "list_mcp_servers",
+        ]),
+      );
       expect(agent.instructions).toContain("Your description now: A pal.");
       expect(agent.instructions).not.toContain("<making-bots>");
     });
