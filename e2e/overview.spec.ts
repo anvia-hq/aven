@@ -229,6 +229,7 @@ test("the column keeps its height while another thread's usage arrives", async (
       contentType: "text/event-stream",
       body: `retry: 600000\n\ndata: ${JSON.stringify({ type: "snapshot", running: false, messages: [], usage })}\n\n`,
     });
+
     if (route.request().url().includes(ids[1]!)) secondServed = true;
   });
   await page.setViewportSize({ width: 1500, height: 800 });
