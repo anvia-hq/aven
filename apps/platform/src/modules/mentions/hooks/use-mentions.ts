@@ -39,11 +39,8 @@ export function useMentions() {
       mentionsAtom,
       (current) => current?.map((mention) => ({ ...mention, read: true })) ?? null,
     );
-    const done = await attempt("Could not mark the mentions read", () =>
-      postJson("/threads/mentions/read", {}),
-    );
-
-    if (!done) await mentionsStore.refresh();
+    await attempt("Could not mark the mentions read", () => postJson("/threads/mentions/read", {}));
+    await mentionsStore.refresh();
   }, []);
 
   const list = mentions ?? [];
