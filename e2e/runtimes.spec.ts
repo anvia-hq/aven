@@ -29,8 +29,8 @@ test.describe("runtimes", () => {
     await page.getByRole("button", { name: "Done" }).click();
 
     const row = page
-      .getByRole("table", { name: "Runtimes" })
-      .getByRole("row")
+      .getByRole("list", { name: "Runtimes" })
+      .getByRole("listitem")
       .filter({ hasText: "e2e-laptop" });
     await expect(row).toContainText("Offline");
     await expect(row).not.toContainText("token");
@@ -97,8 +97,8 @@ test.describe("the built-in runtime", () => {
         : route.continue(),
     );
     await page.goto("/settings/runtimes");
-    const table = page.getByRole("table", { name: "Runtimes" });
-    await expect(table.getByRole("row", { name: /Control plane/ })).toBeVisible();
+    const table = page.getByRole("list", { name: "Runtimes" });
+    await expect(table.getByRole("listitem", { name: /Control plane/ })).toBeVisible();
     await expect(table.getByRole("img", { name: "Built in" })).toBeVisible();
     await expect(page.getByText("Something went wrong")).toHaveCount(0);
   });
@@ -113,8 +113,8 @@ test.describe("renaming a runtime", () => {
     expect(created.ok()).toBe(true);
     await page.goto("/settings/runtimes");
 
-    const table = page.getByRole("table", { name: "Runtimes" });
-    await expect(table.getByRole("row", { name: /devscalelabs-1/ })).toBeVisible();
+    const table = page.getByRole("list", { name: "Runtimes" });
+    await expect(table.getByRole("listitem", { name: /devscalelabs-1/ })).toBeVisible();
     await expect(table).not.toContainText("Built in");
 
     await page.getByRole("button", { name: "Rename devscalelabs-1" }).click();
@@ -127,7 +127,7 @@ test.describe("renaming a runtime", () => {
     await save.click();
 
     await expect(dialog).toHaveCount(0);
-    await expect(table.getByRole("row", { name: /Homelab VPS/ })).toBeVisible();
+    await expect(table.getByRole("listitem", { name: /Homelab VPS/ })).toBeVisible();
     await expect(table).not.toContainText("devscalelabs-1");
     const listed = (await (await page.request.get("/api/runtimes")).json()) as { name: string }[];
     expect(listed.map((runtime) => runtime.name)).toEqual(["Homelab VPS"]);
@@ -138,7 +138,9 @@ test.describe("renaming a runtime", () => {
     expect(created.ok()).toBe(true);
     await page.goto("/settings/runtimes");
 
-    const row = page.getByRole("table", { name: "Runtimes" }).getByRole("row", { name: /big-box/ });
+    const row = page
+      .getByRole("list", { name: "Runtimes" })
+      .getByRole("listitem", { name: /big-box/ });
     await expect(row).toContainText("GitHub: this machine");
 
     await page.getByRole("button", { name: "GitHub of big-box" }).click();
