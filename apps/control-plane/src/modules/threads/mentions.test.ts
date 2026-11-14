@@ -66,4 +66,52 @@ run("threadMentionsService (postgres)", async () => {
     const waiting = await threadMentionsService.waiting(orgA, userId);
     expect(waiting.filter((id) => id === thread.id)).toHaveLength(1);
   });
+
+  test("lists what was said and by whom, unread until seen, and unread again when mentioned again", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    await threadsService.update({ organizationId: orgA, userId }, thread.id, {
+      visibility: "workspace",
+    });
+    await threadMentionsService.record(
+      thread.id,
+      mateId,
+      `${mention(userId, "Owner")}   can you\nlook at this?`,
+    );
+    const [entry] = (await threadMentionsService.list(orgA, userId)).filter(
+      (item) => item.threadId === thread.id,
+    );
+    expect(entry).toMatchObject({
+      title: thread.title,
+      authorName: "Mate",
+      excerpt: "@Owner can you look at this?",
+      read: false,
+    });
+
+    await threadMentionsService.seen(userId, thread.id);
+    const seen = (await threadMentionsService.list(orgA, userId)).find(
+      (item) => item.threadId === thread.id,
+    );
+    expect(seen?.read).toBe(true);
+
+    await threadMentionsService.record(thread.id, mateId, mention(userId, "Owner"));
+    const again = (await threadMentionsService.list(orgA, userId)).find(
+      (item) => item.threadId === thread.id,
+    );
+    expect(again?.read).toBe(false);
+  });
+
+  test("marks every mention of the workspace read at once, and only that workspace's", async () => {
+    const threadA = await threadsService.create(orgA, userId, { projectId: project.id });
+    await threadMentionsService.record(threadA.id, mateId, mention(userId, "Owner"));
+    expect(await threadMentionsService.waiting(orgA, userId)).toContain(threadA.id);
+
+    await threadMentionsService.seenAll(orgB, userId);
+    expect(await threadMentionsService.waiting(orgA, userId)).toContain(threadA.id);
+
+    await threadMentionsService.seenAll(orgA, userId);
+    expect(await threadMentionsService.waiting(orgA, userId)).toEqual([]);
+    const listed = await threadMentionsService.list(orgA, userId);
+    expect(listed.length).toBeGreaterThan(0);
+    expect(listed.every((item) => item.read)).toBe(true);
+  });
 });

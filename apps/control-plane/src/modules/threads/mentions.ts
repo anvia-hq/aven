@@ -2,9 +2,16 @@ import { db } from "@aven/db/client";
 import { threadMentions } from "@aven/db/schema/thread-mentions";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 
-import { personMentions } from "./addressing";
+import { personMentions, spoken } from "./addressing";
+import type { MentionEntry } from "./types";
+
+const EXCERPT_CHARS = 160;
+const LISTED = 30;
+
+const visibleTo = (userId: string) =>
+  or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace"));
 
 export const threadMentionsService = {
   async record(threadId: string, authorId: string, text: string) {
@@ -16,12 +23,13 @@ export const threadMentionsService = {
 
     if (real.length === 0) return;
 
+    const excerpt = spoken(text).replace(/\s+/g, " ").trim().slice(0, EXCERPT_CHARS);
     await db
       .insert(threadMentions)
-      .values(real.map(({ id }) => ({ threadId, userId: id })))
+      .values(real.map(({ id }) => ({ threadId, userId: id, authorId, excerpt })))
       .onConflictDoUpdate({
         target: [threadMentions.threadId, threadMentions.userId],
-        set: { createdAt: new Date() },
+        set: { authorId, excerpt, readAt: null, createdAt: new Date() },
       });
   },
 
@@ -33,16 +41,71 @@ export const threadMentionsService = {
       .where(
         and(
           eq(threadMentions.userId, userId),
+          isNull(threadMentions.readAt),
           eq(threads.organizationId, organizationId),
-          or(eq(threads.createdBy, userId), eq(threads.visibility, "workspace")),
+          visibleTo(userId),
         ),
       );
     return rows.map(({ threadId }) => threadId);
   },
 
+  async list(organizationId: string, userId: string): Promise<MentionEntry[]> {
+    const rows = await db
+      .select({
+        threadId: threadMentions.threadId,
+        title: threads.title,
+        authorName: users.name,
+        authorImage: users.image,
+        excerpt: threadMentions.excerpt,
+        createdAt: threadMentions.createdAt,
+        readAt: threadMentions.readAt,
+      })
+      .from(threadMentions)
+      .innerJoin(threads, eq(threads.id, threadMentions.threadId))
+      .leftJoin(users, eq(users.id, threadMentions.authorId))
+      .where(
+        and(
+          eq(threadMentions.userId, userId),
+          eq(threads.organizationId, organizationId),
+          visibleTo(userId),
+        ),
+      )
+      .orderBy(desc(threadMentions.createdAt))
+      .limit(LISTED);
+    return rows.map(({ readAt, createdAt, ...row }) => ({
+      ...row,
+      createdAt: createdAt.toISOString(),
+      read: readAt !== null,
+    }));
+  },
+
   async seen(userId: string, threadId: string) {
     await db
-      .delete(threadMentions)
-      .where(and(eq(threadMentions.userId, userId), eq(threadMentions.threadId, threadId)));
+      .update(threadMentions)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(threadMentions.userId, userId),
+          eq(threadMentions.threadId, threadId),
+          isNull(threadMentions.readAt),
+        ),
+      );
+  },
+
+  async seenAll(organizationId: string, userId: string) {
+    const inWorkspace = db
+      .select({ id: threads.id })
+      .from(threads)
+      .where(eq(threads.organizationId, organizationId));
+    await db
+      .update(threadMentions)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(threadMentions.userId, userId),
+          isNull(threadMentions.readAt),
+          inArray(threadMentions.threadId, inWorkspace),
+        ),
+      );
   },
 };
