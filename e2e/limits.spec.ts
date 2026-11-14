@@ -73,15 +73,18 @@ test.describe("the Limits card", () => {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
     });
     expect(provider.ok()).toBe(true);
-    const { child, events, threadId } = await threadOnFakeRunner(page, {
+    const { child, threadId } = await threadOnFakeRunner(page, {
       FAKE_LIMITS: LIMITS,
-      FAKE_RUN_ENDS_AFTER: "120000",
+      FAKE_RUN_ENDS: "1",
     });
     runner = child;
-    await runOnce(page, threadId);
+    await page.setViewportSize({ width: 1400, height: 760 });
+    await page.goto(`/threads/${threadId}`);
+    await page.getByRole("textbox", { name: "Prompt" }).fill("build it");
+    await page.getByRole("button", { name: "Send" }).click();
 
+    await expect(page.getByText("Done.")).toBeVisible();
     await expect(page.getByRole("region", { name: "Context" })).toBeVisible();
-    await expect.poll(() => events.some((event) => event.type === "started")).toBe(true);
     await expect(page.getByRole("region", { name: "Limits" })).toHaveCount(0);
   });
 });

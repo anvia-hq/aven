@@ -478,7 +478,7 @@ test.describe("shipping a thread", () => {
       expect(started?.mentions).toEqual([{ type: "skill", name: "setup-ship", from: 0, to: 11 }]);
     });
 
-    test("with both it can be shipped", async ({ page }) => {
+    test("with a ship.md alone it can be shipped", async ({ page }) => {
       await threadWith(page, "ship");
 
       await expect(shipButton(page)).toBeEnabled();

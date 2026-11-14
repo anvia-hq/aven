@@ -1,60 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
+import { DEFAULT_PALETTE, PALETTES } from "../apps/platform/src/modules/theme/types";
 import { registerUser, threadOnFakeRunner } from "./helpers";
-
-const palettes = [
-  "Mint",
-  "Catppuccin",
-  "Tokyo Night",
-  "GitHub",
-  "One Dark",
-  "Solarized",
-  "Nord",
-  "Dracula",
-  "Gruvbox",
-  "Rosé Pine",
-  "Monokai",
-  "Ayu",
-  "Material",
-  "Everforest",
-  "Night Owl",
-  "Palenight",
-  "Kanagawa",
-  "Oceanic",
-  "Horizon",
-  "Zenburn",
-  "Synthwave",
-  "Codex",
-  "Claude",
-  "Devin",
-  "T3",
-];
-const ids: Record<string, string> = {
-  Catppuccin: "catppuccin",
-  "Tokyo Night": "tokyo-night",
-  GitHub: "github",
-  "One Dark": "one-dark",
-  Solarized: "solarized",
-  Nord: "nord",
-  Dracula: "dracula",
-  Gruvbox: "gruvbox",
-  "Rosé Pine": "rose-pine",
-  Monokai: "monokai",
-  Ayu: "ayu",
-  Material: "material",
-  Everforest: "everforest",
-  "Night Owl": "night-owl",
-  Palenight: "palenight",
-  Kanagawa: "kanagawa",
-  Oceanic: "oceanic",
-  Horizon: "horizon",
-  Zenburn: "zenburn",
-  Synthwave: "synthwave",
-  Codex: "codex",
-  Claude: "claude",
-  Devin: "devin",
-  T3: "t3",
-};
 
 async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {
   await page.getByRole("combobox", { name: "Mode" }).click();
@@ -96,13 +43,13 @@ test.describe("themes", () => {
     const html = page.locator("html");
 
     const picker = page.getByRole("combobox", { name: "Theme" });
-    for (const name of palettes) {
+    for (const { id, label } of PALETTES) {
       await picker.click();
-      await page.getByRole("option", { name, exact: true }).click();
-      await expect(picker).toContainText(name);
+      await page.getByRole("option", { name: label, exact: true }).click();
+      await expect(picker).toContainText(label);
 
-      if (name === "Mint") await expect(html).not.toHaveAttribute("data-theme", /.+/);
-      else await expect(html).toHaveAttribute("data-theme", ids[name]);
+      if (id === DEFAULT_PALETTE) await expect(html).not.toHaveAttribute("data-theme", /.+/);
+      else await expect(html).toHaveAttribute("data-theme", id);
     }
 
     await picker.click();
@@ -255,12 +202,12 @@ test.describe("themes", () => {
     await page.goto("/settings/general");
     for (const mode of ["light", "dark"] as const) {
       await chooseMode(page, mode === "light" ? "Light" : "Dark");
-      for (const name of palettes) {
+      for (const { id, label } of PALETTES) {
         await page.getByRole("combobox", { name: "Theme" }).click();
-        await page.getByRole("option", { name, exact: true }).click();
+        await page.getByRole("option", { name: label, exact: true }).click();
         await page.keyboard.press("Escape");
         await page.screenshot({
-          path: `.aven/proof/themes/${ids[name] ?? "mint"}-${mode}.png`,
+          path: `.aven/proof/themes/${id}-${mode}.png`,
         });
       }
     }
@@ -287,10 +234,10 @@ test.describe("themes", () => {
       await page.locator('[data-role="worked"]').first().click();
 
       for (const mode of ["light", "dark"] as const) {
-        for (const name of ["Codex", "Claude", "Devin", "T3"]) {
-          await choosePalette(page, ids[name]!, mode);
+        for (const id of ["codex", "claude", "devin", "t3"]) {
+          await choosePalette(page, id, mode);
           await page.screenshot({
-            path: `.aven/proof/themes/${ids[name]}-${mode}-thread.png`,
+            path: `.aven/proof/themes/${id}-${mode}-thread.png`,
           });
         }
       }
