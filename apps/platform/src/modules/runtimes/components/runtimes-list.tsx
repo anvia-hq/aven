@@ -83,7 +83,7 @@ function LoadTile({
           points={points}
           tone={toneOf(metric.percent)}
           className="h-6 min-w-0 flex-1"
-          aria-label={`${metric.label} trend of ${runtime.name}`}
+          ariaLabel={`${metric.label} trend of ${runtime.name}`}
         />
       </div>
     </div>
