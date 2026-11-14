@@ -7,6 +7,7 @@ import { cn } from "cn";
 import { AvenMark } from "@/components/brand-icons";
 import { BotAvatar } from "@/modules/bots/components/bot-avatar";
 import { useBots } from "@/modules/bots/hooks/use-bots";
+import { useBotsWorking } from "@/modules/bots/hooks/use-bots-working";
 
 import { isThreadsSection } from "../sections";
 
@@ -48,6 +49,7 @@ function Tab({
 
 export function MobileTabBar() {
   const { main } = useBots();
+  const working = useBotsWorking();
   const pathname = useRouterState({
     select: (state) => (state.resolvedLocation ?? state.location).pathname,
   });
@@ -62,7 +64,11 @@ export function MobileTabBar() {
       </Tab>
       <Tab to="/bot" label="Bot" active={pathname.startsWith("/bot")}>
         {main ? (
-          <BotAvatar bot={main} className="size-5" />
+          <BotAvatar
+            bot={main}
+            mood={working.has(main.id) ? "working" : "idle"}
+            className="size-5"
+          />
         ) : (
           <span className="size-5 rounded-md bg-sidebar-accent" />
         )}
