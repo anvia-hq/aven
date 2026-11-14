@@ -1,6 +1,14 @@
 import { describe, expect, test } from "bun:test";
 
-import { isTempId, newTempId, withFolder, withMove } from "./folder-cache";
+import {
+  isTempId,
+  newTempId,
+  withFolder,
+  withMove,
+  withOpen,
+  withoutFolder,
+  withRename,
+} from "./folder-cache";
 import type { Folder } from "./types";
 
 const folder = (id: string, threadIds: string[] = [], open = true): Folder => ({
@@ -19,6 +27,19 @@ describe("folder cache patches", () => {
     expect(next[1]!.threadIds).toEqual([]);
     expect(isTempId(tempId)).toBe(true);
     expect(isTempId("a")).toBe(false);
+  });
+
+  test("renames, closes and deletes one folder and leaves the others as they were", () => {
+    const start = [folder("a", ["t"]), folder("b", ["u"])];
+    expect(withRename(start, { id: "a", name: "X" })).toEqual([
+      { ...start[0]!, name: "X" },
+      start[1]!,
+    ]);
+    expect(withOpen(start, { id: "b", open: false })).toEqual([
+      start[0]!,
+      { ...start[1]!, open: false },
+    ]);
+    expect(withoutFolder(start, "a")).toEqual([start[1]!]);
   });
 
   test("moves a thread into one folder only, or out of all", () => {
