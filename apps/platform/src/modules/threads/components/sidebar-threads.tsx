@@ -34,14 +34,30 @@ function SidebarProjectTile({
   thread,
   project,
   palette,
+  machine,
 }: {
   thread: Thread;
   project?: Project;
   palette?: number;
+  machine?: { name: string; online: boolean };
 }) {
   if (!project) return <span className="size-5 shrink-0" aria-hidden />;
 
-  return <ProjectTile projectId={project.id} palette={palette} working={thread.running} />;
+  return (
+    <span className="relative shrink-0">
+      <ProjectTile projectId={project.id} palette={palette} working={thread.running} />
+      {machine && (
+        <span
+          role="img"
+          aria-label={`On ${machine.name}, ${machine.online ? "online" : "offline"}`}
+          className={cn(
+            "absolute right-0 bottom-0 size-1.5 rounded-full ring-1 ring-sidebar",
+            machine.online ? "bg-success" : "bg-muted-foreground",
+          )}
+        />
+      )}
+    </span>
+  );
 }
 
 function UnreadDot({ label = "Finished, not opened yet" }: { label?: string }) {
@@ -159,7 +175,7 @@ export function SidebarThreads() {
   const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   const shared = others.filter((thread) => thread.state === "open");
-  const { runtimes } = useRuntimes();
+  const { runtimes } = useRuntimes({ poll: true });
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();
@@ -183,6 +199,11 @@ export function SidebarThreads() {
   function hostLabel(thread: Thread) {
     const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
     return `${thread.running ? "Running" : "Hosted"} on ${host}`;
+  }
+
+  function machineOf(thread: Thread) {
+    const runtime = runtimes.find((candidate) => candidate.id === thread.runtimeId);
+    return runtime?.ownerId ? { name: runtime.name, online: runtime.online } : undefined;
   }
 
   function row(
@@ -216,6 +237,7 @@ export function SidebarThreads() {
             thread={thread}
             project={projects.find((candidate) => candidate.id === thread.projectId)}
             palette={palettes.get(thread.projectId)}
+            machine={machineOf(thread)}
           />
           <SharedMark thread={thread} />
           <ForkMark thread={thread} />
@@ -306,7 +328,7 @@ export function SidebarThreads() {
 
   return (
     <>
-      <div className="px-2 group-data-[collapsible=icon]:hidden">
+      <div className="px-2 pt-4 group-data-[collapsible=icon]:hidden">
         {groups.map((group) => (
           <RecencyGroupSection key={group.id} group={group}>
             <SidebarMenu>{rows(group.threads)}</SidebarMenu>

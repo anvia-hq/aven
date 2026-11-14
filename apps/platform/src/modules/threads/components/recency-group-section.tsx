@@ -17,10 +17,9 @@ export function RecencyGroupSection({ group, children }: Props) {
       onOpenChange={setOpen}
     >
       <div className="flex h-6 items-center pl-2">
-        <h3 className="flex min-w-0 flex-1">
-          <CollapsibleTrigger className="group/heading flex min-w-0 flex-1 items-center gap-2 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+        <h3 className="flex min-w-0">
+          <CollapsibleTrigger className="group/heading flex min-w-0 items-center gap-2 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
             <span className="shrink-0">{group.label}</span>
-            <span aria-hidden className="h-px flex-1 bg-foreground/10" />
             <ChevronDown className="size-3.5 shrink-0 -rotate-90 transition-transform duration-200 group-data-panel-open/heading:rotate-0 motion-reduce:transition-none" />
           </CollapsibleTrigger>
         </h3>
