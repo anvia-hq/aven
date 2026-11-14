@@ -96,6 +96,14 @@ export const botsService = {
     return row ? view(row) : null;
   },
 
+  async remove(userId: string, id: string) {
+    const [row] = await db
+      .delete(bots)
+      .where(and(ownBot(userId, id), eq(bots.isMain, false)))
+      .returning();
+    return row ? view(row) : null;
+  },
+
   async update(userId: string, id: string, body: UpdateBotBody) {
     const [current] = await db.select().from(bots).where(ownBot(userId, id));
 

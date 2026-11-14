@@ -7,6 +7,7 @@ import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { createApiTools } from "./tools/api";
 import { createAskQuestionTool } from "./tools/ask-question";
 import { createCreateBotTool } from "./tools/create-bot";
+import { createDeleteBotTool } from "./tools/delete-bot";
 import { createGoalTools } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools } from "./tools/mcp-servers";
@@ -23,6 +24,7 @@ import type {
   AskQuestion,
   CockpitHost,
   CreateBot,
+  DeleteBot,
   GoalHost,
   McpServersHost,
   MemoryHost,
@@ -52,6 +54,7 @@ type BotAgentOptions = ModelSource & {
   compactAfterTokens?: number;
   computer?: readonly AnyTool[];
   createBot?: CreateBot;
+  deleteBot?: DeleteBot;
   peers: readonly BotPeer[];
   goals?: GoalHost;
   schedules?: ScheduleHost;
@@ -81,6 +84,7 @@ export function createBotAgent({
   compactAfterTokens,
   computer = [],
   createBot,
+  deleteBot,
   peers,
   askQuestion,
   goals,
@@ -112,6 +116,7 @@ export function createBotAgent({
         instruction,
         computer: computer.length > 0,
         createBots: Boolean(createBot),
+        deleteBots: Boolean(deleteBot),
         questions: Boolean(askQuestion),
         reactions: Boolean(react),
         goals: Boolean(goals),
@@ -146,6 +151,7 @@ export function createBotAgent({
       ...working(goals),
       ...scheduling(schedules),
       ...makingBots(createBot),
+      ...deletingBots(deleteBot),
       ...changingSelf(updateSelf),
       ...usingMcp(mcp),
       ...keepingMcpServers(mcpServers),
@@ -168,6 +174,7 @@ const scheduling = (schedules?: ScheduleHost) => (schedules ? createScheduleTool
 const asking = (askQuestion?: AskQuestion) =>
   askQuestion ? [createAskQuestionTool(askQuestion)] : [];
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
+const deletingBots = (deleteBot?: DeleteBot) => (deleteBot ? [createDeleteBotTool(deleteBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
 const usingMcp = (mcp?: { tools: readonly AnyTool[] }) => (mcp ? mcp.tools : []);

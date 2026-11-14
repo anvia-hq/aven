@@ -8,7 +8,6 @@ import { useBotLastMessages } from "../hooks/use-bot-last-messages";
 import { useBots } from "../hooks/use-bots";
 import { useBotsWorking } from "../hooks/use-bots-working";
 import { BotAvatar } from "./bot-avatar";
-import { BotSettingsDialog } from "./bot-settings-dialog";
 
 export function BotSidebar() {
   const { bots, main, loaded } = useBots();
@@ -23,7 +22,7 @@ export function BotSidebar() {
         <div className="mx-auto mt-2 mb-3 h-[110px] w-28 rounded-xl bg-sidebar-accent/50 group-data-[collapsible=icon]:hidden" />
       )}
       {main && (
-        <div className="group/tile relative mx-auto mt-2 mb-3">
+        <div className="mx-auto mt-2 mb-3">
           <Link
             to="/bot"
             aria-label={`${main.name}, main bot`}
@@ -43,9 +42,6 @@ export function BotSidebar() {
               {main.name}
             </span>
           </Link>
-          <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/tile:opacity-100 group-hover/tile:opacity-100 pointer-coarse:opacity-100 group-data-[collapsible=icon]:hidden">
-            <BotSettingsDialog bot={main} />
-          </div>
         </div>
       )}
       <SidebarMenu className="gap-2 px-2">

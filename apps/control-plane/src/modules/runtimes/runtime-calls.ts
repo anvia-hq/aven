@@ -6,6 +6,7 @@ import {
   parseBotNotesParams,
   parseMemoryNotesParams,
   parseBotCreateParams,
+  parseBotDeleteParams,
   parseBotGoalParams,
   parseBotMcpParams,
   parseBotProviderParams,
@@ -124,6 +125,12 @@ export async function answerRuntimeCall(
   if (method === "bot.create") {
     return answerBotCall(params, parseBotCreateParams, findBotReply, (reply, call) =>
       reply.create(call),
+    );
+  }
+
+  if (method === "bot.delete") {
+    return answerBotCall(params, parseBotDeleteParams, findBotReply, (reply, call) =>
+      reply.delete(call),
     );
   }
 

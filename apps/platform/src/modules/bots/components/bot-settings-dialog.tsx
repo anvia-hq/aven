@@ -1,7 +1,18 @@
 import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
-import { Cog } from "@mynaui/icons-react";
+import { Cog, Trash } from "@mynaui/icons-react";
 import { useState, type ReactNode } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@aven/ui/alert-dialog";
 import { Button } from "@aven/ui/button";
 import {
   Dialog,
@@ -18,6 +29,7 @@ import { Textarea } from "@aven/ui/textarea";
 import { TextField } from "@aven/ui/text-field";
 
 import { useBotForm } from "../hooks/use-bot-form";
+import { useBots } from "../hooks/use-bots";
 import type { Bot } from "../types";
 import { BotAvatarPicker } from "./bot-avatar-picker";
 
@@ -93,11 +105,41 @@ function BotSettingsForm({ bot, onDone }: { bot: Bot; onDone: () => void }) {
           defaultValue={bot.instruction}
         />
       </div>
-      <DialogFooter>
+      <DialogFooter className="sm:justify-between">
+        {!bot.isMain && <DeleteBot bot={bot} />}
         <Button type="submit" disabled={form.submitting}>
           Save changes
         </Button>
       </DialogFooter>
     </Form>
+  );
+}
+
+function DeleteBot({ bot }: { bot: Bot }) {
+  const { remove } = useBots();
+
+  return (
+    <AlertDialog>
+      <AlertDialogTrigger
+        render={<Button type="button" variant="ghost" className="text-destructive" />}
+      >
+        <Trash />
+        Delete bot
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete {bot.name}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Its chat, schedules, goal and notes are deleted with it. This cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" onClick={() => void remove(bot)}>
+            Delete bot
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

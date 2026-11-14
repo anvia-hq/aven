@@ -190,6 +190,14 @@ export class BotRunner {
     return (this.#channels.get(botId)?.pending ?? 0) >= MAX_PENDING;
   }
 
+  async forget(botId: string, userId: string) {
+    if (!this.isIdle(botId))
+      throw new ConflictError("The bot is working; try again when it is done");
+
+    await this.#store.clear({ scope: this.#scope(botId, userId) });
+    this.#channels.delete(botId);
+  }
+
   isIdle(botId: string) {
     return (this.#channels.get(botId)?.pending ?? 0) === 0;
   }

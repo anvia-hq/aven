@@ -10,6 +10,8 @@ import type {
   BotCockpitParams,
   BotCreated,
   BotCreateParams,
+  BotDeleted,
+  BotDeleteParams,
   BotGoaled,
   BotGoalParams,
   BotMcped,
@@ -94,6 +96,7 @@ export type CallBotReply = {
   machine?: string;
   memory(params: BotMemoryParams): Promise<unknown>;
   create(params: BotCreateParams): Promise<BotCreated>;
+  delete(params: BotDeleteParams): Promise<BotDeleted>;
   update(params: BotUpdateParams): Promise<BotUpdated>;
   send(params: BotSendParams): Promise<BotSent>;
   react(params: BotReactParams): Promise<BotReacted>;

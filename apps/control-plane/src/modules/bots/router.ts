@@ -30,6 +30,14 @@ export const botsRouter = (chats: BotChats) =>
         orNotFound(await botsService.update(user.id, params.id, body), "Bot not found"),
       { auth: true, params: botParams, body: updateBotBody },
     )
+    .delete(
+      "/:id",
+      async ({ params, user }) => {
+        await chats.remove(user.id, params.id);
+        return { ok: true };
+      },
+      { auth: true, params: botParams },
+    )
     .get(
       "/working",
       async function* ({ user, request }) {
