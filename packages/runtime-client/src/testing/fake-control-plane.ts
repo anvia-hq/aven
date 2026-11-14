@@ -4,7 +4,6 @@ import type { FakeControlPlaneOptions } from "../types";
 export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
   const transcripts = { stored: options.storesTranscripts !== false };
   const received: RuntimeToControlPlane[] = [];
-  const receivedBinary: Uint8Array[] = [];
   let client: { send(data: string | Uint8Array): void; close(): void } | undefined;
   const opened = Promise.withResolvers<void>();
   const server = Bun.serve({
@@ -17,10 +16,7 @@ export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
         opened.resolve();
       },
       message(ws, data) {
-        if (typeof data !== "string") {
-          receivedBinary.push(new Uint8Array(data));
-          return;
-        }
+        if (typeof data !== "string") return;
 
         const message = JSON.parse(data) as RuntimeToControlPlane;
         received.push(message);
@@ -46,7 +42,6 @@ export function fakeControlPlane(options: FakeControlPlaneOptions = {}) {
   return {
     url: `ws://localhost:${server.port}`,
     received,
-    receivedBinary,
     transcripts,
     opened: opened.promise,
     send: (message: unknown) => client?.send(JSON.stringify(message)),

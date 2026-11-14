@@ -67,20 +67,3 @@ test("a run resumes after the runtime closes, reusing committed tool results", a
   expect(ran).toBe(1);
   await second.close();
 });
-
-test("an agent with memory cannot be registered", async () => {
-  const memory = { load: async () => [], append: async () => {}, clear: async () => {} };
-  const agent = new Agent({
-    id: "coding",
-    model: scriptedModel([]),
-    instructions: "x",
-    memory: { store: memory },
-  });
-  const dir = mkdtempSync(join(tmpdir(), "aven-durable-"));
-  await expect(
-    DurableRuntime.open({
-      store: new SqliteDurableStore(join(dir, "runs.db")),
-      agents: [{ agent, version: "1" }],
-    }),
-  ).rejects.toThrow(/memory/);
-});

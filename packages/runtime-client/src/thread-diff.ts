@@ -154,8 +154,8 @@ export async function currentBranch(root: string, run: Git = git) {
   return found.code === 0 ? found.stdout.trim() : null;
 }
 
-export async function forkChanges(root: string, run: Git = git): Promise<ThreadDiff | null> {
-  const host = hostGit(run);
+export async function forkChanges(root: string): Promise<ThreadDiff | null> {
+  const host = hostGit(git);
   const now = await workingTree(root, host);
 
   if (!now) return null;

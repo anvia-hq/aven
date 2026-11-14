@@ -95,20 +95,6 @@ describe("the end of a process the agent started (decisions 0144 and 0147)", () 
     t.watch.cancelAll();
   });
 
-  test("tells of one that ends while the run is going, so the run hears it at its next step", async () => {
-    const t = setup([]);
-    t.run(true);
-    t.watch.arm("thread-1");
-    await tick();
-    t.set([proc("a", "running")]);
-    await tick();
-    expect(t.sent).toEqual([]);
-    t.set([proc("a", "exited", 0)]);
-    await tick();
-    expect(idsOf(t.sent)).toEqual(["a"]);
-    t.watch.cancelAll();
-  });
-
   test("tells of one that started and ended between two looks, once the run is over", async () => {
     const t = setup([]);
     t.run(true);

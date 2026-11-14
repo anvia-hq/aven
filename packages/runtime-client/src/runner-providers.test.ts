@@ -121,6 +121,7 @@ describe("a bot's reply with the person's providers (decision 0086)", () => {
             name: "Work Azure",
             baseUrl: "https://work.openai.azure.com",
             modelId: "gpt-5",
+            apiKey: "sk-very-secret",
           }),
         ],
         [toolCall("ask_provider_key", { id: providerId })],

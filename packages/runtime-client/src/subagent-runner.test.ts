@@ -43,24 +43,6 @@ describe("subagentRunner", () => {
     expect(made).toEqual([{ id: "subagent-explore-0", tools: ["read_file", "exec_command"] }]);
   });
 
-  test("a subagent that reads a file with its tool answers with what it found", async () => {
-    const readFile = createTool({
-      name: "read_file",
-      description: "Reads a file.",
-      inputSchema: z.object({ path: z.string() }),
-      execute: ({ path }) => `contents of ${path}`,
-    });
-    const { create } = scripted({
-      "subagent-explore-0": [
-        [{ type: "tool-call", toolCallId: "c1", toolName: "read_file", input: { path: "a.ts" } }],
-        [text("a.ts says: contents of a.ts")],
-      ],
-    });
-    const run = subagentRunner([readFile], create, () => {});
-
-    expect(await run(task("explore"), { index: 0 })).toBe("a.ts says: contents of a.ts");
-  });
-
   test("tells what it does as it goes, and how it ended", async () => {
     const readFile = createTool({
       name: "read_file",
@@ -75,9 +57,12 @@ describe("subagentRunner", () => {
       ],
     });
     const told: RunEvent[] = [];
-    await subagentRunner([readFile], create, (event) => told.push(event))(task("explore"), {
-      index: 3,
-    });
+    const answer = await subagentRunner([readFile], create, (event) => told.push(event))(
+      task("explore"),
+      { index: 3 },
+    );
+
+    expect(answer).toBe("a.ts is fine");
 
     expect(told.filter((event) => event.type === "usage")).toHaveLength(2);
     expect(told.filter((event) => event.type === "subagent")).toEqual([

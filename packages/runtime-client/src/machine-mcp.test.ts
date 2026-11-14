@@ -26,7 +26,14 @@ const handler = createMcpHandler(({ requestInfo }) => {
   );
   return server;
 });
-const http = Bun.serve({ port: 0, fetch: (request) => handler.fetch(request) });
+let requests = 0;
+const http = Bun.serve({
+  port: 0,
+  fetch: (request) => {
+    requests++;
+    return handler.fetch(request);
+  },
+});
 afterAll(() => http.stop(true));
 
 const notes = (changes: Partial<RunMcpServer> = {}): RunMcpServer => ({
@@ -150,11 +157,13 @@ describe("MCP servers reached through a machine", () => {
   test("a second connect with the same servers keeps the connection", async () => {
     const { call } = await machine();
     const first = await connectMachineMcp([notes()], call);
+    const handshake = requests;
     const again = await connectMachineMcp([notes()], call);
     open.push(again);
 
-    expect(await again.tools[0]!.call({ text: "still" })).toBeDefined();
+    expect(requests).toBe(handshake);
     expect(first.tools.map((tool) => tool.name)).toEqual(again.tools.map((tool) => tool.name));
+    expect(await again.tools[0]!.call({ text: "still" })).toBeDefined();
   });
 });
 

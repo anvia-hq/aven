@@ -273,7 +273,9 @@ describe("a run with the person's MCP servers", () => {
     await until(() => ended(plane).length === 1);
     expect(ended(plane)[0]).toMatchObject({ outcome: "response" });
     expect(reports(plane)[0]?.results).toEqual([{ id: serverId, error: expect.any(String) }]);
-    expect(told[0]?.failed.map((failure) => failure.name)).toEqual(["Team Notes"]);
+    expect(told[0]?.failed).toEqual([
+      { name: "Team Notes", reason: reports(plane)[0]?.results[0]?.error ?? "" },
+    ]);
   });
 
   test("an agent that waited for an answer calls the server through the connection of the run that answers", async () => {

@@ -116,7 +116,7 @@ export function startRuntime(options: RuntimeOptions) {
   const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
   const idleReleaseMs = options.idleReleaseMs ?? DEFAULT_IDLE_RELEASE_MS;
-  const state = openRunDatabase(options.statePath ?? `${options.journalPath}.state`);
+  const state = openRunDatabase(`${options.journalPath}.state`);
   const records = new RunRecords(state);
   const outbox = new RunOutbox(state);
   const backends = openAgentBackends(

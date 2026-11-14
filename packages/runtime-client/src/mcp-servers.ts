@@ -8,11 +8,11 @@ import type { McpNote } from "@aven/agents/types";
 import type { McpConnectResult, RunMcpServer } from "@aven/protocol/types";
 import type { ConnectedMcp, ConnectedMcpServer, ResolveHost } from "./types";
 
-export const MCP_CONNECT_TIMEOUT_MS = 15_000;
+const MCP_CONNECT_TIMEOUT_MS = 15_000;
 
 const DISCOVERY_LIMITS = { maxTools: 100, maxBytes: 512 * 1024 };
 
-export const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
+const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
 
 const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
   const { mcp: _origin, ...local } = tool;
@@ -21,9 +21,9 @@ const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
 
 export async function connectMcpServers(
   configs: readonly RunMcpServer[],
-  options: { signal?: AbortSignal; resolve?: ResolveHost } = {},
+  options: { resolve?: ResolveHost } = {},
 ): Promise<ConnectedMcp> {
-  const { signal, resolve } = options;
+  const { resolve } = options;
   const connections: (Connection | undefined)[] = configs.map(() => undefined);
   const results: McpConnectResult[] = [];
   const failed: McpNote["failed"][number][] = [];
@@ -55,10 +55,9 @@ export async function connectMcpServers(
         versionNegotiation: { mode: "auto" },
         tools: { prefix: mcpPrefix(config.name), discoveryLimits: DISCOVERY_LIMITS },
       });
-      const timeout = AbortSignal.timeout(MCP_CONNECT_TIMEOUT_MS);
       try {
         const server = await client.connect({
-          abortSignal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+          abortSignal: AbortSignal.timeout(MCP_CONNECT_TIMEOUT_MS),
         });
         connections[index] = { config, client, server };
       } catch (error) {

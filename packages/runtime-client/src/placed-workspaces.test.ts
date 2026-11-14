@@ -15,28 +15,38 @@ function recording(name: string, released: string[]) {
 describe("PlacedWorkspaces", () => {
   test("asks the machine side where a waited attachment was written", async () => {
     const calls: string[] = [];
-    const machine = {
-      uploads: {
-        save: async () => "unused",
-        settle: async (threadId: string) => {
-          calls.push(`settle:${threadId}`);
+    const side = (name: string) =>
+      ({
+        uploads: {
+          save: async () => "unused",
+          settle: async (threadId: string) => {
+            calls.push(`${name}:settle:${threadId}`);
+          },
+          placed: (threadId: string, file: string) => `${name}:${threadId}/${file}`,
+          claim: (threadId: string, file: string) => {
+            calls.push(`${name}:claim:${threadId}:${file}`);
+          },
+          placedNote: (threadId: string) => `${name}:note:${threadId}`,
         },
-        placed: (threadId: string, name: string) => `${threadId}/${name}`,
-        claim: (threadId: string, name: string) => {
-          calls.push(`claim:${threadId}:${name}`);
-        },
-        placedNote: (threadId: string) => `note:${threadId}`,
-      },
-      release: async () => undefined,
-      dispose: async () => undefined,
-    } as unknown as ThreadWorkspaces;
-    const placed = new PlacedWorkspaces(machine, machine, () => true);
+        release: async () => undefined,
+        dispose: async () => undefined,
+      }) as unknown as ThreadWorkspaces;
+    const placed = new PlacedWorkspaces(side("host"), side("machine"), (id) => id === "m1");
 
-    await placed.uploads?.settle?.("t1");
-    expect(placed.uploads?.placed?.("t1", "a.txt")).toBe("t1/a.txt");
-    placed.uploads?.claim?.("t1", "a.txt");
-    expect(placed.uploads?.placedNote?.("t1")).toBe("note:t1");
-    expect(calls).toEqual(["settle:t1", "claim:t1:a.txt"]);
+    for (const threadId of ["m1", "h1"]) {
+      await placed.uploads?.settle?.(threadId);
+      placed.uploads?.claim?.(threadId, "a.txt");
+    }
+
+    expect(placed.uploads?.placed?.("m1", "a.txt")).toBe("machine:m1/a.txt");
+    expect(placed.uploads?.placedNote?.("m1")).toBe("machine:note:m1");
+    expect(placed.uploads?.placed?.("h1", "a.txt")).toBe("host:h1/a.txt");
+    expect(calls).toEqual([
+      "machine:settle:m1",
+      "machine:claim:m1:a.txt",
+      "host:settle:h1",
+      "host:claim:h1:a.txt",
+    ]);
   });
 
   test("releases a thread on both, so what the machine side kept goes once the run is over", async () => {
