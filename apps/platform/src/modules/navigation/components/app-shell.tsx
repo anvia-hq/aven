@@ -22,7 +22,7 @@ import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CenterRailLink } from "@/modules/center/components/center-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { AnnouncementBanner } from "@/modules/announcements/components/announcement-banner";
-import { BetaCard } from "@/modules/notices/components/beta-card";
+import { MentionsButton } from "@/modules/mentions/components/mentions-button";
 import { MachineMonitor } from "@/modules/runtimes/components/machine-monitor";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
@@ -103,6 +103,7 @@ export function AppShell({ user, sidebar }: Props) {
                 />
               </div>
               <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
+                <MentionsButton />
                 <Button
                   variant="ghost"
                   size="icon-sm"
@@ -118,7 +119,6 @@ export function AppShell({ user, sidebar }: Props) {
           </SidebarHeader>
           <SidebarContent>{sidebar}</SidebarContent>
           <SidebarFooter>
-            <BetaCard />
             <AnnouncementBanner />
             <MachineMonitor />
             <div className="flex items-center gap-1 md:hidden">

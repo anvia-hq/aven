@@ -38,6 +38,22 @@ export const threadsRouter = (
       ({ organizationId, user }) => threadMentionsService.waiting(organizationId, user.id),
       { auth: true, org: true },
     )
+    .get(
+      "/mentions",
+      ({ organizationId, user }) => threadMentionsService.list(organizationId, user.id),
+      {
+        auth: true,
+        org: true,
+      },
+    )
+    .post(
+      "/mentions/read",
+      async ({ organizationId, user }) => {
+        await threadMentionsService.seenAll(organizationId, user.id);
+        return { ok: true };
+      },
+      { auth: true, org: true },
+    )
     .post(
       "/",
       ({ body, organizationId, user }) => threadsService.create(organizationId, user.id, body),

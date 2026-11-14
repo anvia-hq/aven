@@ -53,6 +53,7 @@ test.describe("steering a running agent", () => {
     const queued = page.locator("[data-queued]");
     await expect(queued).toContainText("use the other API");
     await expect(queued).toContainText("Queued");
+    await expect(queued.getByText("use the other API").locator("..")).toHaveCSS("opacity", "1");
     await expect(prompt).toHaveText("");
     await expect(page.getByRole("button", { name: "Stop" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Send" })).toHaveCount(0);

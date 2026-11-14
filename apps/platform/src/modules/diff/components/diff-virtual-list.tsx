@@ -46,8 +46,10 @@ function FileHeader({
       aria-expanded={open}
       onClick={() => onToggle(file, !open)}
       className={cn(
-        "h-auto w-full min-w-0 justify-start gap-2 border bg-card px-3 py-2 text-left text-xs font-normal hover:bg-muted/50",
-        open ? "rounded-t-lg" : "rounded-lg",
+        "h-auto w-full min-w-0 justify-start gap-2 border border-border bg-card px-3 py-2 text-left text-xs font-normal hover:bg-muted/50",
+        open
+          ? "rounded-t-lg rounded-b-none border-b-0 bg-muted aria-expanded:bg-muted"
+          : "rounded-lg",
       )}
     >
       <ChevronRight
@@ -101,8 +103,9 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
       >
         {rows.map((row) => {
           const item = items[row.index]!;
-          const at = { transform: `translateY(${row.start}px)` };
+          const at = { transform: `translateY(${Math.round(row.start)}px)` };
           const colour = (target: Parameters<typeof colours>[1]) => colours(item.file, target);
+          const belowHeader = items[row.index - 1]?.kind === "file";
           return (
             <div
               key={row.key}
@@ -117,14 +120,19 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
                 </div>
               )}
               {item.kind === "note" && (
-                <p className="w-[calc(100cqw-2rem)] border border-t-0 bg-card px-3 py-2 font-sans text-xs text-muted-foreground rounded-b-lg">
+                <p
+                  className={cn(
+                    "w-[calc(100cqw-2rem)] border border-t-0 bg-card px-3 py-2 font-sans text-xs text-muted-foreground rounded-b-lg",
+                    belowHeader && "-mt-px",
+                  )}
+                >
                   {item.file.binary
                     ? "Binary file changed."
                     : "Only the file's mode or name changed."}
                 </p>
               )}
               {item.kind === "hunk" && (
-                <div className="border-x bg-card">
+                <div className={cn("border-x bg-card", belowHeader && "-mt-px")}>
                   <HunkHeader hunk={{ header: item.header, rows: [] }} />
                 </div>
               )}

@@ -90,3 +90,13 @@ export type GateRequest = {
 export type AddressingGate = (request: GateRequest) => Promise<Addressing>;
 
 export type Acting = Awaited<ReturnType<typeof acting>>;
+
+export type MentionEntry = {
+  threadId: string;
+  title: string;
+  authorName: string | null;
+  authorImage: string | null;
+  excerpt: string;
+  createdAt: string;
+  read: boolean;
+};

@@ -42,7 +42,7 @@ export function QueuedMessage({
         />
       ) : null}
       {text && (
-        <div className="w-fit max-w-full rounded-lg bg-accent/60 px-3 py-2 opacity-70 [&_p]:whitespace-pre-line">
+        <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">
           <Markdown components={{ code: mentionCode }}>
             {markMentions(text, message.mentions)}
           </Markdown>

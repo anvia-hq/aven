@@ -333,6 +333,20 @@ test.describe("sharing a thread", () => {
       await expect(sent.locator('[data-mention="person"]')).toHaveText("@Mate Person");
       expect(events.filter((event) => event.type === "started")).toEqual([]);
 
+      await mate.page.reload();
+      await mate.page.getByRole("button", { name: "Mentions, 1 unread" }).click();
+      const panel = mate.page.locator('[data-slot="popover-content"]');
+      await expect(panel.getByText("1 Unread")).toBeVisible();
+      await expect(panel).toContainText("Owner Person mentioned you in");
+      await expect(panel).toContainText("@Mate Person did you deploy the fix?");
+      await panel.getByRole("link").click();
+      await expect(mate.page).toHaveURL(new RegExp(`/threads/${threadId}`));
+      await mate.page.getByRole("button", { name: "Mentions", exact: true }).click();
+      await expect(
+        mate.page.locator('[data-slot="popover-content"]').getByText("0 Unread"),
+      ).toBeVisible();
+      await mate.page.keyboard.press("Escape");
+
       await prompt.click();
       await page.keyboard.type("fix the build");
       await page.keyboard.press("Enter");

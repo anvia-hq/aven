@@ -109,7 +109,6 @@ export const ThreadMessage = memo(function ThreadMessage({
         className={cn(
           "flex max-w-[80%] flex-col gap-2",
           mine ? "ml-auto items-end" : "mr-auto items-start",
-          sending && "opacity-60",
         )}
         data-role="user"
         data-author={mine ? "mine" : "other"}
