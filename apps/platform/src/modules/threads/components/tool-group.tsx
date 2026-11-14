@@ -108,7 +108,7 @@ export function ToolGroup({
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
-        <div className="ml-1 flex flex-col border-l pl-3">
+        <div className="flex flex-col">
           {entries.map((entry, index) =>
             entry.type === "reasoning" ? (
               <ReasoningBlock key={index} text={entry.text} thinking={thinking(index)} />

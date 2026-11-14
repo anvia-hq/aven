@@ -364,8 +364,15 @@ test.describe("threads", () => {
     await edit.click();
     await expect(page.getByText("bye", { exact: true })).toBeVisible();
 
-    await expect(page.getByRole("button", { name: /Read.*missing\.txt/ })).toBeVisible();
+    const missing = page.getByRole("button", { name: /Read.*missing\.txt/ });
+    await expect(missing).toBeVisible();
     await expect(page.getByLabel("Failed")).toHaveCount(1);
+    await missing.click();
+    await expect(page.getByText("File not found: missing.txt", { exact: true })).toBeVisible();
+    await page
+      .getByRole("button", { name: /Read.*a\.txt/ })
+      .first()
+      .click();
 
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);

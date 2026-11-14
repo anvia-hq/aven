@@ -1,12 +1,4 @@
-import {
-  Edit,
-  DangerCircle,
-  Eye,
-  GitBranch,
-  Image as ImageIcon,
-  Search,
-  Terminal,
-} from "@mynaui/icons-react";
+import { DangerCircle } from "@mynaui/icons-react";
 
 import { cn } from "cn";
 
@@ -17,38 +9,37 @@ import { toolFailureNotice } from "../tool-failure";
 import type { ToolPart } from "../types";
 import { DiffBlock } from "./diff-block";
 
-type Meta = { icon: typeof Eye; running: string; done: string };
+type Meta = { running: string; done: string };
 
 const meta: Record<string, Meta> = {
-  read_file: { icon: Eye, running: "Reading", done: "Read" },
-  write_file: { icon: Edit, running: "Writing", done: "Wrote" },
-  edit: { icon: Edit, running: "Editing", done: "Edited" },
-  list_files: { icon: Eye, running: "Listing", done: "Listed" },
-  exec_command: { icon: Terminal, running: "Running", done: "Ran" },
-  start_process: { icon: Terminal, running: "Starting", done: "Started" },
-  list_processes: { icon: Terminal, running: "Listing processes", done: "Listed processes" },
-  wait_for_process: { icon: Terminal, running: "Waiting for", done: "Waited for" },
-  read_process_logs: { icon: Terminal, running: "Reading logs of", done: "Read logs of" },
-  stop_process: { icon: Terminal, running: "Stopping", done: "Stopped" },
-  wait_for_forks: { icon: GitBranch, running: "Waiting for forks", done: "Waited for forks" },
-  wait_for_port: { icon: Terminal, running: "Waiting for port", done: "Port ready" },
-  list_ports: { icon: Terminal, running: "Listing ports", done: "Listed ports" },
-  web_search: { icon: Search, running: "Searching", done: "Searched" },
-  show_artifact: { icon: ImageIcon, running: "Showing", done: "Showed" },
-  show_image: { icon: ImageIcon, running: "Showing", done: "Showed" },
-  git_fetch: { icon: GitBranch, running: "Fetching", done: "Fetched" },
-  computer_status: { icon: Eye, running: "Checking the computer", done: "Checked the computer" },
-  computer_wake: { icon: Eye, running: "Waking the computer", done: "Woke the computer" },
+  read_file: { running: "Reading", done: "Read" },
+  write_file: { running: "Writing", done: "Wrote" },
+  edit: { running: "Editing", done: "Edited" },
+  list_files: { running: "Listing", done: "Listed" },
+  exec_command: { running: "Running", done: "Ran" },
+  start_process: { running: "Starting", done: "Started" },
+  list_processes: { running: "Listing processes", done: "Listed processes" },
+  wait_for_process: { running: "Waiting for", done: "Waited for" },
+  read_process_logs: { running: "Reading logs of", done: "Read logs of" },
+  stop_process: { running: "Stopping", done: "Stopped" },
+  wait_for_forks: { running: "Waiting for forks", done: "Waited for forks" },
+  wait_for_port: { running: "Waiting for port", done: "Port ready" },
+  list_ports: { running: "Listing ports", done: "Listed ports" },
+  web_search: { running: "Searching", done: "Searched" },
+  show_artifact: { running: "Showing", done: "Showed" },
+  show_image: { running: "Showing", done: "Showed" },
+  git_fetch: { running: "Fetching", done: "Fetched" },
+  computer_status: { running: "Checking the computer", done: "Checked the computer" },
+  computer_wake: { running: "Waking the computer", done: "Woke the computer" },
 };
 
 const fallback = (name: string): Meta => ({
-  icon: Terminal,
   running: `Running ${name}`,
   done: `Ran ${name}`,
 });
 
 export function ToolCall({ tool }: { tool: ToolPart }) {
-  const { icon: Icon, running, done } = meta[tool.name] ?? fallback(tool.name);
+  const { running, done } = meta[tool.name] ?? fallback(tool.name);
   const notice = tool.status === "error" ? toolFailureNotice(tool.output) : undefined;
   const additions = tool.diff?.filter((line) => line.type === "add").length ?? 0;
   const deletions = tool.diff?.filter((line) => line.type === "del").length ?? 0;
@@ -60,7 +51,6 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         disabled={!expandable}
         className="group flex w-fit max-w-full items-center gap-2 py-1 text-left disabled:cursor-default"
       >
-        <Icon className="size-4 shrink-0 text-muted-foreground" />
         <span
           className={cn(
             notice ? "text-destructive" : "text-muted-foreground",
@@ -71,7 +61,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         </span>
         <span
           className={cn(
-            "min-w-0 truncate font-mono text-xs",
+            "min-w-0 max-w-[36ch] truncate font-mono text-xs text-muted-foreground/60",
             tool.status === "running" && "shimmer",
           )}
         >
@@ -87,12 +77,17 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
         )}
       </CollapsibleTrigger>
       {expandable && (
-        <CollapsibleContent>
-          <div className="px-2 pb-2">
+        <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
+          <div className="pt-1 pb-2">
             {tool.diff ? (
               <DiffBlock lines={tool.diff} />
             ) : (
-              <pre className="overflow-x-auto rounded-md border bg-background/60 px-3 py-2 font-mono text-xs">
+              <pre
+                className={cn(
+                  "max-h-60 overflow-auto rounded-lg border bg-muted/30 px-3 py-2 font-mono text-xs leading-5",
+                  tool.status === "error" && "border-destructive/30 text-destructive",
+                )}
+              >
                 {tool.output}
               </pre>
             )}
