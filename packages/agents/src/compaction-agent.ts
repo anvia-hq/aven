@@ -15,7 +15,7 @@ import {
 import { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT } from "@aven/protocol/compaction";
 
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
-import { outputLimitFor, resolveAgentModel } from "./agent-model";
+import { resolveAgentModel, summarizerFor } from "./agent-model";
 import type { ModelSource } from "./types";
 
 export { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT };
@@ -65,8 +65,7 @@ function compactionReply(spent: () => Usage, contextWindow?: number): StreamingC
 export function createCompactionAgent(options: ModelSource & { id: string }) {
   const { model } = resolveAgentModel(options);
   const summarize = createSummaryMemoryCompactor({
-    model,
-    maxTokens: outputLimitFor(options),
+    ...summarizerFor(options, model),
     instructions: CODING_SUMMARY_INSTRUCTIONS,
   });
   let spent = Usage.empty();

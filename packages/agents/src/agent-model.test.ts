@@ -93,6 +93,48 @@ describe("the output limit", () => {
   });
 });
 
+describe("the summary's output limit", () => {
+  async function summaryRequestFor(provider: "openai" | "anthropic") {
+    const bodies: Record<string, unknown>[] = [];
+    const server = Bun.serve({
+      port: 0,
+      async fetch(request) {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return Response.json({ error: { message: "stop here" } }, { status: 400 });
+      },
+    });
+    try {
+      const source = {
+        provider,
+        apiKey: "k",
+        modelId: "some-model",
+        baseUrl: `http://localhost:${server.port}/v1`,
+        contextWindow: 100_000,
+      } as const;
+      const compaction = compactionFor(source, resolveAgentModel(source).model);
+      await compaction
+        ?.compactor({ messages: [{ role: "user", content: "hello" }] } as Parameters<
+          NonNullable<typeof compaction>["compactor"]
+        >[0])
+        .catch(() => undefined);
+    } finally {
+      await server.stop(true);
+    }
+    return bodies[0] ?? {};
+  }
+
+  test("a provider with no required limit is asked for a summary with none", async () => {
+    const body = await summaryRequestFor("openai");
+    expect(body).not.toHaveProperty("max_tokens");
+    expect(body).not.toHaveProperty("max_completion_tokens");
+    expect(body).not.toHaveProperty("max_output_tokens");
+  });
+
+  test("Anthropic still gets the limit it requires", async () => {
+    expect((await summaryRequestFor("anthropic")).max_tokens).toBe(16_000);
+  });
+});
+
 describe("history from another provider, sent to the Responses API", () => {
   test("a tool call another provider issued is sent without an item id, matched to its result", async () => {
     const bodies: { input: Record<string, unknown>[] }[] = [];

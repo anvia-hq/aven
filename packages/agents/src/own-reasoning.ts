@@ -25,14 +25,10 @@ function onlyThisTurns(history: Message[]) {
   );
 }
 
-function withChatHistory<T extends CompletionModel>(
+function withRequest<T extends CompletionModel>(
   model: T,
-  change: (history: Message[]) => Message[],
+  clean: (request: CompletionRequest) => CompletionRequest,
 ): T {
-  const clean = (request: CompletionRequest) => ({
-    ...request,
-    chatHistory: change(request.chatHistory),
-  });
   return new Proxy(model, {
     get(target, key) {
       const value: unknown = target[key as keyof typeof target];
@@ -46,6 +42,20 @@ function withChatHistory<T extends CompletionModel>(
       return value.bind(target);
     },
   });
+}
+
+function withChatHistory<T extends CompletionModel>(
+  model: T,
+  change: (history: Message[]) => Message[],
+): T {
+  return withRequest(model, (request) => ({
+    ...request,
+    chatHistory: change(request.chatHistory),
+  }));
+}
+
+export function withoutOutputLimit<T extends CompletionModel>(model: T): T {
+  return withRequest(model, (request) => ({ ...request, maxTokens: undefined }));
 }
 
 export function withOwnReasoning<T extends CompletionModel>(model: T, owns: ReasoningOwnership): T {
