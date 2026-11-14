@@ -1869,7 +1869,9 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
 /* A bot's avatar bobs gently, each at its own time. At work it hops and runs a nine second routine:
    a lean, a horizontal turn (the face slides off one edge of the shape and comes round from the other,
    the shape itself never changes size), a wobble, a look about and the turn back. The shape is only
-   moved and turned, never scaled, and it starts and ends at rest, so a bot that begins to work moves off calmly (decision 0265). */
+   moved and turned, never scaled, and it starts and ends at rest, so a bot that begins to work moves off calmly (decision 0265).
+   Every copy of one bot shares the mood of its working state and the delay of its own look, so the
+   rail, the sidebar and the chat hop as one. */
 .bot-avatar {
   overflow: visible;
 }
@@ -2024,14 +2026,17 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
 
   .bot-avatar[data-mood="working"] .bot-body {
     animation: bot-moves 9s ease-in-out infinite;
+    animation-delay: var(--bot-delay, 0ms);
   }
 
   .bot-avatar[data-mood="working"] .bot-face {
     animation: bot-face-moves 9s ease-in-out infinite;
+    animation-delay: var(--bot-delay, 0ms);
   }
 
   .bot-avatar[data-mood="working"] .bot-pupil {
     animation: bot-look 1.9s ease-in-out infinite;
+    animation-delay: var(--bot-delay, 0ms);
   }
 }
 
