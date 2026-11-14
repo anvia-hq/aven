@@ -20,12 +20,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
   return (
     <OverviewCard title="Environment">
       <Row
-        icon={
-          <Servers
-            aria-label={runtime?.online ? "Online" : "Offline"}
-            className={runtime?.online ? "text-success!" : undefined}
-          />
-        }
+        icon={<Servers aria-label={runtime?.online ? "Online" : "Offline"} />}
         action={
           owned && thread.state !== "archived" ? <ContinueThreadDialog thread={thread} /> : null
         }
