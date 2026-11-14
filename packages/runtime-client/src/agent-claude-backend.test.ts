@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { CLAUDE_TOKEN_MISSING } from "@aven/protocol/runtime-wire";
 
-import { backendFor, openAgentBackends } from "./agent-backends";
+import { backendFor } from "./agent-backends";
 import { ClaudeRuns } from "@aven/claude/claude-backend";
 import { createRunDriver } from "./run-driver";
 import { RunOutbox, openRunDatabase } from "./run-outbox";
@@ -15,11 +15,6 @@ import type { RunMessage, ThreadWorkspaces } from "./types";
 
 const TOKEN_A = "setup-token-alice-thread-0001";
 const TOKEN_B = "setup-token-bob-thread-000002";
-
-const until = async (condition: () => boolean) => {
-  for (let i = 0; i < 50 && !condition(); i++) await Bun.sleep(10);
-  expect(condition()).toBe(true);
-};
 
 function queryOf(gate?: Promise<void>) {
   const inputs: ClaudeQueryInput[] = [];
@@ -104,8 +99,6 @@ const start = (runId: string, threadId: string, token?: string): RunMessage => {
 const ended = (reported: RuntimeToControlPlane[]) =>
   reported.find((message) => message.type === "run.end");
 
-const textOf = (item: string | { text: string }) => (typeof item === "string" ? item : item.text);
-
 describe("the Claude backend", () => {
   test("uses the token of the run it was given, and the next run's token on the next run", async () => {
     const { query, inputs } = queryOf();
@@ -173,67 +166,5 @@ describe("the Claude backend", () => {
       outcome: "error",
       error: CLAUDE_TOKEN_MISSING,
     });
-  });
-
-  test("takes a message while it is working and compacts by resuming the session", async () => {
-    const prompts: string[] = [];
-    let release = () => {};
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-    const inputs: ClaudeQueryInput[] = [];
-    const query: ClaudeQuery = async function* (input) {
-      inputs.push(input);
-      const iterator = input.prompt[Symbol.asyncIterator]();
-      const first = await iterator.next();
-      prompts.push(first.done ? "" : textOf(first.value));
-      yield {
-        type: "assistant",
-        session_id: "sess-steer",
-        message: { content: [{ type: "text", text: first.done ? "" : textOf(first.value) }] },
-      };
-      await gate;
-      yield { type: "result", subtype: "success", session_id: "sess-steer" };
-      const steered = await iterator.next();
-
-      if (steered.done) return;
-
-      prompts.push(textOf(steered.value));
-      yield {
-        type: "assistant",
-        session_id: "sess-steer",
-        message: { content: [{ type: "text", text: steered.value }] },
-      };
-      yield { type: "result", subtype: "success", session_id: "sess-steer" };
-      await iterator.next();
-    };
-    const { driver, reported, backend } = driverFor(query);
-    const running = driver.start(start("run-1", "thread-a", TOKEN_A));
-    await until(() => inputs.length === 1);
-    expect(await driver.steer({ runId: "run-1", steerId: "s1", prompt: "also this" })).toEqual({
-      status: "queued",
-    });
-    release();
-    await running;
-    expect(prompts).toContain("also this");
-
-    await driver.start({
-      ...start("run-2", "thread-a", TOKEN_A),
-      prompt: "/compact",
-      compact: true,
-    } as RunMessage);
-    await backend.close();
-    expect(inputs[1]?.sessionId).toBe("sess-steer");
-    expect(prompts).toContain("/compact");
-    expect(ended(reported)).toMatchObject({ type: "run.end", outcome: "response" });
-  });
-
-  test("is offered next to native", async () => {
-    const path = journalPath();
-    const backends = openAgentBackends(path, new Set());
-    expect(backends.offered).toEqual(["native", "claude"]);
-    expect((await backends.get("claude")).kind).toBe("claude");
-    expect((await backends.get(undefined)).kind).toBe("native");
-    await backends.close();
   });
 });

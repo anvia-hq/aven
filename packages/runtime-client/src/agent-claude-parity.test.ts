@@ -224,16 +224,20 @@ describe("Claude parity with the native agent", () => {
       () => undefined,
     );
     await first.done;
+    const compacted: string[] = [];
     const compact = await runs.start(
       "run-3",
       "thread-a",
       "ignored",
       { claude: context({ compact: true }) },
-      () => undefined,
+      (event) => {
+        if (event.type === "text") compacted.push(event.delta);
+      },
     );
     await compact.done;
     await runs.close();
     expect(inputs.at(-1)?.sessionId).toBe("sess-parity");
+    expect(compacted.join("")).toBe("hello /compact");
   });
 
   test("reports a typed stop and the model's usage", async () => {

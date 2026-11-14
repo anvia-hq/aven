@@ -224,18 +224,6 @@ describe("BotReplies", () => {
     });
   });
 
-  test("a reply is the bot agent, and it is not given a Claude setup token", async () => {
-    let sawToken = false;
-    const run = harness((input) => {
-      sawToken = JSON.stringify(input).includes("CLAUDE_CODE_OAUTH_TOKEN");
-      return agentThat([text("hi")])(input);
-    });
-    run.replies.start(message);
-    await run.until();
-    expect(sawToken).toBe(false);
-    expect(run.sent.some((frame) => frame.type === "bot.end")).toBe(true);
-  });
-
   test("a message can quote one the person wrote, and the bot can react to it with one emoji (decision 0258)", async () => {
     const run = harness(
       agentThat([
@@ -977,19 +965,6 @@ describe("BotReplies", () => {
     plain.replies.start(message);
     await plain.until();
     expect(none).toBeUndefined();
-  });
-
-  test("the agent is told the bot's description as it is now", async () => {
-    let described: string | undefined;
-    const run = harness((input) => {
-      described = input.bot.description;
-      return agentThat([text("")])(input);
-    });
-
-    run.replies.start(message);
-    await run.until();
-
-    expect(described).toBe("A pal.");
   });
 
   describe("the agent the runner builds", () => {

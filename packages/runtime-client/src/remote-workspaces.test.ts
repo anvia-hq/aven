@@ -75,26 +75,6 @@ describe("an agent whose computer is another machine", () => {
     expect(await agent.workspace("t1")).toBe(sandbox.paths("t1").workspace);
   });
 
-  test("prepares a folder the machine serves without cloning a repository", async () => {
-    const folder = await mkdtemp(join(tmpdir(), "aven-served-"));
-    homes.push(folder);
-    const { agent } = await machineAndAgent({ dirs: [folder] });
-    let asked = false;
-    const box = await agent.acquire(
-      { id: "t1" },
-      async () => {
-        asked = true;
-        throw new Error("no repository");
-      },
-      { folder: async () => folder },
-    );
-
-    await call(box.tools, "exec_command", { command: "echo made > proof.txt" });
-
-    expect(asked).toBe(false);
-    expect(await readFile(join(folder, "proof.txt"), "utf8")).toBe("made\n");
-  });
-
   test("edits a file on the machine with the agent's own tools", async () => {
     const { sandbox, agent } = await machineAndAgent();
     const { access } = await createRemoteRepo();
@@ -375,8 +355,10 @@ describe("a project that is a folder on the machine", () => {
 
     const status = await call(box.tools, "exec_command", { command: "git status" });
     const remote = await call(box.tools, "exec_command", { command: "git remote -v" });
+    await call(box.tools, "exec_command", { command: "echo made > proof.txt" });
 
     expect(asked).toBe(false);
+    expect(await readFile(join(dir, "proof.txt"), "utf8")).toBe("made\n");
     expect(status.exitCode).not.toBe(0);
     expect(`${status.stderr}`).toMatch(/not a git repository/i);
     expect(remote.exitCode).not.toBe(0);

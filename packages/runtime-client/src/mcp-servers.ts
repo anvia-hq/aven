@@ -12,7 +12,7 @@ const MCP_CONNECT_TIMEOUT_MS = 15_000;
 
 const DISCOVERY_LIMITS = { maxTools: 100, maxBytes: 512 * 1024 };
 
-export const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
+const mcpPrefix = (name: string) => `${mcpSlug(name)}_`;
 
 const asLocalTool = (tool: McpServer["tools"][number]): AnyTool => {
   const { mcp: _origin, ...local } = tool;

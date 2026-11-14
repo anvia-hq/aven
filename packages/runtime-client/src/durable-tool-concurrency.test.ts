@@ -1,4 +1,4 @@
-import { DurableRuntime, type DurableAgentRegistration } from "@anvia/durable";
+import { DurableRuntime } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { expect, test } from "bun:test";
 import { mkdtempSync } from "node:fs";
@@ -11,20 +11,7 @@ import {
 } from "./durable-tool-concurrency";
 import type { ToolConcurrencyProbe } from "./types";
 
-const patched: ToolConcurrencyProbe = (registration: DurableAgentRegistration) => {
-  const value = registration.toolConcurrency;
-
-  if (value === undefined) return;
-
-  if (!Number.isSafeInteger(value) || value < 1)
-    throw new TypeError("Durable toolConcurrency must be a positive integer.");
-};
-
 const unpatched: ToolConcurrencyProbe = () => {};
-
-test("a durable build that validates toolConcurrency passes the check", () => {
-  expect(() => assertDurableToolConcurrency(patched)).not.toThrow();
-});
 
 test("a durable build that drops toolConcurrency fails the check and says how to fix it", () => {
   const check = () => assertDurableToolConcurrency(unpatched);

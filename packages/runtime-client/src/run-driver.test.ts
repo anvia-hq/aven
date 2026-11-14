@@ -218,6 +218,12 @@ describe("the run driver chooses the thread's backend (decision 0220)", () => {
     expect(native.calls).toEqual([]);
     expect(made).toEqual([]);
     expect(acquired).toEqual([]);
+
+    await driver.start(start("run-2", ""));
+    expect(ended(reported)[1]).toMatchObject({
+      outcome: "error",
+      error: "This runner does not drive that agent backend",
+    });
   });
 
   test("a run taken up again uses the backend it was started with, and native when a record from before names none", async () => {

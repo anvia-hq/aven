@@ -40,9 +40,4 @@ describe("startedOnUse", () => {
     expect(wrapped.id).toBe("s1");
     expect(log).toEqual([]);
   });
-
-  test("nothing starts until something is called", () => {
-    const { log } = make();
-    expect(log).toEqual([]);
-  });
 });
