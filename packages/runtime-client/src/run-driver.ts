@@ -13,7 +13,7 @@ import { memoryInstructions } from "@aven/agents/memory";
 import { skillsInstructions } from "@aven/agents/skills";
 import type { ComputerHost } from "@aven/agents/tools/types";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
-import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
+import { CODING_MAX_TURNS, HAND_OFF_NOTICE, HAND_OFF_TURN } from "@aven/agents/turn-limits";
 import { errorMessage } from "@aven/agents/values";
 
 import { keepAttachments, promptOf, promptWith } from "./attachments";
@@ -572,12 +572,25 @@ export function createRunDriver(context: DriverContext) {
   }
 
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
-    const { runId, thread, run, backend, save, build, forward } = scope;
+    const { runId, thread, run, backend, save, build } = scope;
     const inputOf = (id: string, attended: boolean) =>
       backend.kind === "claude"
         ? scope.claudeInput({ attended })
         : Promise.resolve(build(id, attended));
-    let followed: FollowedRun;
+    let followed: FollowedRun | undefined;
+    let turns = 0;
+    const send = scope.forward;
+    const forward: Emit = (event, source) => {
+      send(event, source);
+
+      if (event.type !== "usage" || ++turns !== HAND_OFF_TURN || !followed) return;
+
+      void backend
+        .steer(followed.durableId, HAND_OFF_NOTICE, `hand-off-${runId}`)
+        .catch((error: unknown) => {
+          console.warn(`Could not send the hand-off notice to run ${runId}:`, errorMessage(error));
+        });
+    };
 
     if (scope.record.durableId) {
       if (!backend.capabilities.restart) throw new Error(backendRefusal(backend.kind, "restart"));
