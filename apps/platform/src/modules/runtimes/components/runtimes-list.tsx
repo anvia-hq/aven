@@ -11,7 +11,7 @@ import { useRuntimeTrend } from "../hooks/use-runtime-trend";
 import { isStale, machineMetrics } from "../machine-metrics";
 import type { MachineMetric, Runtime } from "../types";
 import { MeterBar } from "./meter-bar";
-import { RuntimeSparkline } from "./runtime-sparkline";
+import { RuntimeSparkline, toneOf } from "./runtime-sparkline";
 import { githubModeNote } from "../github-mode";
 import { GithubRuntimeDialog } from "./github-runtime-dialog";
 import { RenameRuntimeDialog } from "./rename-runtime-dialog";
@@ -81,6 +81,7 @@ function LoadTile({
         <MeterBar percent={metric.percent} />
         <RuntimeSparkline
           points={points}
+          tone={toneOf(metric.percent)}
           className="h-6 min-w-0 flex-1"
           aria-label={`${metric.label} trend of ${runtime.name}`}
         />
