@@ -63,6 +63,11 @@ run("the MCP servers routes (real postgres)", async () => {
     );
     expect((await call("DELETE", `/mcp-servers/${id}`, bob.token)).status).toBe(404);
     expect(await (await call("GET", "/mcp-servers", bob.token)).text()).not.toContain("Mine");
+    const kept = (await (await call("GET", "/mcp-servers", alice.token)).json()) as {
+      id: string;
+      enabled: boolean;
+    }[];
+    expect(kept.find((server) => server.id === id)?.enabled).toBe(true);
   });
 
   test("refuses a server that is not a plain http(s) address, and headers it does not own", async () => {
@@ -89,5 +94,7 @@ run("the MCP servers routes (real postgres)", async () => {
     await call("POST", "/mcp-servers", alice.token, { ...valid, name: "Docs Site" });
     const again = await call("POST", "/mcp-servers", alice.token, { ...valid, name: "docs-site" });
     expect(again.status).toBe(409);
+    const another = await call("POST", "/mcp-servers", bob.token, { ...valid, name: "Docs Site" });
+    expect(another.status).toBe(200);
   });
 });

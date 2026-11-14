@@ -19,7 +19,7 @@ const run = process.env.DATABASE_URL ? describe : describe.skip;
 run("shipping a thread over HTTP (real postgres and auth, GitHub and the run faked)", async () => {
   const { seedProject } = await import("../../testing/seed-project");
 
-  const sent: { userId: string; threadId: string; prompt: string }[] = [];
+  const sent: { userId: string; threadId: string; prompt: string; body: object }[] = [];
   let connected = true;
   let workspaceFiles: string[] = [];
   const service = createShipService({ get: () => undefined } as unknown as RuntimeHub, {
@@ -35,7 +35,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     readShipFile: async () => null,
     hasFile: async (_org, _thread, path) => workspaceFiles.includes(path),
     send: async (_org, userId, threadId, body) => {
-      sent.push({ userId, threadId, prompt: body.prompt });
+      sent.push({ userId, threadId, prompt: body.prompt, body });
     },
   });
   const server = new Elysia().use(errorsRouter).use(shipRouter(service)).listen({ port: 0 });
@@ -191,6 +191,7 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     expect(sent[0]!.prompt).toContain("updated by the push: do not open another");
     expect(sent[1]!.prompt).toContain(`git switch -c aven/${shipped.id.slice(0, 8)}-<short-slug>`);
     expect(sent[1]!.prompt).toContain("- #4 open");
+    expect(sent[1]!.body).not.toHaveProperty("mode");
   });
 
   test("a mode that is neither update nor new is refused and nothing is sent", async () => {

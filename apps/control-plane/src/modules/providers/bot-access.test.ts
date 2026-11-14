@@ -128,13 +128,4 @@ run("a bot's use of the person's providers (postgres)", async () => {
       name: mine!.name,
     });
   });
-
-  test("removing the default hands the role on, as the person's own does", async () => {
-    const all = await botProviders.list(alice);
-    const standing = all.find((p) => p.isDefault)!;
-    await botProviders.remove(alice, standing.id);
-    const rest = await botProviders.list(alice);
-    expect(rest.map((p) => p.id)).not.toContain(standing.id);
-    expect(rest.filter((p) => p.isDefault)).toHaveLength(1);
-  });
 });

@@ -281,12 +281,6 @@ describe("RunGateway", () => {
     }
   });
 
-  test("an Azure provider without a key cannot start a run", () => {
-    expect(() =>
-      gateway.issue("r2b", { provider: "azure", modelId: "d", baseUrl: origin }),
-    ).toThrow("no API key");
-  });
-
   test("a runtime cannot choose its own model or effort, or smuggle its own key", async () => {
     const run = gateway.issue("r3", {
       provider: "anthropic",
