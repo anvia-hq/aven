@@ -1,6 +1,5 @@
+import { FOLDER_NAME_MAX } from "@aven/protocol/folders";
 import { z } from "zod";
-
-export const FOLDER_NAME_MAX = 60;
 
 const name = z.string().trim().min(1).max(FOLDER_NAME_MAX);
 
