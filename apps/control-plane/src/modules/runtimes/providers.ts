@@ -1,3 +1,6 @@
+import { BoatClient } from "./boat/client";
+import { createBoatProvider } from "./boat/provider";
+import { stopBoatSandbox } from "./boat/stop";
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
 import { runtimesService } from "./service";
 import type { RuntimeProviderKind } from "@aven/protocol/types";
@@ -17,7 +20,15 @@ export const manualProvider: RuntimeProvider = {
   },
 };
 
-const PROVIDERS: Record<RuntimeProviderKind, RuntimeProvider> = { manual: manualProvider };
+const providers: Record<RuntimeProviderKind, (hub: Pick<RuntimeHub, "get">) => RuntimeProvider> = {
+  manual: () => manualProvider,
+  boat: (hub) =>
+    createBoatProvider({
+      hub,
+      load: (runtimeId) => runtimesService.boatRecord(runtimeId),
+      saveSandboxId: (runtimeId, sandboxId) => runtimesService.setBoatSandbox(runtimeId, sandboxId),
+    }),
+};
 
 export async function reachRunner(
   hub: Pick<RuntimeHub, "get">,
@@ -32,7 +43,7 @@ export async function reachRunner(
 
   if (!kind) throw new RuntimeOfflineError(offline);
 
-  return PROVIDERS[kind].start(place, offline);
+  return providers[kind](hub).start(place, offline);
 }
 
 export async function releaseThread(hub: Pick<RuntimeHub, "get">, place: ThreadPlace) {
@@ -40,5 +51,13 @@ export async function releaseThread(hub: Pick<RuntimeHub, "get">, place: ThreadP
 
   if (!kind) return;
 
-  await PROVIDERS[kind].release(place, hub.get(place.runtimeId));
+  await providers[kind](hub).release(place, hub.get(place.runtimeId));
+}
+
+export async function stopBoatRuntime(runtimeId: string, fetchFn: typeof fetch = fetch) {
+  const record = await runtimesService.boatRecord(runtimeId, true);
+
+  if (!record) return;
+
+  await stopBoatSandbox(record, new BoatClient(fetchFn));
 }
