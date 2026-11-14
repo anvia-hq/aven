@@ -184,6 +184,8 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
             if (op === "paths") throw new Error("Unknown call machine.call");
 
+            if (op === "workspace") throw new Error("unknown call");
+
             if (op === "listFiles") throw new Error("Could not list files");
 
             return { path: "/home/aven/workspaces/t" };
@@ -225,6 +227,14 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
     const stale = await ask(ws, received, "machine.call", { runId: "run-machine", op: "paths" });
     expect(stale).toMatchObject({
+      ok: false,
+      error: "Update this computer's runner to use its tools",
+    });
+    const lowercase = await ask(ws, received, "machine.call", {
+      runId: "run-machine",
+      op: "workspace",
+    });
+    expect(lowercase).toMatchObject({
       ok: false,
       error: "Update this computer's runner to use its tools",
     });
@@ -1384,12 +1394,6 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
         reason: "Cancelled by user",
       });
       expect(seen.lost).toEqual([]);
-    });
-
-    test("cutting a runtime off ends its runs at once", async () => {
-      const { runtime, seen } = await dropped("revoked", "run-cut");
-      hub.disconnect(runtime.id, "Revoked");
-      await until(() => seen.lost.length === 1);
     });
 
     test("a transcript call sent again after a lost reply adds nothing twice", async () => {

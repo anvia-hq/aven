@@ -219,7 +219,7 @@ describe("a page", () => {
     const { port, app } = setup((_app, _text, sink) => ok(sink));
     await raw(
       port,
-      `GET /a HTTP/1.1\r\nHost: ${host()}:443\r\nCookie: ${PAGE_COOKIE}=${page()}; theme=dark\r\nOrigin: https://${host()}\r\nReferer: https://${host()}/b\r\n\r\n`,
+      `GET /a HTTP/1.1\r\nHost: ${host()}:443\r\nCookie: ${PAGE_COOKIE}=${page()}; theme=dark\r\nOrigin: https://${host()}\r\nReferer: https://${host()}/b?c=1\r\n\r\n`,
     );
 
     expect(app.opened).toEqual([claim()]);
@@ -227,7 +227,7 @@ describe("a page", () => {
     expect(sent).toStartWith("GET /a HTTP/1.1\r\n");
     expect(sent).toContain("Host: localhost:3000\r\n");
     expect(sent).toContain("Origin: http://localhost:3000\r\n");
-    expect(sent).toContain("Referer: http://localhost:3000/b\r\n");
+    expect(sent).toContain("Referer: http://localhost:3000/b?c=1\r\n");
     expect(sent).toContain("Cookie: theme=dark\r\n");
     expect(sent).toContain("Connection: close\r\n");
     expect(sent).not.toContain(PAGE_COOKIE);

@@ -31,15 +31,10 @@ describe("a preview's token", () => {
 });
 
 describe("a spent ticket", () => {
-  test("is refused the second time", () => {
-    const ledger = new SpentTickets();
-    expect(ledger.spend("ticket", 1_000, 0)).toBe(true);
-    expect(ledger.spend("ticket", 1_000, 1)).toBe(false);
-  });
-
   test("is forgotten once it has expired", () => {
     const ledger = new SpentTickets();
     expect(ledger.spend("ticket", 1_000, 0)).toBe(true);
+    expect(ledger.spend("ticket", 1_000, 999)).toBe(false);
     expect(ledger.spend("ticket", 1_000, 1_000)).toBe(true);
   });
 });

@@ -7,6 +7,8 @@ import { platformSettings } from "@aven/db/schema/platform-settings";
 import { users } from "@aven/db/schema/users";
 import { eq, inArray } from "drizzle-orm";
 
+import { keepPlatformSettings } from "../../testing/kept-platform-settings";
+
 import {
   loadAppById,
   loadGithubApp,
@@ -30,7 +32,7 @@ const app: GithubConfig = {
 };
 
 run("the kept GitHub App (real postgres)", () => {
-  afterAll(() => db.delete(platformSettings).where(eq(platformSettings.key, "github_app")));
+  keepPlatformSettings(["github_app"]);
 
   test("is kept encrypted and read back with the environment's URLs", async () => {
     await saveGithubApp(app);
@@ -64,7 +66,7 @@ run("the kept GitHub App (real postgres)", () => {
 });
 
 run("starting with a kept app (real postgres)", () => {
-  afterAll(() => db.delete(platformSettings).where(eq(platformSettings.key, "github_app")));
+  keepPlatformSettings(["github_app"]);
 
   const fakeClient = (configured: boolean) => {
     const configs: (GithubConfig | null)[] = [];

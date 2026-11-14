@@ -55,7 +55,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
   let setupRefused: Error | null = null;
   const appSetup = {
     canSetUp: async (person: { email: string }) => person.email.startsWith("owner"),
-    canSetUpWorkspace: async (person: { email: string }) => person.email.startsWith("owner"),
+    canSetUpWorkspace: async (person: { email: string }) => person.email.startsWith("admin"),
     manifest: (_person: unknown, options: unknown, organizationId?: string) => {
       if (setupRefused) throw setupRefused;
 
@@ -132,9 +132,16 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     connectedLogin = null;
   };
 
-  test("tells a platform owner they can set the app up", async () => {
-    const body = (await (await get("/github")).json()) as { canSetUp: boolean };
-    expect(body.canSetUp).toBe(true);
+  test("says whether the person can set up the platform's app and the workspace's", async () => {
+    const admin = await signUp("admin");
+    organizationIds.push(admin.organizationId);
+    const may = async (token: string) => {
+      const { canSetUp, canSetUpWorkspace } = await (await get("/github", token)).json();
+      return { canSetUp, canSetUpWorkspace };
+    };
+
+    expect(await may(owner.token)).toEqual({ canSetUp: true, canSetUpWorkspace: false });
+    expect(await may(admin.token)).toEqual({ canSetUp: false, canSetUpWorkspace: true });
   });
 
   test("gives the manifest, passing the name and organization asked for", async () => {

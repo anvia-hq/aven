@@ -61,8 +61,6 @@ export interface RuntimeProvider {
   release(place: ThreadPlace, runner: RuntimeConnection | undefined): Promise<void>;
 }
 
-export type ProviderOf = (runtimeId: string) => Promise<RuntimeProviderKind | undefined>;
-
 export type Runner = ReturnType<typeof runnerVia>;
 
 export type RunSink = {

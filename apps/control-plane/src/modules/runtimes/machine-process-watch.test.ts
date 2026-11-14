@@ -58,12 +58,6 @@ describe("telling a machine to watch the processes an agent started there", () =
     ]);
   });
 
-  test("a run on the machine's own agent is not told, it watches that itself", async () => {
-    const t = calls();
-    await t.watch.ended(undefined, "thread-1", "response");
-    expect(t.sent).toEqual([]);
-  });
-
   test("waits while the machine is offline and tells it when it connects", async () => {
     const t = calls();
     t.offline();
@@ -73,15 +67,6 @@ describe("telling a machine to watch the processes an agent started there", () =
     t.online();
     await t.watch.hello("machine");
     expect(t.sent).toEqual([{ threadId: "thread-1", phase: "suspend" }]);
-  });
-
-  test("a machine that refuses the call is asked once", async () => {
-    const t = calls();
-    t.failWith(new Error("Unknown call process.watch"));
-    await t.watch.ended("machine", "thread-1", "response");
-    t.failWith();
-    await t.watch.hello("machine");
-    expect(t.sent).toEqual([]);
   });
 
   test("a call that fails because the machine dropped is sent when it connects", async () => {

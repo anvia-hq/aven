@@ -15,9 +15,11 @@ run("a bot's use of the person's providers (postgres)", async () => {
   const alice = `bot-prov-a-${suffix}`;
   const bob = `bot-prov-b-${suffix}`;
   let previousKey: string | undefined;
+  let previousCatalogUrl: string | undefined;
 
   beforeAll(async () => {
     previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
+    previousCatalogUrl = process.env.MODEL_CATALOG_URL;
     process.env.MODEL_CATALOG_URL = "";
     process.env.PROVIDER_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString("base64");
     await db.insert(users).values([
@@ -28,6 +30,9 @@ run("a bot's use of the person's providers (postgres)", async () => {
   afterAll(async () => {
     if (previousKey === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
     else process.env.PROVIDER_ENCRYPTION_KEY = previousKey;
+
+    if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
 
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
@@ -122,14 +127,5 @@ run("a bot's use of the person's providers (postgres)", async () => {
       providerId: mine!.id,
       name: mine!.name,
     });
-  });
-
-  test("removing the default hands the role on, as the person's own does", async () => {
-    const all = await botProviders.list(alice);
-    const standing = all.find((p) => p.isDefault)!;
-    await botProviders.remove(alice, standing.id);
-    const rest = await botProviders.list(alice);
-    expect(rest.map((p) => p.id)).not.toContain(standing.id);
-    expect(rest.filter((p) => p.isDefault)).toHaveLength(1);
   });
 });

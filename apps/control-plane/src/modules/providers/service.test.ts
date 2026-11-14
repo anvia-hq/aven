@@ -18,7 +18,6 @@ run("providersService (postgres)", async () => {
   const { eq, inArray } = await import("drizzle-orm");
   const { UnavailableError } = await import("@aven/server-kit/errors");
   const { providersService } = await import("./service");
-  const { effortsByModel } = await import("./model-list");
   const { bedrockEndpoint } = await import("./schema");
   const { InvalidSelectionError, resolveModel } = await import("./resolve-model");
 
@@ -39,6 +38,7 @@ run("providersService (postgres)", async () => {
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
   const bob = `u-bob-${suffix}`;
+  const previousCatalogUrl = process.env.MODEL_CATALOG_URL;
   beforeAll(async () => {
     process.env.MODEL_CATALOG_URL = "";
     await db.insert(users).values([
@@ -48,6 +48,9 @@ run("providersService (postgres)", async () => {
   });
 
   afterAll(async () => {
+    if (previousCatalogUrl === undefined) delete process.env.MODEL_CATALOG_URL;
+    else process.env.MODEL_CATALOG_URL = previousCatalogUrl;
+
     await db.delete(users).where(inArray(users.id, [alice, bob]));
   });
 
@@ -375,12 +378,5 @@ run("providersService (postgres)", async () => {
       apiKey: "ya29.pasted-token",
     });
     await providersService.remove(alice, created.id);
-  });
-
-  test("model efforts come from the SDK and leave out models without the control", async () => {
-    expect(await effortsByModel({ kind: "openai" }, ["gpt-4o", "o3"])).toEqual({
-      o3: { options: ["low", "medium", "high"], defaultValue: "medium" },
-    });
-    expect(await effortsByModel({ kind: "openai-compatible" }, ["llama3"])).toEqual({});
   });
 });

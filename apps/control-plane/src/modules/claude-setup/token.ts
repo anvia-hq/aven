@@ -18,12 +18,3 @@ export async function claudeTokenOf(
 
   return token;
 }
-
-export async function claudeTokenForRun(
-  thread: { agentBackend?: string | null; createdBy: string },
-  read: (userId: string) => Promise<string | undefined>,
-) {
-  if (thread.agentBackend !== "claude") return undefined;
-
-  return claudeTokenOf(thread.createdBy, read);
-}

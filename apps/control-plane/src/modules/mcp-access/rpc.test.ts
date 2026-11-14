@@ -255,6 +255,7 @@ describe("the Aven MCP server", () => {
       arguments: { method: "GET", path: "/missing" },
     });
     expect(answer).toMatchObject({ result: { isError: true } });
+    expect(text(answer)).toEqual({ status: 404, body: { ok: true } });
   });
 
   test("answers an unknown method with a JSON-RPC error", async () => {

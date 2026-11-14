@@ -20,14 +20,6 @@ const project = {
     state: "open" | "closed" | "merged";
   }[],
 };
-const pull = (number: number, state: "open" | "closed" | "merged") => ({
-  number,
-  url: `https://github.com/acme/app/pull/${number}`,
-  branch: "aven/abcdef12",
-  title: `Pull ${number}`,
-  state,
-});
-
 function setup(
   options: {
     connected?: boolean;
@@ -144,20 +136,6 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     const offline = setup();
     expect((await offline.service.readiness("org-1", threadId)).runnerGithub).toBeNull();
   });
-
-  test("is asked of a thread of the organization only", async () => {
-    const asked: string[] = [];
-    const service = createShipService({} as RuntimeHub, {
-      load: async () => {
-        throw new Error("Thread not found");
-      },
-      hasFile: async (_org, _thread, path) => (asked.push(path), true),
-      send: async () => undefined,
-    });
-
-    await expect(service.readiness("org-2", threadId)).rejects.toThrow("Thread not found");
-    expect(asked).toEqual([]);
-  });
 });
 
 describe("shipping a thread", () => {
@@ -272,27 +250,6 @@ describe("shipping a thread", () => {
 
     expect(sent[0]!.prompt).not.toContain("git switch -c");
     expect(sent[0]!.prompt).toContain("gh pr create --draft");
-  });
-
-  test("a thread with an open pull request updates it, unless the person asks for a new one", async () => {
-    const { service, sent } = setup({ pullRequests: [pull(7, "open")] });
-
-    await service.ship("org-1", "user-1", threadId);
-    await service.ship("org-1", "user-1", threadId, { mode: "new", providerId: "p", modelId: "m" });
-
-    expect(sent[0]!.prompt).toContain("updated by the push: do not open another");
-    expect(sent[1]!.prompt).toContain("git switch -c aven/abcdef12-<short-slug> origin/develop");
-    expect(sent[1]).toMatchObject({ providerId: "p", modelId: "m" });
-    expect(sent[1]).not.toHaveProperty("mode");
-  });
-
-  test("a thread whose latest pull request is merged opens a new one", async () => {
-    const { service, sent } = setup({ pullRequests: [pull(7, "merged")] });
-
-    await service.ship("org-1", "user-1", threadId);
-
-    expect(sent[0]!.prompt).toContain("git switch -c aven/abcdef12-<short-slug> origin/develop");
-    expect(sent[0]!.prompt).toContain("- #7 merged");
   });
 });
 

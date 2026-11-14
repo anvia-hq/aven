@@ -11,6 +11,10 @@ describe("a preview's host", () => {
       port: 3000,
       runtimeId: id,
     });
+    expect(previewHost(`3000-${id}.example.com`, "example.com")).toEqual({
+      port: 3000,
+      runtimeId: id,
+    });
     expect(previewHostname({ port: 5173, runtimeId: id }, "preview.example.com")).toBe(
       `5173-${id}.preview.example.com`,
     );
@@ -32,13 +36,5 @@ describe("a preview's host", () => {
     ]) {
       expect(previewHost(host, "aven.run")).toBeNull();
     }
-  });
-
-  test("keeps a port and a runtime id apart", () => {
-    expect(previewHost(`3000-${id}.example.com`, "example.com")).toEqual({
-      port: 3000,
-      runtimeId: id,
-    });
-    expect(previewHost(`3000-${id}.example.com`, "aven.run")).toBeNull();
   });
 });
