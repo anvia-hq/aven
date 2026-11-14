@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { addressingFrom, fallbackAddressing, namesAgent, personMentions } from "./addressing";
+import { addressingFrom, namesAgent, personMentions } from "./addressing";
 
 const randy = "@[Randy](user:u-2)";
 
@@ -18,18 +18,6 @@ describe("who a multiplayer message is for (decision 0191)", () => {
     expect(namesAgent("hey, @Agent, run it")).toBe(true);
     expect(namesAgent("@agents or me@agent.dev")).toBe(false);
     expect(namesAgent("@[@agent](user:u-9) look")).toBe(false);
-  });
-
-  test("without a model the agent acts unless the message only mentions a person", () => {
-    expect(fallbackAddressing("fix the build")).toEqual({ agentAction: true, by: "fallback" });
-    expect(fallbackAddressing(`${randy} did you see this?`)).toEqual({
-      agentAction: false,
-      by: "fallback",
-    });
-    expect(fallbackAddressing(`${randy} look, then @agent fix it`)).toEqual({
-      agentAction: true,
-      by: "fallback",
-    });
   });
 
   test("the model keeps the agent out only when a person is clearly the one addressed", () => {

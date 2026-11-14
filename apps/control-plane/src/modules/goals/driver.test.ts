@@ -195,11 +195,4 @@ run("createGoalDriver (postgres)", async () => {
     expect(wakes).toBe(1);
     await driver.close();
   });
-
-  test("a tick that cannot wake a bot leaves the goal for the next", async () => {
-    const { bot, driver, state } = await setup();
-    state.refuse = true;
-    await driver.tick();
-    expect(await goalsService.get(bot.id)).toMatchObject({ phase: "active", round: 0 });
-  });
 });

@@ -32,6 +32,7 @@ run("a thread's access (real postgres)", async () => {
   const runs = {
     isRunning: () => false,
     history: async () => [],
+    latest: async () => ({ messages: [], hidden: 0 }),
     cancel: () => false,
     async *events() {},
   } as unknown as RunManager;
@@ -159,6 +160,11 @@ run("a thread's access (real postgres)", async () => {
     }
     const list = (await (await call("GET", "/threads", mate.token)).json()) as { id: string }[];
     expect(list.map((row) => row.id)).toContain(id);
+    const read = (await (await call("GET", `/threads/${id}`, mate.token)).json()) as {
+      visibility: string;
+      createdByName: string;
+    };
+    expect(read).toMatchObject({ visibility: "workspace", createdByName: "owner" });
   });
 
   test("unsharing takes it away again", async () => {

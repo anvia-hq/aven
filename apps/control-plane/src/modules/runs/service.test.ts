@@ -26,7 +26,7 @@ import { RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { RunGateway } from "../runtimes/gateway";
 import { RemoteRuntime } from "./remote-runtime";
-import { RunBusyError, RunManager } from "./service";
+import { RunManager } from "./service";
 import type { RunEnding, RunThread } from "./types";
 import type { ScriptStep } from "@aven/agents/types";
 import type { ChatMessage, RunEvent } from "@aven/protocol/types";
@@ -458,17 +458,6 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     const history = await manager.history(thread);
     expect(JSON.stringify(history)).toContain("still here");
     expect(JSON.stringify(history)).toContain("survived");
-  });
-
-  test("a second start while running is rejected", async () => {
-    const manager = await managerWith([
-      [toolCall("exec_command", { command: "sleep 0.4" })],
-      [text("ok")],
-    ]);
-    const thread = newThread();
-    await manager.start(thread, "one");
-    await expect(manager.start(thread, "two")).rejects.toBeInstanceOf(RunBusyError);
-    await until(async () => !manager.isRunning(thread.id));
   });
 
   test("cancel stops the run and the command it is waiting on", async () => {

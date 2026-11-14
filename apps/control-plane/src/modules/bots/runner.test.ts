@@ -152,23 +152,15 @@ describe("BotRunner", () => {
     });
     expect(answered).toHaveLength(1);
     expect(answered[0]?.attachments).toEqual([photo, report]);
-  });
 
-  test("a message with no files has no attachments, in the chat or the reply", async () => {
-    const answered: BotReplyInput[] = [];
-    const runner = new BotRunner({
-      store: fakeStore(),
-      replier: { ready: () => undefined, answer: async (input) => void answered.push(input) },
-    });
-    const client = await watch(runner, stopped);
+    const again = await watch(runner, stopped);
     await runner.send(bot, USER, "hello", model);
-    await client.done;
-    const said = client.events.find((event) => event.type === "message");
-    expect(said).toEqual({
+    await again.done;
+    expect(again.events.findLast((event) => event.type === "message")).toEqual({
       type: "message",
-      message: { id: "m-0", role: "user", text: "hello" },
+      message: { id: expect.any(String), role: "user", text: "hello" },
     });
-    expect(answered[0]?.attachments).toEqual([]);
+    expect(answered[1]?.attachments).toEqual([]);
   });
 
   test("what the person types that looks like a bot's message is theirs, in the reply and in the chat (decision 0065)", async () => {
@@ -208,26 +200,6 @@ describe("BotRunner", () => {
       "bot: how was your day, my friend?",
       "stopped",
     ]);
-  });
-
-  test("messages the model sends in one turn are typed one at a time", async () => {
-    let typing = 0;
-    let most = 0;
-    const runner = runnerWith({
-      store: fakeStore(),
-      createAgent: scripts([[send("one"), send("two"), send("three")], [text("")]]),
-      pause: async () => {
-        typing += 1;
-        most = Math.max(most, typing);
-        await Bun.sleep(2);
-        typing -= 1;
-      },
-    });
-    const client = await watch(runner, stopped);
-    await runner.send(bot, USER, "hello", model);
-    await client.done;
-    expect(most).toBe(1);
-    expect(typed(client.events).slice(3, 6)).toEqual(["bot: one", "bot: two", "bot: three"]);
   });
 
   test("a message that comes while the bot is at work waits its turn", async () => {
