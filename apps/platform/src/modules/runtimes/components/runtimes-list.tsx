@@ -64,7 +64,7 @@ function LoadTile({
   const empty = history.length === 0;
 
   return (
-    <div className="rounded-lg border bg-card/40 p-2.5">
+    <div>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
           {metric.short} · {metric.detail}
@@ -95,14 +95,7 @@ function LoadTile({
 
 function Status({ runtime }: { runtime: Runtime }) {
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-        runtime.online
-          ? "border-success/30 bg-success/10 text-success"
-          : "border-muted-foreground/20 bg-muted/40 text-muted-foreground",
-      )}
-    >
+    <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-muted-foreground">
       <span
         role="img"
         aria-label={runtime.online ? "Online" : "Offline"}
@@ -208,26 +201,12 @@ function RuntimeCard({
       </div>
 
       {metrics.length > 0 ? (
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {metrics.map((metric) => (
-            <LoadTile
-              key={metric.key}
-              runtime={runtime}
-              metric={metric}
-              history={trend.history[metric.key]}
-              previous={trend.previous[metric.key]}
-            />
-          ))}
-          <div className="rounded-lg border bg-card/40 p-2.5">
-            <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
-              Sandbox
-            </span>
-            <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">
-              {stats?.sandboxes ?? "–"}
-              <span className="ml-1 text-[11px] font-normal text-muted-foreground">running</span>
-            </div>
-          </div>
-        </div>
+        <LoadSection
+          runtime={runtime}
+          metrics={metrics}
+          trend={trend}
+          sandboxes={stats?.sandboxes ?? null}
+        />
       ) : (
         <p className="mt-3 text-xs text-muted-foreground">
           {runtime.online
@@ -236,7 +215,7 @@ function RuntimeCard({
         </p>
       )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-1 border-t pt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-1">
         <UpdateRuntimeDialog runtime={runtime} />
         {canRename && <GithubRuntimeDialog runtime={runtime} />}
         {canRename && <RenameRuntimeDialog runtime={runtime} />}
@@ -255,5 +234,45 @@ function RuntimeCard({
         )}
       </div>
     </li>
+  );
+}
+
+type TrendState = {
+  history: Record<MachineMetric["key"], number[]>;
+  previous: Record<MachineMetric["key"], number | null>;
+};
+
+function LoadSection({
+  runtime,
+  metrics,
+  trend,
+  sandboxes,
+}: {
+  runtime: Runtime;
+  metrics: MachineMetric[];
+  trend: TrendState;
+  sandboxes: number | null;
+}) {
+  return (
+    <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5">
+      {metrics.map((metric) => (
+        <LoadTile
+          key={metric.key}
+          runtime={runtime}
+          metric={metric}
+          history={trend.history[metric.key]}
+          previous={trend.previous[metric.key]}
+        />
+      ))}
+      <div>
+        <span className="text-[10px] font-semibold tracking-wide text-muted-foreground uppercase">
+          Sandbox
+        </span>
+        <div className="mt-1 text-lg font-semibold tracking-tight tabular-nums">
+          {sandboxes ?? "–"}
+          <span className="ml-1 text-[11px] font-normal text-muted-foreground">running</span>
+        </div>
+      </div>
+    </div>
   );
 }
