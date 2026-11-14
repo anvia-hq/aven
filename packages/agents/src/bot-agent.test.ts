@@ -585,10 +585,12 @@ describe("createBotAgent", () => {
 
   test("a cancelled delivery stops the run", async () => {
     const controller = new AbortController();
+    const sent: string[] = [];
     const agent = createBotAgent({
       ...base,
       model: scriptedModel([[send("one")], [send("two")]]),
-      send: async (_message, { abortSignal }) => {
+      send: async (message, { abortSignal }) => {
+        sent.push(message.text);
         controller.abort();
         abortSignal?.throwIfAborted();
         return "Sent";
@@ -601,6 +603,7 @@ describe("createBotAgent", () => {
         session: { sessionId: "b1" },
         abortSignal: controller.signal,
       }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(/abort/i);
+    expect(sent).toEqual(["one"]);
   });
 });
