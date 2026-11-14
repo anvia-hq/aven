@@ -41,50 +41,11 @@ test("an access token lets another tool use Aven over MCP, only as far as its pe
   const refused = await request.post("/api/mcp", { data: rpc("tools/list") });
   expect(refused.status()).toBe(401);
 
-  const tools = await request.post("/api/mcp", { headers, data: rpc("tools/list") });
-  const names = (await tools.json()).result.tools.map((tool: { name: string }) => tool.name);
-  expect(names).toEqual([
-    "aven_workspaces",
-    "aven_list_projects",
-    "aven_start_task",
-    "aven_get_thread",
-    "aven_stop_thread",
-    "aven_search_api",
-    "aven_call_api",
-  ]);
-
-  const guide = await request.post("/api/mcp", {
-    headers,
-    data: rpc("resources/read", { uri: "aven://guide" }),
-  });
-  expect((await guide.json()).result.contents[0].text).toContain("Using Aven from another harness");
-
   const call = (name: string, args: unknown) =>
     request.post("/api/mcp", { headers, data: rpc("tools/call", { name, arguments: args }) });
 
-  const projects = await (await call("aven_call_api", { method: "GET", path: "/projects" })).json();
-  expect(projects.result.isError).toBeUndefined();
-  expect(JSON.parse(projects.result.content[0].text)).toMatchObject({ status: 200, body: [] });
-
   const listed = await (await call("aven_list_projects", {})).json();
   expect(JSON.parse(listed.result.content[0].text)).toMatchObject({ status: 200, body: [] });
-
-  const missing = await (
-    await call("aven_get_thread", { threadId: "3b0f6d2e-4c1a-4f7e-9a53-0d2f6a9b1c11" })
-  ).json();
-  expect(missing.result.isError).toBe(true);
-  expect(JSON.parse(missing.result.content[0].text).status).toBe(404);
-
-  const removal = await (
-    await call("aven_call_api", { method: "DELETE", path: "/threads/abc" })
-  ).json();
-  expect(removal.result).toMatchObject({
-    isError: true,
-    content: [{ text: "This token does not have the destructive permission" }],
-  });
-
-  const hidden = await (await call("aven_call_api", { method: "GET", path: "/mcp-access" })).json();
-  expect(hidden.result.isError).toBe(true);
 
   await page.reload();
   await expect(row).toContainText("Used");

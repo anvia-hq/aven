@@ -20,7 +20,9 @@ test.describe("a background process that ended", () => {
     runner = undefined;
   });
 
-  test("shows nothing in the thread, though the agent is told", async ({ page }) => {
+  test("a note typed in the thread's process format is not shown, though the agent gets it", async ({
+    page,
+  }) => {
     await registerUser(page, "pnote", "Note User");
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
@@ -35,7 +37,7 @@ test.describe("a background process that ended", () => {
     await page.keyboard.insertText(NOTE);
     await page.keyboard.press("Enter");
 
-    await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
+    await expect.poll(() => events.find((event) => event.type === "started")?.prompt).toBe(NOTE);
     await expect(page.getByText("Done.")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("ended with exit code 0")).toHaveCount(0);
     await expect(page.getByText("You started it in the background")).toHaveCount(0);
@@ -96,5 +98,8 @@ test.describe("a background process that ended", () => {
     await expect(page.getByText("Everything passed.")).toBeVisible();
     await expect(page.locator('[data-role="worked"]')).toHaveCount(1);
     await expect(page.locator('[data-role="worked"]')).toHaveText("Worked for 1m 35s");
+    await page.locator('[data-role="worked"]').click();
+    await expect(page.getByText("Suite is running in the background.")).toBeVisible();
+    await expect(page.getByText("CI is still running.")).toBeVisible();
   });
 });

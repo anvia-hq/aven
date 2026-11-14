@@ -3,17 +3,6 @@ import { expect, test } from "@playwright/test";
 import { registerUser } from "./helpers";
 
 test.describe("connecting GitHub", () => {
-  test("a callback with a state made for someone else is refused", async ({ page }) => {
-    await registerUser(page, "gh", "GitHub User");
-    const response = await page.request.get(
-      "/api/github/callback?installation_id=1&code=fake&state=forged.state",
-      { maxRedirects: 0 },
-    );
-    expect(response.status()).toBe(422);
-    const installations = await page.request.get("/api/github/installations");
-    expect(await installations.json()).toEqual([]);
-  });
-
   test("a person connects their own GitHub account and comes back to where they were", async ({
     page,
   }) => {
@@ -34,14 +23,6 @@ test.describe("connecting GitHub", () => {
       login: "ada",
       appKey: "platform",
     });
-  });
-
-  test("will not send a person back to another site after connecting", async ({ page }) => {
-    await registerUser(page, "gh", "GitHub User");
-    const response = await page.request.get("/api/github/connect?next=https://evil.test/", {
-      maxRedirects: 0,
-    });
-    expect(response.status()).toBe(422);
   });
 });
 

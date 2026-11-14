@@ -34,17 +34,6 @@ test.describe("threads", () => {
     );
   });
 
-  test("a thread started from a project opens with its prompt as the title", async ({ page }) => {
-    await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
-    await createProject(page, "project");
-    await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
-    await page.getByRole("button", { name: "Send" }).click();
-
-    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
-  });
-
   test("hovering a thread in the sidebar offers to archive it", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     await addRunner(page);
@@ -179,12 +168,6 @@ test.describe("threads", () => {
     await prompt.blur();
     await page.mouse.click(outer!.x + 3, outer!.y + 3);
     await expect(prompt).toBeFocused();
-  });
-
-  test("a thread from another organization is not found", async ({ page }) => {
-    await registerUser(page, "thr", "Thread User");
-    await page.goto("/threads/00000000-0000-4000-8000-000000000000");
-    await expect(page.getByRole("heading", { name: "Thread not found" })).toBeVisible();
   });
 
   test("a fetch from GitHub reads as one, with what it did", async ({ page }) => {

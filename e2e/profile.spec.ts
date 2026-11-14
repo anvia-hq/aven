@@ -55,6 +55,7 @@ test.describe("Settings > Profile", () => {
     await expect(page).toHaveURL(/\/settings\/general$/);
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
     await expect(page.getByLabel("Name")).toHaveValue("General Person");
+    await expect(page.getByLabel("Email", { exact: true })).toBeDisabled();
     await expect(page.getByText("Appearance")).toBeVisible();
 
     await page.getByLabel("Name").fill("Renamed Person");

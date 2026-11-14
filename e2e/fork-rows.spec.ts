@@ -46,9 +46,5 @@ test.describe("forked threads in the sidebar", () => {
     await expect(page.getByRole("img", { name: "Fork" })).toHaveCount(2);
     await expect(page.getByText("Fork", { exact: true })).toHaveCount(0);
     await expect(page.locator('[data-slot="fork-elbow"]')).toHaveCount(2);
-    await page.screenshot({
-      path: ".aven/proof/forks/after.png",
-      clip: { x: 0, y: 0, width: 420, height: 400 },
-    });
   });
 });

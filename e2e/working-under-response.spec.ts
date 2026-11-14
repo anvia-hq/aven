@@ -15,7 +15,6 @@ type Sample = {
 
 test.use({
   viewport: { width: 1000, height: 700 },
-  video: { mode: "on", size: { width: 1000, height: 700 } },
 });
 
 test.describe("the working indicator while a reply streams", () => {
@@ -170,14 +169,6 @@ test.describe("the working indicator while a reply streams", () => {
         ).__frames,
     );
     const painted = frames.filter((frame) => frame.bottomGap >= 0);
-    console.log(
-      "WRAP",
-      JSON.stringify({
-        painted: painted.length,
-        fromEnd: [...new Set(painted.map((frame) => Math.round(frame.fromEnd)))],
-        gap: [...new Set(painted.map((frame) => Math.round(frame.bottomGap)))],
-      }),
-    );
     expect(painted.length).toBeGreaterThan(15);
     for (const frame of painted) expect(Math.round(frame.fromEnd)).toBe(0);
     const gaps = painted.map((frame) => frame.bottomGap);

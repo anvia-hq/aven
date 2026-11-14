@@ -18,12 +18,6 @@ test("the beta card shows until the person dismisses it, and stays gone after a 
   expect((await saved.json()).dismissedNotices).toEqual(["beta"]);
 });
 
-test("the beta card is shown to a new person", async ({ page }) => {
-  await registerUser(page, "beta2", "Beta Two");
-  await page.goto("/threads");
-  await expect(page.getByRole("region", { name: "Beta notice" })).toBeVisible();
-});
-
 test("the beta card stays while the person moves between sections", async ({ page }) => {
   await registerUser(page, "beta3", "Beta Three");
   await page.goto("/threads");

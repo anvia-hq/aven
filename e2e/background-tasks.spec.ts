@@ -69,7 +69,14 @@ test.describe("a thread's background tasks", () => {
     runner = child;
     await page.setViewportSize({ width: 1400, height: 760 });
 
+    const listed = page.waitForResponse(
+      (response) => new URL(response.url()).pathname === `/api/threads/${threadId}/processes`,
+    );
     await page.goto(`/threads/${threadId}`);
+    expect((await listed).ok()).toBe(true);
+    await page.evaluate(
+      () => new Promise((settled) => requestAnimationFrame(() => requestAnimationFrame(settled))),
+    );
 
     await expect(page.getByRole("region", { name: "Environment" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Background tasks" })).toHaveCount(0);

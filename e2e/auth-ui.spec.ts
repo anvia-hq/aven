@@ -2,9 +2,19 @@ import { expect, test } from "@playwright/test";
 
 import { registerUser } from "./helpers";
 
-const unique = () => `ui-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
+const API_URL = process.env.E2E_API_URL ?? "http://localhost:8100";
 
 test.describe("platform auth", () => {
+  test("health is public, directly and through the platform's /api proxy", async ({ request }) => {
+    const direct = await request.get(`${API_URL}/health`);
+    expect(direct.status()).toBe(200);
+    expect(await direct.json()).toEqual({ status: "ok" });
+
+    const proxied = await request.get("/api/health");
+    expect(proxied.status()).toBe(200);
+    expect(await proxied.json()).toEqual({ status: "ok" });
+  });
+
   test("unauthenticated visitors are sent to the login page", async ({ page }) => {
     await page.goto("/threads");
     await expect(page).toHaveURL(/\/login$/);
@@ -24,6 +34,7 @@ test.describe("platform auth", () => {
     await userCard.getByRole("button", { name: /UI User/ }).click();
     await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
+    expect((await page.request.get("/api/providers")).status()).toBe(401);
     await page.goto("/threads");
     await expect(page).toHaveURL(/\/login$/);
 
@@ -44,46 +55,13 @@ test.describe("platform auth", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 
-  test("Settings sits at the bottom of the narrow rail, with no theme toggle", async ({ page }) => {
-    await registerUser(page, "rail", "Rail User");
-
-    const rail = page.getByRole("navigation", { name: "Aven" });
-    await expect(rail.getByRole("link", { name: "Settings" })).toBeVisible();
-    await expect(rail.getByRole("button", { name: "Toggle theme" })).toHaveCount(0);
-    await expect(
-      page.locator("[data-slot=sidebar]").getByRole("button", { name: "Settings" }),
-    ).toBeHidden();
-
-    await rail.getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/\/settings\/general/);
-  });
-
-  test("theme defaults to dark, and the mode select in Settings switches and persists it", async ({
-    page,
-  }) => {
-    await page.goto("/register");
-    await expect(page.locator("html")).toHaveClass(/dark/);
-    await registerUser(page, "ui", "Theme User");
-
-    await expect(page.locator('[data-slot="sidebar-trigger"]')).toBeHidden();
-    await page.goto("/settings/general");
-    await page.getByRole("combobox", { name: "Mode" }).click();
-    await page.getByRole("option", { name: "Light", exact: true }).click();
-    await expect(page.locator("html")).not.toHaveClass(/dark/);
-
-    await page.reload();
-    await expect(page.locator("html")).not.toHaveClass(/dark/);
-
-    await page.getByRole("combobox", { name: "Mode" }).click();
-    await page.getByRole("option", { name: "Dark", exact: true }).click();
-    await expect(page.locator("html")).toHaveClass(/dark/);
-  });
-
-  test("shows an error for invalid credentials", async ({ page }) => {
+  test("shows an error for a wrong password", async ({ page }) => {
+    const email = await registerUser(page, "wrong", "Wrong Password User");
+    await page.context().clearCookies();
     await page.goto("/login");
     await expect(page.getByLabel("Email")).toBeVisible();
-    await page.getByLabel("Email").fill(unique());
-    await page.getByLabel("Password").fill("password123");
+    await page.getByLabel("Email").fill(email);
+    await page.getByLabel("Password").fill("wrong-password");
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
 
     await expect(page.getByRole("alert")).toBeVisible();

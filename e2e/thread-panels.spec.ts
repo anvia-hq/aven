@@ -37,12 +37,10 @@ test.describe("a thread's panels", () => {
     await page.mouse.move(box.x + box.width / 2 + 250, 400, { steps: 8 });
     await page.mouse.up();
     const widened = await conversationWidth();
-    await page.screenshot({ path: ".aven/proof/thread-panels/first-thread.png" });
 
     await page.goto(`/threads/${otherId}`);
     await expect(page.getByRole("button", { name: "Changes", exact: true })).toBeVisible();
     await expect(changes).toHaveCount(0);
-    await page.screenshot({ path: ".aven/proof/thread-panels/other-thread.png" });
 
     await page.goto(`/threads/${threadId}`);
     await expect(changes).toBeVisible();
