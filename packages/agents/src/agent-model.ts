@@ -6,6 +6,7 @@ import {
   withAnthropicReasoning,
   withOwnReasoning,
   withoutEmptyAssistantText,
+  withoutOutputLimit,
 } from "./own-reasoning";
 import { withUniqueToolCallIds } from "./unique-tool-call-ids";
 import type { ModelConfig, ModelSource } from "./types";
@@ -20,6 +21,14 @@ export function outputLimitFor(source: ModelSource) {
   return "provider" in source && source.provider === "anthropic"
     ? ANTHROPIC_MAX_OUTPUT_TOKENS
     : undefined;
+}
+
+export function summarizerFor(source: ModelSource, model: CompletionModel) {
+  const unlimited = !("provider" in source) || source.provider !== "anthropic";
+  return {
+    model: unlimited ? withoutOutputLimit(model) : model,
+    maxTokens: outputLimitFor(source),
+  };
 }
 
 export function resolveAgentModel(source: ModelSource) {
@@ -40,6 +49,7 @@ export function compactionFor(
   instructions?: string,
 ) {
   const contextWindow = "contextWindow" in source ? source.contextWindow : undefined;
+  const summarizer = summarizerFor(source, model);
   const trigger =
     afterTokens ?? (contextWindow ? Math.floor(contextWindow * COMPACT_AT) : undefined);
 
@@ -48,8 +58,7 @@ export function compactionFor(
   return {
     trigger: { afterTokens: trigger },
     compactor: createSummaryMemoryCompactor({
-      model,
-      maxTokens: outputLimitFor(source),
+      ...summarizer,
       instructions,
     }),
   };
