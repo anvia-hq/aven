@@ -1,6 +1,6 @@
 # The Claude agent runs on a setup token
 
-Status: accepted. Adds to 0220 and 0222. For the Claude backend only, this supersedes the 0220 consequences that an SDK backend calls its provider through the model gateway and that it may lack questions, restart, steering, goals and compaction.
+Status: accepted. Adds to 0220 and 0222. Superseded in part by 0309: the token is now a `claude-subscription` provider row, not a `claude_setup_tokens` one. For the Claude backend only, this supersedes the 0220 consequences that an SDK backend calls its provider through the model gateway and that it may lack questions, restart, steering, goals and compaction.
 
 ## Context
 
