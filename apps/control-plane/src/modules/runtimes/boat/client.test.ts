@@ -62,28 +62,12 @@ describe("boat client", () => {
     );
   });
 
-  test("creates a private sandbox and retries a trial that cannot disable auto-stop", async () => {
+  test("creates a private sandbox that stops itself after two hours, keyed by its runtime", async () => {
     const bodies: unknown[] = [];
     const keys: string[] = [];
     const { fetchFn } = recorded((_url, init) => {
       bodies.push(JSON.parse(String(init.body)));
       keys.push(headers(init)["Idempotency-Key"] ?? "");
-
-      if (bodies.length === 1)
-        return {
-          status: 400,
-          json: {
-            ok: false,
-            code: "trial_auto_stop_required",
-            message: "A trial sandbox has to stop itself",
-            error: {
-              code: "trial_auto_stop_required",
-              message: "A trial sandbox has to stop itself",
-              status: 400,
-            },
-          },
-        };
-
       return { status: 202, json: sandbox("provisioning") };
     });
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
@@ -93,18 +77,34 @@ describe("boat client", () => {
     });
 
     expect(created).toEqual({ id: ID, state: "provisioning", dataExpiredAt: null });
-    expect(bodies[0]).toMatchObject({
-      type: "small",
-      ttlSeconds: null,
-      noEnv: true,
-      visibility: "private",
-      labels: { avenRuntimeId: "11111111-1111-4111-8111-111111111111" },
-    });
-    expect(bodies[1]).toMatchObject({ ttlSeconds: 7200 });
-    expect(keys).toEqual([
-      "aven-11111111-1111-4111-8111-111111111111",
-      "aven-11111111-1111-4111-8111-111111111111-trial",
+    expect(bodies).toEqual([
+      {
+        name: "aven-11111111-1111-4111-8111-111111111111",
+        type: "small",
+        ttlSeconds: 7200,
+        noEnv: true,
+        visibility: "private",
+        labels: { avenRuntimeId: "11111111-1111-4111-8111-111111111111" },
+      },
     ]);
+    expect(keys).toEqual(["aven-11111111-1111-4111-8111-111111111111"]);
+  });
+
+  test("resumes with the same auto-stop and deletes only with the confirmation boat asks for", async () => {
+    const { calls, fetchFn } = recorded((url) =>
+      url.endsWith("/resume")
+        ? { json: { ok: true, type: "sandbox.resuming", id: ID } }
+        : { status: 202, json: { ok: true, type: "sandbox.deleting" } },
+    );
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+
+    await client.resume(KEY, ID);
+    await client.deleteSandbox(KEY, ID);
+
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ ttlSeconds: 7200 });
+    expect(calls[1]!.init.method).toBe("DELETE");
+    expect(calls[1]!.url).toBe(`https://boat.test/api/v1/sandboxes/${ID}`);
+    expect(headers(calls[1]!.init)["X-Ascii-Confirm-Delete"]).toBe(ID);
   });
 
   test("refuses a sandbox id that is not one boat would issue", async () => {
