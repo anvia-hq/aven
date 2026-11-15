@@ -223,18 +223,26 @@ export const runtimesService = {
   },
 
   async liveCloudSandboxes(limit = 500): Promise<CloudSandboxThread[]> {
+    const sandboxes = await db
+      .select({ id: runtimes.id })
+      .from(runtimes)
+      .where(and(inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS), isNull(runtimes.revokedAt)))
+      .limit(limit);
+
+    if (sandboxes.length === 0) return [];
+
     return db
       .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
       .from(threads)
-      .innerJoin(runtimes, eq(runtimes.id, threads.runtimeId))
       .where(
         and(
-          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
-          isNull(runtimes.revokedAt),
+          inArray(
+            threads.runtimeId,
+            sandboxes.map(({ id }) => id),
+          ),
           ne(threads.state, "archived"),
         ),
-      )
-      .limit(limit);
+      );
   },
 
   async openThreadsOn(runtimeId: string) {

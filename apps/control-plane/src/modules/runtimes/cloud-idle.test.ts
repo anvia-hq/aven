@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 
 import type { RuntimeConnection } from "./hub";
 import { threadsService } from "../threads/service";
@@ -116,6 +116,24 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
 
     expect(sweep.stopped).toEqual([]);
     expect(sweep.extended).toEqual([]);
+  });
+
+  test("reads every thread of a sandbox, so a capped list of sandboxes never hides a running one", async () => {
+    const first = await cloudThread("pair-one", new Date());
+    const second = await cloudThread("pair-two", new Date());
+    await db.update(threads).set({ runtimeId: first.runtimeId }).where(eq(threads.id, second.id));
+
+    const rows = await runtimesService.liveCloudSandboxes(1);
+    const [chosen] = rows;
+    const ofSandbox = await db
+      .select({ threadId: threads.id })
+      .from(threads)
+      .where(and(eq(threads.runtimeId, chosen!.runtimeId), ne(threads.state, "archived")));
+
+    expect(new Set(rows.map(({ runtimeId }) => runtimeId)).size).toBe(1);
+    expect(rows.map(({ threadId }) => threadId).sort()).toEqual(
+      ofSandbox.map(({ threadId }) => threadId).sort(),
+    );
   });
 
   test("a sandbox keeps a whole idle window after the server sees it, so a restart stops nothing early", async () => {
