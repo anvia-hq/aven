@@ -87,7 +87,7 @@ AVEN_BOAT_API_KEY=boat_...
 A provider that is not named, or that lacks what it needs (boat needs its key, spaces its address and
 key), is hidden and refuses new threads. Threads that already
 have a computer stay readable, but cannot start it again, and expired computers are still deleted
-while the boat key is set.
+while the key of the provider that made them is set.
 
 Create the key at [boat.dev](https://docs.boat.dev/api-keys) with permission to create and drive
 sandboxes. It belongs to the platform, so people using it bring no key of their own. A free trial
