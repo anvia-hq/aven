@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { threadsService } from "../threads/service";
 import { BoatApiError } from "./boat/client";
 import { CLOUD_SANDBOX_LIFE_MS, createCloudExpiry } from "./cloud-expiry";
+import { EXPIRED_COMPUTER, reachRunner } from "./providers";
 import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -87,6 +88,11 @@ run("Aven Cloud expiry (postgres)", async () => {
     expect(await revokedAt(unused.runtimeId)).not.toBeNull();
     expect(await revokedAt(fresh.runtimeId)).toBeNull();
     expect(await runtimesService.providerOf(stale.runtimeId)).toBeUndefined();
+    expect(await runtimesService.isExpiredCloud(stale.runtimeId)).toBe(true);
+    expect(await runtimesService.isExpiredCloud(fresh.runtimeId)).toBe(false);
+    await expect(
+      reachRunner({ get: () => undefined }, { runtimeId: stale.runtimeId }),
+    ).rejects.toThrow(EXPIRED_COMPUTER);
   });
 
   test("a sandbox boat no longer has is expired, and one it will not delete is tried again", async () => {

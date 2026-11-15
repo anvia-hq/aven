@@ -275,6 +275,14 @@ export const runtimesService = {
     };
   },
 
+  async isExpiredCloud(id: string) {
+    const [row] = await db
+      .select({ revokedAt: runtimes.revokedAt })
+      .from(runtimes)
+      .where(and(eq(runtimes.id, id), eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID)));
+    return row?.revokedAt != null;
+  },
+
   async setBoatSandbox(id: string, sandboxId: string) {
     await db
       .update(runtimes)

@@ -8,6 +8,9 @@ import type { RunnerPlace, RuntimeProvider, ThreadPlace } from "./types";
 
 const RELEASE_TIMEOUT_MS = 30_000;
 
+export const EXPIRED_COMPUTER =
+  "This Aven Cloud computer was deleted after 48 hours without use. Continue the thread to start a new one";
+
 export const manualProvider: RuntimeProvider = {
   kind: "manual",
   async start(_place, offline) {
@@ -41,7 +44,12 @@ export async function reachRunner(
 
   const kind = await runtimesService.providerOf(place.runtimeId);
 
-  if (!kind) throw new RuntimeOfflineError(offline);
+  if (!kind) {
+    if (await runtimesService.isExpiredCloud(place.runtimeId))
+      throw new RuntimeOfflineError(EXPIRED_COMPUTER);
+
+    throw new RuntimeOfflineError(offline);
+  }
 
   return providers[kind](hub).start(place, offline);
 }
