@@ -26,6 +26,7 @@ export async function wakeBoatSandbox(input: {
   runnerUrl: string;
   saveSandboxId: (sandboxId: string) => Promise<void>;
   connected: () => boolean;
+  forget?: () => void;
   clock?: BoatClock;
   readyTimeoutMs?: number;
   settleMs?: number;
@@ -35,9 +36,11 @@ export async function wakeBoatSandbox(input: {
   const readyTimeoutMs = input.readyTimeoutMs ?? 75_000;
   const settleMs = input.settleMs ?? 10_000;
   const connectTimeoutMs = input.connectTimeoutMs ?? 120_000;
-  const sandboxId = await ensureSandbox(input, clock, readyTimeoutMs);
+  const { sandboxId, started } = await ensureSandbox(input, clock, readyTimeoutMs);
 
-  if (await waitFor(input.connected, clock, clock.now() + settleMs)) return;
+  if (started) input.forget?.();
+
+  if (await waitFor(input.connected, clock, clock.now() + settleMs)) return { started };
 
   await input.client.command(input.record.apiKey, sandboxId, "mkdir -p /home/user/.aven");
   await input.client.writeFile(
@@ -48,7 +51,7 @@ export async function wakeBoatSandbox(input: {
   );
   await input.client.command(input.record.apiKey, sandboxId, BOAT_BOOT_COMMAND, true);
 
-  if (await waitFor(input.connected, clock, clock.now() + connectTimeoutMs)) return;
+  if (await waitFor(input.connected, clock, clock.now() + connectTimeoutMs)) return { started };
 
   throw new UnavailableError(
     `The boat sandbox ${sandboxId} did not connect. It has to reach ${input.runnerUrl}`,
@@ -73,7 +76,7 @@ async function ensureSandbox(
       readyTimeoutMs,
     );
 
-    if (existing) return existing;
+    if (existing) return { sandboxId: existing.id, started: existing.resumed };
   }
 
   let created: BoatSandbox;
@@ -92,7 +95,7 @@ async function ensureSandbox(
 
   if (!ready) throw new UnavailableError("Boat did not keep the sandbox it created");
 
-  return ready;
+  return { sandboxId: ready.id, started: true };
 }
 
 async function prepare(
@@ -114,7 +117,9 @@ async function prepare(
 
   if (sandbox.dataExpiredAt || sandbox.state === "cancelled") return undefined;
 
-  if (sandbox.state === "archived" || sandbox.state === "error") {
+  const resumed = sandbox.state === "archived" || sandbox.state === "error";
+
+  if (resumed) {
     try {
       await client.resume(apiKey, sandboxId);
     } catch (error) {
@@ -137,7 +142,7 @@ async function prepare(
         : "The boat sandbox did not become ready",
     );
 
-  return sandbox.id;
+  return { id: sandbox.id, resumed };
 }
 
 async function watch(

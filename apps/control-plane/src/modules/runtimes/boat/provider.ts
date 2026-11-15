@@ -1,6 +1,7 @@
 import { RuntimeOfflineError } from "../offline";
 import type { RuntimeConnection } from "../hub";
-import { BoatClient } from "./client";
+import { autoStopSeconds, BoatClient } from "./client";
+import { boatLifetime } from "./lifetime";
 import { runnerUrlFromEnv } from "./runner-url";
 import { wakeBoatSandbox } from "./wake";
 import type { RuntimeProvider, ThreadPlace } from "../types";
@@ -11,7 +12,10 @@ const RELEASE_TIMEOUT_MS = 30_000;
 const inflight = new Map<string, Promise<RuntimeConnection>>();
 
 type Deps = {
-  hub: Pick<{ get(runtimeId: string): RuntimeConnection | undefined }, "get">;
+  hub: {
+    get(runtimeId: string): RuntimeConnection | undefined;
+    disconnect?(runtimeId: string, reason: string): void;
+  };
   load: (runtimeId: string) => Promise<BoatWakeRecord | null>;
   saveSandboxId: (runtimeId: string, sandboxId: string) => Promise<void>;
   fetchFn?: typeof fetch;
@@ -55,14 +59,16 @@ async function wake(
 
   if (!record) throw new RuntimeOfflineError(offline);
 
-  await wakeBoatSandbox({
+  const { started } = await wakeBoatSandbox({
     record,
     client,
     runnerUrl: runnerUrl(),
     saveSandboxId: (sandboxId) => deps.saveSandboxId(runtimeId, sandboxId),
     connected: () => deps.hub.get(runtimeId) !== undefined,
+    forget: () => deps.hub.disconnect?.(runtimeId, "The computer was stopped and started again"),
     clock: deps.clock,
   });
+  boatLifetime.woke(runtimeId, started, autoStopSeconds() * 1000);
   const connection = deps.hub.get(runtimeId);
 
   if (!connection) throw new RuntimeOfflineError(offline);

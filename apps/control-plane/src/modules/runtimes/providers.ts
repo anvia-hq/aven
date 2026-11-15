@@ -1,4 +1,5 @@
 import { BoatClient } from "./boat/client";
+import { boatLifetime } from "./boat/lifetime";
 import { createBoatProvider } from "./boat/provider";
 import { stopBoatSandbox } from "./boat/stop";
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
@@ -23,7 +24,9 @@ export const manualProvider: RuntimeProvider = {
   },
 };
 
-const providers: Record<RuntimeProviderKind, (hub: Pick<RuntimeHub, "get">) => RuntimeProvider> = {
+type ProviderHub = Pick<RuntimeHub, "get"> & Partial<Pick<RuntimeHub, "disconnect">>;
+
+const providers: Record<RuntimeProviderKind, (hub: ProviderHub) => RuntimeProvider> = {
   manual: () => manualProvider,
   boat: (hub) =>
     createBoatProvider({
@@ -33,14 +36,10 @@ const providers: Record<RuntimeProviderKind, (hub: Pick<RuntimeHub, "get">) => R
     }),
 };
 
-export async function reachRunner(
-  hub: Pick<RuntimeHub, "get">,
-  place: RunnerPlace,
-  offline?: string,
-) {
+export async function reachRunner(hub: ProviderHub, place: RunnerPlace, offline?: string) {
   const connected = hub.get(place.runtimeId);
 
-  if (connected) return connected;
+  if (connected && !boatLifetime.mayHaveStopped(place.runtimeId)) return connected;
 
   const kind = await runtimesService.providerOf(place.runtimeId);
 

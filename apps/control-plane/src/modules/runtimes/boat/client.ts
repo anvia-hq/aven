@@ -6,7 +6,7 @@ const SANDBOX_ID = /^bx_[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
 
 const AUTO_STOP_SECONDS = 2 * 60 * 60;
 
-function autoStopSeconds() {
+export function autoStopSeconds() {
   const configured = Number(process.env.AVEN_BOAT_AUTO_STOP_SECONDS);
 
   return Number.isInteger(configured) && configured >= 60 ? configured : AUTO_STOP_SECONDS;
