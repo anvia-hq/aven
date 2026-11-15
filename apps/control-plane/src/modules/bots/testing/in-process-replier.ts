@@ -20,7 +20,9 @@ export function inProcessReplier(options: {
   const pause = options.pause ?? (async () => undefined);
   return {
     ready: () => undefined,
-    answer: async ({ bot, userId, model, prompt, hops, say, ask, react, signal }) => {
+    answer: async ({ bot, userId, choice, prompt, hops, say, ask, react, signal }) => {
+      if (!choice.model) throw new Error("The in-process replier runs native models only");
+
       const send: SendMessage = async ({ to, text, quote }, { abortSignal }) => {
         if (to !== USER_HANDLE) {
           if (!options.sendToBot) throw new Error(`No bot with the handle "${to}"`);
@@ -34,7 +36,7 @@ export function inProcessReplier(options: {
       };
       const agent = options.createAgent({
         bot,
-        model,
+        model: choice.model,
         send,
         react: async ({ messageId, emoji }) => {
           react(messageId, emoji);

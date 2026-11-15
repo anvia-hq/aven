@@ -49,3 +49,17 @@ export type ProviderCatalog = {
   labels: Record<string, string>;
   efforts: Record<string, ModelEfforts>;
 };
+
+export type BotSettingsModel = {
+  providerId: string | null;
+  modelId: string | null;
+  reasoningEffort: string | null;
+};
+
+export type BotRunChoice = {
+  backend: AgentBackendKind;
+  model?: ModelConfig;
+  token?: string;
+  modelId?: string;
+  effort?: string;
+};

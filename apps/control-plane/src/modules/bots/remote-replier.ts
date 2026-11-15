@@ -20,10 +20,11 @@ import type {
   NewBot,
 } from "./types";
 import type { BotMcp } from "../mcp/types";
-import type { BotProviders } from "../providers/types";
+import type { BotProviders, BotRunChoice } from "../providers/types";
 import type { BotThreads } from "../threads/types";
-import type { ModelConfig } from "@aven/agents/types";
+import { UnavailableError } from "@aven/server-kit/errors";
 import type {
+  AgentBackendKind,
   Bot,
   BotGoaled,
   BotGoalParams,
@@ -35,6 +36,7 @@ import type {
   BotProviderParams,
   BotQuestioned,
   BotQuestionParams,
+  RunModel,
   BotReactParams,
   BotScheduled,
   BotScheduleParams,
@@ -61,6 +63,30 @@ function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
   return text.slice(0, BOT_MESSAGE_MAX);
 }
 
+function backendName(backend: AgentBackendKind) {
+  return backend === "claude" ? "the Claude agent" : "the Codex agent";
+}
+
+function credentialOf(choice: BotRunChoice, model: RunModel | undefined) {
+  if (choice.backend === "claude")
+    return {
+      backend: choice.backend,
+      claudeToken: choice.token,
+      claudeModel: choice.modelId,
+      claudeEffort: choice.effort,
+    };
+
+  if (choice.backend === "codex")
+    return {
+      backend: choice.backend,
+      codexToken: choice.token,
+      codexModel: choice.modelId,
+      codexEffort: choice.effort,
+    };
+
+  return { model };
+}
+
 export class RemoteBotReplier implements BotReplier {
   constructor(
     private hub: Pick<RuntimeHub, "get">,
@@ -76,15 +102,21 @@ export class RemoteBotReplier implements BotReplier {
     private agentOnControlPlane = true,
   ) {}
 
-  ready(model: ModelConfig, bot: Pick<Bot, "runtimeId">) {
-    this.#place(this.#runtimeOf(bot));
-    this.gateway.check(model);
+  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId">) {
+    const { connection } = this.#place(this.#runtimeOf(bot));
+
+    if (choice.backend !== "native" && !connection.offers(choice.backend))
+      throw new UnavailableError(
+        `The computer this bot runs on does not drive ${backendName(choice.backend)}: update its runner`,
+      );
+
+    if (choice.model) this.gateway.check(choice.model);
   }
 
   async answer({
     bot,
     userId,
-    model,
+    choice,
     prompt,
     attachments,
     hops,
@@ -114,7 +146,7 @@ export class RemoteBotReplier implements BotReplier {
     const runtimeId = this.#runtimeOf(bot);
     const { connection, machine } = this.#place(runtimeId);
     const replyId = crypto.randomUUID();
-    const runModel = this.gateway.issue(replyId, model);
+    const runModel = choice.model ? this.gateway.issue(replyId, choice.model) : undefined;
     const ended = Promise.withResolvers<void>();
     const { from, note } = parseBotPrompt(prompt);
     const makesBotsOnTheirWord = onPersonsWord && from === undefined;
@@ -426,7 +458,7 @@ export class RemoteBotReplier implements BotReplier {
             timezone,
           },
           prompt,
-          model: runModel,
+          ...credentialOf(choice, runModel),
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,

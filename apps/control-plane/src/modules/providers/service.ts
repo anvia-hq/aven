@@ -78,6 +78,8 @@ function vertexEndpointOf(value: string) {
   return parsed.data;
 }
 
+export const invalidBotModel = (message: string) => new InvalidProviderError(message);
+
 function checkCredential(kind: Provider, apiKey: string) {
   if (kind !== "vertex" && apiKey.length > 4096)
     throw new InvalidProviderError("An API key is at most 4096 characters");
