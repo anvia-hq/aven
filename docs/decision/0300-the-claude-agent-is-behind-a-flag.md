@@ -1,8 +1,8 @@
-# 0299: The Claude agent is behind a flag
+# 0300: The Claude agent is behind a flag
 
 Date: 2026-11-15
 
-Status: accepted. Adds to 0220 (agent backends) and follows the provider list of 0298.
+Status: accepted. Adds to 0220 (agent backends) and follows the provider list of 0299.
 
 ## Decision
 
