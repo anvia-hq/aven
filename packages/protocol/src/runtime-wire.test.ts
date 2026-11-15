@@ -8,13 +8,15 @@ import {
 } from "./runtime-wire";
 
 describe("agent backend capabilities", () => {
-  test("native and Claude both support every capability", () => {
-    expect(AGENT_BACKENDS).toEqual(["native", "claude"]);
+  test("native, Claude and Codex support every capability", () => {
+    expect(AGENT_BACKENDS).toEqual(["native", "claude", "codex"]);
     for (const capability of ["question", "restart", "steering", "goals", "compaction"] as const) {
       expect(backendSupports("native", capability)).toBe(true);
       expect(backendSupports(undefined, capability)).toBe(true);
       expect(backendSupports("claude", capability)).toBe(true);
+      expect(backendSupports("codex", capability)).toBe(true);
       expect(AGENT_BACKEND_CAPABILITIES.claude[capability]).toBe(true);
+      expect(AGENT_BACKEND_CAPABILITIES.codex[capability]).toBe(true);
     }
   });
 
@@ -27,6 +29,9 @@ describe("agent backend capabilities", () => {
     );
     expect(backendRefusal("claude", "question")).toBe(
       "The Claude agent does not pause for a question",
+    );
+    expect(backendRefusal("codex", "steering")).toBe(
+      "The Codex agent does not take a message while it is working",
     );
   });
 });

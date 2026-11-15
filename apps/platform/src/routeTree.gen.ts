@@ -29,6 +29,7 @@ import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settin
 import { Route as AuthedSettingsAnnouncementsRouteImport } from './routes/_authed/settings/announcements'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
 import { Route as AuthedSettingsClaudeRouteImport } from './routes/_authed/settings/claude'
+import { Route as AuthedSettingsCodexRouteImport } from './routes/_authed/settings/codex'
 import { Route as AuthedSettingsDecisionModelRouteImport } from './routes/_authed/settings/decision-model'
 import { Route as AuthedSettingsEnvironmentVariablesRouteImport } from './routes/_authed/settings/environment-variables'
 import { Route as AuthedSettingsGeneralRouteImport } from './routes/_authed/settings/general'
@@ -148,6 +149,11 @@ const AuthedSettingsBotsRoute = AuthedSettingsBotsRouteImport.update({
 const AuthedSettingsClaudeRoute = AuthedSettingsClaudeRouteImport.update({
   id: '/claude',
   path: '/claude',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
+const AuthedSettingsCodexRoute = AuthedSettingsCodexRouteImport.update({
+  id: '/codex',
+  path: '/codex',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
 const AuthedSettingsDecisionModelRoute =
@@ -273,6 +279,7 @@ export interface FileRoutesByFullPath {
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/claude': typeof AuthedSettingsClaudeRoute
+  '/settings/codex': typeof AuthedSettingsCodexRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -310,6 +317,7 @@ export interface FileRoutesByTo {
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/claude': typeof AuthedSettingsClaudeRoute
+  '/settings/codex': typeof AuthedSettingsCodexRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/settings/general': typeof AuthedSettingsGeneralRoute
@@ -353,6 +361,7 @@ export interface FileRoutesById {
   '/_authed/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/claude': typeof AuthedSettingsClaudeRoute
+  '/_authed/settings/codex': typeof AuthedSettingsCodexRoute
   '/_authed/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
   '/_authed/settings/environment-variables': typeof AuthedSettingsEnvironmentVariablesRoute
   '/_authed/settings/general': typeof AuthedSettingsGeneralRoute
@@ -395,6 +404,7 @@ export interface FileRouteTypes {
     | '/settings/announcements'
     | '/settings/bots'
     | '/settings/claude'
+    | '/settings/codex'
     | '/settings/decision-model'
     | '/settings/environment-variables'
     | '/settings/general'
@@ -432,6 +442,7 @@ export interface FileRouteTypes {
     | '/settings/announcements'
     | '/settings/bots'
     | '/settings/claude'
+    | '/settings/codex'
     | '/settings/decision-model'
     | '/settings/environment-variables'
     | '/settings/general'
@@ -474,6 +485,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/announcements'
     | '/_authed/settings/bots'
     | '/_authed/settings/claude'
+    | '/_authed/settings/codex'
     | '/_authed/settings/decision-model'
     | '/_authed/settings/environment-variables'
     | '/_authed/settings/general'
@@ -647,6 +659,13 @@ declare module '@tanstack/react-router' {
       path: '/claude'
       fullPath: '/settings/claude'
       preLoaderRoute: typeof AuthedSettingsClaudeRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
+    '/_authed/settings/codex': {
+      id: '/_authed/settings/codex'
+      path: '/codex'
+      fullPath: '/settings/codex'
+      preLoaderRoute: typeof AuthedSettingsCodexRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
     '/_authed/settings/decision-model': {
@@ -848,6 +867,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsAnnouncementsRoute: typeof AuthedSettingsAnnouncementsRoute
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsClaudeRoute: typeof AuthedSettingsClaudeRoute
+  AuthedSettingsCodexRoute: typeof AuthedSettingsCodexRoute
   AuthedSettingsDecisionModelRoute: typeof AuthedSettingsDecisionModelRoute
   AuthedSettingsEnvironmentVariablesRoute: typeof AuthedSettingsEnvironmentVariablesRoute
   AuthedSettingsGeneralRoute: typeof AuthedSettingsGeneralRoute
@@ -871,6 +891,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsAnnouncementsRoute: AuthedSettingsAnnouncementsRoute,
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
   AuthedSettingsClaudeRoute: AuthedSettingsClaudeRoute,
+  AuthedSettingsCodexRoute: AuthedSettingsCodexRoute,
   AuthedSettingsDecisionModelRoute: AuthedSettingsDecisionModelRoute,
   AuthedSettingsEnvironmentVariablesRoute:
     AuthedSettingsEnvironmentVariablesRoute,

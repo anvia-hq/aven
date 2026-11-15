@@ -135,7 +135,7 @@ describe("startRuntime updating itself (decision 0146)", () => {
     await until(() => withUpdate.plane.received.some((m) => m.type === "hello"));
     expect(withUpdate.plane.received.find((m) => m.type === "hello")).toMatchObject({
       canUpdate: true,
-      backends: ["native", "claude"],
+      backends: ["native", "claude", "codex"],
     });
 
     const without = connect({ sandbox });

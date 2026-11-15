@@ -5,6 +5,7 @@ import type { botThreads } from "./bot-threads";
 import type { botWebhooks } from "./bot-webhooks";
 import type { bots } from "./bots";
 import type { claudeSetupTokens } from "./claude-setup-tokens";
+import type { codexSetupTokens } from "./codex-setup-tokens";
 import type { cockpitInboxItems } from "./cockpit-inbox-items";
 import type { cockpitNotes } from "./cockpit-notes";
 import type { cockpitTags } from "./cockpit-tags";
@@ -45,6 +46,8 @@ export type BotWebhookRow = typeof botWebhooks.$inferSelect;
 export type BotRow = typeof bots.$inferSelect;
 
 export type ClaudeSetupTokenRow = typeof claudeSetupTokens.$inferSelect;
+
+export type CodexSetupTokenRow = typeof codexSetupTokens.$inferSelect;
 
 export type CockpitInboxItemRow = typeof cockpitInboxItems.$inferSelect;
 

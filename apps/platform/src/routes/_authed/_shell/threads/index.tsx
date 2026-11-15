@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
+import { useCodexSetup } from "@/modules/codex-setup/hooks/use-codex-setup";
 import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -10,7 +11,12 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import type { ClaudeChoice, OutgoingMessage, RunSelection } from "@/modules/threads/types";
+import type {
+  ClaudeChoice,
+  CodexChoice,
+  OutgoingMessage,
+  RunSelection,
+} from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -32,11 +38,17 @@ function NewThread() {
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
   const [claude, setClaude] = useState<ClaudeChoice | null>(null);
+  const [codex, setCodex] = useState<CodexChoice | null>(null);
   const credential = useClaudeSetup();
+  const codexCredential = useCodexSetup();
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
+  let backend: "native" | "claude" | "codex" = "native";
+
+  if (codex) backend = "codex";
+  else if (claude) backend = "claude";
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, claude ? "claude" : "native");
+    startThread(projectId, message, selection, backend);
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
@@ -69,12 +81,21 @@ function NewThread() {
                 autoFocus
                 onSubmit={start}
                 claude={{ choice: claude, onChange: setClaude }}
+                codex={{ choice: codex, onChange: setCodex }}
                 tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
               />
               {claude && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">
                   <Link to="/settings/claude" className="underline">
                     Set a Claude setup token
+                  </Link>{" "}
+                  before this thread can run.
+                </p>
+              )}
+              {codex && codexCredential.loaded && !codexCredential.setup.configured && (
+                <p className="px-1 text-center text-xs text-muted-foreground">
+                  <Link to="/settings/codex" className="underline">
+                    Set a Codex API key
                   </Link>{" "}
                   before this thread can run.
                 </p>

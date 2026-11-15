@@ -613,6 +613,7 @@ export type RunSecrets = {
   identity?: RunIdentityCredential;
   mcp?: RunMcpServer[];
   claudeToken?: string;
+  codexToken?: string;
 };
 
 export type BotReplyInfo = {
@@ -651,6 +652,9 @@ export type ControlPlaneToRuntime =
       claudeToken?: string;
       claudeModel?: string;
       claudeEffort?: string;
+      codexToken?: string;
+      codexModel?: string;
+      codexEffort?: string;
     }
   | {
       type: "run.resume";
@@ -671,6 +675,9 @@ export type ControlPlaneToRuntime =
       claudeToken?: string;
       claudeModel?: string;
       claudeEffort?: string;
+      codexToken?: string;
+      codexModel?: string;
+      codexEffort?: string;
     }
   | { type: "run.cancel"; runId: string; reason: string }
   | {
@@ -1098,6 +1105,8 @@ export type BotThreadDetail = BotThreadView & {
 export type ContinuationPatch = "attached" | "none" | "unavailable";
 
 export type ClaudeEffort = "low" | "medium" | "high" | "xhigh" | "max";
+
+export type CodexEffort = "low" | "medium" | "high" | "xhigh" | "max" | "ultra";
 
 export type AccessPermission = "read" | "change" | "destructive";
 

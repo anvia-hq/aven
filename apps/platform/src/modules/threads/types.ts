@@ -187,6 +187,14 @@ export type ClaudeControl = {
   only?: boolean;
 };
 
+export type CodexChoice = { modelId?: string; effort?: string };
+
+export type CodexControl = {
+  choice: CodexChoice | null;
+  onChange: (choice: CodexChoice | null) => void;
+  only?: boolean;
+};
+
 export type RecencyGroupId = "today" | "week" | "month";
 
 export type RecencyGroup = { id: RecencyGroupId; label: string; threads: Thread[] };

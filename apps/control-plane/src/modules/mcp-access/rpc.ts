@@ -61,9 +61,9 @@ const TOOLS = [
         title: { type: "string", description: "A title for the thread" },
         backend: {
           type: "string",
-          enum: ["native", "claude"],
+          enum: ["native", "claude", "codex"],
           description:
-            "native uses a model key from Providers; claude uses the person's Claude subscription",
+            "native uses a model key from Providers; claude uses the person's Claude subscription; codex uses the person's OpenAI API key",
         },
         organizationId: ORGANIZATION,
       },

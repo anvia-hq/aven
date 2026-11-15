@@ -76,10 +76,13 @@ run("a person driving an archived thread (postgres, decision 0114)", async () =>
     } as never);
     const claude = await threadsService.create(orgA, userId, { projectId: project.id });
     await db.update(threads).set({ agentBackend: "claude" }).where(eq(threads.id, claude.id));
+    const codex = await threadsService.create(orgA, userId, { projectId: project.id });
+    await db.update(threads).set({ agentBackend: "codex" }).where(eq(threads.id, codex.id));
     const native = await threadsService.create(orgA, userId, { projectId: project.id });
     const body = { prompt: "see this", attachments: [{ name: "shot.png", data: PNG }] };
     expect((await taking.send(orgA, userId, claude.id, body)).steered).toBe(true);
-    expect(files).toEqual([1]);
+    expect((await taking.send(orgA, userId, codex.id, body)).steered).toBe(true);
+    expect(files).toEqual([1, 1]);
     expect(handed[0]?.attachments?.[0]?.name).toBe("shot.png");
     expect(JSON.stringify(handed[0])).not.toContain(PNG);
     await expect(taking.send(orgA, userId, native.id, body)).rejects.toThrow(
