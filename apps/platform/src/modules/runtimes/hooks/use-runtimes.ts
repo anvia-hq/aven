@@ -12,7 +12,7 @@ import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config"
 import { runtimesAtom } from "../atoms/runtimes-atom";
 import { updatingAtom } from "../atoms/updating-atom";
 import { isUpdating as isStillUpdating, UPDATE_WAIT_MS, updateEnd } from "../updating";
-import type { BoatMachineType, RuntimeGithubMode } from "@aven/protocol/types";
+import type { RuntimeGithubMode } from "@aven/protocol/types";
 import type { CreatedRuntime, Runtime } from "../types";
 
 const runtimesStore = createListStore<Runtime>({
@@ -26,7 +26,8 @@ export const resetRuntimes = runtimesStore.reset;
 const POLL_MS = 10_000;
 
 export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
-  const [runtimes] = useAtom(runtimesAtom);
+  const [listed] = useAtom(runtimesAtom);
+  const runtimes = listed === null ? null : listed.filter((runtime) => !runtime.parentRuntimeId);
   const { data: session } = authClient.useSession();
   const { refresh } = runtimesStore;
 
@@ -53,12 +54,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
     });
   }
 
-  function create(input: {
-    name: string;
-    provider?: "boat";
-    apiKey?: string;
-    machineType?: BoatMachineType;
-  }) {
+  function create(input: { name: string }) {
     return change("Could not add runtime", () => postJson<CreatedRuntime>("/runtimes", input));
   }
 
@@ -138,6 +134,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
 
   return {
     runtimes: runtimes ?? [],
+    computers: listed ?? [],
     loaded: runtimes !== null,
     defaultRunner,
     isOwnedByMe,

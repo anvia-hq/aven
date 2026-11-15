@@ -11,6 +11,8 @@ const FALLBACK: PlatformConfig = {
   registrationEnabled: true,
   githubLogin: false,
   emailLogin: true,
+  claudeBackend: true,
+  codexBackend: true,
   isOwner: false,
 };
 

@@ -18,6 +18,17 @@ export const addRepositoryBody = z.object({
   name: z.string().trim().min(1).max(200).optional(),
 });
 
+export const addGithubRepositoryBody = z.object({
+  installationId: z.uuid(),
+  repository: z
+    .string()
+    .trim()
+    .regex(/^[\w.-]+\/[\w.-]+$/),
+  name: z.string().trim().min(1).max(200).optional(),
+});
+
+export type AddGithubRepositoryBody = z.infer<typeof addGithubRepositoryBody>;
+
 export const folderQuery = z.object({
   path: z
     .string()

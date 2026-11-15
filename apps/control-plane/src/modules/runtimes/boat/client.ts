@@ -4,7 +4,13 @@ import type { BoatSandbox } from "./types";
 
 const SANDBOX_ID = /^bx_[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
 
-const TRIAL_AUTO_STOP_SECONDS = 2 * 60 * 60;
+const AUTO_STOP_SECONDS = 2 * 60 * 60;
+
+export function autoStopSeconds() {
+  const configured = Number(process.env.AVEN_BOAT_AUTO_STOP_SECONDS);
+
+  return Number.isInteger(configured) && configured >= 60 ? configured : AUTO_STOP_SECONDS;
+}
 
 const REQUEST_TIMEOUT_MS = 60_000;
 
@@ -101,36 +107,23 @@ export class BoatClient {
     private base = boatApiBase(),
   ) {}
 
-  me(apiKey: string) {
-    return this.#request("GET", "/me", apiKey);
-  }
-
   async createSandbox(apiKey: string, input: { runtimeId: string; machineType: BoatMachineType }) {
-    const body = (ttlSeconds: number | null) => ({
-      name: `aven-${input.runtimeId}`.slice(0, 120),
-      type: input.machineType,
-      ttlSeconds,
-      noEnv: true,
-      visibility: "private",
-      labels: { avenRuntimeId: input.runtimeId },
-    });
-
-    try {
-      return sandboxOf(
-        await this.#request("POST", "/sandboxes", apiKey, body(null), {
-          "Idempotency-Key": `aven-${input.runtimeId}`,
-        }),
-      );
-    } catch (error) {
-      if (error instanceof BoatApiError && error.code === "trial_auto_stop_required")
-        return sandboxOf(
-          await this.#request("POST", "/sandboxes", apiKey, body(TRIAL_AUTO_STOP_SECONDS), {
-            "Idempotency-Key": `aven-${input.runtimeId}-trial`,
-          }),
-        );
-
-      throw error;
-    }
+    return sandboxOf(
+      await this.#request(
+        "POST",
+        "/sandboxes",
+        apiKey,
+        {
+          name: `aven-${input.runtimeId}`.slice(0, 120),
+          type: input.machineType,
+          ttlSeconds: autoStopSeconds(),
+          noEnv: true,
+          visibility: "private",
+          labels: { avenRuntimeId: input.runtimeId },
+        },
+        { "Idempotency-Key": `aven-${input.runtimeId}` },
+      ),
+    );
   }
 
   getSandbox(apiKey: string, sandboxId: string) {
@@ -138,22 +131,19 @@ export class BoatClient {
   }
 
   async resume(apiKey: string, sandboxId: string) {
-    try {
-      await this.#request("POST", `${this.#sandboxPath(sandboxId)}/resume`, apiKey, {
-        ttlSeconds: null,
-      });
-    } catch (error) {
-      if (!(error instanceof BoatApiError) || error.code !== "trial_auto_stop_required")
-        throw error;
-
-      await this.#request("POST", `${this.#sandboxPath(sandboxId)}/resume`, apiKey, {
-        ttlSeconds: TRIAL_AUTO_STOP_SECONDS,
-      });
-    }
+    await this.#request("POST", `${this.#sandboxPath(sandboxId)}/resume`, apiKey, {
+      ttlSeconds: autoStopSeconds(),
+    });
   }
 
   stop(apiKey: string, sandboxId: string) {
     return this.#request("POST", `${this.#sandboxPath(sandboxId)}/stop`, apiKey);
+  }
+
+  deleteSandbox(apiKey: string, sandboxId: string) {
+    return this.#request("DELETE", this.#sandboxPath(sandboxId), apiKey, undefined, {
+      "X-Ascii-Confirm-Delete": sandboxId,
+    });
   }
 
   writeFile(apiKey: string, sandboxId: string, path: string, content: string) {

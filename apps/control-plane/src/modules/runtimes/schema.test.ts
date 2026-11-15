@@ -7,17 +7,9 @@ describe("create runtime body", () => {
     expect(createRuntimeBody.parse({ name: "laptop" })).toEqual({ name: "laptop" });
   });
 
-  test("a boat runtime needs a boat key", () => {
+  test("a boat key is not something a person can bring", () => {
     expect(
-      createRuntimeBody.safeParse({ provider: "boat", name: "cloud", apiKey: "sk-nope" }).success,
-    ).toBe(false);
-    expect(
-      createRuntimeBody.parse({
-        provider: "boat",
-        name: "cloud",
-        apiKey: "boat_live_key",
-        machineType: "large",
-      }),
-    ).toMatchObject({ provider: "boat", apiKey: "boat_live_key", machineType: "large" });
+      createRuntimeBody.parse({ provider: "boat", name: "cloud", apiKey: "boat_live_key" }),
+    ).toEqual({ name: "cloud" });
   });
 });

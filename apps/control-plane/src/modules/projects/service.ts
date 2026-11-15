@@ -18,7 +18,12 @@ import {
 import { isOwnerOrAdmin } from "../auth/members";
 import { githubService } from "../github/service";
 import { runtimesService } from "../runtimes/service";
-import type { AddFolderBody, AddRepositoryBody, UpdateProjectBody } from "./schema";
+import type {
+  AddFolderBody,
+  AddGithubRepositoryBody,
+  AddRepositoryBody,
+  UpdateProjectBody,
+} from "./schema";
 import type { ProjectFolders } from "./types";
 import type {
   GithubCommitFilters,
@@ -30,6 +35,7 @@ import type {
 export class RuntimeNotFoundError extends UnprocessableError {}
 export class RepositoryAlreadyImportedError extends ConflictError {}
 export class FolderNotServedError extends UnprocessableError {}
+export class RepositoryNotInstalledError extends UnprocessableError {}
 
 const insideServed = (served: readonly string[], path: string) =>
   served.some((dir) => path === dir || path.startsWith(dir.endsWith(sep) ? dir : dir + sep));
@@ -144,6 +150,37 @@ export const projectsService = {
     });
   },
 
+  async addGithubRepository(organizationId: string, userId: string, body: AddGithubRepositoryBody) {
+    const repositories = await githubService.repositories(organizationId, body.installationId);
+    const repository = repositories.find(
+      (found) => found.fullName.toLowerCase() === body.repository.toLowerCase(),
+    );
+
+    if (!repository) {
+      throw new RepositoryNotInstalledError(
+        `The Aven app on GitHub cannot reach ${body.repository}. Add it to the app's repositories there, then try again`,
+      );
+    }
+
+    const [project] = await db
+      .insert(projects)
+      .values({
+        organizationId,
+        createdBy: userId,
+        githubInstallationId: body.installationId,
+        repoFullName: repository.fullName,
+        cloneUrl: repository.cloneUrl,
+        defaultBranch: repository.defaultBranch,
+        name: body.name ?? repository.fullName.split("/")[1]!,
+      })
+      .onConflictDoNothing()
+      .returning();
+
+    if (!project) throw new RepositoryAlreadyImportedError("This repository is already a project");
+
+    return project;
+  },
+
   async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {
     if (project.createdBy === userId || (await isOwnerOrAdmin(organizationId, userId))) return;
 
@@ -192,13 +229,17 @@ export const projectsService = {
   async folderRunner(
     organizationId: string,
     userId: string,
-    project: { runtimeId: string; directory: string | null },
+    project: { runtimeId: string | null; directory: string | null },
   ) {
+    if (!project.runtimeId || !project.directory) {
+      throw new NotFoundError("This project is a repository, not a folder on a computer");
+    }
+
     if (!(await runtimesService.get(organizationId, project.runtimeId, userId))) {
       throw new ForbiddenError("This project is on a computer that is private to its owner");
     }
 
-    return { runtimeId: project.runtimeId, directory: project.directory! };
+    return { runtimeId: project.runtimeId, directory: project.directory };
   },
 
   async folder(

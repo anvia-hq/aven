@@ -2,6 +2,7 @@ import { app } from "./app";
 import {
   botApiApp,
   botRunner,
+  cloudExpiry,
   goalDriver,
   previews,
   runsService,
@@ -9,14 +10,19 @@ import {
   threadRetention,
   threadWatcher,
 } from "./composition";
+import { claudeBackendEnabled } from "./modules/claude-setup/flag";
+import { codexBackendEnabled } from "./modules/codex-setup/flag";
 import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
 import { startLocalRunner } from "./modules/runtimes/local";
+import { runtimesService } from "./modules/runtimes/service";
 import { startPreviews } from "./modules/preview/start";
 
 export async function startControlPlane(edition: Edition) {
   editionInUse.current = edition;
+  claudeBackendEnabled();
+  codexBackendEnabled();
 
   for (const route of edition.routes) app.use(route);
 
@@ -38,6 +44,7 @@ export async function startControlPlane(edition: Edition) {
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
+  await runtimesService.ensureCloud();
   const previewListener = startPreviews(previews);
 
   const shutdown = async () => {
@@ -48,6 +55,7 @@ export async function startControlPlane(edition: Edition) {
     await goalDriver.close();
     await threadWatcher.close();
     await threadRetention.close();
+    await cloudExpiry.close();
     runsService.dispose();
     process.exit(0);
   };
@@ -58,6 +66,7 @@ export async function startControlPlane(edition: Edition) {
   goalDriver.start();
   threadWatcher.start();
   threadRetention.start();
+  cloudExpiry.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

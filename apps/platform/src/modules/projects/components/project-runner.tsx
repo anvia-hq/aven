@@ -12,7 +12,8 @@ export function ProjectRunner({ project }: { project: Project }) {
   const { runtimes } = useRuntimes();
   const { moveProject } = useProjects();
 
-  if (!canManage) return <RuntimeBadge runtimeId={project.runtimeId} />;
+  if (!canManage || project.runtimeId === null)
+    return <RuntimeBadge runtimeId={project.runtimeId} />;
 
   const options = runtimes.map((runtime) => ({ value: runtime.id, label: runtimeLabel(runtime) }));
   return (

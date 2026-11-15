@@ -108,6 +108,7 @@ import type {
   GithubPullDetail,
   GithubPullRequest,
   GithubReadme,
+  GithubRepository,
   GithubTrackedFilters,
   GithubTrackedItem,
   GithubTrackedKind,
@@ -290,6 +291,34 @@ export class GithubClient {
 
       if (entries.length < PAGE_SIZE) return;
     }
+  }
+
+  async repositories(installationId: number) {
+    const { token } = await this.installationToken(installationId);
+    const found: GithubRepository[] = [];
+
+    for await (const repo of this.#pages<
+      {
+        repositories: {
+          full_name: string;
+          clone_url: string;
+          default_branch: string;
+          private: boolean;
+        }[];
+      },
+      { full_name: string; clone_url: string; default_branch: string; private: boolean }
+    >("/installation/repositories", token, (page) => page.repositories)) {
+      found.push({
+        fullName: repo.full_name,
+        cloneUrl: repo.clone_url,
+        defaultBranch: repo.default_branch,
+        private: repo.private,
+      });
+    }
+
+    return found.sort((a, b) =>
+      a.fullName.localeCompare(b.fullName, undefined, { sensitivity: "base" }),
+    );
   }
 
   async installation(installationId: number) {

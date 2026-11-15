@@ -4,12 +4,14 @@ import { runtimes } from "@aven/db/schema/runtimes";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
+import { isCloudTemplate } from "./cloud-config";
 import { LOCAL_RUNTIME_ID } from "./service";
 
 export async function requireUsableRuntime(userId: string, runtimeId: string) {
   const [row] = await db
     .select({
       host: runtimes.host,
+      parentRuntimeId: runtimes.parentRuntimeId,
       ownerId: runtimes.ownerId,
       organizationId: runtimes.organizationId,
     })
@@ -19,9 +21,9 @@ export async function requireUsableRuntime(userId: string, runtimeId: string) {
 
   if (!row) throw refused;
 
-  if (runtimeId === LOCAL_RUNTIME_ID) return;
+  if (runtimeId === LOCAL_RUNTIME_ID || isCloudTemplate(runtimeId)) return;
 
-  if (row.host) {
+  if (row.host || row.parentRuntimeId) {
     if (row.ownerId !== userId) throw refused;
 
     return;

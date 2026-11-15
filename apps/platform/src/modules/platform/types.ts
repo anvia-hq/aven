@@ -2,6 +2,8 @@ export type PlatformConfig = {
   registrationEnabled: boolean;
   githubLogin: boolean;
   emailLogin: boolean;
+  claudeBackend: boolean;
+  codexBackend: boolean;
   isOwner: boolean;
 };
 

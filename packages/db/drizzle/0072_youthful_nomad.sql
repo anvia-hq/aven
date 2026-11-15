@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ALTER COLUMN "runtime_id" DROP NOT NULL;

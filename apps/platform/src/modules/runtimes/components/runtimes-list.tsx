@@ -93,8 +93,6 @@ function LoadTile({
 function loadNote(runtime: Runtime) {
   if (runtime.online) return "Waiting for the runner to report its load.";
 
-  if (runtime.provider === "boat") return "Asleep until a thread needs it.";
-
   return "Offline: no load to show.";
 }
 
@@ -115,7 +113,8 @@ function Status({ runtime }: { runtime: Runtime }) {
 }
 
 export function RuntimesList() {
-  const { runtimes, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
+  const { runtimes: all, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
+  const runtimes = all.filter((runtime) => !runtime.isCloud);
 
   if (!loaded) return null;
 
@@ -176,11 +175,6 @@ function RuntimeCard({
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {runtime.provider === "boat" && (
-          <Badge variant="outline" title="A boat.dev sandbox. It wakes when a thread needs it">
-            boat.dev
-          </Badge>
-        )}
         {runtime.host && (
           <Badge
             variant="outline"

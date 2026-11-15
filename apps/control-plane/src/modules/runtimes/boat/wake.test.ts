@@ -107,19 +107,26 @@ describe("waking a boat sandbox", () => {
     expect(JSON.stringify(calls[4]?.body)).not.toContain(TOKEN);
   });
 
-  test("resumes a stopped sandbox", async () => {
+  test("resumes a stopped sandbox and lets go of the runner connection it had", async () => {
     const { calls, fetchFn } = scripted({ [ID]: ["archived", "ready"] });
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+    let forgotten = 0;
 
-    await wakeBoatSandbox({
+    const woke = await wakeBoatSandbox({
       record: record(ID),
       client,
       runnerUrl: "https://aven.example.com/api",
       saveSandboxId: async () => undefined,
       connected: () => true,
+      forget: () => {
+        forgotten += 1;
+      },
       clock: clock(),
       settleMs: 0,
     });
+
+    expect(woke).toEqual({ started: true });
+    expect(forgotten).toBe(1);
 
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
       `GET https://boat.test/api/v1/sandboxes/${ID}`,
@@ -154,5 +161,27 @@ describe("waking a boat sandbox", () => {
     expect(calls.some((call) => call.method === "POST" && call.url.endsWith("/sandboxes"))).toBe(
       true,
     );
+  });
+
+  test("keeps the runner connection of a sandbox that is already running", async () => {
+    const { fetchFn } = scripted({ [ID]: ["ready"] });
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+    let forgotten = 0;
+
+    const woke = await wakeBoatSandbox({
+      record: record(ID),
+      client,
+      runnerUrl: "https://aven.example.com/api",
+      saveSandboxId: async () => undefined,
+      connected: () => true,
+      forget: () => {
+        forgotten += 1;
+      },
+      clock: clock(),
+      settleMs: 0,
+    });
+
+    expect(woke).toEqual({ started: false });
+    expect(forgotten).toBe(0);
   });
 });

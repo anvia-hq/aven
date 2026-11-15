@@ -1,4 +1,4 @@
-import type { BoatMachineType, RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
+import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 
 export type RuntimeStats = {
   cores: number;
@@ -18,10 +18,6 @@ export type Runtime = {
   host: boolean;
   shared: boolean;
   githubMode: RuntimeGithubMode;
-  provider: "manual" | "boat";
-  boatMachineType: BoatMachineType | null;
-  boatSandboxId: string | null;
-  boatKeyHint: string | null;
   github: RunnerGithub | null;
   directories: string[];
   tokenHint: string;
@@ -30,6 +26,8 @@ export type Runtime = {
   outdated: boolean;
   updateTo: string | null;
   isControlPlane: boolean;
+  isCloud: boolean;
+  parentRuntimeId: string | null;
   canUpdate: boolean;
   stats: RuntimeStats | null;
   lastSeenAt: string | null;
@@ -51,3 +49,9 @@ export type MachineMetric = {
 export type MeterLevel = "low" | "busy" | "high";
 
 export type UpdateAsked = { from: string | null; at: number };
+
+export type RuntimeChoice = {
+  runtime: Runtime;
+  disabled: boolean;
+  note: string | null;
+};

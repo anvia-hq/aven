@@ -3,11 +3,17 @@ import { cn } from "cn";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 
 type Props = {
-  runtimeId: string;
+  runtimeId: string | null;
   className?: string;
 };
 
 export function RunnerStatus({ runtimeId, className }: Props) {
+  if (runtimeId === null) return <span className={className}>Any computer</span>;
+
+  return <KnownRunnerStatus runtimeId={runtimeId} className={className} />;
+}
+
+function KnownRunnerStatus({ runtimeId, className }: { runtimeId: string; className?: string }) {
   const { runtime, loaded } = useRuntime(runtimeId);
 
   if (!loaded) return null;

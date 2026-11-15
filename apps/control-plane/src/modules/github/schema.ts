@@ -37,3 +37,5 @@ export const connectQuery = z.object({
 export const userQuery = z.object({
   app: z.string().min(1).max(64).optional(),
 });
+
+export const installationParams = z.object({ id: z.uuid() });

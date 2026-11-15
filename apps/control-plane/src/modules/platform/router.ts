@@ -1,6 +1,8 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
+import { claudeBackendEnabled } from "../claude-setup/flag";
+import { codexBackendEnabled } from "../codex-setup/flag";
 import { authService, emailLoginEnabled, githubLoginEnabled } from "../auth/service";
 import type { PutAwayThread } from "../threads/types";
 import { requirePlatformOwner } from "./owner";
@@ -16,6 +18,8 @@ export const platformRouter = (putAway: PutAwayThread) => {
         registrationEnabled: await platformService.isRegistrationEnabled(),
         githubLogin: githubLoginEnabled,
         emailLogin: emailLoginEnabled,
+        claudeBackend: claudeBackendEnabled(),
+        codexBackend: codexBackendEnabled(),
         isOwner: session ? await platformService.isOwner(session.user) : false,
       };
     })

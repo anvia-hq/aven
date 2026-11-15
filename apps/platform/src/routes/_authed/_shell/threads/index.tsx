@@ -4,8 +4,11 @@ import { useState } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
 import { useCodexSetup } from "@/modules/codex-setup/hooks/use-codex-setup";
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
+import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
+import { useRuntimeChoice } from "@/modules/runtimes/hooks/use-runtime-choice";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
@@ -41,14 +44,20 @@ function NewThread() {
   const [codex, setCodex] = useState<CodexChoice | null>(null);
   const credential = useClaudeSetup();
   const codexCredential = useCodexSetup();
+  const { config } = usePlatformConfig();
+  const claudeOffered = config?.claudeBackend === true;
+  const codexOffered = config?.codexBackend === true;
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
   let backend: "native" | "claude" | "codex" = "native";
 
-  if (codex) backend = "codex";
-  else if (claude) backend = "claude";
+  if (codexOffered && codex) backend = "codex";
+  else if (claudeOffered && claude) backend = "claude";
+
+  const project = projects.find((candidate) => candidate.id === projectId);
+  const computer = useRuntimeChoice(project);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, backend);
+    startThread(projectId, message, selection, backend, computer.runtimeId);
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
@@ -80,11 +89,22 @@ function NewThread() {
               <PromptInput
                 autoFocus
                 onSubmit={start}
-                claude={{ choice: claude, onChange: setClaude }}
-                codex={{ choice: codex, onChange: setCodex }}
-                tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
+                claude={claudeOffered ? { choice: claude, onChange: setClaude } : undefined}
+                codex={codexOffered ? { choice: codex, onChange: setCodex } : undefined}
+                tools={
+                  <>
+                    <ProjectPicker value={projectId} onChange={setProjectId} />
+                    {project && (
+                      <RuntimePicker
+                        choices={computer.choices}
+                        value={computer.runtimeId}
+                        onChange={computer.choose}
+                      />
+                    )}
+                  </>
+                }
               />
-              {claude && credential.loaded && !credential.setup.configured && (
+              {claudeOffered && claude && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">
                   <Link to="/settings/claude" className="underline">
                     Set a Claude setup token
@@ -92,14 +112,17 @@ function NewThread() {
                   before this thread can run.
                 </p>
               )}
-              {codex && codexCredential.loaded && !codexCredential.setup.configured && (
-                <p className="px-1 text-center text-xs text-muted-foreground">
-                  <Link to="/settings/codex" className="underline">
-                    Set a Codex API key
-                  </Link>{" "}
-                  before this thread can run.
-                </p>
-              )}
+              {codexOffered &&
+                codex &&
+                codexCredential.loaded &&
+                !codexCredential.setup.configured && (
+                  <p className="px-1 text-center text-xs text-muted-foreground">
+                    <Link to="/settings/codex" className="underline">
+                      Set a Codex API key
+                    </Link>{" "}
+                    before this thread can run.
+                  </p>
+                )}
             </>
           ))}
 

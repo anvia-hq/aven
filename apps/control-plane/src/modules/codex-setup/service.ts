@@ -3,6 +3,8 @@ import { codexSetupTokens } from "@aven/db/schema/codex-setup-tokens";
 import { eq } from "drizzle-orm";
 
 import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
+import { UnprocessableError } from "@aven/server-kit/errors";
+import { CODEX_BACKEND_OFF, codexBackendEnabled } from "./flag";
 import { codexTokenOf } from "./token";
 import type { CodexSetupView } from "./types";
 
@@ -37,6 +39,8 @@ export const codexSetupService = {
   },
 
   requireFor(userId: string) {
+    if (!codexBackendEnabled()) throw new UnprocessableError(CODEX_BACKEND_OFF);
+
     return codexTokenOf(userId, (id) => this.tokenFor(id));
   },
 

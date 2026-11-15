@@ -833,4 +833,38 @@ describe("writing to a repository", () => {
     expect(await client.canPush("ghu_a", "acme/hidden")).toBe(false);
     expect(auth(github.calls[0]!)).toBe("Bearer ghu_a");
   });
+  test("lists the repositories an installation can reach, sorted by name", async () => {
+    const repo = (full_name: string, isPrivate: boolean) => ({
+      full_name,
+      clone_url: `https://github.com/${full_name}.git`,
+      default_branch: "main",
+      private: isPrivate,
+    });
+    const github = fakeGithub({
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_read",
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+      "GET /installation/repositories?per_page=100&page=1": {
+        total_count: 2,
+        repositories: [repo("acme/zed", true), repo("acme/app", false)],
+      },
+    });
+
+    expect(await new GithubClient(config, github.fetch).repositories(7)).toEqual([
+      {
+        fullName: "acme/app",
+        cloneUrl: "https://github.com/acme/app.git",
+        defaultBranch: "main",
+        private: false,
+      },
+      {
+        fullName: "acme/zed",
+        cloneUrl: "https://github.com/acme/zed.git",
+        defaultBranch: "main",
+        private: true,
+      },
+    ]);
+    expect(auth(github.calls[1]!)).toBe("Bearer ghs_read");
+  });
 });

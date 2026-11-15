@@ -25,24 +25,6 @@ function Rotated({
   rotated: CreatedRuntime;
   onDone: () => void;
 }) {
-  if (runtime.provider === "boat")
-    return (
-      <div className="flex flex-col gap-4">
-        <DialogHeader>
-          <DialogTitle>New token for {runtime.name}</DialogTitle>
-          <DialogDescription>
-            The old token no longer works. The sandbox reconnects with the new one the next time a
-            thread wakes it.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button type="button" onClick={onDone}>
-            Done
-          </Button>
-        </DialogFooter>
-      </div>
-    );
-
   return (
     <div className="flex flex-col gap-4">
       <DialogHeader>

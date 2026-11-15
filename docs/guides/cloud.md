@@ -33,9 +33,10 @@ A runner is a computer with git that connects out, so it needs no open port. Ins
 puts beside the server shares its machine: agents run commands there, as the server's user, in the folders `AVEN_DIRS` names. Nothing is isolated. For a server
 many people use, prefer `aven install --no-runner` on the server and runners on other machines.
 
-A boat.dev sandbox is another kind of runtime: an API key in Settings > Runtimes, and the sandbox
-connects out to this server. It needs a public address (`AVEN_BOAT_RUNNER_URL` when this server is
-not already on one). See [Self-hosting](self-hosting.md#a-boatdev-sandbox).
+Aven Cloud is a computer Aven provides: each thread started on it gets a [boat.dev](https://boat.dev)
+sandbox of its own, deleted after 48 hours without use. It is off until the platform sets
+`AVEN_CLOUD_PROVIDERS=boat` with its boat API key (`AVEN_BOAT_API_KEY`) and a public address for the sandbox to connect to (`AVEN_BOAT_RUNNER_URL` when
+this server is not already on one). See [Self-hosting](self-hosting.md#aven-cloud).
 
 ## Changing an install
 

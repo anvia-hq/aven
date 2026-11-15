@@ -5,7 +5,7 @@ import { projects } from "@aven/db/schema/projects";
 export async function seedProject(
   organizationId: string,
   userId: string,
-  runtimeId: string,
+  runtimeId: string | null,
   name = "proj",
 ) {
   const [installation] = await db

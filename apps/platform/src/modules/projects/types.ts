@@ -8,7 +8,7 @@ export type Project = {
   repoFullName: string | null;
   defaultBranch: string | null;
   directory: string | null;
-  runtimeId: string;
+  runtimeId: string | null;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -122,3 +122,11 @@ export type OrbShape = { light: number; rings: Ring[]; dots: Dot[] };
 export type FolderEntry = { name: string; path: string; git: boolean };
 
 export type FolderListing = { path: string | null; parent: string | null; folders: FolderEntry[] };
+
+export type GithubInstallation = { id: string; accountLogin: string };
+
+export type GithubRepository = {
+  fullName: string;
+  defaultBranch: string;
+  private: boolean;
+};

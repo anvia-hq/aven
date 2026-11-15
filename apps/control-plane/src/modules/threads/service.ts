@@ -20,7 +20,8 @@ import { claudeSetupService } from "../claude-setup/service";
 import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
-import { runtimesService } from "../runtimes/service";
+import { cloudEnabled, templateProvider } from "../runtimes/cloud-config";
+import { CLOUD_OFF, runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
@@ -230,15 +231,31 @@ export const threadsService = {
 
     if (!project) throw new ProjectNotFoundError("Project not found");
 
-    const runtimeId = placement?.runtimeId ?? project.runtimeId;
+    const requested = placement?.runtimeId ?? body.runtimeId ?? project.runtimeId;
 
-    if (!(await runtimesService.get(organizationId, runtimeId, userId))) {
+    if (!requested) throw new UnprocessableError("Choose a computer to run this thread on");
+
+    if (project.directory && requested !== project.runtimeId) {
+      throw new UnprocessableError(
+        "This project is a folder on one computer, so its threads run there",
+      );
+    }
+
+    const cloud = templateProvider(requested);
+
+    if (cloud && !cloudEnabled(cloud)) throw new UnprocessableError(CLOUD_OFF);
+
+    if (!(await runtimesService.get(organizationId, requested, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
 
     if (body.backend === "claude") await claudeSetupService.requireFor(userId);
 
     if (body.backend === "codex") await codexSetupService.requireFor(userId);
+
+    const runtimeId = cloud
+      ? (await runtimesService.createCloudSandbox(organizationId, userId, requested)).id
+      : requested;
 
     const [thread] = await db
       .insert(threads)

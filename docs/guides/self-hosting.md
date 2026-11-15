@@ -61,18 +61,49 @@ Docker. The server's own built-in runner serves folders too: `AVEN_LOCAL_RUNNER`
 A runner is private to the person who registered it until they turn on **Share** in **Settings >
 Runtimes**; sharing lets workspace members run commands on it as its user.
 
-## A boat.dev sandbox
+## Turning the Claude agent off
 
-**Settings > Runtimes** can add a [boat.dev](https://boat.dev) sandbox instead of a computer you
-install. Create an API key that can create and drive sandboxes
-([API keys](https://docs.boat.dev/api-keys)) and paste it there. It is stored encrypted with the
-other provider keys and is not an environment variable.
+Threads can run on Anthropic's Claude Agent SDK with a person's own Claude subscription. It is on by
+default. Set `AVEN_CLAUDE_BACKEND=off` to hide it from the composer and Settings and to refuse new
+Claude threads; threads that already use it stay readable but cannot run.
+
+## Turning the Codex agent off
+
+Threads can run on OpenAI's Codex SDK with a person's own API key. It is on by default. Set
+`AVEN_CODEX_BACKEND=off` to hide it from the composer and Settings and to refuse new Codex threads;
+threads that already use it stay readable but cannot run.
+
+## Aven Cloud
+
+Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer, and
+boat.dev is the one there is. Each provider is its own entry in the new thread composer, and you can
+name several, separated by commas:
+
+```sh
+AVEN_CLOUD_PROVIDERS=boat
+AVEN_BOAT_API_KEY=boat_...
+```
+
+A provider that is not named, or that lacks what it needs (boat needs its key), is hidden and refuses
+new threads. Threads that already
+have a computer stay readable, but cannot start it again, and expired computers are still deleted
+while the boat key is set.
+
+Create the key at [boat.dev](https://docs.boat.dev/api-keys) with permission to create and drive
+sandboxes. It belongs to the platform, so people using it bring no key of their own. A free trial
+account allows two sandboxes at once and a two-hour auto-stop; a paid plan lifts those limits.
+
+A project that is a GitHub repository can run on Aven Cloud (add it from **Add project > GitHub**,
+which needs the GitHub app installed on the repository). A project that is a folder stays on the
+computer that serves it.
 
 The sandbox runs `aven runner` and connects out to this server, so the server has to be reachable
 from the public internet. When `BETTER_AUTH_URL` is a localhost or private address, set
-`AVEN_BOAT_RUNNER_URL` to the public one, for example `https://aven.example.com/api`. A paid
-sandbox keeps running, and billing, until you revoke the runtime. A free trial stops after two
-hours and the next thread resumes it. A project chooses it like any other runtime.
+`AVEN_BOAT_RUNNER_URL` to the public one: the address that reaches the control plane, for example
+`https://aven.example.com/api` when the platform proxies `/api`. A sandbox stops itself after two
+hours (`AVEN_BOAT_AUTO_STOP_SECONDS`) and the next message resumes it. It is deleted after 48 hours
+without use, and work that was not pushed is lost with it. A workspace may hold 20 Aven Cloud
+computers at once (`AVEN_CLOUD_MAX_SANDBOXES`).
 
 ## Update
 

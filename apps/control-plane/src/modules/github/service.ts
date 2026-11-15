@@ -218,6 +218,13 @@ export function createGithubService(
       return { next: state.next };
     },
 
+    async repositories(organizationId: string, installationRowId: string) {
+      if (!(await get(organizationId, installationRowId))) throw new InstallationNotFoundError();
+
+      const { client, installationId } = await acting(installationRowId);
+      return client.repositories(installationId);
+    },
+
     async cloneToken(installationRowId: string) {
       const { client, installationId } = await acting(installationRowId);
       return (await client.installationToken(installationId)).token;

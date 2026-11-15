@@ -1,5 +1,14 @@
 import { sql } from "drizzle-orm";
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  type AnyPgColumn,
+  boolean,
+  index,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import {
   BOAT_MACHINE_TYPES,
@@ -18,14 +27,15 @@ export const runtimes = pgTable(
     organizationId: text("organization_id").references(() => organizations.id, {
       onDelete: "cascade",
     }),
+    parentRuntimeId: uuid("parent_runtime_id").references((): AnyPgColumn => runtimes.id, {
+      onDelete: "cascade",
+    }),
     ownerId: text("owner_id").references(() => users.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     host: boolean("host").notNull().default(false),
     provider: text("provider", { enum: RUNTIME_PROVIDERS }).notNull().default("manual"),
     lifetime: text("lifetime", { enum: RUNTIME_LIFETIMES }).notNull().default("persistent"),
     githubMode: text("github_mode", { enum: RUNTIME_GITHUB_MODES }).notNull().default("machine"),
-    boatApiKeyEncrypted: text("boat_api_key_encrypted"),
-    boatKeyHint: text("boat_key_hint"),
     boatMachineType: text("boat_machine_type", { enum: BOAT_MACHINE_TYPES }),
     boatSandboxId: text("boat_sandbox_id"),
     boatRunnerTokenEncrypted: text("boat_runner_token_encrypted"),
@@ -42,6 +52,7 @@ export const runtimes = pgTable(
   },
   (table) => [
     index("runtimes_organization_idx").on(table.organizationId),
+    index("runtimes_parent_idx").on(table.parentRuntimeId),
     uniqueIndex("runtimes_token_hash_idx").on(table.tokenHash),
   ],
 );

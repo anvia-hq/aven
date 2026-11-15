@@ -3,7 +3,13 @@ import { Badge } from "@aven/ui/badge";
 import { useRuntime } from "../hooks/use-runtime";
 import { runtimeLabel } from "../runtime-label";
 
-export function RuntimeBadge({ runtimeId }: { runtimeId: string }) {
+export function RuntimeBadge({ runtimeId }: { runtimeId: string | null }) {
+  if (runtimeId === null) return <Badge variant="secondary">Any computer</Badge>;
+
+  return <KnownRuntimeBadge runtimeId={runtimeId} />;
+}
+
+function KnownRuntimeBadge({ runtimeId }: { runtimeId: string }) {
   const { runtime, loaded } = useRuntime(runtimeId);
 
   if (!loaded) return null;

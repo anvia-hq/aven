@@ -2,17 +2,31 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { threads } from "@aven/db/schema/threads";
+import { and, count, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 
-import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
-import { BoatApiError, BoatClient } from "./boat/client";
+import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
+import { CLOUD_RUNTIME_ID } from "./cloud-id";
+import {
+  CLOUD_TEMPLATE_IDS,
+  cloudApiKey,
+  cloudEnabled,
+  cloudTemplateId,
+  cloudTemplateName,
+  disabledTemplateIds,
+  enabledCloudProviders,
+  enabledTemplateIds,
+  templateProvider,
+} from "./cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { BoatMachineType, RuntimeGithubMode } from "@aven/protocol/types";
+import type { RuntimeGithubMode } from "@aven/protocol/types";
 
-export { LOCAL_RUNTIME_ID };
+export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
+
+export const CLOUD_OFF = "Aven Cloud is turned off on this server";
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -46,11 +60,27 @@ const localToken = configuredLocalToken
   ? localRunnerToken(configuredLocalToken, process.env.AVEN_LOCAL_RUNNER)
   : localRunnerToken(undefined, LOCAL_RUNNER_OFF);
 
+const SANDBOX_LIMIT = 20;
+
+const sandboxLimit = () => Number(process.env.AVEN_CLOUD_MAX_SANDBOXES) || SANDBOX_LIMIT;
+
 const visibleTo = (organizationId: string) =>
-  or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
+  or(
+    eq(runtimes.organizationId, organizationId),
+    eq(runtimes.id, LOCAL_RUNTIME_ID),
+    enabledTemplateIds().length > 0 ? inArray(runtimes.id, enabledTemplateIds()) : undefined,
+  );
 
 const usableBy = (userId: string) =>
-  or(eq(runtimes.host, false), eq(runtimes.id, LOCAL_RUNTIME_ID), eq(runtimes.ownerId, userId));
+  and(
+    or(
+      eq(runtimes.host, false),
+      eq(runtimes.id, LOCAL_RUNTIME_ID),
+      inArray(runtimes.id, CLOUD_TEMPLATE_IDS),
+      eq(runtimes.ownerId, userId),
+    ),
+    or(isNull(runtimes.parentRuntimeId), eq(runtimes.ownerId, userId)),
+  );
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -72,7 +102,6 @@ const sameToken = (a: string, b: string) =>
 
 const publicRuntime = ({
   tokenHash: _hash,
-  boatApiKeyEncrypted: _apiKey,
   boatRunnerTokenEncrypted: _runnerToken,
   ...runtime
 }: RuntimeRow) => ({
@@ -80,51 +109,26 @@ const publicRuntime = ({
   githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
 });
 
-function fromBoat(error: unknown): never {
-  if (error instanceof BoatApiError && (error.status === 401 || error.status === 400))
-    throw new UnprocessableError(error.message);
+const named = (row: RuntimeRow) => {
+  const runtime = publicRuntime(row);
+  const provider = templateProvider(row.id);
 
-  if (error instanceof BoatApiError) throw new UnavailableError(error.message);
+  return provider ? { ...runtime, name: cloudTemplateName(provider) } : runtime;
+};
 
-  throw new UnavailableError("Could not reach boat.dev");
-}
-
-async function readBoatSecret(stored: string | null, id: string, label: string) {
+async function readRunnerToken(stored: string | null, id: string) {
   if (!stored) return null;
 
   const { decryptOrUnavailable } = await import("@aven/server-kit/crypto");
   return decryptOrUnavailable(stored, {
-    logged: `Could not decrypt the boat ${label} of runtime ${id}:`,
-    message: "This runtime's saved boat key could not be read; add the runtime again",
+    logged: `Could not decrypt the runner token of Aven Cloud computer ${id}:`,
+    message: "This Aven Cloud computer's saved token could not be read",
   });
 }
 
 async function encryptedRunnerToken(token: string) {
   const { encryptSecret } = await import("@aven/server-kit/crypto");
   return { boatRunnerTokenEncrypted: encryptSecret(token) };
-}
-
-async function boatColumns(
-  body: Extract<CreateRuntimeBody, { provider: "boat" }>,
-  token: string,
-  fetchFn: typeof fetch,
-) {
-  try {
-    await new BoatClient(fetchFn).me(body.apiKey);
-  } catch (error) {
-    fromBoat(error);
-  }
-
-  const { encryptSecret } = await import("@aven/server-kit/crypto");
-  const machineType: BoatMachineType = body.machineType ?? "default";
-  return {
-    provider: "boat" as const,
-    githubMode: "person" as const,
-    boatMachineType: machineType,
-    boatApiKeyEncrypted: encryptSecret(body.apiKey),
-    boatKeyHint: body.apiKey.slice(-4),
-    boatRunnerTokenEncrypted: encryptSecret(token),
-  };
 }
 
 export const runtimesService = {
@@ -142,13 +146,105 @@ export const runtimesService = {
       .onConflictDoNothing();
   },
 
+  async ensureCloud() {
+    for (const provider of enabledCloudProviders()) {
+      await db
+        .insert(runtimes)
+        .values({
+          id: cloudTemplateId(provider),
+          name: cloudTemplateName(provider),
+          provider,
+          lifetime: "ephemeral",
+          githubMode: "person",
+          tokenHash: hashToken(randomBytes(32).toString("hex")),
+          tokenHint: "",
+        })
+        .onConflictDoNothing();
+    }
+  },
+
+  async createCloudSandbox(organizationId: string, ownerId: string, templateId: string) {
+    const provider = templateProvider(templateId);
+
+    if (!provider || !cloudEnabled(provider)) throw new UnavailableError(CLOUD_OFF);
+
+    const [live] = await db
+      .select({ total: count() })
+      .from(runtimes)
+      .where(
+        and(
+          eq(runtimes.organizationId, organizationId),
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+        ),
+      );
+
+    if ((live?.total ?? 0) >= sandboxLimit())
+      throw new ConflictError(
+        `This workspace has ${sandboxLimit()} Aven Cloud computers. Archive a thread, or wait for one to expire`,
+      );
+
+    const { token, columns } = issueToken();
+    const [row] = await db
+      .insert(runtimes)
+      .values({
+        organizationId,
+        ownerId,
+        parentRuntimeId: templateId,
+        name: "Aven Cloud",
+        provider,
+        lifetime: "ephemeral",
+        githubMode: "person",
+        boatMachineType: "default",
+        ...(await encryptedRunnerToken(token)),
+        ...columns,
+      })
+      .returning();
+    return publicRuntime(row!);
+  },
+
+  async idleCloudSandboxes(before: Date, limit = 100) {
+    const lastUsed = sql`greatest(
+      ${runtimes.createdAt},
+      coalesce(${runtimes.lastSeenAt}, ${runtimes.createdAt}),
+      coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
+    )`;
+    return db
+      .select({ id: runtimes.id, sandboxId: runtimes.boatSandboxId })
+      .from(runtimes)
+      .where(
+        and(
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+          sql`${lastUsed} < ${before.toISOString()}::timestamptz`,
+        ),
+      )
+      .limit(limit);
+  },
+
+  async expireCloudSandbox(id: string) {
+    await db
+      .update(runtimes)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
+  },
+
   async list(organizationId: string, userId: string) {
     const rows = await db
       .select()
       .from(runtimes)
-      .where(and(visibleTo(organizationId), usableBy(userId), isNull(runtimes.revokedAt)))
+      .where(
+        and(
+          visibleTo(organizationId),
+          usableBy(userId),
+          isNull(runtimes.revokedAt),
+          disabledTemplateIds().length > 0
+            ? notInArray(runtimes.id, disabledTemplateIds())
+            : undefined,
+        ),
+      )
       .orderBy(desc(runtimes.createdAt));
-    return rows.map(publicRuntime);
+    return rows.map(named);
   },
 
   async get(organizationId: string, id: string, userId?: string) {
@@ -163,24 +259,17 @@ export const runtimesService = {
           isNull(runtimes.revokedAt),
         ),
       );
-    return row ? publicRuntime(row) : null;
+    return row ? named(row) : null;
   },
 
-  async create(
-    organizationId: string,
-    ownerId: string,
-    body: CreateRuntimeBody,
-    fetchFn: typeof fetch = fetch,
-  ) {
+  async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
     const { token, columns } = issueToken();
-    const boat = body.provider === "boat" ? await boatColumns(body, token, fetchFn) : {};
     const [row] = await db
       .insert(runtimes)
       .values({
         organizationId,
         ownerId,
         name: body.name,
-        ...boat,
         ...columns,
       })
       .returning();
@@ -193,10 +282,11 @@ export const runtimesService = {
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat") return null;
+    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled(row.provider))
+      return null;
 
-    const apiKey = await readBoatSecret(row.boatApiKeyEncrypted, row.id, "API key");
-    const runnerToken = await readBoatSecret(row.boatRunnerTokenEncrypted, row.id, "runner token");
+    const apiKey = cloudApiKey();
+    const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
 
     if (!apiKey || !runnerToken) return null;
 
@@ -207,6 +297,14 @@ export const runtimesService = {
       sandboxId: row.boatSandboxId,
       machineType: row.boatMachineType ?? "default",
     };
+  },
+
+  async isExpiredCloud(id: string) {
+    const [row] = await db
+      .select({ revokedAt: runtimes.revokedAt })
+      .from(runtimes)
+      .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
+    return row?.revokedAt != null;
   },
 
   async setBoatSandbox(id: string, sandboxId: string) {
@@ -228,7 +326,14 @@ export const runtimesService = {
     const [row] = await db
       .update(runtimes)
       .set({ name })
-      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)))
+      .where(
+        and(
+          visibleTo(organizationId),
+          eq(runtimes.id, id),
+          notInArray(runtimes.id, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+        ),
+      )
       .returning();
     return row ? publicRuntime(row) : null;
   },
@@ -306,7 +411,14 @@ export const runtimesService = {
     const [current] = await db
       .select({ lifetime: runtimes.lifetime })
       .from(runtimes)
-      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+      .where(
+        and(
+          visibleTo(organizationId),
+          eq(runtimes.id, id),
+          notInArray(runtimes.id, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+        ),
+      );
 
     if (!current) return null;
 

@@ -6,6 +6,8 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
+import { CLAUDE_BACKEND_OFF } from "../claude-setup/flag";
+import { CODEX_BACKEND_OFF } from "../codex-setup/flag";
 import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { ProjectNotFoundError, ThreadNotFoundError, threadsService } from "./service";
@@ -52,6 +54,40 @@ run("threadsService (postgres)", async () => {
       driving: 1,
     });
     await threadsService.drivable(teammate, mine.id);
+  });
+
+  test("a thread cannot be started on the Claude agent while it is turned off", async () => {
+    const kept = process.env.AVEN_CLAUDE_BACKEND;
+    process.env.AVEN_CLAUDE_BACKEND = "off";
+
+    try {
+      await expect(
+        threadsService.create(orgA, userId, { projectId: projectA.id, backend: "claude" }),
+      ).rejects.toThrow(CLAUDE_BACKEND_OFF);
+      expect(
+        (await threadsService.create(orgA, userId, { projectId: projectA.id })).agentBackend,
+      ).toBe("native");
+    } finally {
+      if (kept === undefined) delete process.env.AVEN_CLAUDE_BACKEND;
+      else process.env.AVEN_CLAUDE_BACKEND = kept;
+    }
+  });
+
+  test("a thread cannot be started on the Codex agent while it is turned off", async () => {
+    const kept = process.env.AVEN_CODEX_BACKEND;
+    process.env.AVEN_CODEX_BACKEND = "off";
+
+    try {
+      await expect(
+        threadsService.create(orgA, userId, { projectId: projectA.id, backend: "codex" }),
+      ).rejects.toThrow(CODEX_BACKEND_OFF);
+      expect(
+        (await threadsService.create(orgA, userId, { projectId: projectA.id })).agentBackend,
+      ).toBe("native");
+    } finally {
+      if (kept === undefined) delete process.env.AVEN_CODEX_BACKEND;
+      else process.env.AVEN_CODEX_BACKEND = kept;
+    }
   });
 
   test("keeps the time of every run that carried on an answer, added up", async () => {
