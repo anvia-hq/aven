@@ -337,6 +337,10 @@ public struct Runtime: Identifiable, Equatable, Sendable {
     public var host: Bool
     public var shared: Bool
     public var githubMode: String
+    public var provider: String
+    public var boatMachineType: String?
+    public var boatSandboxId: String?
+    public var boatKeyHint: String?
     public var directories: [String]
     public var tokenHint: String
     public var online: Bool
@@ -352,7 +356,8 @@ public struct Runtime: Identifiable, Equatable, Sendable {
 
 extension Runtime: Decodable {
     private enum CodingKeys: String, CodingKey {
-        case id, name, ownerId, host, shared, githubMode, directories, tokenHint, online, build
+        case id, name, ownerId, host, shared, githubMode, provider, boatMachineType, boatSandboxId
+        case boatKeyHint, directories, tokenHint, online, build
         case outdated, updateTo, isControlPlane, canUpdate, stats, lastSeenAt, createdAt
     }
 
@@ -364,6 +369,10 @@ extension Runtime: Decodable {
         host = container.optional(.host, default: false)
         shared = container.optional(.shared, default: false)
         githubMode = container.optional(.githubMode, default: "machine")
+        provider = container.optional(.provider, default: "manual")
+        boatMachineType = try container.decodeIfPresent(String.self, forKey: .boatMachineType)
+        boatSandboxId = try container.decodeIfPresent(String.self, forKey: .boatSandboxId)
+        boatKeyHint = try container.decodeIfPresent(String.self, forKey: .boatKeyHint)
         directories = container.optional(.directories, default: [])
         tokenHint = container.optional(.tokenHint, default: "")
         online = container.optional(.online, default: false)

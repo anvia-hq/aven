@@ -2,7 +2,7 @@
 
 Native macOS control plane. SwiftUI and AppKit, the same screens and the same HTTP API as the web app in `apps/platform`. It is not a web view, and it does not replace the thread client in `clients/macos`.
 
-Decision 0297. The API and email session are the ones in `docs/products/0004-native-client-contract.md`.
+Decision 0298. The API and email session are the ones in `docs/products/0004-native-client-contract.md`.
 
 ## Requirements
 
@@ -53,7 +53,7 @@ The rail order matches the web app: Threads, Cockpit, Bot, Settings. Machines si
 | Cockpit                              | Inbox, tasks (board and table), notes, tags, pinned notes, tag filter.                                                                                  |
 | Bot                                  | Main bot and the others, chat over the bot event stream, name, description, instruction, model.                                                         |
 | Settings, Personal                   | General, Profile, Providers, Claude Subscription, Bots, Skills, MCP servers, MCP access, Webhooks, Memory, Environment variables.                       |
-| Settings, Workspace                  | Members, GitHub, Runtimes, Variables, Decision model.                                                                                                   |
+| Settings, Workspace                  | Members, GitHub, Runtimes (a computer, or a boat.dev sandbox with its API key and size), Variables, Decision model.                                     |
 | Settings, Platform                   | Platform, People, Announcements. Shown only when `GET /platform/config` says `isOwner`.                                                                 |
 | Command palette                      | Threads, projects and settings (⌘K).                                                                                                                    |
 | Mentions                             | `@` menu, mark all read.                                                                                                                                |

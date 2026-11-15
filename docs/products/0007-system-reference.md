@@ -26,7 +26,7 @@ React + Vite + Tailwind 4 + Base UI (headless) + TanStack Router (file-based) + 
 
 ## apps/macos
 
-Aven Desktop (`apps/macos`, decision 0297) is a native macOS control plane. It is a Swift package: `AvenDesktopCore` is Foundation-only (the API client, models, transcript reducer and the screen catalog) and `AvenDesktop` is the SwiftUI app, compiled only when the package is evaluated on macOS. It talks to the same control plane as the web app, with the email session of `docs/products/0004-native-client-contract.md` and its own Keychain service (`dev.anvia.aven.desktop`). It does not replace the thread client in `clients/macos`. `swift test` in `apps/macos` checks the core. The app needs macOS 14. There is no `package.json`, so the Bun workspaces do not include it.
+Aven Desktop (`apps/macos`, decision 0298) is a native macOS control plane. Settings > Runtimes adds a computer or a boat.dev sandbox, the same way as the web app (decision 0297). It is a Swift package: `AvenDesktopCore` is Foundation-only (the API client, models, transcript reducer and the screen catalog) and `AvenDesktop` is the SwiftUI app, compiled only when the package is evaluated on macOS. It talks to the same control plane as the web app, with the email session of `docs/products/0004-native-client-contract.md` and its own Keychain service (`dev.anvia.aven.desktop`). It does not replace the thread client in `clients/macos`. `swift test` in `apps/macos` checks the core. The app needs macOS 14. There is no `package.json`, so the Bun workspaces do not include it.
 
 ## Self-hosting (deploy/)
 

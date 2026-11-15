@@ -214,8 +214,17 @@ extension APIClient {
         try await get([Runtime].self, "/runtimes")
     }
 
-    public func createRuntime(name: String) async throws -> CreatedRuntime {
-        try await post(CreatedRuntime.self, "/runtimes", body: jsonObject(("name", .string(name))))
+    public func createRuntime(
+        name: String, provider: String? = nil, apiKey: String? = nil, machineType: String? = nil
+    ) async throws -> CreatedRuntime {
+        try await post(
+            CreatedRuntime.self, "/runtimes",
+            body: jsonObject(
+                ("name", .string(name)),
+                ("provider", JSONValue.optionalString(provider)),
+                ("apiKey", JSONValue.optionalString(apiKey)),
+                ("machineType", JSONValue.optionalString(machineType))
+            ))
     }
 
     public func renameRuntime(_ id: String, name: String) async throws {

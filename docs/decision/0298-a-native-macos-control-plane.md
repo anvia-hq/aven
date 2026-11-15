@@ -1,6 +1,8 @@
-# 0297. A native macOS app mirrors the web control plane
+# 0298. A native macOS app mirrors the web control plane
 
 Date: 2026-11-14
+
+Renumbered from 0297 after 0297 landed on main for the boat.dev runtime.
 
 ## Decision
 
@@ -12,6 +14,8 @@ The package is split so the part that can be checked without a Mac is separate f
 - `AvenDesktop` is SwiftUI and AppKit. The package manifest includes that target only on macOS. It needs macOS 14.
 
 No new backend. Email sign-in and invitation accept are native. GitHub sign-in and the GitHub App manifest stay in the browser, because they finish in a redirect this client cannot turn into a bearer token. The interactive terminal and the in-app preview stay out: both are a remote page or a binary socket, and this app is not a web view. The terminal panel wakes the computer; the browser panel opens the preview URL outside the app.
+
+Settings > Runtimes adds either a computer or a boat.dev sandbox, with the same kind, API key and sizes as the web app (decision 0297). A boat runtime is shown as asleep until a thread needs it, and creating one does not show an install token.
 
 Cockpit documents are edited as plain text. The web app stores BlockNote JSON; the desktop shows that JSON as text and writes plain text back, which the web app still displays.
 

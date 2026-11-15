@@ -762,8 +762,19 @@ private struct GithubSettings: View {
 private struct RuntimesSettings: View {
     @Environment(AppModel.self) private var model
     @State private var name = ""
+    @State private var kind = "manual"
+    @State private var apiKey = ""
+    @State private var machineType = "default"
     @State private var token: String?
+    @State private var savedBoat: String?
     @State private var error: String?
+
+    private static let sizes = [
+        ("small", "Small · 2 vCPU, 4 GB"),
+        ("default", "Default · 4 vCPU, 8 GB"),
+        ("large", "Large · 8 vCPU, 16 GB"),
+        ("xlarge", "X-Large · 16 vCPU, 32 GB"),
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -772,13 +783,20 @@ private struct RuntimesSettings: View {
                     HStack {
                         Circle().fill(runtime.online ? Color.green : Color.secondary).frame(width: 8, height: 8)
                         Text(runtime.name).font(.headline)
+                        if runtime.provider == "boat" { Text("boat.dev").font(.caption) }
                         if runtime.isControlPlane { Text("Built in").font(.caption).foregroundStyle(.secondary) }
                         Spacer()
                         if runtime.shared { Text("Shared").font(.caption) }
                     }
+                    if runtime.provider == "boat" {
+                        Text(boatLine(runtime)).font(.caption).foregroundStyle(.secondary)
+                    }
                     Text(runtime.directories.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                     if let stats = runtime.stats {
                         Text(load(stats)).font(.caption2).foregroundStyle(.secondary)
+                    } else if !runtime.online {
+                        Text(runtime.provider == "boat" ? "Asleep until a thread needs it." : "Offline: no load to show.")
+                            .font(.caption2).foregroundStyle(.secondary)
                     }
                     HStack {
                         if runtime.canUpdate, runtime.updateTo != nil {
@@ -788,10 +806,10 @@ private struct RuntimesSettings: View {
                             get: { runtime.githubMode },
                             set: { mode in Task { await setMode(runtime, mode) } }
                         )) {
-                            Text("Machine").tag("machine")
-                            Text("Person").tag("person")
+                            Text("GitHub: this machine").tag("machine")
+                            Text("GitHub: each person").tag("person")
                         }
-                        .frame(width: 160)
+                        .frame(width: 220)
                         if !runtime.isControlPlane {
                             Button("Revoke", role: .destructive) { Task { await revoke(runtime) } }
                         }
@@ -800,14 +818,57 @@ private struct RuntimesSettings: View {
                 .padding(8)
                 .background(.quaternary.opacity(0.35), in: RoundedRectangle(cornerRadius: 8))
             }
-            TextField("New runtime name", text: $name).textFieldStyle(.roundedBorder)
-            Button("Create runtime") { Task { await create() } }.disabled(name.isEmpty)
+            Text("Add runtime").font(.headline)
+            Text("A runtime is a machine that runs agents for this workspace.")
+                .font(.caption).foregroundStyle(.secondary)
+            Picker("Kind", selection: $kind) {
+                Text("A computer I install").tag("manual")
+                Text("boat.dev sandbox").tag("boat")
+            }
+            TextField("Name", text: $name, prompt: Text(kind == "boat" ? "cloud" : "my-laptop"))
+                .textFieldStyle(.roundedBorder)
+            if kind == "boat" {
+                SecureField("boat.dev API key", text: $apiKey, prompt: Text("boat_…"))
+                Picker("Size", selection: $machineType) {
+                    ForEach(Self.sizes, id: \.0) { size in
+                        Text(size.1).tag(size.0)
+                    }
+                }
+                Text("A trial account can start Small and Default, and stops the sandbox after two hours. Larger sizes need a paid plan. The key needs permission to create and drive sandboxes.")
+                    .font(.caption).foregroundStyle(.secondary)
+                if serverIsLocal {
+                    Text("This server is on a private address. A sandbox cannot reach it. Set AVEN_BOAT_RUNNER_URL on the server to a public https address ending in /api before a thread uses this runtime.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            Button("Add runtime") { Task { await create() } }
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || (kind == "boat" && !boatKeyReady))
+            if let savedBoat {
+                Text("\(savedBoat) is saved. The API key stays encrypted on this server. The sandbox starts the first time a thread needs it, and it has to reach this server. A paid sandbox keeps running, and billing, until you revoke the runtime. A free trial stops after two hours and the next thread starts it again.")
+                    .font(.caption)
+            }
             if let token {
                 Text("Copy this token now. It is shown once.").font(.caption)
                 Text(token).font(.system(.caption, design: .monospaced)).textSelection(.enabled)
             }
             StatusBanner(message: error)
         }
+    }
+
+    private var boatKeyReady: Bool {
+        let key = apiKey.trimmingCharacters(in: .whitespaces)
+        return key.count >= 8 && (key.hasPrefix("boat_") || key.hasPrefix("box_"))
+    }
+
+    private var serverIsLocal: Bool {
+        let host = model.serverText.lowercased()
+        return host.contains("localhost") || host.contains("127.0.0.1") || host.contains("[::1]") || host.contains(".local")
+    }
+
+    private func boatLine(_ runtime: Runtime) -> String {
+        let size = Self.sizes.first { $0.0 == runtime.boatMachineType }?.1 ?? runtime.boatMachineType
+        let hint = runtime.boatKeyHint.map { "key ····\($0)" }
+        return [size, hint].compactMap { $0 }.joined(separator: " · ")
     }
 
     private func load(_ stats: RuntimeStats) -> String {
@@ -818,10 +879,18 @@ private struct RuntimesSettings: View {
     }
 
     private func create() async {
+        let boat = kind == "boat"
         do {
-            let created = try await model.client?.createRuntime(name: name)
-            token = created?.token
+            let created = try await model.client?.createRuntime(
+                name: name.trimmingCharacters(in: .whitespaces),
+                provider: boat ? "boat" : nil,
+                apiKey: boat ? apiKey.trimmingCharacters(in: .whitespaces) : nil,
+                machineType: boat ? machineType : nil
+            )
+            token = boat ? nil : created?.token
+            savedBoat = boat ? (created?.runtime.name ?? name) : nil
             name = ""
+            apiKey = ""
             await model.refresh()
         } catch { self.error = errorText(error) }
     }

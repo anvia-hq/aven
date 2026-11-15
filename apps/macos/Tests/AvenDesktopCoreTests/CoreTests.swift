@@ -191,6 +191,15 @@ import Testing
         let machine = try JSONDecoder().decode(Runtime.self, from: Data(runtime.utf8))
         #expect(machine.online == false)
         #expect(machine.name == "Laptop")
+        #expect(machine.provider == "manual")
+        let boat = """
+            {"id":"r2","name":"cloud","provider":"boat","boatMachineType":"small","boatKeyHint":"zzzz","boatSandboxId":null}
+            """
+        let sandbox = try JSONDecoder().decode(Runtime.self, from: Data(boat.utf8))
+        #expect(sandbox.provider == "boat")
+        #expect(sandbox.boatMachineType == "small")
+        #expect(sandbox.boatKeyHint == "zzzz")
+        #expect(sandbox.boatSandboxId == nil)
     }
 
     @Test func aSessionKeepsTheActiveOrganization() throws {
