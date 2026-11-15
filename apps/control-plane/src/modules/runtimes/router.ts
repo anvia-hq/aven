@@ -22,7 +22,7 @@ import { runnerFolders } from "./folders";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { stopBoatRuntime } from "./providers";
-import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
+import { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { LatestRelease } from "./types";
 
 export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) => {
@@ -44,6 +44,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
               build,
               outdated: isBehind(build ?? undefined, server),
               isControlPlane: runtime.id === LOCAL_RUNTIME_ID,
+              isCloud: runtime.id === CLOUD_RUNTIME_ID,
               updateTo: await updateTarget(
                 { build: build ?? undefined, isControlPlane: runtime.id === LOCAL_RUNTIME_ID },
                 server,

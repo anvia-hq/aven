@@ -57,6 +57,12 @@ run("Aven Cloud runtime (postgres)", async () => {
     }
   });
 
+  test("the Aven Cloud template cannot be renamed or told which GitHub to use", async () => {
+    expect(await runtimesService.rename(orgA, CLOUD_RUNTIME_ID, "Mine")).toBeNull();
+    expect(await runtimesService.setGithubMode(orgA, CLOUD_RUNTIME_ID, "machine")).toBeNull();
+    expect((await runtimesService.get(orgA, CLOUD_RUNTIME_ID))?.name).toBe("Aven Cloud");
+  });
+
   test("a thread on Aven Cloud gets a computer of its own that the runtime list does not show", async () => {
     const { project } = await seedProject(orgA, userId, null, "cloud-repo");
     const first = await threadsService.create(orgA, userId, {

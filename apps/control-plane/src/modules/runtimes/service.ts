@@ -337,7 +337,14 @@ export const runtimesService = {
     const [row] = await db
       .update(runtimes)
       .set({ name })
-      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)))
+      .where(
+        and(
+          visibleTo(organizationId),
+          eq(runtimes.id, id),
+          ne(runtimes.id, CLOUD_RUNTIME_ID),
+          isNull(runtimes.revokedAt),
+        ),
+      )
       .returning();
     return row ? publicRuntime(row) : null;
   },
@@ -415,7 +422,14 @@ export const runtimesService = {
     const [current] = await db
       .select({ lifetime: runtimes.lifetime })
       .from(runtimes)
-      .where(and(visibleTo(organizationId), eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+      .where(
+        and(
+          visibleTo(organizationId),
+          eq(runtimes.id, id),
+          ne(runtimes.id, CLOUD_RUNTIME_ID),
+          isNull(runtimes.revokedAt),
+        ),
+      );
 
     if (!current) return null;
 
