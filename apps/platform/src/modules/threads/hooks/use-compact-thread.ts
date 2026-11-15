@@ -4,11 +4,12 @@ import { toast } from "@aven/ui/toast";
 import { attempt, postJson } from "@/lib/api";
 
 import type { RunSelection } from "../types";
+import type { AgentBackendKind } from "@aven/protocol/types";
 import { useModelSelection } from "./use-model-selection";
 
-export function useCompactThread(threadId: string) {
+export function useCompactThread(threadId: string, backend?: AgentBackendKind) {
   const [compacting, setCompacting] = useState(false);
-  const { selection: remembered } = useModelSelection(threadId);
+  const { selection: remembered } = useModelSelection(threadId, backend);
 
   const compact = useCallback(
     async (selection: RunSelection = remembered) => {

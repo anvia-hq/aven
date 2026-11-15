@@ -8,12 +8,13 @@ import { UnprocessableError } from "@aven/server-kit/errors";
 import { encryptSecret } from "@aven/server-kit/crypto";
 import { readKey } from "./crypto";
 import { hostedKindOf, HOSTED_BACKENDS } from "./backends";
-import { isGoogleCredential, parseServiceAccount } from "./google-auth";
+import { parseServiceAccount } from "./google-auth";
 import { effortsByModel, labelsByModel, listAgentModels, ModelListError } from "./model-list";
 import { subscriptionCatalog } from "./subscription-models";
 import {
   azureEndpoint,
   bedrockEndpoint,
+  credentialFor,
   vertexEndpoint,
   type CreateProviderBody,
   type KeylessProviderBody,
@@ -77,6 +78,16 @@ function vertexEndpointOf(value: string) {
   if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
 
   return parsed.data;
+}
+
+function checkCredential(kind: Provider, apiKey: string) {
+  if (kind !== "vertex" && apiKey.length > 4096)
+    throw new InvalidProviderError("An API key is at most 4096 characters");
+
+  const parsed = credentialFor(kind).safeParse(apiKey);
+
+  if (!parsed.success)
+    throw new InvalidProviderError(parsed.error.issues[0]?.message ?? "That is not a usable key");
 }
 
 function changedBaseUrl(kind: Provider, baseUrl: string | undefined) {
@@ -193,17 +204,7 @@ export const providersService = {
 
       const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
 
-      if (body.apiKey !== undefined && current.kind !== "vertex" && body.apiKey.length > 500) {
-        throw new InvalidProviderError("An API key is at most 500 characters");
-      }
-
-      if (
-        body.apiKey !== undefined &&
-        current.kind === "vertex" &&
-        !isGoogleCredential(body.apiKey)
-      ) {
-        throw new InvalidProviderError("Give a service account's JSON key, or an access token");
-      }
+      if (body.apiKey !== undefined) checkCredential(current.kind, body.apiKey);
 
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
 

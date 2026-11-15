@@ -14,6 +14,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
     thread.id,
     thread.projectId,
     thread.running,
+    thread.agentBackend,
   );
   const [open, setOpen] = useState(false);
 

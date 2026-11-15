@@ -59,7 +59,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   useFirstPrompt(threadId, send);
   const followUps = useFollowUps(threadId, loaded && synced, running, messages, viewer);
   const { selection } = useModelSelection(threadId, thread?.agentBackend);
-  const { compacting, compact } = useCompactThread(threadId);
+  const { compacting, compact } = useCompactThread(threadId, thread?.agentBackend);
   const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
   const canCompact = owned && !running && !question && supportsCompaction;
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -178,6 +178,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           key={question.id}
                           tool={question}
                           threadId={thread.id}
+                          backend={thread.agentBackend}
                           onSubmit={answer}
                         />
                       ) : (

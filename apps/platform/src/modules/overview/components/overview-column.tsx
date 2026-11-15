@@ -26,7 +26,13 @@ export function OverviewColumn({
       className="sticky top-0 hidden w-72 shrink-0 flex-col gap-3 self-start p-3 @4xl:flex"
     >
       <EnvironmentCard thread={thread} owned={owned} />
-      {owned && <BackgroundTasksCard threadId={thread.id} running={thread.running} />}
+      {owned && (
+        <BackgroundTasksCard
+          threadId={thread.id}
+          backend={thread.agentBackend}
+          running={thread.running}
+        />
+      )}
       <ContextCard
         context={usage?.context}
         loading={!synced}

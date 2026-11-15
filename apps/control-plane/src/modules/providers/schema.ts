@@ -1,5 +1,6 @@
 import { BEDROCK_ENDPOINT, vertexPartsOf } from "@aven/protocol/providers";
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
+import type { Provider } from "@aven/protocol/types";
 import { providerBaseUrl, providerModelId, providerName } from "@aven/protocol/provider-schema";
 import { z } from "zod";
 
@@ -168,6 +169,16 @@ export const listModelsBody = z
       });
     }
   });
+
+export function credentialFor(kind: Provider) {
+  if (kind === "claude-subscription") return claudeSetupToken;
+
+  if (kind === "codex-subscription") return codexApiKey;
+
+  if (kind === "vertex") return vertexCredential;
+
+  return apiKey;
+}
 
 export type CreateProviderBody = z.infer<typeof createProviderBody>;
 export type KeylessProviderBody = z.infer<typeof keylessProviderBody> & { apiKey?: undefined };

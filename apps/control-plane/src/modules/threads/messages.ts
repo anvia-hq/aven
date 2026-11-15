@@ -7,14 +7,13 @@ import { codexEffortOf } from "@aven/protocol/codex-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
-import { providerBackend } from "@aven/protocol/providers";
-import { providersService } from "../providers/service";
+import { selectionForThread } from "../providers/selection";
 import { requireSubscriptionToken } from "../providers/token";
 import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { runtimesService } from "../runtimes/service";
-import { assertSeesImages, InvalidSelectionError, resolveModel } from "../providers/resolve-model";
+import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { webSearchForRun } from "../runs/web-search";
 import { mcpService } from "../mcp/service";
@@ -190,11 +189,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     const attachments = prepareAttachments(files);
     const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-    const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
+    const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+    const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
 
     if (!hosted && model && attachments.some((file) => file.image)) await assertSeesImages(model);
 
-    const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+    const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
     clock.mark("model");
     const sender = await senderExtras(
       ownerId,
@@ -312,8 +312,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const model = hosted ? undefined : await resolveModel(userId, selection);
-      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+      const chosen = await selectionForThread(userId, thread.agentBackend, selection);
+      const model = hosted ? undefined : await resolveModel(userId, chosen);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       await runs.start(thread, COMPACT_PROMPT, model, {
         compact: true,
         ...credential,
@@ -338,8 +339,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
-      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+      const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+      const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       const sender = await senderExtras(
         ownerId,
         project.githubInstallationId,
@@ -366,29 +368,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
   };
 };
 
-async function assertSubscriptionChoice(
-  ownerId: string,
-  backend: "claude" | "codex",
-  providerId: string | undefined,
-) {
-  if (!providerId) return;
-
-  const row = await providersService.forRun(ownerId, providerId);
-
-  if (!row || providerBackend(row.kind) !== backend)
-    throw new InvalidSelectionError(
-      "This thread runs on another agent: choose a model of its own provider",
-    );
-}
-
 async function hostedRun(
   backend: string | null | undefined,
   ownerId: string,
   selection: { providerId?: string; modelId?: string; reasoningEffort?: string },
 ) {
   if (backend !== "claude" && backend !== "codex") return {};
-
-  await assertSubscriptionChoice(ownerId, backend, selection.providerId);
 
   const token = await requireSubscriptionToken(ownerId, backend);
 

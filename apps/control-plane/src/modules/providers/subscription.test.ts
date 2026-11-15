@@ -42,6 +42,8 @@ run("a subscription as a provider (postgres)", async () => {
     restore("AVEN_CODEX_BACKEND", kept.codex);
   });
 
+  let aliceToken = CLAUDE_TOKEN;
+
   const addClaude = (userId: string, apiKey = CLAUDE_TOKEN, isDefault = false) =>
     providersService.create(userId, {
       kind: "claude-subscription",
@@ -103,6 +105,23 @@ run("a subscription as a provider (postgres)", async () => {
     expect(catalog.efforts.default?.options).toContain("medium");
   });
 
+  test("a replacement key must be the kind the row is", async () => {
+    const [row] = await providersService.list(alice);
+
+    await expect(
+      providersService.update(alice, row!.id, { apiKey: `sk-${"e".repeat(40)}` }),
+    ).rejects.toThrow("sk-ant-oat01-");
+    await expect(
+      providersService.update(alice, row!.id, { apiKey: "not-a-claude-token-at-all" }),
+    ).rejects.toThrow("sk-ant-oat01-");
+
+    aliceToken = `sk-ant-oat01-${"f".repeat(24)}`;
+    expect((await providersService.update(alice, row!.id, { apiKey: aliceToken }))?.keyHint).toBe(
+      aliceToken.slice(-4),
+    );
+    expect(await providersService.tokenFor(alice, "claude")).toBe(aliceToken);
+  });
+
   test("a native thread asks for a native provider, even when the default is a subscription", async () => {
     const [defaultRow] = await providersService.list(alice);
 
@@ -135,7 +154,7 @@ run("a subscription as a provider (postgres)", async () => {
     await expect(requireSubscriptionToken(bob, "claude")).rejects.toBeInstanceOf(
       SubscriptionTokenMissingError,
     );
-    expect(await requireSubscriptionToken(alice, "claude")).toBe(CLAUDE_TOKEN);
+    expect(await requireSubscriptionToken(alice, "claude")).toBe(aliceToken);
     expect(await requireSubscriptionToken(alice, "native")).toBeUndefined();
   });
 });

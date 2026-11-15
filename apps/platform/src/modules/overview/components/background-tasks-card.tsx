@@ -7,7 +7,7 @@ import { useFixProcess } from "../hooks/use-fix-process";
 import { useThreadProcesses } from "../hooks/use-thread-processes";
 import { BackgroundProcess } from "./background-process";
 import { OverviewCard } from "./overview-card";
-import type { ProcessView } from "@aven/protocol/types";
+import type { AgentBackendKind, ProcessView } from "@aven/protocol/types";
 
 const ENDED_SHOWN = 5;
 
@@ -18,9 +18,17 @@ function shown(processes: ProcessView[]) {
   return [...running, ...ended];
 }
 
-export function BackgroundTasksCard({ threadId, running }: { threadId: string; running: boolean }) {
+export function BackgroundTasksCard({
+  threadId,
+  backend,
+  running,
+}: {
+  threadId: string;
+  backend?: AgentBackendKind;
+  running: boolean;
+}) {
   const { processes, stopping, stop } = useThreadProcesses(threadId, running);
-  const { fixing, fix } = useFixProcess(threadId);
+  const { fixing, fix } = useFixProcess(threadId, backend);
   const rows = shown(processes);
   const live = rows.filter((process) => process.status === "running");
   const ended = rows.filter((process) => process.status !== "running");
