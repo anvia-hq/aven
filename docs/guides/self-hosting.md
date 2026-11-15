@@ -67,6 +67,12 @@ Threads can run on Anthropic's Claude Agent SDK with a person's own Claude subsc
 default. Set `AVEN_CLAUDE_BACKEND=off` to hide it from the composer and Settings and to refuse new
 Claude threads; threads that already use it stay readable but cannot run.
 
+## Turning the Codex agent off
+
+Threads can run on OpenAI's Codex SDK with a person's own API key. It is on by default. Set
+`AVEN_CODEX_BACKEND=off` to hide it from the composer and Settings and to refuse new Codex threads;
+threads that already use it stay readable but cannot run.
+
 ## Aven Cloud
 
 Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer, and

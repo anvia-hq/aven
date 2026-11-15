@@ -3,6 +3,7 @@ export type PlatformConfig = {
   githubLogin: boolean;
   emailLogin: boolean;
   claudeBackend: boolean;
+  codexBackend: boolean;
   isOwner: boolean;
 };
 

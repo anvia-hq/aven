@@ -46,10 +46,11 @@ function NewThread() {
   const codexCredential = useCodexSetup();
   const { config } = usePlatformConfig();
   const claudeOffered = config?.claudeBackend === true;
+  const codexOffered = config?.codexBackend === true;
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
   let backend: "native" | "claude" | "codex" = "native";
 
-  if (codex) backend = "codex";
+  if (codexOffered && codex) backend = "codex";
   else if (claudeOffered && claude) backend = "claude";
 
   const project = projects.find((candidate) => candidate.id === projectId);
@@ -89,7 +90,7 @@ function NewThread() {
                 autoFocus
                 onSubmit={start}
                 claude={claudeOffered ? { choice: claude, onChange: setClaude } : undefined}
-                codex={{ choice: codex, onChange: setCodex }}
+                codex={codexOffered ? { choice: codex, onChange: setCodex } : undefined}
                 tools={
                   <>
                     <ProjectPicker value={projectId} onChange={setProjectId} />
@@ -111,14 +112,17 @@ function NewThread() {
                   before this thread can run.
                 </p>
               )}
-              {codex && codexCredential.loaded && !codexCredential.setup.configured && (
-                <p className="px-1 text-center text-xs text-muted-foreground">
-                  <Link to="/settings/codex" className="underline">
-                    Set a Codex API key
-                  </Link>{" "}
-                  before this thread can run.
-                </p>
-              )}
+              {codexOffered &&
+                codex &&
+                codexCredential.loaded &&
+                !codexCredential.setup.configured && (
+                  <p className="px-1 text-center text-xs text-muted-foreground">
+                    <Link to="/settings/codex" className="underline">
+                      Set a Codex API key
+                    </Link>{" "}
+                    before this thread can run.
+                  </p>
+                )}
             </>
           ))}
 

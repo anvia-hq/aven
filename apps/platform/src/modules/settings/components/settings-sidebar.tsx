@@ -73,7 +73,9 @@ export function SettingsSidebar() {
   const visibleGroups = withPlatform.map((group) => ({
     ...group,
     items: group.items.filter(
-      (item) => item.to !== "/settings/claude" || config?.claudeBackend === true,
+      (item) =>
+        (item.to !== "/settings/claude" || config?.claudeBackend === true) &&
+        (item.to !== "/settings/codex" || config?.codexBackend === true),
     ),
   }));
   const pathname = useRouterState({ select: (state) => state.location.pathname });
