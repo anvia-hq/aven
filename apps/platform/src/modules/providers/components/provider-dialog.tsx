@@ -27,6 +27,8 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   vertex: "Service account JSON key, or an access token",
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
+  "claude-subscription": "sk-ant-oat01-…",
+  "codex-subscription": "sk-…",
 };
 
 const modelWaiting: Record<ProviderKind, string> = {
@@ -37,7 +39,24 @@ const modelWaiting: Record<ProviderKind, string> = {
   vertex: "Enter the project, location and credential to load models",
   azure: "Enter the resource URL and key to load deployments",
   "openai-compatible": "Enter the base URL to load models",
+  "claude-subscription": "The models your subscription runs",
+  "codex-subscription": "The models your key runs",
 };
+
+const SUBSCRIPTION_HELP: Partial<Record<ProviderKind, string>> = {
+  "claude-subscription":
+    "Run `claude setup-token` on your own computer and sign in: it prints a token that starts with sk-ant-oat01-. You need Claude Code and a Claude Pro or Max subscription. Every thread you start on it uses this token.",
+  "codex-subscription":
+    "Create a key at platform.openai.com/api-keys. The runner also needs the Codex CLI, from the SDK's install or from CODEX_PATH. Every thread you start on it uses this key.",
+};
+
+function SubscriptionHelp({ kind }: { kind: ProviderKind }) {
+  const text = SUBSCRIPTION_HELP[kind];
+
+  if (!text) return null;
+
+  return <p className="text-xs leading-relaxed text-muted-foreground">{text}</p>;
+}
 
 type Props = {
   kind: ProviderKind;
@@ -49,9 +68,12 @@ type Props = {
 export function ProviderDialog({ kind, provider, preset, label }: Props) {
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false), preset);
-  const { compatible, azure, bedrock, vertex } = form;
+  const { compatible, azure, bedrock, vertex, subscription } = form;
   const keyOptional = compatible && preset?.needsKey !== true;
-  const keyLabel = (vertex && "Credential") || (keyOptional ? "API key (optional)" : "API key");
+  const keyLabel =
+    (vertex && "Credential") ||
+    (subscription && (kind === "claude-subscription" ? "Setup token" : "API key")) ||
+    (keyOptional ? "API key (optional)" : "API key");
   const vertexParts = vertexPartsOf(provider?.baseUrl);
   const modelRequired = compatible || bedrock || azure || vertex;
   const editing = provider !== undefined;
@@ -134,6 +156,7 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
               />
             </>
           )}
+          {subscription && <SubscriptionHelp kind={kind} />}
           <TextField
             label={keyLabel}
             name="apiKey"
@@ -154,7 +177,10 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
             waiting={modelWaiting[kind]}
           />
           <DialogFooter>
-            <Button type="submit" disabled={form.submitting || (modelRequired && !form.modelId)}>
+            <Button
+              type="submit"
+              disabled={form.submitting || ((modelRequired || subscription) && !form.modelId)}
+            >
               {editing ? "Save changes" : "Add provider"}
             </Button>
           </DialogFooter>

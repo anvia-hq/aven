@@ -1,7 +1,6 @@
 import {
   BookOpen,
   ChatDots,
-  Code,
   Cog,
   Github,
   Key,
@@ -35,8 +34,6 @@ const groups = [
       { to: "/settings/general", label: "General", icon: Cog },
       { to: "/settings/profile", label: "Profile", icon: UserCircle },
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
-      { to: "/settings/claude", label: "Claude Subscription", icon: Code },
-      { to: "/settings/codex", label: "Codex", icon: Terminal },
       { to: "/settings/bots", label: "Bots", icon: ChatDots },
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
       { to: "/settings/mcp", label: "MCP servers", icon: Puzzle },
@@ -69,15 +66,7 @@ const platformGroup = {
 
 export function SettingsSidebar() {
   const { config } = usePlatformConfig();
-  const withPlatform = config?.isOwner ? [...groups, platformGroup] : groups;
-  const visibleGroups = withPlatform.map((group) => ({
-    ...group,
-    items: group.items.filter(
-      (item) =>
-        (item.to !== "/settings/claude" || config?.claudeBackend === true) &&
-        (item.to !== "/settings/codex" || config?.codexBackend === true),
-    ),
-  }));
+  const visibleGroups = config?.isOwner ? [...groups, platformGroup] : groups;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (

@@ -7,20 +7,8 @@ import {
   CommandList,
 } from "@aven/ui/command";
 
-import type { ReactNode } from "react";
-
-import type { ModelChoice, Provider } from "../types";
+import { isSubscription, type ModelChoice, type Provider } from "../types";
 import { ProviderLogo } from "./provider-logo";
-import { SubsSpark } from "./subs-mark";
-
-export type ModelExtraGroup = {
-  heading: ReactNode;
-  items: readonly { id: string; label: string }[];
-  selected: string | null;
-  onSelect: (id: string) => void;
-  badge: string;
-  mark: "subscription" | "openai";
-};
 
 type Props = {
   providers: Provider[];
@@ -28,17 +16,9 @@ type Props = {
   loading: boolean;
   selected?: { providerId: string; modelId: string | null };
   onSelect: (choice: ModelChoice) => void;
-  extras?: readonly ModelExtraGroup[];
 };
 
-export function ModelChoiceList({
-  providers,
-  choices,
-  loading,
-  selected,
-  onSelect,
-  extras = [],
-}: Props) {
+export function ModelChoiceList({ providers, choices, loading, selected, onSelect }: Props) {
   return (
     <Command>
       <CommandInput placeholder={loading ? "Loading models…" : "Search models…"} />
@@ -51,6 +31,9 @@ export function ModelChoiceList({
               <span className="flex items-center gap-1.5">
                 <ProviderLogo kind={item.kind} baseUrl={item.baseUrl} />
                 {item.name}
+                {isSubscription(item) && (
+                  <span className="text-xs text-muted-foreground">Subscription</span>
+                )}
               </span>
             }
           >
@@ -70,22 +53,6 @@ export function ModelChoiceList({
                   ]
                 : [],
             )}
-          </CommandGroup>
-        ))}
-        {extras.map((extra) => (
-          <CommandGroup key={extra.badge} heading={extra.heading}>
-            {extra.items.map((item) => (
-              <CommandItem
-                key={`${extra.badge}-${item.id}`}
-                value={`${item.label} ${item.id} ${extra.heading}`}
-                data-checked={item.id === extra.selected}
-                onSelect={() => extra.onSelect(item.id)}
-              >
-                {extra.mark === "openai" ? <ProviderLogo kind="openai" /> : <SubsSpark />}
-                <span className="truncate">{item.label}</span>
-                <span className="ml-auto text-xs text-muted-foreground">{extra.badge}</span>
-              </CommandItem>
-            ))}
           </CommandGroup>
         ))}
       </CommandList>

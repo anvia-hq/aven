@@ -3,10 +3,11 @@ import type { ReactNode } from "react";
 
 import { Badge } from "@aven/ui/badge";
 
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
 import { useProviders } from "../hooks/use-providers";
 import { useProvidersModels } from "../hooks/use-provider-models";
-import { PROVIDER_DESCRIPTIONS, PROVIDER_LABELS } from "../types";
+import { isSubscription, PROVIDER_DESCRIPTIONS, PROVIDER_LABELS } from "../types";
 import type { CompatiblePreset, Provider, ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
@@ -56,14 +57,26 @@ function Tile({
   );
 }
 
+const OFFERED_BACKEND: Partial<Record<ProviderKind, "claudeBackend" | "codexBackend">> = {
+  "claude-subscription": "claudeBackend",
+  "codex-subscription": "codexBackend",
+};
+
 export function ProvidersList() {
   const { providers, loaded } = useProviders();
   const { byProvider } = useProvidersModels(providers.map((item) => item.id));
+  const { config } = usePlatformConfig();
 
   if (!loaded) return null;
 
+  const offered = (kind: ProviderKind) => {
+    const flag = OFFERED_BACKEND[kind];
+
+    return !flag || config?.[flag] !== false;
+  };
   const available = PROVIDERS.filter(
-    (kind) => MANY.has(kind) || !providers.some((provider) => provider.kind === kind),
+    (kind) =>
+      offered(kind) && (MANY.has(kind) || !providers.some((provider) => provider.kind === kind)),
   );
 
   const taken = connectedPresets(providers);
@@ -102,6 +115,7 @@ export function ProvidersList() {
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium">{provider.name}</span>
+                  {isSubscription(provider) && <Badge variant="outline">Subscription</Badge>}
                   {provider.isDefault && <Badge variant="secondary">Default</Badge>}
                 </div>
                 <p className="truncate font-mono text-xs text-muted-foreground">

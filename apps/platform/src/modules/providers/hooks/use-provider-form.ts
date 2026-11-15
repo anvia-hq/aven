@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { errorMessage } from "@/lib/api";
 
 import {
+  isSubscription,
   PROVIDER_LABELS,
   type CompatiblePreset,
   type ModelsState,
@@ -32,6 +33,7 @@ export function useProviderForm(
   const azure = kind === "azure";
   const bedrock = kind === "bedrock";
   const vertex = kind === "vertex";
+  const subscription = isSubscription({ kind });
 
   const readTrimmedField = (name: string) =>
     String(new FormData(formRef.current ?? undefined).get(name) ?? "").trim() || undefined;
@@ -66,7 +68,9 @@ export function useProviderForm(
     const saved = provider !== undefined && !apiKey;
     const keyless = compatible && preset?.needsKey !== true;
     const ready =
-      saved || ((apiKey || keyless) && (baseUrl || !(compatible || azure || bedrock || vertex)));
+      subscription ||
+      saved ||
+      ((apiKey || keyless) && (baseUrl || !(compatible || azure || bedrock || vertex)));
 
     if (!ready) {
       latest.current += 1;
@@ -77,9 +81,10 @@ export function useProviderForm(
     const request = ++latest.current;
     setModelsState((current) => ({ ...current, status: "loading", error: undefined }));
     try {
-      const listed = await (saved
-        ? listSavedModels(provider)
-        : listModels({ kind, apiKey, baseUrl }));
+      const listed =
+        saved && provider
+          ? await listSavedModels(provider)
+          : await listModels({ kind, apiKey, baseUrl });
 
       if (request !== latest.current) return;
 
@@ -145,6 +150,7 @@ export function useProviderForm(
     azure,
     bedrock,
     vertex,
+    subscription,
     modelsState,
     modelId,
     submitting,
