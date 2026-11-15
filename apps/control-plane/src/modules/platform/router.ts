@@ -1,8 +1,7 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
-import { claudeBackendEnabled } from "../claude-setup/flag";
-import { codexBackendEnabled } from "../codex-setup/flag";
+import { claudeBackendEnabled, codexBackendEnabled } from "../providers/backends";
 import { authService, emailLoginEnabled, githubLoginEnabled } from "../auth/service";
 import type { PutAwayThread } from "../threads/types";
 import { requirePlatformOwner } from "./owner";

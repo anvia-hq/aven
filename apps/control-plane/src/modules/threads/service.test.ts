@@ -6,8 +6,7 @@ import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { eq } from "drizzle-orm";
 
-import { CLAUDE_BACKEND_OFF } from "../claude-setup/flag";
-import { CODEX_BACKEND_OFF } from "../codex-setup/flag";
+import { CLAUDE_BACKEND_OFF, CODEX_BACKEND_OFF } from "../providers/backends";
 import { decisionModelService } from "../decision-model/service";
 import { runtimesService } from "../runtimes/service";
 import { ProjectNotFoundError, ThreadNotFoundError, threadsService } from "./service";

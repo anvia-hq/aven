@@ -2,9 +2,10 @@ import { Elysia } from "elysia";
 
 import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
+import { isModelApi } from "@aven/protocol/providers";
 import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
 import { labelsByModel, listAgentModels } from "./model-list";
-import { providersService } from "./service";
+import { listedModels, providersService } from "./service";
 
 export const providersRouter = new Elysia({ prefix: "/providers" })
   .use(authRouter)
@@ -16,8 +17,16 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
   .post(
     "/models",
     async ({ body }) => {
-      const models = await listAgentModels(body);
-      return { models, labels: await labelsByModel(body, models) };
+      const { kind, apiKey, baseUrl } = body;
+      const catalog = listedModels(kind);
+
+      if (catalog) return catalog;
+
+      if (!isModelApi(kind)) return { models: [], labels: {} };
+
+      const source = { kind, apiKey, baseUrl };
+      const models = await listAgentModels(source);
+      return { models, labels: await labelsByModel(source, models) };
     },
     { auth: true, body: listModelsBody },
   )

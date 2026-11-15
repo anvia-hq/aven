@@ -1,6 +1,11 @@
 import type { ModelConfig } from "@aven/agents/types";
 import type { ProviderRow } from "@aven/db/schema/types";
-import type { BotProviderView, Provider, ProviderKeyAsk } from "@aven/protocol/types";
+import type {
+  AgentBackendKind,
+  BotProviderView,
+  Provider,
+  ProviderKeyAsk,
+} from "@aven/protocol/types";
 
 export type BotProviders = {
   list(userId: string): Promise<BotProviderView[]>;
@@ -32,4 +37,15 @@ export type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: strin
 
 export type ModelSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
 
-export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & { hasKey: boolean };
+export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & {
+  hasKey: boolean;
+  backend: AgentBackendKind;
+};
+
+export type ModelEfforts = { options: string[]; defaultValue: string | null };
+
+export type ProviderCatalog = {
+  models: string[];
+  labels: Record<string, string>;
+  efforts: Record<string, ModelEfforts>;
+};

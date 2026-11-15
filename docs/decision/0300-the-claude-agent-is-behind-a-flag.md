@@ -2,7 +2,7 @@
 
 Date: 2026-11-15
 
-Status: accepted. Adds to 0220 (agent backends) and follows the provider list of 0299.
+Status: accepted. Adds to 0220 (agent backends) and follows the provider list of 0299. Superseded in part by 0309: the flag now gates the `claude-subscription` provider in Settings > Providers, not a Settings page of its own.
 
 ## Decision
 

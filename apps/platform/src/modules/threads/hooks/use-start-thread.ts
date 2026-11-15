@@ -5,7 +5,6 @@ import { attempt, postJson } from "@/lib/api";
 
 import { handOverFirstPrompt } from "../first-prompt";
 import type { OutgoingMessage, RunSelection, Thread } from "../types";
-import type { AgentBackendKind } from "@aven/protocol/types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
 
@@ -21,11 +20,11 @@ export function useStartThread() {
   function createThread(
     projectId: string,
     title: string,
-    backend: AgentBackendKind,
+    providerId: string | undefined,
     runtimeId: string | undefined,
   ) {
     return attempt("Could not start thread", () =>
-      postJson<Thread>("/threads", { projectId, runtimeId, title, backend }),
+      postJson<Thread>("/threads", { projectId, runtimeId, title, providerId }),
     );
   }
 
@@ -33,7 +32,6 @@ export function useStartThread() {
     projectId: string | undefined,
     message: OutgoingMessage,
     selection: RunSelection = {},
-    backend: AgentBackendKind = "native",
     runtimeId?: string,
   ) => {
     if (!projectId) {
@@ -41,7 +39,7 @@ export function useStartThread() {
       return false;
     }
 
-    const thread = await createThread(projectId, titleOf(message), backend, runtimeId);
+    const thread = await createThread(projectId, titleOf(message), selection.providerId, runtimeId);
 
     if (!thread) return false;
 

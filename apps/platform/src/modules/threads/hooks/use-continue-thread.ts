@@ -12,7 +12,7 @@ export function useContinueThread(thread: Thread) {
   const navigate = useNavigate();
   const { refresh } = useThreads();
   const [working, setWorking] = useState(false);
-  const { selection } = useModelSelection(thread.id);
+  const { selection } = useModelSelection(thread.id, thread.agentBackend);
 
   async function continueOn(runtimeId: string) {
     setWorking(true);

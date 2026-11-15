@@ -16,14 +16,16 @@ import {
   NotFoundError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
-import { claudeSetupService } from "../claude-setup/service";
-import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
 import { cloudEnabled, templateProvider } from "@aven/sandbox/cloud-config";
+import { providerBackend } from "@aven/protocol/providers";
+import { providersService } from "../providers/service";
+import { requireSubscriptionToken } from "../providers/token";
 import { CLOUD_OFF, runtimesService } from "../runtimes/service";
-import type { CreateThreadBody, UpdateThreadBody } from "./schema";
-import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
+import type { UpdateThreadBody } from "./schema";
+import type { ProviderRow } from "@aven/db/schema/types";
+import type { NewThread, ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
 export class ProjectNotFoundError extends UnprocessableError {}
 export class ThreadNotFoundError extends NotFoundError {
@@ -64,6 +66,9 @@ const columns = {
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+const backendFor = (provider: ProviderRow | undefined) =>
+  provider ? providerBackend(provider.kind) : "native";
 
 async function isMember(organizationId: string, userId: string) {
   const [row] = await db
@@ -224,7 +229,7 @@ export const threadsService = {
   async create(
     organizationId: string,
     userId: string,
-    body: CreateThreadBody,
+    body: NewThread,
     placement?: { parentThreadId?: string; runtimeId: string },
   ) {
     const project = await projectsService.get(organizationId, body.projectId);
@@ -249,9 +254,10 @@ export const threadsService = {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
 
-    if (body.backend === "claude") await claudeSetupService.requireFor(userId);
+    const backend =
+      body.backend ?? backendFor(await providersService.forRun(userId, body.providerId));
 
-    if (body.backend === "codex") await codexSetupService.requireFor(userId);
+    await requireSubscriptionToken(userId, backend);
 
     const runtimeId = cloud
       ? (await runtimesService.createCloudSandbox(organizationId, userId, requested)).id
@@ -264,7 +270,7 @@ export const threadsService = {
         projectId: project.id,
         createdBy: userId,
         runtimeId,
-        agentBackend: body.backend ?? "native",
+        agentBackend: backend,
         parentThreadId: placement?.parentThreadId,
         title: body.title ?? project.name,
       })

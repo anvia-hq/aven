@@ -2,7 +2,7 @@
 
 Date: 2026-11-15
 
-Status: accepted. Follows 0300, which does the same for the Claude agent.
+Status: accepted. Follows 0300, which does the same for the Claude agent. Superseded in part by 0309: the flag now gates the `codex-subscription` provider in Settings > Providers.
 
 ## Decision
 

@@ -1,7 +1,5 @@
-import { useState } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
-import { CODEX_DEFAULT_EFFORT } from "@aven/protocol/codex-models";
 import { backendSupports } from "@aven/protocol/runtime-wire";
 import { cn } from "cn";
 
@@ -29,9 +27,7 @@ import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
-import { runSelectionOf } from "@/modules/threads/run-selection";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
-import type { ClaudeChoice, CodexChoice } from "@/modules/threads/types";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
 
@@ -62,10 +58,8 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   } = useThread(threadId);
   useFirstPrompt(threadId, send);
   const followUps = useFollowUps(threadId, loaded && synced, running, messages, viewer);
-  const { selection } = useModelSelection(threadId);
-  const [claudeChoice, setClaudeChoice] = useState<ClaudeChoice | null>({});
-  const [codexChoice, setCodexChoice] = useState<CodexChoice | null>({});
-  const { compacting, compact } = useCompactThread(threadId);
+  const { selection } = useModelSelection(threadId, thread?.agentBackend);
+  const { compacting, compact } = useCompactThread(threadId, thread?.agentBackend);
   const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
   const canCompact = owned && !running && !question && supportsCompaction;
   const wide = useMediaQuery("(min-width: 1024px)");
@@ -93,17 +87,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
   }
 
-  let hosted: ClaudeChoice | null = null;
-  let defaultEffort: string | undefined;
-
-  if (thread.agentBackend === "claude") hosted = claudeChoice;
-
-  if (thread.agentBackend === "codex") {
-    hosted = codexChoice;
-    defaultEffort = CODEX_DEFAULT_EFFORT;
-  }
-
-  const runSelection = runSelectionOf(hosted, selection, defaultEffort);
+  const runSelection = selection;
 
   const chips = (
     <FollowUpChips
@@ -194,6 +178,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           key={question.id}
                           tool={question}
                           threadId={thread.id}
+                          backend={thread.agentBackend}
                           onSubmit={answer}
                         />
                       ) : (
@@ -202,21 +187,10 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           <PromptInput
                             threadId={thread.id}
                             running={running}
-                            filesWhileRunning={
-                              thread.agentBackend === "claude" || thread.agentBackend === "codex"
-                            }
+                            filesWhileRunning={thread.agentBackend !== "native"}
+                            backend={thread.agentBackend}
                             onStop={cancel}
                             onCompact={compact}
-                            claude={
-                              thread.agentBackend === "claude"
-                                ? { choice: claudeChoice, onChange: setClaudeChoice, only: true }
-                                : undefined
-                            }
-                            codex={
-                              thread.agentBackend === "codex"
-                                ? { choice: codexChoice, onChange: setCodexChoice, only: true }
-                                : undefined
-                            }
                             placeholder="Reply to the agent…"
                             onSubmit={send}
                             tools={<ProjectInfo projectId={thread.projectId} />}

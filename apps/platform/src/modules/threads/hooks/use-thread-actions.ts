@@ -5,7 +5,7 @@ import { useRequest } from "@/hooks/use-request";
 import { toast } from "@aven/ui/toast";
 import { attempt, postJson } from "@/lib/api";
 import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
-import type { ThreadAction } from "@aven/protocol/types";
+import type { AgentBackendKind, ThreadAction } from "@aven/protocol/types";
 
 import { useModelSelection } from "./use-model-selection";
 
@@ -15,13 +15,18 @@ type Answer = { actions: ThreadAction[]; problem: string | null };
 
 registerUserState(() => forgetStoredKeysStartingWith(FAVORITES_PREFIX));
 
-export function useThreadActions(threadId: string, projectId: string, running: boolean) {
+export function useThreadActions(
+  threadId: string,
+  projectId: string,
+  running: boolean,
+  backend?: AgentBackendKind,
+) {
   const [favorites, setFavorites] = useLocalStorage<string[]>(
     `${FAVORITES_PREFIX}${projectId}`,
     [],
   );
   const [starting, setStarting] = useState<string | null>(null);
-  const { selection } = useModelSelection(threadId);
+  const { selection } = useModelSelection(threadId, backend);
   const answer = useRequest<Answer>(`/threads/${threadId}/actions`, {
     resetOn: threadId,
     refreshKey: running,

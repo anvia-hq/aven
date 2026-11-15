@@ -1,38 +1,57 @@
 import { db } from "@aven/db/client";
 import { providers } from "@aven/db/schema/providers";
-import { providerNeedsKey } from "@aven/protocol/providers";
-import { and, asc, eq } from "drizzle-orm";
+import { isModelApi, providerBackend, providerNeedsKey } from "@aven/protocol/providers";
+import { MODEL_APIS } from "@aven/protocol/runtime-wire";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { encryptSecret } from "@aven/server-kit/crypto";
 import { readKey } from "./crypto";
-import { isGoogleCredential, parseServiceAccount } from "./google-auth";
+import { hostedKindOf, HOSTED_BACKENDS } from "./backends";
+import { parseServiceAccount } from "./google-auth";
 import { effortsByModel, labelsByModel, listAgentModels, ModelListError } from "./model-list";
+import { subscriptionCatalog } from "./subscription-models";
 import {
   azureEndpoint,
   bedrockEndpoint,
+  credentialFor,
   vertexEndpoint,
   type CreateProviderBody,
   type KeylessProviderBody,
   type UpdateProviderBody,
 } from "./schema";
-import type { ModelSource, ProviderView } from "./types";
-import type { ModelConfig } from "@aven/agents/types";
+import type { ModelSource, ProviderCatalog, ProviderView } from "./types";
+import type { Provider } from "@aven/protocol/types";
 import type { ProviderRow } from "@aven/db/schema/types";
 
 class InvalidProviderError extends UnprocessableError {}
 
-type ProviderKind = ModelConfig["provider"];
+const SINGLE_CREDENTIAL = new Set<Provider>([
+  "openai",
+  "anthropic",
+  "gemini",
+  "azure",
+  "claude-subscription",
+  "codex-subscription",
+]);
 
-const SINGLE_CREDENTIAL = new Set<ProviderKind>(["openai", "anthropic", "gemini", "azure"]);
-
-const hasBaseUrl = (
-  kind: ProviderKind,
-): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
+const hasBaseUrl = (kind: Provider): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
   kind === "openai-compatible" || kind === "azure" || kind === "bedrock" || kind === "vertex";
 
 function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): ProviderView {
-  return { ...row, hasKey: apiKeyEncrypted !== null };
+  return { ...row, hasKey: apiKeyEncrypted !== null, backend: providerBackend(row.kind) };
+}
+
+function offered(kind: Provider) {
+  const hosted = HOSTED_BACKENDS.find((candidate) => candidate.kind === kind);
+
+  if (hosted && !hosted.offered()) throw new InvalidProviderError(hosted.off);
+
+  return hosted !== undefined;
+}
+
+export function listedModels(kind: Provider): ProviderCatalog | undefined {
+  return subscriptionCatalog(kind);
 }
 
 function azureEndpointOf(value: string) {
@@ -59,7 +78,17 @@ function vertexEndpointOf(value: string) {
   return parsed.data;
 }
 
-function changedBaseUrl(kind: ProviderKind, baseUrl: string | undefined) {
+function checkCredential(kind: Provider, apiKey: string) {
+  if (kind !== "vertex" && apiKey.length > 4096)
+    throw new InvalidProviderError("An API key is at most 4096 characters");
+
+  const parsed = credentialFor(kind).safeParse(apiKey);
+
+  if (!parsed.success)
+    throw new InvalidProviderError(parsed.error.issues[0]?.message ?? "That is not a usable key");
+}
+
+function changedBaseUrl(kind: Provider, baseUrl: string | undefined) {
   if (baseUrl === undefined) return undefined;
 
   if (kind === "azure") return azureEndpointOf(baseUrl);
@@ -109,6 +138,8 @@ export const providersService = {
   },
 
   async create(userId: string, body: CreateProviderBody | KeylessProviderBody) {
+    offered(body.kind);
+
     return db.transaction(async (tx) => {
       const existing = await tx
         .select({ id: providers.id })
@@ -171,17 +202,7 @@ export const providersService = {
 
       const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
 
-      if (body.apiKey !== undefined && current.kind !== "vertex" && body.apiKey.length > 500) {
-        throw new InvalidProviderError("An API key is at most 500 characters");
-      }
-
-      if (
-        body.apiKey !== undefined &&
-        current.kind === "vertex" &&
-        !isGoogleCredential(body.apiKey)
-      ) {
-        throw new InvalidProviderError("Give a service account's JSON key, or an access token");
-      }
+      if (body.apiKey !== undefined) checkCredential(current.kind, body.apiKey);
 
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
 
@@ -238,6 +259,10 @@ export const providersService = {
 
     if (!row) return null;
 
+    const catalog = subscriptionCatalog(row.kind);
+
+    if (catalog) return catalog;
+
     const source = sourceOf(row);
     const models = await modelsOf(row, source);
     const [efforts, labels] = await Promise.all([
@@ -245,6 +270,41 @@ export const providersService = {
       labelsByModel(source, models),
     ]);
     return { models, efforts, labels };
+  },
+
+  async rowForBackend(userId: string, backend: string) {
+    const kind = hostedKindOf(backend as Parameters<typeof hostedKindOf>[0]);
+
+    if (!kind) return undefined;
+
+    const [row] = await db
+      .select()
+      .from(providers)
+      .where(and(eq(providers.userId, userId), eq(providers.kind, kind)))
+      .limit(1);
+
+    return row;
+  },
+
+  async tokenFor(userId: string, backend: string) {
+    const row = await this.rowForBackend(userId, backend);
+
+    if (!row) return undefined;
+
+    return readKey(row);
+  },
+
+  async forNativeRun(userId: string, providerId: string | undefined) {
+    if (providerId) return this.forRun(userId, providerId);
+
+    const [row] = await db
+      .select()
+      .from(providers)
+      .where(and(eq(providers.userId, userId), inArray(providers.kind, [...MODEL_APIS])))
+      .orderBy(desc(providers.isDefault), asc(providers.createdAt))
+      .limit(1);
+
+    return row;
   },
 
   async forRun(userId: string, providerId: string | undefined) {
@@ -260,11 +320,12 @@ export const providersService = {
   },
 };
 
-const sourceOf = (row: ProviderRow): ModelSource => ({
-  kind: row.kind,
-  baseUrl: row.baseUrl ?? undefined,
-  apiKey: readKey(row),
-});
+const sourceOf = (row: ProviderRow): ModelSource => {
+  if (!isModelApi(row.kind))
+    throw new InvalidProviderError("A subscription has no models of its own to list here");
+
+  return { kind: row.kind, baseUrl: row.baseUrl ?? undefined, apiKey: readKey(row) };
+};
 
 async function modelsOf(row: ProviderRow, source: ModelSource) {
   if (row.kind !== "azure" && row.kind !== "vertex") return listAgentModels(source);

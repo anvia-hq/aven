@@ -1,4 +1,4 @@
-import type { Provider as WireProvider } from "@aven/protocol/types";
+import type { AgentBackendKind, Provider as WireProvider } from "@aven/protocol/types";
 
 export type ProviderKind = WireProvider;
 
@@ -10,6 +10,8 @@ export const PROVIDER_LABELS: Record<ProviderKind, string> = {
   vertex: "Google Vertex AI",
   azure: "Azure OpenAI",
   "openai-compatible": "OpenAI-compatible",
+  "claude-subscription": "Claude subscription",
+  "codex-subscription": "Codex subscription",
 };
 
 export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
@@ -20,11 +22,16 @@ export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
   vertex: "Gemini and other models in a Google Cloud project, through a service account.",
   azure: "Models you have deployed in an Azure OpenAI resource.",
   "openai-compatible": "Any server that speaks the OpenAI API, such as Ollama or vLLM.",
+  "claude-subscription":
+    "Claude Pro or Max, through the Claude Agent SDK, with a setup token from claude setup-token.",
+  "codex-subscription":
+    "GPT models on the Codex SDK, with an OpenAI API key, instead of Aven's own agent.",
 };
 
 export type Provider = {
   id: string;
   kind: ProviderKind;
+  backend: AgentBackendKind;
   name: string;
   baseUrl: string | null;
   modelId: string | null;
@@ -35,6 +42,9 @@ export type Provider = {
 };
 
 export type ModelChoice = { provider: Provider; modelId: string; label: string };
+
+export const isSubscription = (provider: { kind: ProviderKind }) =>
+  provider.kind === "claude-subscription" || provider.kind === "codex-subscription";
 
 export type ProviderPatch = {
   name?: string;

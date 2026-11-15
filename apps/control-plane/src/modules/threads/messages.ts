@@ -7,8 +7,8 @@ import { codexEffortOf } from "@aven/protocol/codex-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
-import { claudeSetupService } from "../claude-setup/service";
-import { codexSetupService } from "../codex-setup/service";
+import { selectionForThread } from "../providers/selection";
+import { requireSubscriptionToken } from "../providers/token";
 import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
@@ -189,11 +189,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     const attachments = prepareAttachments(files);
     const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-    const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
+    const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+    const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
 
     if (!hosted && model && attachments.some((file) => file.image)) await assertSeesImages(model);
 
-    const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+    const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
     clock.mark("model");
     const sender = await senderExtras(
       ownerId,
@@ -311,8 +312,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const model = hosted ? undefined : await resolveModel(userId, selection);
-      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+      const chosen = await selectionForThread(userId, thread.agentBackend, selection);
+      const model = hosted ? undefined : await resolveModel(userId, chosen);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       await runs.start(thread, COMPACT_PROMPT, model, {
         compact: true,
         ...credential,
@@ -337,8 +339,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
-      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
+      const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+      const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       const sender = await senderExtras(
         ownerId,
         project.githubInstallationId,
@@ -368,23 +371,23 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 async function hostedRun(
   backend: string | null | undefined,
   ownerId: string,
-  selection: { modelId?: string; reasoningEffort?: string },
+  selection: { providerId?: string; modelId?: string; reasoningEffort?: string },
 ) {
+  if (backend !== "claude" && backend !== "codex") return {};
+
+  const token = await requireSubscriptionToken(ownerId, backend);
+
   if (backend === "claude") {
     return {
-      claudeToken: await claudeSetupService.requireFor(ownerId),
+      claudeToken: token,
       claudeModel: selection.modelId,
       claudeEffort: claudeEffortOf(selection.reasoningEffort),
     };
   }
 
-  if (backend === "codex") {
-    return {
-      codexToken: await codexSetupService.requireFor(ownerId),
-      codexModel: selection.modelId,
-      codexEffort: codexEffortOf(selection.reasoningEffort),
-    };
-  }
-
-  return {};
+  return {
+    codexToken: token,
+    codexModel: selection.modelId,
+    codexEffort: codexEffortOf(selection.reasoningEffort),
+  };
 }
