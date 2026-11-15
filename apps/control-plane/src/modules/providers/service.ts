@@ -42,8 +42,6 @@ function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): Provid
   return { ...row, hasKey: apiKeyEncrypted !== null, backend: providerBackend(row.kind) };
 }
 
-export const backendOf = (kind: Provider) => providerBackend(kind);
-
 function offered(kind: Provider) {
   const hosted = HOSTED_BACKENDS.find((candidate) => candidate.kind === kind);
 
