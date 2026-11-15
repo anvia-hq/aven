@@ -61,3 +61,7 @@ The suite's control plane has `AVEN_LOCAL_RUNNER=off`, so a thread's run stays o
 ## A Claude backend
 
 `e2e/claude-backend.spec.ts` covers a person saving a Claude setup token, starting a thread on the Claude backend, and seeing that thread's run answer. It starts the same kind of private control plane and machine runner. The machine is started with `AVEN_CLAUDE_FAKE=1`, so its Claude query is the local stand-in in `packages/claude/src/claude-fake.ts` and never loads the Claude Agent SDK or calls Anthropic.
+
+## A Codex backend
+
+`e2e/codex-backend.spec.ts` covers a person saving a Codex API key, starting a thread on the Codex backend, and seeing that thread's run answer. It starts the same kind of private control plane and machine runner, on its own ports. The machine is started with `AVEN_CODEX_FAKE=1`, so its Codex query is the local stand-in in `packages/codex/src/codex-fake.ts` and never loads the Codex SDK or calls OpenAI.

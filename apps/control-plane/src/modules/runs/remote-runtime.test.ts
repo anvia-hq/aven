@@ -249,6 +249,51 @@ describe("a Claude run", () => {
   });
 });
 
+describe("a Codex run", () => {
+  const token = "sk-codex-remote-runtime-0001";
+
+  test("runs on the thread's machine, with that run's key, and does not ask the model gateway", async () => {
+    const codex = runtime({ backends: ["native", "claude", "codex"] });
+    const native = runtime();
+    await codex.remote.start({
+      thread: { ...thread, agentBackend: "codex" },
+      prompt: "go",
+      codexToken: token,
+      codexModel: "terra",
+      codexEffort: "high",
+    });
+    await codex.remote.resume({
+      thread: { ...thread, agentBackend: "codex" },
+      continuation: {},
+      response: {},
+      codexToken: token,
+      codexModel: "sol",
+      codexEffort: "low",
+    });
+    await native.remote.start({ thread, prompt: "go" });
+
+    expect(codex.issued).toEqual([]);
+    expect(codex.asked).toEqual([thread.runtimeId, thread.runtimeId]);
+    expect(codex.posted[0]).toMatchObject({
+      type: "run.start",
+      backend: "codex",
+      codexToken: token,
+      codexModel: "terra",
+      codexEffort: "high",
+    });
+    expect(codex.posted[1]).toMatchObject({
+      type: "run.resume",
+      backend: "codex",
+      codexToken: token,
+      codexModel: "sol",
+      codexEffort: "low",
+    });
+    expect(codex.posted[0]).not.toHaveProperty("model");
+    expect(JSON.stringify(native.posted[0])).not.toContain(token);
+    expect(native.issued).toHaveLength(1);
+  });
+});
+
 describe("where a run's agent runs (decision 0222)", () => {
   const sentThread = (posted: ControlPlaneToRuntime[]) =>
     (posted[0] as Extract<ControlPlaneToRuntime, { type: "run.start" }>).thread;

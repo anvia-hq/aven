@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
+import { CODEX_DEFAULT_EFFORT } from "@aven/protocol/codex-models";
 import { backendSupports } from "@aven/protocol/runtime-wire";
 import { cn } from "cn";
 
@@ -30,7 +31,7 @@ import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
 import { runSelectionOf } from "@/modules/threads/run-selection";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
-import type { ClaudeChoice } from "@/modules/threads/types";
+import type { ClaudeChoice, CodexChoice } from "@/modules/threads/types";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
 
@@ -63,6 +64,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const followUps = useFollowUps(threadId, loaded && synced, running, messages, viewer);
   const { selection } = useModelSelection(threadId);
   const [claudeChoice, setClaudeChoice] = useState<ClaudeChoice | null>({});
+  const [codexChoice, setCodexChoice] = useState<CodexChoice | null>({});
   const { compacting, compact } = useCompactThread(threadId);
   const supportsCompaction = backendSupports(thread?.agentBackend, "compaction");
   const canCompact = owned && !running && !question && supportsCompaction;
@@ -91,10 +93,17 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     return <NotFound title="Thread not found" to="/threads" back="Back to threads" />;
   }
 
-  const runSelection = runSelectionOf(
-    thread.agentBackend === "claude" ? claudeChoice : null,
-    selection,
-  );
+  let hosted: ClaudeChoice | null = null;
+  let defaultEffort: string | undefined;
+
+  if (thread.agentBackend === "claude") hosted = claudeChoice;
+
+  if (thread.agentBackend === "codex") {
+    hosted = codexChoice;
+    defaultEffort = CODEX_DEFAULT_EFFORT;
+  }
+
+  const runSelection = runSelectionOf(hosted, selection, defaultEffort);
 
   const chips = (
     <FollowUpChips
@@ -193,12 +202,19 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           <PromptInput
                             threadId={thread.id}
                             running={running}
-                            filesWhileRunning={thread.agentBackend === "claude"}
+                            filesWhileRunning={
+                              thread.agentBackend === "claude" || thread.agentBackend === "codex"
+                            }
                             onStop={cancel}
                             onCompact={compact}
                             claude={
                               thread.agentBackend === "claude"
                                 ? { choice: claudeChoice, onChange: setClaudeChoice, only: true }
+                                : undefined
+                            }
+                            codex={
+                              thread.agentBackend === "codex"
+                                ? { choice: codexChoice, onChange: setCodexChoice, only: true }
                                 : undefined
                             }
                             placeholder="Reply to the agent…"

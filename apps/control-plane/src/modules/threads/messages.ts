@@ -3,10 +3,12 @@ import { timing } from "@aven/runtime-client/timing";
 
 import { driverPrompt, isDriving, ownPrompt } from "@aven/protocol/drivers";
 import { claudeEffortOf } from "@aven/protocol/claude-models";
+import { codexEffortOf } from "@aven/protocol/codex-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import { claudeSetupService } from "../claude-setup/service";
+import { codexSetupService } from "../codex-setup/service";
 import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
@@ -186,14 +188,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
     const attachments = prepareAttachments(files);
-    const claude = thread.agentBackend === "claude";
-    const model = claude ? undefined : await resolveModel(driverId ?? ownerId, selection);
+    const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
+    const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
 
-    if (!claude && model && attachments.some((file) => file.image)) await assertSeesImages(model);
+    if (!hosted && model && attachments.some((file) => file.image)) await assertSeesImages(model);
 
-    const claudeToken = claude ? await claudeSetupService.requireFor(thread.createdBy) : undefined;
-    const claudeModel = claude ? selection.modelId : undefined;
-    const claudeEffort = claude ? claudeEffortOf(selection.reasoningEffort) : undefined;
+    const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
     clock.mark("model");
     const sender = await senderExtras(
       ownerId,
@@ -208,9 +208,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       attachments,
       mentions,
       senderId: userId,
-      claudeToken,
-      claudeModel,
-      claudeEffort,
+      ...credential,
       ...sender,
       ...scoped,
     });
@@ -231,7 +229,11 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
-    if (attachments.length > 0 && thread.agentBackend !== "claude") {
+    if (
+      attachments.length > 0 &&
+      thread.agentBackend !== "claude" &&
+      thread.agentBackend !== "codex"
+    ) {
       throw new ConflictError("Files can be sent when the agent is not working");
     }
 
@@ -308,16 +310,12 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new UnprocessableError(backendRefusal(thread.agentBackend, "compaction"));
       }
 
-      const claude = thread.agentBackend === "claude";
-      const model = claude ? undefined : await resolveModel(userId, selection);
-      const claudeToken = claude
-        ? await claudeSetupService.requireFor(thread.createdBy)
-        : undefined;
+      const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
+      const model = hosted ? undefined : await resolveModel(userId, selection);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
       await runs.start(thread, COMPACT_PROMPT, model, {
         compact: true,
-        claudeToken,
-        claudeModel: claude ? selection.modelId : undefined,
-        claudeEffort: claude ? claudeEffortOf(selection.reasoningEffort) : undefined,
+        ...credential,
       });
       await threadsService.reopen(thread);
     },
@@ -338,11 +336,9 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
       }
 
-      const claude = thread.agentBackend === "claude";
-      const model = claude ? undefined : await resolveModel(driverId ?? ownerId, selection);
-      const claudeToken = claude
-        ? await claudeSetupService.requireFor(thread.createdBy)
-        : undefined;
+      const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
+      const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, selection);
+      const credential = await hostedRun(thread.agentBackend, thread.createdBy, selection);
       const sender = await senderExtras(
         ownerId,
         project.githubInstallationId,
@@ -362,11 +358,33 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       await runs.answer(thread, continuation, kept, model, {
         ...sender,
         ...scoped,
-        claudeToken,
-        claudeModel: claude ? selection.modelId : undefined,
-        claudeEffort: claude ? claudeEffortOf(selection.reasoningEffort) : undefined,
+        ...credential,
       });
       await threadsService.reopen(thread);
     },
   };
 };
+
+async function hostedRun(
+  backend: string | null | undefined,
+  ownerId: string,
+  selection: { modelId?: string; reasoningEffort?: string },
+) {
+  if (backend === "claude") {
+    return {
+      claudeToken: await claudeSetupService.requireFor(ownerId),
+      claudeModel: selection.modelId,
+      claudeEffort: claudeEffortOf(selection.reasoningEffort),
+    };
+  }
+
+  if (backend === "codex") {
+    return {
+      codexToken: await codexSetupService.requireFor(ownerId),
+      codexModel: selection.modelId,
+      codexEffort: codexEffortOf(selection.reasoningEffort),
+    };
+  }
+
+  return {};
+}

@@ -52,6 +52,9 @@ export type RunExtras = Pick<
   | "claudeToken"
   | "claudeModel"
   | "claudeEffort"
+  | "codexToken"
+  | "codexModel"
+  | "codexEffort"
 > & { senderId?: string };
 
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
@@ -74,6 +77,9 @@ export type StartRunInput = {
   claudeToken?: string;
   claudeModel?: string;
   claudeEffort?: string;
+  codexToken?: string;
+  codexModel?: string;
+  codexEffort?: string;
 };
 
 export type ResumeRunInput = {
@@ -92,6 +98,9 @@ export type ResumeRunInput = {
   claudeToken?: string;
   claudeModel?: string;
   claudeEffort?: string;
+  codexToken?: string;
+  codexModel?: string;
+  codexEffort?: string;
 };
 
 export type RunResult = { type: RunOutcome; continuation?: unknown };

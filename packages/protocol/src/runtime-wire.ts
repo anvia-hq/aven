@@ -9,7 +9,7 @@ export const PROVIDERS = [
 ] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 
-export const AGENT_BACKENDS = ["native", "claude"] as const;
+export const AGENT_BACKENDS = ["native", "claude", "codex"] as const;
 
 export const AGENT_BACKEND_CAPABILITIES = {
   native: {
@@ -20,6 +20,13 @@ export const AGENT_BACKEND_CAPABILITIES = {
     compaction: true,
   },
   claude: {
+    question: true,
+    restart: true,
+    steering: true,
+    goals: true,
+    compaction: true,
+  },
+  codex: {
     question: true,
     restart: true,
     steering: true,
@@ -47,7 +54,7 @@ export function backendSupports(
   kind: string | null | undefined,
   capability: AgentBackendCapability,
 ) {
-  const name = kind === "claude" ? "claude" : "native";
+  const name = kind === "claude" || kind === "codex" || kind === "native" ? kind : "native";
   return AGENT_BACKEND_CAPABILITIES[name][capability];
 }
 
@@ -56,6 +63,8 @@ export function backendRefusal(kind: string, capability: AgentBackendCapability)
 
   if (kind === "claude") name = "The Claude agent";
 
+  if (kind === "codex") name = "The Codex agent";
+
   if (kind === "native") name = "The native agent";
 
   return `${name} does not ${BACKEND_ACT[capability]}`;
@@ -63,6 +72,9 @@ export function backendRefusal(kind: string, capability: AgentBackendCapability)
 
 export const CLAUDE_TOKEN_MISSING =
   "Set a Claude setup token in Settings before this thread can run on the Claude agent";
+
+export const CODEX_TOKEN_MISSING =
+  "Set a Codex API key in Settings before this thread can run on the Codex agent";
 
 export const RUNTIME_PROVIDERS = ["manual", "boat"] as const;
 

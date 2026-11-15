@@ -160,12 +160,114 @@ export type ClaudeQuery = (
   input: ClaudeQueryInput,
 ) => AsyncIterable<ClaudeSdkMessage> & { close?(): void };
 
+export type CodexQuestion = ClaudeQuestion;
+
+export type CodexToolContent = ClaudeToolContent;
+
+export type CodexToolHost = ClaudeToolHost;
+
+export type CodexRunContext = {
+  token?: string;
+  workspace(): Promise<string>;
+  tools: CodexToolHost;
+  redact(text: string): string;
+  env: readonly RunEnvVar[];
+  instructions?: string;
+  model?: string;
+  effort?: string;
+  compact?: boolean;
+  questions?: boolean;
+  children?: boolean;
+};
+
+export type CodexImage = ClaudeImage;
+
+export type CodexSteer = { id: string; text: string; images: CodexImage[] };
+
+export type CodexUsage = {
+  input_tokens: number;
+  cached_input_tokens: number;
+  cache_write_input_tokens?: number;
+  output_tokens: number;
+  reasoning_output_tokens: number;
+};
+
+export type CodexSdkItem =
+  | { id: string; type: "agent_message"; text: string }
+  | { id: string; type: "reasoning"; text: string }
+  | {
+      id: string;
+      type: "command_execution";
+      command: string;
+      aggregated_output: string;
+      exit_code?: number;
+      status: "in_progress" | "completed" | "failed";
+    }
+  | {
+      id: string;
+      type: "file_change";
+      changes: { path: string; kind: string }[];
+      status: "completed" | "failed";
+    }
+  | {
+      id: string;
+      type: "mcp_tool_call";
+      server: string;
+      tool: string;
+      arguments: unknown;
+      status: "in_progress" | "completed" | "failed";
+      result?: { content?: { type?: string; text?: string }[] };
+      error?: { message: string };
+    }
+  | { id: string; type: "web_search"; query: string }
+  | { id: string; type: "todo_list"; items: { text: string; completed: boolean }[] }
+  | { id: string; type: "error"; message: string };
+
+export type CodexSdkEvent =
+  | { type: "thread.started"; thread_id: string }
+  | { type: "turn.started" }
+  | { type: "turn.completed"; usage: CodexUsage }
+  | { type: "turn.failed"; error: { message: string } }
+  | { type: "item.started"; item: CodexSdkItem }
+  | { type: "item.updated"; item: CodexSdkItem }
+  | { type: "item.completed"; item: CodexSdkItem }
+  | { type: "error"; message: string };
+
+export type CodexQueryInput = {
+  prompt: string;
+  images: CodexImage[];
+  sessionId?: string;
+  token: string;
+  cwd: string;
+  codexHome: string;
+  mcpUrl: string;
+  abortController: AbortController;
+  tools: CodexToolHost;
+  env: readonly RunEnvVar[];
+  redact(text: string): string;
+  instructions?: string;
+  model?: string;
+  effort?: string;
+};
+
+export type CodexQuery = (
+  input: CodexQueryInput,
+) => AsyncIterable<CodexSdkEvent> & { close?(): void };
+
+export type CodexMcpTool = {
+  name: string;
+  description: string;
+  shape: Record<string, z.ZodType>;
+  handler(args: unknown): Promise<{ content: CodexToolContent[]; isError?: boolean }>;
+};
+
 export type RunInput = {
   agent?: Agent<unknown>;
   compaction?: DurableAgentRegistration["compaction"];
   contextWindow?: number;
   compacting?: boolean;
   claude?: ClaudeRunContext;
+  codex?: CodexRunContext;
 };
 
 export type FollowedRun = {

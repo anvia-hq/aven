@@ -18,6 +18,7 @@
     "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
     "@aven/claude": "workspace:*",
+    "@aven/codex": "workspace:*",
     "@aven/protocol": "workspace:*",
     "zod": "^4.6.7"
   },

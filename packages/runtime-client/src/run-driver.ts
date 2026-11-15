@@ -72,6 +72,7 @@ type RunScope = {
   current(): readonly AnyTool[] | undefined;
   build(id: string, attended: boolean): RunInput;
   claudeInput(options?: { attended?: boolean }): Promise<RunInput>;
+  codexInput(options?: { attended?: boolean }): Promise<RunInput>;
   forward: Emit;
   file(messages: Message[]): Promise<void>;
   stopIfCancelled(): void;
@@ -107,6 +108,19 @@ async function prepareRun(
     }),
   ]);
   sandbox.setProjectEnv?.(threadId, env);
+}
+
+async function inputFor(
+  backend: AgentBackend,
+  scope: RunScope,
+  attended: boolean,
+  native: RunInput,
+) {
+  if (backend.kind === "claude") return scope.claudeInput({ attended });
+
+  if (backend.kind === "codex") return scope.codexInput({ attended });
+
+  return native;
 }
 
 export function createRunDriver(context: DriverContext) {
@@ -261,6 +275,27 @@ export function createRunDriver(context: DriverContext) {
     backend: AgentBackend,
   ): Promise<RunScope> {
     const { runId, thread, model } = initial;
+    const compactHosted = async (kind: "claude" | "codex") => {
+      const token = kind === "claude" ? secrets.claudeToken : secrets.codexToken;
+      const cwd =
+        (await context.sandbox.workspace(thread.id).catch(() => undefined)) ??
+        context.sandbox.paths?.(thread.id)?.workspace ??
+        process.cwd();
+      const hosted = {
+        token,
+        workspace: () => Promise.resolve(cwd),
+        redact: (text: string) => text,
+        env: [],
+        tools: {},
+        compact: true,
+        questions: false,
+        children: false,
+        model: kind === "claude" ? state.record.claudeModel : state.record.codexModel,
+        effort: kind === "claude" ? state.record.claudeEffort : state.record.codexEffort,
+        instructions: "Compact this conversation and reply with one short note that you did.",
+      };
+      return kind === "claude" ? { claude: hosted } : { codex: hosted };
+    };
     return {
       runId,
       thread,
@@ -277,28 +312,8 @@ export function createRunDriver(context: DriverContext) {
         contextWindow: model?.contextWindow,
         compacting: true,
       }),
-      async claudeInput() {
-        const token = secrets.claudeToken;
-        const cwd =
-          (await context.sandbox.workspace(thread.id).catch(() => undefined)) ??
-          context.sandbox.paths?.(thread.id)?.workspace ??
-          process.cwd();
-        return {
-          claude: {
-            token,
-            workspace: () => Promise.resolve(cwd),
-            redact: (text: string) => text,
-            env: [],
-            tools: {},
-            compact: true,
-            questions: false,
-            children: false,
-            model: state.record.claudeModel,
-            effort: state.record.claudeEffort,
-            instructions: "Compact this conversation and reply with one short note that you did.",
-          },
-        };
-      },
+      claudeInput: () => compactHosted("claude"),
+      codexInput: () => compactHosted("codex"),
       ...reporting(initial, state, run),
     };
   }
@@ -468,6 +483,66 @@ export function createRunDriver(context: DriverContext) {
       return { skills, envNames, forking, tools };
     };
 
+    const hostedInput = async (
+      kind: "claude" | "codex",
+      options?: { attended?: boolean },
+    ): Promise<RunInput> => {
+      const attended = options?.attended !== false;
+      await wake();
+      const cwd =
+        (await context.sandbox.workspace(thread.id)) ??
+        context.sandbox.paths?.(thread.id)?.workspace ??
+        process.cwd();
+      const token = kind === "claude" ? secrets.claudeToken : secrets.codexToken;
+      const variables = env ? [...env] : [];
+
+      if (token) {
+        variables.push({
+          name: kind === "claude" ? "CLAUDE_CODE_OAUTH_TOKEN" : "CODEX_API_KEY",
+          value: token,
+          secret: true,
+        });
+      }
+
+      const redact = secretRedactor(variables);
+      const hide = <T>(value: T): T => (redact ? redact(value) : value);
+      const hideText = (text: string) => hide(text);
+      const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
+      const parts = [
+        codingInstructions(CODING_MAX_TURNS, attended),
+        skillsInstructions(skills ?? [], run.skillsUnavailable ?? []),
+        environmentInstructions(envNames ?? []),
+        mcpInstructions(mcp?.note),
+        memoryInstructions(state.record.memory),
+      ];
+
+      if (forking) parts.push(forkInstructions());
+
+      parts.push(
+        "Use the aven tools for files, commands, git, processes, artifacts, memory and goals.",
+      );
+      const hosted = {
+        token,
+        workspace: () => Promise.resolve(cwd),
+        redact: hideText,
+        env: env ?? [],
+        instructions: forPaths(
+          parts.filter((part) => part.length > 0).join("\n\n"),
+          context.sandbox.paths?.(thread.id) ?? SANDBOX_PATHS,
+        ),
+        model: kind === "claude" ? state.record.claudeModel : state.record.codexModel,
+        effort: kind === "claude" ? state.record.claudeEffort : state.record.codexEffort,
+        questions: attended,
+        tools: {
+          catalog: tools,
+          questions: attended,
+          emit: forward,
+          webSearch: state.record.webSearch,
+        },
+      };
+      return kind === "claude" ? { claude: hosted } : { codex: hosted };
+    };
+
     return {
       runId,
       thread,
@@ -498,59 +573,8 @@ export function createRunDriver(context: DriverContext) {
         });
         return { agent, compaction, contextWindow: model?.contextWindow };
       },
-      async claudeInput(options) {
-        const attended = options?.attended !== false;
-        await wake();
-        const cwd =
-          (await context.sandbox.workspace(thread.id)) ??
-          context.sandbox.paths?.(thread.id)?.workspace ??
-          process.cwd();
-        const token = secrets.claudeToken;
-        const variables = env ? [...env] : [];
-
-        if (token) {
-          variables.push({ name: "CLAUDE_CODE_OAUTH_TOKEN", value: token, secret: true });
-        }
-
-        const redact = secretRedactor(variables);
-        const hide = <T>(value: T): T => (redact ? redact(value) : value);
-        const hideText = (text: string) => hide(text);
-        const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
-        const parts = [
-          codingInstructions(CODING_MAX_TURNS, attended),
-          skillsInstructions(skills ?? [], run.skillsUnavailable ?? []),
-          environmentInstructions(envNames ?? []),
-          mcpInstructions(mcp?.note),
-          memoryInstructions(state.record.memory),
-        ];
-
-        if (forking) parts.push(forkInstructions());
-
-        parts.push(
-          "Use the aven tools for files, commands, git, processes, artifacts, memory and goals.",
-        );
-        return {
-          claude: {
-            token,
-            workspace: () => Promise.resolve(cwd),
-            redact: hideText,
-            env: env ?? [],
-            instructions: forPaths(
-              parts.filter((part) => part.length > 0).join("\n\n"),
-              context.sandbox.paths?.(thread.id) ?? SANDBOX_PATHS,
-            ),
-            model: state.record.claudeModel,
-            effort: state.record.claudeEffort,
-            questions: attended,
-            tools: {
-              catalog: tools,
-              questions: attended,
-              emit: (event) => forward(event),
-              webSearch: state.record.webSearch,
-            },
-          },
-        };
-      },
+      claudeInput: (options) => hostedInput("claude", options),
+      codexInput: (options) => hostedInput("codex", options),
       forward,
       file,
       stopIfCancelled,
@@ -573,13 +597,16 @@ export function createRunDriver(context: DriverContext) {
 
   async function runChat(scope: RunScope, message?: RunMessage): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build } = scope;
-    const inputOf = (id: string, attended: boolean) =>
-      backend.kind === "claude"
-        ? scope.claudeInput({ attended })
-        : Promise.resolve(build(id, attended));
+    const inputOf = (id: string, attended: boolean) => {
+      if (backend.kind === "claude") return scope.claudeInput({ attended });
+
+      if (backend.kind === "codex") return scope.codexInput({ attended });
+
+      return Promise.resolve(build(id, attended));
+    };
     let followed: FollowedRun | undefined;
     let turns = 0;
-    const counted = backend.kind === "claude" ? "tool_start" : "usage";
+    const counted = backend.kind === "claude" || backend.kind === "codex" ? "tool_start" : "usage";
     const send = scope.forward;
     const forward: Emit = (event, source) => {
       send(event, source);
@@ -624,8 +651,7 @@ export function createRunDriver(context: DriverContext) {
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
-      const restored =
-        backend.kind === "claude" ? await scope.claudeInput() : build(asked.agentId, true);
+      const restored = await inputFor(backend, scope, true, build(asked.agentId, true));
       followed = await backend.answer(
         asked,
         interaction,
@@ -672,10 +698,7 @@ export function createRunDriver(context: DriverContext) {
 
     scope.stopIfCancelled();
     const exec = scope.current()?.find((tool) => tool.name === "exec_command");
-    const input =
-      backend.kind === "claude"
-        ? await scope.claudeInput({ attended: false })
-        : build(`goal-${runId}`, false);
+    const input = await inputFor(backend, scope, false, build(`goal-${runId}`, false));
     const working = await backend.startGoal({
       runId,
       request: goal,
@@ -711,10 +734,7 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build, forward } = scope;
     scope.stopIfCancelled();
-    const reportAgent =
-      backend.kind === "claude"
-        ? await scope.claudeInput({ attended: false })
-        : build(`run-${runId}-report`, false);
+    const reportAgent = await inputFor(backend, scope, false, build(`run-${runId}-report`, false));
     let closing: FollowedRun;
     const { reportId } = scope.record;
 
@@ -775,6 +795,8 @@ export function createRunDriver(context: DriverContext) {
         model: message.model,
         claudeModel: message.claudeModel,
         claudeEffort: message.claudeEffort,
+        codexModel: message.codexModel,
+        codexEffort: message.codexEffort,
         kind: message.type === "run.start" ? "start" : "answer",
         prompt: message.type === "run.start" ? message.prompt : undefined,
         compact: message.type === "run.start" ? message.compact : undefined,
