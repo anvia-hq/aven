@@ -51,7 +51,7 @@ export async function reachRunner(hub: ProviderHub, place: RunnerPlace, offline?
     throw new RuntimeOfflineError(offline);
   }
 
-  if (kind === "boat" && !cloudEnabled()) throw new RuntimeOfflineError(CLOUD_OFF);
+  if (kind === "boat" && !cloudEnabled(kind)) throw new RuntimeOfflineError(CLOUD_OFF);
 
   return providers[kind](hub).start(place, offline);
 }

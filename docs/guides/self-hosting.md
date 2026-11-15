@@ -69,15 +69,17 @@ Claude threads; threads that already use it stay readable but cannot run.
 
 ## Aven Cloud
 
-Aven Cloud runs a thread in a sandbox of its own. It is off until you choose a provider, and boat.dev
-is the one there is. It then appears in the new thread composer:
+Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer, and
+boat.dev is the one there is. Each provider is its own entry in the new thread composer, and you can
+name several, separated by commas:
 
 ```sh
-AVEN_CLOUD_PROVIDER=boat
+AVEN_CLOUD_PROVIDERS=boat
 AVEN_BOAT_API_KEY=boat_...
 ```
 
-With the provider off (or unset) Aven Cloud is hidden and refuses new threads. Threads that already
+A provider that is not named, or that lacks what it needs (boat needs its key), is hidden and refuses
+new threads. Threads that already
 have a computer stay readable, but cannot start it again, and expired computers are still deleted
 while the boat key is set.
 

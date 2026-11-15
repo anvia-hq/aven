@@ -3,11 +3,21 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { and, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import { CLOUD_RUNTIME_ID } from "./cloud-id";
-import { cloudApiKey, cloudEnabled } from "./cloud-config";
+import {
+  CLOUD_TEMPLATE_IDS,
+  cloudApiKey,
+  cloudEnabled,
+  cloudTemplateId,
+  cloudTemplateName,
+  disabledTemplateIds,
+  enabledCloudProviders,
+  enabledTemplateIds,
+  templateProvider,
+} from "./cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
@@ -58,7 +68,7 @@ const visibleTo = (organizationId: string) =>
   or(
     eq(runtimes.organizationId, organizationId),
     eq(runtimes.id, LOCAL_RUNTIME_ID),
-    cloudEnabled() ? eq(runtimes.id, CLOUD_RUNTIME_ID) : undefined,
+    enabledTemplateIds().length > 0 ? inArray(runtimes.id, enabledTemplateIds()) : undefined,
   );
 
 const usableBy = (userId: string) =>
@@ -66,7 +76,7 @@ const usableBy = (userId: string) =>
     or(
       eq(runtimes.host, false),
       eq(runtimes.id, LOCAL_RUNTIME_ID),
-      eq(runtimes.id, CLOUD_RUNTIME_ID),
+      inArray(runtimes.id, CLOUD_TEMPLATE_IDS),
       eq(runtimes.ownerId, userId),
     ),
     or(isNull(runtimes.parentRuntimeId), eq(runtimes.ownerId, userId)),
@@ -99,6 +109,13 @@ const publicRuntime = ({
   githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
 });
 
+const named = (row: RuntimeRow) => {
+  const runtime = publicRuntime(row);
+  const provider = templateProvider(row.id);
+
+  return provider ? { ...runtime, name: cloudTemplateName(provider) } : runtime;
+};
+
 async function readRunnerToken(stored: string | null, id: string) {
   if (!stored) return null;
 
@@ -130,24 +147,26 @@ export const runtimesService = {
   },
 
   async ensureCloud() {
-    if (!cloudEnabled()) return;
-
-    await db
-      .insert(runtimes)
-      .values({
-        id: CLOUD_RUNTIME_ID,
-        name: "Aven Cloud",
-        provider: "boat",
-        lifetime: "ephemeral",
-        githubMode: "person",
-        tokenHash: hashToken(randomBytes(32).toString("hex")),
-        tokenHint: "",
-      })
-      .onConflictDoNothing();
+    for (const provider of enabledCloudProviders()) {
+      await db
+        .insert(runtimes)
+        .values({
+          id: cloudTemplateId(provider),
+          name: cloudTemplateName(provider),
+          provider,
+          lifetime: "ephemeral",
+          githubMode: "person",
+          tokenHash: hashToken(randomBytes(32).toString("hex")),
+          tokenHint: "",
+        })
+        .onConflictDoNothing();
+    }
   },
 
-  async createCloudSandbox(organizationId: string, ownerId: string) {
-    if (!cloudEnabled()) throw new UnavailableError(CLOUD_OFF);
+  async createCloudSandbox(organizationId: string, ownerId: string, templateId: string) {
+    const provider = templateProvider(templateId);
+
+    if (!provider || !cloudEnabled(provider)) throw new UnavailableError(CLOUD_OFF);
 
     const [live] = await db
       .select({ total: count() })
@@ -155,7 +174,7 @@ export const runtimesService = {
       .where(
         and(
           eq(runtimes.organizationId, organizationId),
-          eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID),
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
           isNull(runtimes.revokedAt),
         ),
       );
@@ -171,9 +190,9 @@ export const runtimesService = {
       .values({
         organizationId,
         ownerId,
-        parentRuntimeId: CLOUD_RUNTIME_ID,
+        parentRuntimeId: templateId,
         name: "Aven Cloud",
-        provider: "boat",
+        provider,
         lifetime: "ephemeral",
         githubMode: "person",
         boatMachineType: "default",
@@ -195,7 +214,7 @@ export const runtimesService = {
       .from(runtimes)
       .where(
         and(
-          eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID),
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
           isNull(runtimes.revokedAt),
           sql`${lastUsed} < ${before.toISOString()}::timestamptz`,
         ),
@@ -207,7 +226,7 @@ export const runtimesService = {
     await db
       .update(runtimes)
       .set({ revokedAt: new Date() })
-      .where(and(eq(runtimes.id, id), eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID)));
+      .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
   },
 
   async list(organizationId: string, userId: string) {
@@ -219,11 +238,13 @@ export const runtimesService = {
           visibleTo(organizationId),
           usableBy(userId),
           isNull(runtimes.revokedAt),
-          cloudEnabled() ? undefined : ne(runtimes.id, CLOUD_RUNTIME_ID),
+          disabledTemplateIds().length > 0
+            ? notInArray(runtimes.id, disabledTemplateIds())
+            : undefined,
         ),
       )
       .orderBy(desc(runtimes.createdAt));
-    return rows.map(publicRuntime);
+    return rows.map(named);
   },
 
   async get(organizationId: string, id: string, userId?: string) {
@@ -238,7 +259,7 @@ export const runtimesService = {
           isNull(runtimes.revokedAt),
         ),
       );
-    return row ? publicRuntime(row) : null;
+    return row ? named(row) : null;
   },
 
   async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
@@ -261,7 +282,8 @@ export const runtimesService = {
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled()) return null;
+    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled(row.provider))
+      return null;
 
     const apiKey = cloudApiKey();
     const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
@@ -281,7 +303,7 @@ export const runtimesService = {
     const [row] = await db
       .select({ revokedAt: runtimes.revokedAt })
       .from(runtimes)
-      .where(and(eq(runtimes.id, id), eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID)));
+      .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
     return row?.revokedAt != null;
   },
 
@@ -308,7 +330,7 @@ export const runtimesService = {
         and(
           visibleTo(organizationId),
           eq(runtimes.id, id),
-          ne(runtimes.id, CLOUD_RUNTIME_ID),
+          notInArray(runtimes.id, CLOUD_TEMPLATE_IDS),
           isNull(runtimes.revokedAt),
         ),
       )
@@ -393,7 +415,7 @@ export const runtimesService = {
         and(
           visibleTo(organizationId),
           eq(runtimes.id, id),
-          ne(runtimes.id, CLOUD_RUNTIME_ID),
+          notInArray(runtimes.id, CLOUD_TEMPLATE_IDS),
           isNull(runtimes.revokedAt),
         ),
       );

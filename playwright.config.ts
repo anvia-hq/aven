@@ -70,7 +70,7 @@ export default defineConfig({
         MODEL_CATALOG_URL: "",
         PLATFORM_OWNER_EMAILS: process.env.E2E_PLATFORM_OWNERS,
         AVEN_LOCAL_RUNNER: "off",
-        AVEN_CLOUD_PROVIDER: "off",
+        AVEN_CLOUD_PROVIDERS: "",
         AVEN_BOAT_API_KEY: "",
         AVEN_BOAT_API_BASE: "http://127.0.0.1:9",
         AVEN_BOAT_RUNNER_URL: "",

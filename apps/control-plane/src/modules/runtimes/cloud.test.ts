@@ -7,7 +7,12 @@ import { eq } from "drizzle-orm";
 import { joinOrganization, signUp } from "../../testing/sign-up";
 import { projectsService } from "../projects/service";
 import { threadsService } from "../threads/service";
-import { cloudProvider } from "./cloud-config";
+import {
+  cloudEnabled,
+  cloudProviders,
+  cloudTemplateName,
+  enabledCloudProviders,
+} from "./cloud-config";
 import { reachRunner } from "./providers";
 import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
@@ -20,12 +25,12 @@ run("Aven Cloud runtime (postgres)", async () => {
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
   const keptKey = process.env.AVEN_BOAT_API_KEY;
   const keptLimit = process.env.AVEN_CLOUD_MAX_SANDBOXES;
-  const keptProvider = process.env.AVEN_CLOUD_PROVIDER;
+  const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
   beforeAll(() => {
     process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
-    process.env.AVEN_CLOUD_PROVIDER = "boat";
+    process.env.AVEN_CLOUD_PROVIDERS = "boat";
     delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
   });
 
@@ -40,8 +45,8 @@ run("Aven Cloud runtime (postgres)", async () => {
     if (keptLimit === undefined) delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
     else process.env.AVEN_CLOUD_MAX_SANDBOXES = keptLimit;
 
-    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDER;
-    else process.env.AVEN_CLOUD_PROVIDER = keptProvider;
+    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
+    else process.env.AVEN_CLOUD_PROVIDERS = keptProvider;
   });
 
   test("Aven Cloud is listed for every workspace once the platform has a boat key, and only then", async () => {
@@ -208,13 +213,13 @@ run("Aven Cloud runtime (postgres)", async () => {
     }
   });
 
-  test("with the provider off Aven Cloud is hidden, refuses new threads and cannot wake the ones it has", async () => {
+  test("with no provider named Aven Cloud is hidden, refuses new threads and cannot wake the ones it has", async () => {
     const { project } = await seedProject(orgA, userId, null, "off-repo");
     const mine = await threadsService.create(orgA, userId, {
       projectId: project.id,
       runtimeId: CLOUD_RUNTIME_ID,
     });
-    process.env.AVEN_CLOUD_PROVIDER = "off";
+    process.env.AVEN_CLOUD_PROVIDERS = "";
 
     try {
       const listed = (await runtimesService.list(orgA, userId)).map(({ id }) => id);
@@ -228,16 +233,32 @@ run("Aven Cloud runtime (postgres)", async () => {
         reachRunner({ get: () => undefined }, { runtimeId: mine.runtimeId }),
       ).rejects.toThrow(CLOUD_OFF);
     } finally {
-      process.env.AVEN_CLOUD_PROVIDER = "boat";
+      process.env.AVEN_CLOUD_PROVIDERS = "boat";
     }
 
     expect(await runtimesService.boatRecord(mine.runtimeId)).not.toBeNull();
   });
 
-  test("the provider is off unless it is named, and a name that is not a provider is refused", () => {
-    expect(cloudProvider(undefined)).toBe("off");
-    expect(cloudProvider("")).toBe("off");
-    expect(cloudProvider(" boat ")).toBe("boat");
-    expect(() => cloudProvider("vercel")).toThrow('must be off or boat, got "vercel"');
+  test("providers are named in a list, none named is off, and a name that is not a provider is refused", () => {
+    expect(cloudProviders(undefined)).toEqual([]);
+    expect(cloudProviders("")).toEqual([]);
+    expect(cloudProviders(" boat , boat ")).toEqual(["boat"]);
+    expect(() => cloudProviders("boat,vercel")).toThrow("names vercel");
+  });
+
+  test("a provider is on only when it is named and has what it needs", () => {
+    expect(enabledCloudProviders()).toEqual(["boat"]);
+    expect(cloudEnabled("boat")).toBe(true);
+    expect(cloudEnabled("vercel")).toBe(false);
+    expect(cloudTemplateName("boat")).toBe("Aven Cloud");
+
+    delete process.env.AVEN_BOAT_API_KEY;
+
+    try {
+      expect(enabledCloudProviders()).toEqual([]);
+      expect(cloudEnabled("boat")).toBe(false);
+    } finally {
+      process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
+    }
   });
 });

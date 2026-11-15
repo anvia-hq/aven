@@ -19,12 +19,12 @@ run("Aven Cloud expiry (postgres)", async () => {
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, cleanup } = await seedOrgPair();
   const keptKey = process.env.AVEN_BOAT_API_KEY;
-  const keptProvider = process.env.AVEN_CLOUD_PROVIDER;
+  const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
   beforeAll(async () => {
     process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_expiry";
-    process.env.AVEN_CLOUD_PROVIDER = "boat";
+    process.env.AVEN_CLOUD_PROVIDERS = "boat";
     await runtimesService.ensureCloud();
   });
 
@@ -36,8 +36,8 @@ run("Aven Cloud expiry (postgres)", async () => {
     if (keptKey === undefined) delete process.env.AVEN_BOAT_API_KEY;
     else process.env.AVEN_BOAT_API_KEY = keptKey;
 
-    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDER;
-    else process.env.AVEN_CLOUD_PROVIDER = keptProvider;
+    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
+    else process.env.AVEN_CLOUD_PROVIDERS = keptProvider;
   });
 
   async function cloudThread(name: string, sandboxId: string | null) {

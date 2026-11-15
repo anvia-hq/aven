@@ -2,7 +2,7 @@
 
 Date: 2026-11-15
 
-Status: accepted. Adds to 0220 (agent backends) and follows the provider flag of 0298.
+Status: accepted. Adds to 0220 (agent backends) and follows the provider list of 0298.
 
 ## Decision
 

@@ -19,8 +19,8 @@ import {
 import { claudeSetupService } from "../claude-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
-import { cloudEnabled } from "../runtimes/cloud-config";
-import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "../runtimes/service";
+import { cloudEnabled, templateProvider } from "../runtimes/cloud-config";
+import { CLOUD_OFF, runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
@@ -240,7 +240,9 @@ export const threadsService = {
       );
     }
 
-    if (requested === CLOUD_RUNTIME_ID && !cloudEnabled()) throw new UnprocessableError(CLOUD_OFF);
+    const cloud = templateProvider(requested);
+
+    if (cloud && !cloudEnabled(cloud)) throw new UnprocessableError(CLOUD_OFF);
 
     if (!(await runtimesService.get(organizationId, requested, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
@@ -248,10 +250,9 @@ export const threadsService = {
 
     if (body.backend === "claude") await claudeSetupService.requireFor(userId);
 
-    const runtimeId =
-      requested === CLOUD_RUNTIME_ID
-        ? (await runtimesService.createCloudSandbox(organizationId, userId)).id
-        : requested;
+    const runtimeId = cloud
+      ? (await runtimesService.createCloudSandbox(organizationId, userId, requested)).id
+      : requested;
 
     const [thread] = await db
       .insert(threads)
