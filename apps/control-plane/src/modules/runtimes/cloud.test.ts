@@ -7,15 +7,9 @@ import { eq } from "drizzle-orm";
 import { joinOrganization, signUp } from "../../testing/sign-up";
 import { projectsService } from "../projects/service";
 import { threadsService } from "../threads/service";
-import {
-  cloudEnabled,
-  cloudProviders,
-  cloudTemplateName,
-  enabledCloudProviders,
-} from "./cloud-config";
-import { SPACES_RUNTIME_ID } from "./cloud-id";
+import { enabledCloudProviders } from "@aven/sandbox/cloud-config";
 import { reachRunner } from "./providers";
-import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { CLOUD_OFF, CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -110,7 +104,7 @@ run("Aven Cloud runtime (postgres)", async () => {
     expect(listed).toContain(first.runtimeId);
     expect(listed).toContain(second.runtimeId);
 
-    const record = await runtimesService.boatRecord(first.runtimeId);
+    const record = await runtimesService.cloudRecord(first.runtimeId, "boat");
     expect(record).toMatchObject({
       runtimeId: first.runtimeId,
       apiKey: "boat_test_key_for_cloud",
@@ -120,7 +114,9 @@ run("Aven Cloud runtime (postgres)", async () => {
     expect(JSON.stringify(child)).not.toContain(record!.runnerToken);
 
     const rotated = await runtimesService.rotate(orgA, userId, first.runtimeId);
-    expect((await runtimesService.boatRecord(first.runtimeId))?.runnerToken).toBe(rotated!.token);
+    expect((await runtimesService.cloudRecord(first.runtimeId, "boat"))?.runnerToken).toBe(
+      rotated!.token,
+    );
     expect(await runtimesService.authenticate(record!.runnerToken)).toBeNull();
   });
 
@@ -232,7 +228,7 @@ run("Aven Cloud runtime (postgres)", async () => {
       await expect(
         threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
       ).rejects.toThrow(CLOUD_OFF);
-      expect(await runtimesService.boatRecord(mine.runtimeId)).toBeNull();
+      expect(await runtimesService.cloudRecord(mine.runtimeId, "boat")).toBeNull();
       await expect(
         reachRunner({ get: () => undefined }, { runtimeId: mine.runtimeId }),
       ).rejects.toThrow(CLOUD_OFF);
@@ -240,7 +236,7 @@ run("Aven Cloud runtime (postgres)", async () => {
       process.env.AVEN_CLOUD_PROVIDERS = "boat";
     }
 
-    expect(await runtimesService.boatRecord(mine.runtimeId)).not.toBeNull();
+    expect(await runtimesService.cloudRecord(mine.runtimeId, "boat")).not.toBeNull();
   });
 
   test("spaces is a provider of its own, with its own key and address, and boat's key never reaches it", async () => {
@@ -276,24 +272,24 @@ run("Aven Cloud runtime (postgres)", async () => {
       const [child] = await db.select().from(runtimes).where(eq(runtimes.id, onSpaces.runtimeId));
       expect(child).toMatchObject({ provider: "spaces", parentRuntimeId: SPACES_RUNTIME_ID });
 
-      expect(await runtimesService.spacesRecord(onSpaces.runtimeId)).toMatchObject({
+      expect(await runtimesService.cloudRecord(onSpaces.runtimeId, "spaces")).toMatchObject({
         apiKey: "sk_spaces_test_key",
         sandboxId: null,
       });
-      expect(await runtimesService.boatRecord(onSpaces.runtimeId)).toBeNull();
-      expect(await runtimesService.spacesRecord(onBoat.runtimeId)).toBeNull();
-      expect(await runtimesService.boatRecord(onBoat.runtimeId)).toMatchObject({
+      expect(await runtimesService.cloudRecord(onSpaces.runtimeId, "boat")).toBeNull();
+      expect(await runtimesService.cloudRecord(onBoat.runtimeId, "spaces")).toBeNull();
+      expect(await runtimesService.cloudRecord(onBoat.runtimeId, "boat")).toMatchObject({
         apiKey: "boat_test_key_for_cloud",
       });
 
       const rotated = await runtimesService.rotate(orgA, userId, onSpaces.runtimeId);
-      expect((await runtimesService.spacesRecord(onSpaces.runtimeId))?.runnerToken).toBe(
+      expect((await runtimesService.cloudRecord(onSpaces.runtimeId, "spaces"))?.runnerToken).toBe(
         rotated!.token,
       );
 
       delete process.env.AVEN_SPACES_API_BASE;
       expect(enabledCloudProviders()).toEqual(["boat"]);
-      expect(await runtimesService.spacesRecord(onSpaces.runtimeId)).toBeNull();
+      expect(await runtimesService.cloudRecord(onSpaces.runtimeId, "spaces")).toBeNull();
       await expect(
         threadsService.create(orgA, userId, {
           projectId: project.id,
@@ -312,29 +308,6 @@ run("Aven Cloud runtime (postgres)", async () => {
         if (value === undefined) delete process.env[name];
         else process.env[name] = value;
       }
-    }
-  });
-
-  test("providers are named in a list, none named is off, and a name that is not a provider is refused", () => {
-    expect(cloudProviders(undefined)).toEqual([]);
-    expect(cloudProviders("")).toEqual([]);
-    expect(cloudProviders(" boat , boat ")).toEqual(["boat"]);
-    expect(() => cloudProviders("boat,vercel")).toThrow("names vercel");
-  });
-
-  test("a provider is on only when it is named and has what it needs", () => {
-    expect(enabledCloudProviders()).toEqual(["boat"]);
-    expect(cloudEnabled("boat")).toBe(true);
-    expect(cloudEnabled("vercel")).toBe(false);
-    expect(cloudTemplateName("boat")).toBe("Aven Cloud");
-
-    delete process.env.AVEN_BOAT_API_KEY;
-
-    try {
-      expect(enabledCloudProviders()).toEqual([]);
-      expect(cloudEnabled("boat")).toBe(false);
-    } finally {
-      process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
     }
   });
 });

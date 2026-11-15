@@ -3,14 +3,14 @@ import { describe, expect, test } from "bun:test";
 import { BOAT_BOOT_COMMAND, BOAT_BOOT_PATH } from "./boot";
 import { BoatClient } from "./client";
 import { wakeBoatSandbox } from "./wake";
-import type { BoatClock, BoatWakeRecord } from "./types";
+import type { SandboxClock, SandboxRecord } from "../types";
 
 const KEY = "boat_test_key_value";
 const TOKEN = "avrt_runner_token_value";
 const ID = "bx_23456789";
 const NEXT = "bx_abcdef23";
 
-function clock(): BoatClock {
+function clock(): SandboxClock {
   let time = 0;
   return {
     now: () => time,
@@ -20,7 +20,7 @@ function clock(): BoatClock {
   };
 }
 
-function record(sandboxId: string | null): BoatWakeRecord {
+function record(sandboxId: string | null): SandboxRecord {
   return {
     runtimeId: "11111111-1111-4111-8111-111111111111",
     apiKey: KEY,

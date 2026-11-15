@@ -1,25 +1,32 @@
-import { featureList } from "../../features";
+import { featureList } from "@aven/server-kit/features";
+
+import { boatModule } from "./boat/module";
+import { spacesModule } from "./spaces/module";
 import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
-import { spacesConfigured } from "./spaces/config";
+import type { CloudProviderModule } from "./types";
+
+export { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID };
+
+export const CLOUD_OFF = "Aven Cloud is turned off on this server";
 
 const CLOUD_PROVIDERS = {
-  boat: { templateId: CLOUD_RUNTIME_ID, ready: () => cloudApiKey() !== null },
-  spaces: { templateId: SPACES_RUNTIME_ID, ready: () => spacesConfigured() },
+  boat: { templateId: CLOUD_RUNTIME_ID, module: boatModule },
+  spaces: { templateId: SPACES_RUNTIME_ID, module: spacesModule },
 } as const;
 
-type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
+export type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
 
 const NAMES = Object.keys(CLOUD_PROVIDERS) as CloudProviderName[];
 
 export const CLOUD_TEMPLATE_IDS: string[] = NAMES.map((name) => CLOUD_PROVIDERS[name].templateId);
 
-export const cloudApiKey = () => process.env.AVEN_BOAT_API_KEY?.trim() || null;
-
 export const cloudProviders = (configured: string | undefined) =>
   featureList("AVEN_CLOUD_PROVIDERS", configured, NAMES);
 
 export const enabledCloudProviders = () =>
-  cloudProviders(process.env.AVEN_CLOUD_PROVIDERS).filter((name) => CLOUD_PROVIDERS[name].ready());
+  cloudProviders(process.env.AVEN_CLOUD_PROVIDERS).filter((name) =>
+    CLOUD_PROVIDERS[name].module.ready(),
+  );
 
 export const isCloudProvider = (name: string): name is CloudProviderName =>
   NAMES.some((known) => known === name);
@@ -42,3 +49,17 @@ export const cloudTemplateName = (name: string) =>
   enabledCloudProviders().length > 1 ? `Aven Cloud · ${name}` : "Aven Cloud";
 
 export const cloudTemplateId = (name: CloudProviderName) => CLOUD_PROVIDERS[name].templateId;
+
+export const cloudProvider = (name: CloudProviderName): CloudProviderModule =>
+  CLOUD_PROVIDERS[name].module;
+
+export const cloudProviderApiKey = (name: string) =>
+  isCloudProvider(name) ? CLOUD_PROVIDERS[name].module.apiKey() : null;
+
+export const cloudProviderNames = () => NAMES;
+
+export const cloudSandboxRemover = async (provider: string, sandboxId: string) => {
+  if (!isCloudProvider(provider)) return true;
+
+  return CLOUD_PROVIDERS[provider].module.removeSandbox(sandboxId);
+};

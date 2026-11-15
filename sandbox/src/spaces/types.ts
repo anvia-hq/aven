@@ -1,4 +1,4 @@
-import type { RuntimeProvider } from "../types";
+import type { CloudSandboxProvider, SandboxClock, SandboxRecord, SandboxRunner } from "../types";
 import type { SpacesClient } from "./client";
 
 export type SpacesMachineType = "small" | "default" | "large" | "xlarge";
@@ -8,32 +8,18 @@ export type SpacesSandbox = {
   state: string;
 };
 
-export type SpacesWakeRecord = {
-  runtimeId: string;
-  apiKey: string;
-  runnerToken: string;
-  sandboxId: string | null;
-  machineType: SpacesMachineType;
-};
-
-export type SpacesClock = {
-  now(): number;
-  sleep(ms: number): Promise<void>;
-};
-
-export type SpacesProvider = RuntimeProvider & {
-  stop(runtimeId: string): Promise<void>;
+export type SpacesProvider<T extends SandboxRunner = SandboxRunner> = CloudSandboxProvider<T> & {
   destroy(sandboxId: string): Promise<void>;
 };
 
 export type SpacesWake = {
-  record: SpacesWakeRecord;
+  record: SandboxRecord;
   client: SpacesClient;
   runnerUrl: string;
   saveSandboxId: (sandboxId: string) => Promise<void>;
   connected: () => boolean;
   forget?: () => void;
-  clock?: SpacesClock;
+  clock?: SandboxClock;
   readyTimeoutMs?: number;
   settleMs?: number;
   connectTimeoutMs?: number;

@@ -1,30 +1,22 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { RuntimeOfflineError } from "../offline";
-import type { RuntimeConnection } from "../hub";
-import type { ThreadPlace } from "../types";
 import { SpacesClient } from "./client";
 import { spacesApiBase, spacesApiKey, spacesAutoStopSeconds, spacesRunnerUrl } from "./config";
 import { spacesLifetime } from "./lifetime";
 import { destroySpacesSandbox, stopSpacesSandbox } from "./stop";
-import type { SpacesClock, SpacesProvider, SpacesWakeRecord } from "./types";
 import { wakeSpacesSandbox } from "./wake";
+import type { ProviderDeps, SandboxRunner, ThreadPlace } from "../types";
+import type { SpacesProvider } from "./types";
 
 const RELEASE_TIMEOUT_MS = 30_000;
 
-const inflight = new Map<string, Promise<RuntimeConnection>>();
+const inflight = new Map<string, Promise<unknown>>();
 
-type Deps = {
-  hub: {
-    get(runtimeId: string): RuntimeConnection | undefined;
-    disconnect?(runtimeId: string, reason: string): void;
-  };
-  load: (runtimeId: string, revoked?: boolean) => Promise<SpacesWakeRecord | null>;
-  saveSandboxId: (runtimeId: string, sandboxId: string) => Promise<void>;
+export type SpacesProviderDeps<T extends SandboxRunner> = ProviderDeps<T> & {
   apiKey?: () => string | null;
   client?: () => SpacesClient;
   runnerUrl?: () => string;
-  clock?: SpacesClock;
 };
 
 function defaultClient() {
@@ -35,12 +27,14 @@ function defaultClient() {
   return new SpacesClient(base);
 }
 
-export function createSpacesProvider(deps: Deps): SpacesProvider {
+export function createSpacesProvider<T extends SandboxRunner>(
+  deps: SpacesProviderDeps<T>,
+): SpacesProvider<T> {
   const clientOf = deps.client ?? defaultClient;
   const runnerUrl = deps.runnerUrl ?? spacesRunnerUrl;
 
   async function wake(runtimeId: string, offline?: string) {
-    const record = await deps.load(runtimeId);
+    const record = await deps.record({ runtimeId });
 
     if (!record) throw new RuntimeOfflineError(offline);
 
@@ -66,7 +60,7 @@ export function createSpacesProvider(deps: Deps): SpacesProvider {
     start(place, offline) {
       const running = inflight.get(place.runtimeId);
 
-      if (running) return running;
+      if (running) return running as Promise<T>;
 
       const waking = wake(place.runtimeId, offline).finally(() => {
         if (inflight.get(place.runtimeId) === waking) inflight.delete(place.runtimeId);
@@ -74,13 +68,13 @@ export function createSpacesProvider(deps: Deps): SpacesProvider {
       inflight.set(place.runtimeId, waking);
       return waking;
     },
-    async release(place: ThreadPlace, runner: RuntimeConnection | undefined) {
+    async release(place: ThreadPlace, runner: T | undefined) {
       if (!runner) return;
 
       await runner.call("sandbox.release", { threadId: place.threadId }, RELEASE_TIMEOUT_MS);
     },
     async stop(runtimeId) {
-      const record = await deps.load(runtimeId, true);
+      const record = await deps.record({ runtimeId, revoked: true });
 
       if (record) await stopSpacesSandbox(record, clientOf());
     },

@@ -2,13 +2,14 @@ import { UnavailableError } from "@aven/server-kit/errors";
 
 import { BOAT_BOOT_COMMAND, BOAT_BOOT_PATH, runnerBootEnv } from "./boot";
 import { BoatApiError, type BoatClient } from "./client";
-import type { BoatClock, BoatSandbox, BoatWakeRecord } from "./types";
+import type { BoatSandbox } from "./types";
+import type { SandboxClock, SandboxRecord } from "../types";
 
 const READY = new Set(["ready", "idle", "running"]);
 
 const WAITING = new Set(["init", "provisioning", "provisioned", "cloning", "archiving"]);
 
-const realClock: BoatClock = {
+const realClock: SandboxClock = {
   now: () => Date.now(),
   sleep: (ms) => Bun.sleep(ms),
 };
@@ -21,13 +22,13 @@ function gone(error: unknown) {
 }
 
 export async function wakeBoatSandbox(input: {
-  record: BoatWakeRecord;
+  record: SandboxRecord;
   client: BoatClient;
   runnerUrl: string;
   saveSandboxId: (sandboxId: string) => Promise<void>;
   connected: () => boolean;
   forget?: () => void;
-  clock?: BoatClock;
+  clock?: SandboxClock;
   readyTimeoutMs?: number;
   settleMs?: number;
   connectTimeoutMs?: number;
@@ -60,11 +61,11 @@ export async function wakeBoatSandbox(input: {
 
 async function ensureSandbox(
   input: {
-    record: BoatWakeRecord;
+    record: SandboxRecord;
     client: BoatClient;
     saveSandboxId: (sandboxId: string) => Promise<void>;
   },
-  clock: BoatClock,
+  clock: SandboxClock,
   readyTimeoutMs: number,
 ) {
   if (input.record.sandboxId) {
@@ -102,7 +103,7 @@ async function prepare(
   client: BoatClient,
   apiKey: string,
   sandboxId: string,
-  clock: BoatClock,
+  clock: SandboxClock,
   readyTimeoutMs: number,
 ) {
   let sandbox: BoatSandbox;
@@ -149,7 +150,7 @@ async function watch(
   client: BoatClient,
   apiKey: string,
   sandboxId: string,
-  clock: BoatClock,
+  clock: SandboxClock,
   readyTimeoutMs: number,
 ) {
   const deadline = clock.now() + readyTimeoutMs;
@@ -168,7 +169,7 @@ async function watch(
   return sandbox;
 }
 
-async function waitFor(connected: () => boolean, clock: BoatClock, deadline: number) {
+async function waitFor(connected: () => boolean, clock: SandboxClock, deadline: number) {
   for (let i = 0; i < 200; i++) {
     if (connected()) return true;
 

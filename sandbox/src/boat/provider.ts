@@ -1,38 +1,33 @@
 import { RuntimeOfflineError } from "../offline";
-import type { RuntimeConnection } from "../hub";
 import { autoStopSeconds, BoatClient } from "./client";
 import { boatLifetime } from "./lifetime";
 import { runnerUrlFromEnv } from "./runner-url";
+import { stopBoatSandbox } from "./stop";
 import { wakeBoatSandbox } from "./wake";
-import type { RuntimeProvider, ThreadPlace } from "../types";
-import type { BoatClock, BoatWakeRecord } from "./types";
+import type { CloudSandboxProvider, ProviderDeps, SandboxRunner, ThreadPlace } from "../types";
 
 const RELEASE_TIMEOUT_MS = 30_000;
 
-const inflight = new Map<string, Promise<RuntimeConnection>>();
+const inflight = new Map<string, Promise<unknown>>();
 
-type Deps = {
-  hub: {
-    get(runtimeId: string): RuntimeConnection | undefined;
-    disconnect?(runtimeId: string, reason: string): void;
-  };
-  load: (runtimeId: string) => Promise<BoatWakeRecord | null>;
-  saveSandboxId: (runtimeId: string, sandboxId: string) => Promise<void>;
-  fetchFn?: typeof fetch;
-  runnerUrl?: () => string;
+export type BoatProviderDeps<T extends SandboxRunner> = ProviderDeps<T> & {
   client?: BoatClient;
-  clock?: BoatClock;
+  runnerUrl?: () => string;
+  fetchFn?: typeof fetch;
 };
 
-export function createBoatProvider(deps: Deps): RuntimeProvider {
+export function createBoatProvider<T extends SandboxRunner>(
+  deps: BoatProviderDeps<T>,
+): CloudSandboxProvider<T> {
   const client = deps.client ?? new BoatClient(deps.fetchFn);
   const runnerUrl = deps.runnerUrl ?? (() => runnerUrlFromEnv());
+
   return {
     kind: "boat",
     start(place, offline) {
       const running = inflight.get(place.runtimeId);
 
-      if (running) return running;
+      if (running) return running as Promise<T>;
 
       const waking = wake(deps, client, runnerUrl, place.runtimeId, offline).finally(() => {
         if (inflight.get(place.runtimeId) === waking) inflight.delete(place.runtimeId);
@@ -40,22 +35,27 @@ export function createBoatProvider(deps: Deps): RuntimeProvider {
       inflight.set(place.runtimeId, waking);
       return waking;
     },
-    async release(place: ThreadPlace, runner: RuntimeConnection | undefined) {
+    async release(place: ThreadPlace, runner: T | undefined) {
       if (!runner) return;
 
       await runner.call("sandbox.release", { threadId: place.threadId }, RELEASE_TIMEOUT_MS);
     },
+    async stop(runtimeId) {
+      const record = await deps.record({ runtimeId, revoked: true });
+
+      if (record) await stopBoatSandbox(record, client);
+    },
   };
 }
 
-async function wake(
-  deps: Deps,
+async function wake<T extends SandboxRunner>(
+  deps: BoatProviderDeps<T>,
   client: BoatClient,
   runnerUrl: () => string,
   runtimeId: string,
   offline?: string,
-) {
-  const record = await deps.load(runtimeId);
+): Promise<T> {
+  const record = await deps.record({ runtimeId });
 
   if (!record) throw new RuntimeOfflineError(offline);
 

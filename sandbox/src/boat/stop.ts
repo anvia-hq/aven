@@ -1,12 +1,11 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
-import type { BoatClient } from "./client";
-import { BoatApiError } from "./client";
-import type { BoatWakeRecord } from "./types";
+import { boatApiKey, BoatApiError, BoatClient } from "./client";
+import type { SandboxRecord } from "../types";
 
 const STOPPED = new Set(["archived", "cancelled"]);
 
-export async function stopBoatSandbox(record: BoatWakeRecord, client: BoatClient) {
+export async function stopBoatSandbox(record: SandboxRecord, client: BoatClient) {
   if (!record.sandboxId) return;
 
   try {
@@ -30,4 +29,18 @@ export async function stopBoatSandbox(record: BoatWakeRecord, client: BoatClient
 
     throw new UnavailableError(error.message);
   }
+}
+
+export async function removeBoatSandbox(sandboxId: string, client = new BoatClient()) {
+  const apiKey = boatApiKey();
+
+  if (!apiKey) return false;
+
+  try {
+    await client.deleteSandbox(apiKey, sandboxId);
+  } catch (error) {
+    if (!(error instanceof BoatApiError && error.status === 404)) throw error;
+  }
+
+  return true;
 }

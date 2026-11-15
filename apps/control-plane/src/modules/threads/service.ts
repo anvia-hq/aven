@@ -20,7 +20,7 @@ import { claudeSetupService } from "../claude-setup/service";
 import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
-import { cloudEnabled, templateProvider } from "../runtimes/cloud-config";
+import { cloudEnabled, templateProvider } from "@aven/sandbox/cloud-config";
 import { CLOUD_OFF, runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";

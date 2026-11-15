@@ -22,7 +22,7 @@ import { runnerFolders } from "./folders";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
 import { stopCloudRuntime } from "./providers";
-import { isCloudTemplate } from "./cloud-config";
+import { isCloudTemplate } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { LatestRelease } from "./types";
 

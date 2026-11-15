@@ -6,29 +6,27 @@ import { threads } from "@aven/db/schema/threads";
 import { and, count, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
-import { CLOUD_RUNTIME_ID } from "./cloud-id";
 import {
+  CLOUD_OFF,
+  CLOUD_RUNTIME_ID,
   CLOUD_TEMPLATE_IDS,
-  cloudApiKey,
+  SPACES_RUNTIME_ID,
   cloudEnabled,
+  cloudProviderApiKey,
   cloudTemplateId,
   cloudTemplateName,
   disabledTemplateIds,
   enabledCloudProviders,
   enabledTemplateIds,
   templateProvider,
-} from "./cloud-config";
+} from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
-import type { BoatWakeRecord } from "./boat/types";
-import { spacesApiKey } from "./spaces/config";
-import type { SpacesWakeRecord } from "./spaces/types";
+import type { SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { RuntimeGithubMode } from "@aven/protocol/types";
+import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
 
-export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
-
-export const CLOUD_OFF = "Aven Cloud is turned off on this server";
+export { CLOUD_OFF, CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -278,39 +276,20 @@ export const runtimesService = {
     return { runtime: publicRuntime(row!), token };
   },
 
-  async boatRecord(id: string, revoked = false): Promise<BoatWakeRecord | null> {
+  async cloudRecord(
+    id: string,
+    provider: RuntimeProviderKind,
+    revoked = false,
+  ): Promise<SandboxRecord | null> {
     const [row] = await db
       .select()
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled(row.provider))
+    if (!row || row.provider !== provider || !row.parentRuntimeId || !cloudEnabled(row.provider))
       return null;
 
-    const apiKey = cloudApiKey();
-    const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
-
-    if (!apiKey || !runnerToken) return null;
-
-    return {
-      runtimeId: row.id,
-      apiKey,
-      runnerToken,
-      sandboxId: row.boatSandboxId,
-      machineType: row.boatMachineType ?? "default",
-    };
-  },
-
-  async spacesRecord(id: string, revoked = false): Promise<SpacesWakeRecord | null> {
-    const [row] = await db
-      .select()
-      .from(runtimes)
-      .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
-
-    if (!row || row.provider !== "spaces" || !row.parentRuntimeId || !cloudEnabled(row.provider))
-      return null;
-
-    const apiKey = spacesApiKey();
+    const apiKey = cloudProviderApiKey(provider);
     const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
 
     if (!apiKey || !runnerToken) return null;

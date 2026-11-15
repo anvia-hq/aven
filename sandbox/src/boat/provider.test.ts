@@ -3,15 +3,14 @@ import { describe, expect, test } from "bun:test";
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { RuntimeOfflineError } from "../offline";
-import type { RuntimeConnection } from "../hub";
 import { BoatClient } from "./client";
 import { createBoatProvider } from "./provider";
 import { stopBoatSandbox } from "./stop";
-import type { BoatClock, BoatWakeRecord } from "./types";
+import type { SandboxClock, SandboxRecord, SandboxRunner } from "../types";
 
 const ID = "bx_23456789";
 
-function clock(): BoatClock {
+function clock(): SandboxClock {
   let time = 0;
   return {
     now: () => time,
@@ -21,7 +20,7 @@ function clock(): BoatClock {
   };
 }
 
-function record(): BoatWakeRecord {
+function record(): SandboxRecord {
   return {
     runtimeId: "runtime-1",
     apiKey: "boat_test_key_value",
@@ -56,11 +55,11 @@ describe("boat runtime provider", () => {
 
       return Response.json({ ok: true, type: "ok" });
     }) as typeof fetch;
-    const connection = { call: async () => ({ released: true }) } as unknown as RuntimeConnection;
+    const connection: SandboxRunner = { call: async () => ({ released: true }) };
     const hub = { get: () => (online ? connection : undefined) };
     const provider = createBoatProvider({
       hub,
-      load: async () => record(),
+      record: async () => record(),
       saveSandboxId: async () => undefined,
       client: new BoatClient(fetchFn, "https://boat.test/api/v1"),
       runnerUrl: () => "https://aven.example.com/api",
@@ -76,19 +75,22 @@ describe("boat runtime provider", () => {
     expect(creates).toEqual(["https://boat.test/api/v1/sandboxes"]);
 
     const released: unknown[] = [];
-    await provider.release({ runtimeId: "runtime-1", threadId: "t1" }, {
-      call: async (method: string, params: unknown) => {
-        released.push({ method, params });
-        return { released: true };
+    await provider.release(
+      { runtimeId: "runtime-1", threadId: "t1" },
+      {
+        call: async (method: string, params: unknown) => {
+          released.push({ method, params });
+          return { released: true };
+        },
       },
-    } as unknown as RuntimeConnection);
+    );
     expect(released).toEqual([{ method: "sandbox.release", params: { threadId: "t1" } }]);
   });
 
   test("a runtime without a saved key is offline", async () => {
     const provider = createBoatProvider({
       hub: { get: () => undefined },
-      load: async () => null,
+      record: async () => null,
       saveSandboxId: async () => undefined,
       runnerUrl: () => "https://aven.example.com/api",
     });

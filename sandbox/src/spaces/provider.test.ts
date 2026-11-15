@@ -2,14 +2,13 @@ import { describe, expect, test } from "bun:test";
 
 import { UnavailableError } from "@aven/server-kit/errors";
 
-import type { RuntimeConnection } from "../hub";
 import { SpacesClient } from "./client";
 import { createSpacesProvider } from "./provider";
-import type { SpacesWakeRecord } from "./types";
+import type { SandboxRecord, SandboxRunner } from "../types";
 
 const ID = "bx_23456789";
 
-const record: SpacesWakeRecord = {
+const record: SandboxRecord = {
   runtimeId: "runtime-1",
   apiKey: "sk_test_key_value",
   runnerToken: "avrt_token",
@@ -17,7 +16,7 @@ const record: SpacesWakeRecord = {
   machineType: "default",
 };
 
-const connection = { call: async () => ({}) } as unknown as RuntimeConnection;
+const connection: SandboxRunner = { call: async () => ({}) };
 
 function setup(options: { online?: boolean; replies?: (url: string, method: string) => Response }) {
   const calls: string[] = [];
@@ -35,7 +34,7 @@ function setup(options: { online?: boolean; replies?: (url: string, method: stri
   }) as typeof fetch;
   const provider = createSpacesProvider({
     hub: { get: () => (online ? connection : undefined), disconnect: () => (online = false) },
-    load: async (_runtimeId, revoked) => {
+    record: async ({ revoked }) => {
       loads.push(revoked);
       return record;
     },
@@ -71,9 +70,12 @@ describe("the spaces provider", () => {
     const { provider } = setup({});
     const asked: unknown[] = [];
 
-    await provider.release({ runtimeId: "runtime-1", threadId: "t" }, {
-      call: async (method: string, params: unknown) => asked.push([method, params]),
-    } as never);
+    await provider.release(
+      { runtimeId: "runtime-1", threadId: "t" },
+      {
+        call: async (method: string, params: unknown) => asked.push([method, params]),
+      },
+    );
     await provider.release({ runtimeId: "runtime-1", threadId: "t" }, undefined);
 
     expect(asked).toEqual([["sandbox.release", { threadId: "t" }]]);
@@ -127,7 +129,7 @@ describe("the spaces provider", () => {
   test("cannot destroy anything without a key", async () => {
     const provider = createSpacesProvider({
       hub: { get: () => undefined },
-      load: async () => null,
+      record: async () => null,
       saveSandboxId: async () => undefined,
       apiKey: () => null,
     });

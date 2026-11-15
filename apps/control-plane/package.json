@@ -20,6 +20,7 @@
     "@aven/github": "workspace:*",
     "@aven/protocol": "workspace:*",
     "@aven/runtime-client": "workspace:*",
+    "@aven/sandbox": "workspace:*",
     "@aven/server-kit": "workspace:*",
     "@typesafe-ai/sdk": "^0.7.0",
     "better-auth": "^1.7.12",
