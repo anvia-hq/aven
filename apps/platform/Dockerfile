@@ -19,6 +19,7 @@ COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
 COPY packages/server-kit/package.json packages/server-kit/
 COPY packages/ui/package.json packages/ui/
+COPY sandbox/package.json sandbox/
 RUN bun install --frozen-lockfile --filter @aven/platform
 
 COPY tsconfig.json ./
