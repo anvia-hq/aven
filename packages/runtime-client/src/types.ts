@@ -282,6 +282,8 @@ export type RunRecord = {
   backend?: string;
   claudeModel?: string;
   claudeEffort?: string;
+  codexModel?: string;
+  codexEffort?: string;
 };
 
 export type RunToolsInput = {

@@ -19,8 +19,16 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
+import { CODEX_DEFAULT_EFFORT } from "@aven/protocol/codex-models";
+
 import { runSelectionOf } from "../run-selection";
-import type { ClaudeControl, MentionPerson, OutgoingMessage, RunSelection } from "../types";
+import type {
+  ClaudeControl,
+  CodexControl,
+  MentionPerson,
+  OutgoingMessage,
+  RunSelection,
+} from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
@@ -39,6 +47,7 @@ type Props = {
   threadId?: string;
   tools?: ReactNode;
   claude?: ClaudeControl;
+  codex?: CodexControl;
 };
 
 const renderEntity =
@@ -100,6 +109,7 @@ function Composer({
   threadId,
   tools,
   claude,
+  codex,
   people,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
@@ -108,10 +118,17 @@ function Composer({
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
+  let selection = model.selection;
+
+  if (claude?.choice) selection = runSelectionOf(claude.choice, model.selection);
+  else if (codex?.choice) {
+    selection = runSelectionOf(codex.choice, model.selection, CODEX_DEFAULT_EFFORT);
+  }
+
   const { canSend, submit } = useSendComposer({
     composer,
     attachments,
-    selection: claude ? runSelectionOf(claude.choice, model.selection) : model.selection,
+    selection,
     running,
     filesWhileRunning,
     onSubmit,
@@ -169,7 +186,7 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <ModelMenu model={model} claude={claude} />
+          <ModelMenu model={model} claude={claude} codex={codex} />
           {running && (
             <Button
               size="icon-sm"

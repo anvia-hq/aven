@@ -1,6 +1,6 @@
 {
-  "id": "96d6bd1f-c34a-45b9-ba9c-86f449df631d",
-  "prevId": "79a3062f-d1de-4806-8bcd-13e9c65402fd",
+  "id": "b328d3bc-0e44-4e4a-b910-9edd655cd787",
+  "prevId": "37531a4b-e8e0-49b9-ad86-3ce8b27e93b7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1705,6 +1705,80 @@
           "columns": [
             "user_id",
             "number"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.codex_setup_tokens": {
+      "name": "codex_setup_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_encrypted": {
+          "name": "token_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hint": {
+          "name": "token_hint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "codex_setup_tokens_user_id_users_id_fk": {
+          "name": "codex_setup_tokens_user_id_users_id_fk",
+          "tableFrom": "codex_setup_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "codex_setup_tokens_user_id_unique": {
+          "name": "codex_setup_tokens_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
           ]
         }
       },
@@ -3645,6 +3719,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'machine'"
+        },
+        "boat_api_key_encrypted": {
+          "name": "boat_api_key_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "boat_key_hint": {
+          "name": "boat_key_hint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "boat_machine_type": {
           "name": "boat_machine_type",

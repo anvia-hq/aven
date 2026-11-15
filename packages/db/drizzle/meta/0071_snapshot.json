@@ -1,5 +1,5 @@
 {
-  "id": "df55a6a4-6241-4afb-ada9-ddc56ac9f0ff",
+  "id": "44a3b886-9f10-4b3d-af15-463f0653149b",
   "prevId": "6dba2a18-bae7-474d-b64b-be59584deaa9",
   "version": "7",
   "dialect": "postgresql",
@@ -1712,6 +1712,80 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.codex_setup_tokens": {
+      "name": "codex_setup_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_encrypted": {
+          "name": "token_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hint": {
+          "name": "token_hint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "codex_setup_tokens_user_id_users_id_fk": {
+          "name": "codex_setup_tokens_user_id_users_id_fk",
+          "tableFrom": "codex_setup_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "codex_setup_tokens_user_id_unique": {
+          "name": "codex_setup_tokens_user_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.decision_models": {
       "name": "decision_models",
       "schema": "",
@@ -3253,7 +3327,7 @@
           "name": "runtime_id",
           "type": "uuid",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "github_installation_id": {
           "name": "github_installation_id",

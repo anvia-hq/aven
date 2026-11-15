@@ -502,22 +502,29 @@
     {
       "idx": 71,
       "version": "7",
-      "when": 1794719719557,
-      "tag": "0071_parched_may_parker",
+      "when": 1794720511867,
+      "tag": "0071_conscious_post",
       "breakpoints": true
     },
     {
       "idx": 72,
       "version": "7",
-      "when": 1794720011385,
-      "tag": "0072_clean_gargoyle",
+      "when": 1794727498901,
+      "tag": "0072_youthful_nomad",
       "breakpoints": true
     },
     {
       "idx": 73,
       "version": "7",
-      "when": 1794720493694,
-      "tag": "0073_goofy_rick_jones",
+      "when": 1794727499136,
+      "tag": "0073_spotty_blade",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1794727499373,
+      "tag": "0074_parallel_surge",
       "breakpoints": true
     }
   ]

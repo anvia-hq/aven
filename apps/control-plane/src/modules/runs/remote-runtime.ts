@@ -112,8 +112,11 @@ export class RemoteRuntime implements Runtime {
     claudeToken,
     claudeModel,
     claudeEffort,
+    codexToken,
+    codexModel,
+    codexEffort,
   }: StartRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
+    const extras = { skills, mcp, identity, memory, cockpit, claudeToken, codexToken };
     return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
       const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
         type: "run.start",
@@ -142,6 +145,12 @@ export class RemoteRuntime implements Runtime {
 
       if (claudeEffort) message.claudeEffort = claudeEffort;
 
+      if (codexToken) message.codexToken = codexToken;
+
+      if (codexModel) message.codexModel = codexModel;
+
+      if (codexEffort) message.codexEffort = codexEffort;
+
       return message;
     });
   }
@@ -162,8 +171,11 @@ export class RemoteRuntime implements Runtime {
     claudeToken,
     claudeModel,
     claudeEffort,
+    codexToken,
+    codexModel,
+    codexEffort,
   }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, claudeToken };
+    const extras = { skills, mcp, identity, memory, cockpit, claudeToken, codexToken };
     return this.#launch(
       thread,
       model,
@@ -194,6 +206,12 @@ export class RemoteRuntime implements Runtime {
 
         if (claudeEffort) message.claudeEffort = claudeEffort;
 
+        if (codexToken) message.codexToken = codexToken;
+
+        if (codexModel) message.codexModel = codexModel;
+
+        if (codexEffort) message.codexEffort = codexEffort;
+
         return message;
       },
     );
@@ -211,9 +229,18 @@ export class RemoteRuntime implements Runtime {
       github,
       env,
       claudeToken,
+      codexToken,
     }: Pick<
       StartRunInput,
-      "skills" | "mcp" | "identity" | "memory" | "cockpit" | "github" | "env" | "claudeToken"
+      | "skills"
+      | "mcp"
+      | "identity"
+      | "memory"
+      | "cockpit"
+      | "github"
+      | "env"
+      | "claudeToken"
+      | "codexToken"
     >,
     tokenOf: string | undefined,
     message: (
@@ -228,7 +255,7 @@ export class RemoteRuntime implements Runtime {
     const runId = crypto.randomUUID();
     const backend = threadBackend(thread);
     const runModel =
-      backend === "claude"
+      backend === "claude" || backend === "codex"
         ? undefined
         : this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
     const queue = new EventQueue();
@@ -244,7 +271,7 @@ export class RemoteRuntime implements Runtime {
       mcp?.map((server) => server.id),
       memory?.caller,
       cockpit,
-      keptSecrets(github, env, credential, mcp, claudeToken),
+      keptSecrets(github, env, credential, mcp, claudeToken, codexToken),
     );
     this.#post(connection, runId, message(runId, runModel, credential, placed));
 
@@ -333,6 +360,7 @@ function keptSecrets(
   identity: RunIdentityCredential | undefined,
   mcp: StartRunInput["mcp"],
   claudeToken: string | undefined,
+  codexToken: string | undefined,
 ): RunSecrets {
   const secrets: RunSecrets = {
     github,
@@ -342,6 +370,8 @@ function keptSecrets(
   };
 
   if (claudeToken) secrets.claudeToken = claudeToken;
+
+  if (codexToken) secrets.codexToken = codexToken;
 
   return secrets;
 }

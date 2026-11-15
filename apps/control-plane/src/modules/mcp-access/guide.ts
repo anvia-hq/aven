@@ -39,7 +39,7 @@ Some routes are never available through a token: sign-in, platform settings, run
 Short form: \`aven_list_projects\`, then \`aven_start_task\`, then \`aven_get_thread\` until \`running\` is false. The same in routes:
 
 1. Find the project: \`GET /projects\`. A project is a folder on a runner, with an \`id\`, a name and the runner it lives on. To add one, \`POST /projects/folder\` \`{ runtimeId, path, name? }\` for a folder that is already on the runner, or \`POST /projects/repository\` \`{ runtimeId, repository, name? }\` to clone a repository onto it. \`GET /runtimes\` lists the runners and whether each is connected.
-2. Make a thread: \`POST /threads\` \`{ projectId, title?, backend? }\`. \`backend\` is \`native\` (a model key from Providers) or \`claude\` (the person's Claude subscription). The answer has the thread's \`id\`.
+2. Make a thread: \`POST /threads\` \`{ projectId, title?, backend? }\`. \`backend\` is \`native\` (a model key from Providers), \`claude\` (the person's Claude subscription), or \`codex\` (the person's OpenAI API key). The answer has the thread's \`id\`.
 3. Give it the task: \`POST /threads/{id}/messages\` \`{ prompt, providerId?, modelId?, reasoningEffort? }\`. This starts the agent and answers at once; the agent keeps working.
 4. Watch it: \`GET /threads/{id}\`. \`running\` says whether the agent is still working, and \`messages\` is the conversation so far, including what the agent did and said. Poll every few seconds until \`running\` is false.
 5. Look at what it changed: \`GET /threads/{id}/diff\`. Steer it with another \`POST /threads/{id}/messages\`. Stop it with \`POST /threads/{id}/cancel\`.

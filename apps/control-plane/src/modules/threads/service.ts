@@ -17,6 +17,7 @@ import {
   UnprocessableError,
 } from "@aven/server-kit/errors";
 import { claudeSetupService } from "../claude-setup/service";
+import { codexSetupService } from "../codex-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
 import { cloudEnabled, templateProvider } from "../runtimes/cloud-config";
@@ -249,6 +250,8 @@ export const threadsService = {
     }
 
     if (body.backend === "claude") await claudeSetupService.requireFor(userId);
+
+    if (body.backend === "codex") await codexSetupService.requireFor(userId);
 
     const runtimeId = cloud
       ? (await runtimesService.createCloudSandbox(organizationId, userId, requested)).id

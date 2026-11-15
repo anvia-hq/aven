@@ -3,10 +3,11 @@ import { CLAUDE_DEFAULT_EFFORT } from "@aven/protocol/claude-models";
 import type { ClaudeChoice, RunSelection } from "./types";
 
 export function runSelectionOf(
-  claude: ClaudeChoice | null | undefined,
+  hosted: ClaudeChoice | null | undefined,
   fallback: RunSelection,
+  defaultEffort: string = CLAUDE_DEFAULT_EFFORT,
 ): RunSelection {
-  if (!claude) return fallback;
+  if (!hosted) return fallback;
 
-  return { modelId: claude.modelId, reasoningEffort: claude.effort ?? CLAUDE_DEFAULT_EFFORT };
+  return { modelId: hosted.modelId, reasoningEffort: hosted.effort ?? defaultEffort };
 }
