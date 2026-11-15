@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 
 import { threadsService } from "../threads/service";
 import { BoatApiError } from "./boat/client";
+import { SPACES_RUNTIME_ID } from "./cloud-id";
 import { CLOUD_SANDBOX_LIFE_MS, createCloudExpiry } from "./cloud-expiry";
 import { EXPIRED_COMPUTER, reachRunner } from "./providers";
 import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
@@ -20,11 +21,16 @@ run("Aven Cloud expiry (postgres)", async () => {
   const { userId, orgA, cleanup } = await seedOrgPair();
   const keptKey = process.env.AVEN_BOAT_API_KEY;
   const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
+  const keptSpacesKey = process.env.AVEN_SPACES_API_KEY;
+  const keptSpacesBase = process.env.AVEN_SPACES_API_BASE;
+  const [keptSpaces] = await db.select().from(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
   beforeAll(async () => {
     process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_expiry";
-    process.env.AVEN_CLOUD_PROVIDERS = "boat";
+    process.env.AVEN_CLOUD_PROVIDERS = "boat,spaces";
+    process.env.AVEN_SPACES_API_KEY = "sk_test_key_for_expiry";
+    process.env.AVEN_SPACES_API_BASE = "http://spaces.test:8787/api/v1";
     await runtimesService.ensureCloud();
   });
 
@@ -33,6 +39,14 @@ run("Aven Cloud expiry (postgres)", async () => {
 
     if (!kept) await db.delete(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
+    if (!keptSpaces) await db.delete(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
+
+    if (keptSpacesKey === undefined) delete process.env.AVEN_SPACES_API_KEY;
+    else process.env.AVEN_SPACES_API_KEY = keptSpacesKey;
+
+    if (keptSpacesBase === undefined) delete process.env.AVEN_SPACES_API_BASE;
+    else process.env.AVEN_SPACES_API_BASE = keptSpacesBase;
+
     if (keptKey === undefined) delete process.env.AVEN_BOAT_API_KEY;
     else process.env.AVEN_BOAT_API_KEY = keptKey;
 
@@ -40,11 +54,11 @@ run("Aven Cloud expiry (postgres)", async () => {
     else process.env.AVEN_CLOUD_PROVIDERS = keptProvider;
   });
 
-  async function cloudThread(name: string, sandboxId: string | null) {
+  async function cloudThread(name: string, sandboxId: string | null, template = CLOUD_RUNTIME_ID) {
     const { project } = await seedProject(orgA, userId, null, name);
     const thread = await threadsService.create(orgA, userId, {
       projectId: project.id,
-      runtimeId: CLOUD_RUNTIME_ID,
+      runtimeId: template,
     });
 
     if (sandboxId)
@@ -125,6 +139,60 @@ run("Aven Cloud expiry (postgres)", async () => {
 
     expect(await revokedAt(gone.runtimeId)).not.toBeNull();
     expect(await revokedAt(stuck.runtimeId)).toBeNull();
+  });
+
+  test("deletes a spaces sandbox through spaces and a boat one through boat, each on its own", async () => {
+    const onSpaces = await cloudThread("on-spaces", "bx_spaces00", SPACES_RUNTIME_ID);
+    const onBoat = await cloudThread("on-boat", "bx_boat0000");
+    await backdate(onSpaces, 60);
+    await backdate(onBoat, 60);
+    const boat: string[] = [];
+    const spaces: string[] = [];
+
+    await createCloudExpiry({
+      intervalMs: 60_000,
+      client: {
+        deleteSandbox: async (_key, id) => {
+          boat.push(id);
+          return {};
+        },
+      },
+      destroySpaces: async (id) => {
+        spaces.push(id);
+      },
+    }).sweep();
+
+    expect(spaces).toContain("bx_spaces00");
+    expect(spaces).not.toContain("bx_boat0000");
+    expect(boat).toContain("bx_boat0000");
+    expect(boat).not.toContain("bx_spaces00");
+    expect(await revokedAt(onSpaces.runtimeId)).not.toBeNull();
+    expect(await revokedAt(onBoat.runtimeId)).not.toBeNull();
+  });
+
+  test("a spaces sandbox that cannot be deleted is tried again, and a boat key is not needed for it", async () => {
+    const stuck = await cloudThread("spaces-stuck", "bx_stuck000", SPACES_RUNTIME_ID);
+    const fine = await cloudThread("spaces-fine", "bx_fine0000", SPACES_RUNTIME_ID);
+    await backdate(stuck, 60);
+    await backdate(fine, 60);
+    const warn = console.warn;
+    console.warn = () => {};
+    delete process.env.AVEN_BOAT_API_KEY;
+
+    try {
+      await createCloudExpiry({
+        intervalMs: 60_000,
+        destroySpaces: async (id) => {
+          if (id === "bx_stuck000") throw new Error("spaces is down");
+        },
+      }).sweep();
+    } finally {
+      console.warn = warn;
+      process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_expiry";
+    }
+
+    expect(await revokedAt(stuck.runtimeId)).toBeNull();
+    expect(await revokedAt(fine.runtimeId)).not.toBeNull();
   });
 
   test("does nothing without a boat key", async () => {

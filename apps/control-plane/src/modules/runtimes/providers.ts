@@ -1,7 +1,9 @@
 import { BoatClient } from "./boat/client";
 import { boatLifetime } from "./boat/lifetime";
-import { cloudEnabled } from "./cloud-config";
+import { cloudEnabled, isCloudProvider } from "./cloud-config";
 import { createBoatProvider } from "./boat/provider";
+import { createSpacesProvider } from "./spaces/provider";
+import { spacesLifetime } from "./spaces/lifetime";
 import { stopBoatSandbox } from "./boat/stop";
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
 import { CLOUD_OFF, runtimesService } from "./service";
@@ -27,6 +29,14 @@ export const manualProvider: RuntimeProvider = {
 
 type ProviderHub = Pick<RuntimeHub, "get"> & Partial<Pick<RuntimeHub, "disconnect">>;
 
+function spacesProvider(hub: ProviderHub) {
+  return createSpacesProvider({
+    hub,
+    load: (runtimeId, revoked) => runtimesService.spacesRecord(runtimeId, revoked),
+    saveSandboxId: (runtimeId, sandboxId) => runtimesService.setBoatSandbox(runtimeId, sandboxId),
+  });
+}
+
 const providers: Record<RuntimeProviderKind, (hub: ProviderHub) => RuntimeProvider> = {
   manual: () => manualProvider,
   boat: (hub) =>
@@ -35,12 +45,18 @@ const providers: Record<RuntimeProviderKind, (hub: ProviderHub) => RuntimeProvid
       load: (runtimeId) => runtimesService.boatRecord(runtimeId),
       saveSandboxId: (runtimeId, sandboxId) => runtimesService.setBoatSandbox(runtimeId, sandboxId),
     }),
+  spaces: (hub) => spacesProvider(hub),
 };
 
 export async function reachRunner(hub: ProviderHub, place: RunnerPlace, offline?: string) {
   const connected = hub.get(place.runtimeId);
 
-  if (connected && !boatLifetime.mayHaveStopped(place.runtimeId)) return connected;
+  if (
+    connected &&
+    !boatLifetime.mayHaveStopped(place.runtimeId) &&
+    !spacesLifetime.mayHaveStopped(place.runtimeId)
+  )
+    return connected;
 
   const kind = await runtimesService.providerOf(place.runtimeId);
 
@@ -51,7 +67,7 @@ export async function reachRunner(hub: ProviderHub, place: RunnerPlace, offline?
     throw new RuntimeOfflineError(offline);
   }
 
-  if (kind === "boat" && !cloudEnabled(kind)) throw new RuntimeOfflineError(CLOUD_OFF);
+  if (isCloudProvider(kind) && !cloudEnabled(kind)) throw new RuntimeOfflineError(CLOUD_OFF);
 
   return providers[kind](hub).start(place, offline);
 }
@@ -71,3 +87,11 @@ export async function stopBoatRuntime(runtimeId: string, fetchFn: typeof fetch =
 
   await stopBoatSandbox(record, new BoatClient(fetchFn));
 }
+
+export async function stopCloudRuntime(runtimeId: string, fetchFn: typeof fetch = fetch) {
+  await stopBoatRuntime(runtimeId, fetchFn);
+  await spacesProvider({ get: () => undefined }).stop(runtimeId);
+}
+
+export const destroySpacesSandbox = (sandboxId: string) =>
+  spacesProvider({ get: () => undefined }).destroy(sandboxId);

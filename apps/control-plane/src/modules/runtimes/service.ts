@@ -20,6 +20,8 @@ import {
 } from "./cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
+import { spacesApiKey } from "./spaces/config";
+import type { SpacesWakeRecord } from "./spaces/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
 import type { RuntimeGithubMode } from "@aven/protocol/types";
@@ -210,7 +212,7 @@ export const runtimesService = {
       coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
     )`;
     return db
-      .select({ id: runtimes.id, sandboxId: runtimes.boatSandboxId })
+      .select({ id: runtimes.id, provider: runtimes.provider, sandboxId: runtimes.boatSandboxId })
       .from(runtimes)
       .where(
         and(
@@ -299,6 +301,29 @@ export const runtimesService = {
     };
   },
 
+  async spacesRecord(id: string, revoked = false): Promise<SpacesWakeRecord | null> {
+    const [row] = await db
+      .select()
+      .from(runtimes)
+      .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+
+    if (!row || row.provider !== "spaces" || !row.parentRuntimeId || !cloudEnabled(row.provider))
+      return null;
+
+    const apiKey = spacesApiKey();
+    const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
+
+    if (!apiKey || !runnerToken) return null;
+
+    return {
+      runtimeId: row.id,
+      apiKey,
+      runnerToken,
+      sandboxId: row.boatSandboxId,
+      machineType: row.boatMachineType ?? "default",
+    };
+  },
+
   async isExpiredCloud(id: string) {
     const [row] = await db
       .select({ revokedAt: runtimes.revokedAt })
@@ -356,7 +381,7 @@ export const runtimesService = {
 
     if (!current) return null;
 
-    const encrypted = current.provider === "boat" ? await encryptedRunnerToken(token) : {};
+    const encrypted = current.provider !== "manual" ? await encryptedRunnerToken(token) : {};
     const [row] = await db
       .update(runtimes)
       .set({ ...columns, ...encrypted })

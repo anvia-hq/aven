@@ -13,6 +13,7 @@ import {
   cloudTemplateName,
   enabledCloudProviders,
 } from "./cloud-config";
+import { SPACES_RUNTIME_ID } from "./cloud-id";
 import { reachRunner } from "./providers";
 import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
@@ -27,6 +28,7 @@ run("Aven Cloud runtime (postgres)", async () => {
   const keptLimit = process.env.AVEN_CLOUD_MAX_SANDBOXES;
   const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
+  const [keptSpaces] = await db.select().from(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
   beforeAll(() => {
     process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
@@ -38,6 +40,8 @@ run("Aven Cloud runtime (postgres)", async () => {
     await cleanup();
 
     if (!kept) await db.delete(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
+
+    if (!keptSpaces) await db.delete(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
     if (keptKey === undefined) delete process.env.AVEN_BOAT_API_KEY;
     else process.env.AVEN_BOAT_API_KEY = keptKey;
@@ -237,6 +241,78 @@ run("Aven Cloud runtime (postgres)", async () => {
     }
 
     expect(await runtimesService.boatRecord(mine.runtimeId)).not.toBeNull();
+  });
+
+  test("spaces is a provider of its own, with its own key and address, and boat's key never reaches it", async () => {
+    const kept = {
+      key: process.env.AVEN_SPACES_API_KEY,
+      base: process.env.AVEN_SPACES_API_BASE,
+      providers: process.env.AVEN_CLOUD_PROVIDERS,
+    };
+    process.env.AVEN_CLOUD_PROVIDERS = "boat,spaces";
+    process.env.AVEN_SPACES_API_KEY = "sk_spaces_test_key";
+    process.env.AVEN_SPACES_API_BASE = "http://spaces.test:8787/api/v1/";
+
+    try {
+      expect(enabledCloudProviders()).toEqual(["boat", "spaces"]);
+      await runtimesService.ensureCloud();
+      const listed = await runtimesService.list(orgA, userId);
+      expect(listed.find(({ id }) => id === CLOUD_RUNTIME_ID)?.name).toBe("Aven Cloud · boat");
+      expect(listed.find(({ id }) => id === SPACES_RUNTIME_ID)).toMatchObject({
+        name: "Aven Cloud · spaces",
+        provider: "spaces",
+        lifetime: "ephemeral",
+      });
+
+      const { project } = await seedProject(orgA, userId, null, "spaces-repo");
+      const onSpaces = await threadsService.create(orgA, userId, {
+        projectId: project.id,
+        runtimeId: SPACES_RUNTIME_ID,
+      });
+      const onBoat = await threadsService.create(orgA, userId, {
+        projectId: project.id,
+        runtimeId: CLOUD_RUNTIME_ID,
+      });
+      const [child] = await db.select().from(runtimes).where(eq(runtimes.id, onSpaces.runtimeId));
+      expect(child).toMatchObject({ provider: "spaces", parentRuntimeId: SPACES_RUNTIME_ID });
+
+      expect(await runtimesService.spacesRecord(onSpaces.runtimeId)).toMatchObject({
+        apiKey: "sk_spaces_test_key",
+        sandboxId: null,
+      });
+      expect(await runtimesService.boatRecord(onSpaces.runtimeId)).toBeNull();
+      expect(await runtimesService.spacesRecord(onBoat.runtimeId)).toBeNull();
+      expect(await runtimesService.boatRecord(onBoat.runtimeId)).toMatchObject({
+        apiKey: "boat_test_key_for_cloud",
+      });
+
+      const rotated = await runtimesService.rotate(orgA, userId, onSpaces.runtimeId);
+      expect((await runtimesService.spacesRecord(onSpaces.runtimeId))?.runnerToken).toBe(
+        rotated!.token,
+      );
+
+      delete process.env.AVEN_SPACES_API_BASE;
+      expect(enabledCloudProviders()).toEqual(["boat"]);
+      expect(await runtimesService.spacesRecord(onSpaces.runtimeId)).toBeNull();
+      await expect(
+        threadsService.create(orgA, userId, {
+          projectId: project.id,
+          runtimeId: SPACES_RUNTIME_ID,
+        }),
+      ).rejects.toThrow(CLOUD_OFF);
+      await expect(
+        reachRunner({ get: () => undefined }, { runtimeId: onSpaces.runtimeId }),
+      ).rejects.toThrow(CLOUD_OFF);
+    } finally {
+      for (const [name, value] of [
+        ["AVEN_SPACES_API_KEY", kept.key],
+        ["AVEN_SPACES_API_BASE", kept.base],
+        ["AVEN_CLOUD_PROVIDERS", kept.providers],
+      ] as const) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
   });
 
   test("providers are named in a list, none named is off, and a name that is not a provider is refused", () => {

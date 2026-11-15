@@ -1,6 +1,7 @@
 import { describeError } from "@aven/server-kit/errors";
 
 import { BoatApiError, BoatClient } from "./boat/client";
+import { destroySpacesSandbox } from "./providers";
 import { runtimesService } from "./service";
 
 const HOUR_MS = 3_600_000;
@@ -11,27 +12,30 @@ type Options = {
   intervalMs: number;
   afterMs?: number;
   client?: Pick<BoatClient, "deleteSandbox">;
+  destroySpaces?: (sandboxId: string) => Promise<void>;
 };
 
 export function createCloudExpiry({
   intervalMs,
   afterMs = CLOUD_SANDBOX_LIFE_MS,
   client = new BoatClient(),
+  destroySpaces = destroySpacesSandbox,
 }: Options) {
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking: Promise<unknown> | undefined;
 
   async function sweep(now = new Date()) {
     const apiKey = process.env.AVEN_BOAT_API_KEY?.trim();
-
-    if (!apiKey) return 0;
-
     const idle = await runtimesService.idleCloudSandboxes(new Date(now.getTime() - afterMs));
     let expired = 0;
 
-    for (const { id, sandboxId } of idle) {
+    for (const { id, provider, sandboxId } of idle) {
       try {
-        if (sandboxId) {
+        if (sandboxId && provider === "spaces") {
+          await destroySpaces(sandboxId);
+        } else if (sandboxId) {
+          if (!apiKey) continue;
+
           await client.deleteSandbox(apiKey, sandboxId).catch((error: unknown) => {
             if (!(error instanceof BoatApiError && error.status === 404)) throw error;
           });
