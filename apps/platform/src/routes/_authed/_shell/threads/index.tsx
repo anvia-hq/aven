@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
@@ -35,13 +36,21 @@ function NewThread() {
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
   const [claude, setClaude] = useState<ClaudeChoice | null>(null);
   const credential = useClaudeSetup();
+  const { config } = usePlatformConfig();
+  const claudeOffered = config?.claudeBackend === true;
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
 
   const project = projects.find((candidate) => candidate.id === projectId);
   const computer = useRuntimeChoice(project);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, claude ? "claude" : "native", computer.runtimeId);
+    startThread(
+      projectId,
+      message,
+      selection,
+      claudeOffered && claude ? "claude" : "native",
+      computer.runtimeId,
+    );
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
@@ -73,7 +82,7 @@ function NewThread() {
               <PromptInput
                 autoFocus
                 onSubmit={start}
-                claude={{ choice: claude, onChange: setClaude }}
+                claude={claudeOffered ? { choice: claude, onChange: setClaude } : undefined}
                 tools={
                   <>
                     <ProjectPicker value={projectId} onChange={setProjectId} />
@@ -87,7 +96,7 @@ function NewThread() {
                   </>
                 }
               />
-              {claude && credential.loaded && !credential.setup.configured && (
+              {claudeOffered && claude && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">
                   <Link to="/settings/claude" className="underline">
                     Set a Claude setup token

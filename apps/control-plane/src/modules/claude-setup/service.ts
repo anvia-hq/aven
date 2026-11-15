@@ -3,6 +3,8 @@ import { claudeSetupTokens } from "@aven/db/schema/claude-setup-tokens";
 import { eq } from "drizzle-orm";
 
 import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
+import { UnprocessableError } from "@aven/server-kit/errors";
+import { CLAUDE_BACKEND_OFF, claudeBackendEnabled } from "./flag";
 import { claudeTokenOf } from "./token";
 import type { ClaudeSetupView } from "./types";
 
@@ -37,6 +39,8 @@ export const claudeSetupService = {
   },
 
   requireFor(userId: string) {
+    if (!claudeBackendEnabled()) throw new UnprocessableError(CLAUDE_BACKEND_OFF);
+
     return claudeTokenOf(userId, (id) => this.tokenFor(id));
   },
 

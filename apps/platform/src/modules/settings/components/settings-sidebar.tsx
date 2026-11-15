@@ -68,7 +68,13 @@ const platformGroup = {
 
 export function SettingsSidebar() {
   const { config } = usePlatformConfig();
-  const visibleGroups = config?.isOwner ? [...groups, platformGroup] : groups;
+  const withPlatform = config?.isOwner ? [...groups, platformGroup] : groups;
+  const visibleGroups = withPlatform.map((group) => ({
+    ...group,
+    items: group.items.filter(
+      (item) => item.to !== "/settings/claude" || config?.claudeBackend === true,
+    ),
+  }));
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (

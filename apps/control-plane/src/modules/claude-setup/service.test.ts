@@ -10,6 +10,7 @@ run("claudeSetupService (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { inArray } = await import("drizzle-orm");
   const { claudeSetupService } = await import("./service");
+  const { CLAUDE_BACKEND_OFF } = await import("./flag");
 
   const alice = `alice-${crypto.randomUUID()}`;
   const bob = `bob-${crypto.randomUUID()}`;
@@ -24,6 +25,21 @@ run("claudeSetupService (postgres)", async () => {
     { id: alice, name: "Alice", email: `${alice}@example.com` },
     { id: bob, name: "Bob", email: `${bob}@example.com` },
   ]);
+
+  test("hands out a person's token only while the Claude agent is on", async () => {
+    const kept = process.env.AVEN_CLAUDE_BACKEND;
+    await claudeSetupService.save(alice, aliceToken);
+    process.env.AVEN_CLAUDE_BACKEND = "off";
+
+    try {
+      expect(() => claudeSetupService.requireFor(alice)).toThrow(CLAUDE_BACKEND_OFF);
+    } finally {
+      if (kept === undefined) delete process.env.AVEN_CLAUDE_BACKEND;
+      else process.env.AVEN_CLAUDE_BACKEND = kept;
+    }
+
+    expect(await claudeSetupService.requireFor(alice)).toBe(aliceToken);
+  });
 
   test("keeps each person's token to that person, and never returns it", async () => {
     await claudeSetupService.save(alice, aliceToken);

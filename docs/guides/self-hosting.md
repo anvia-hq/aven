@@ -61,6 +61,12 @@ Docker. The server's own built-in runner serves folders too: `AVEN_LOCAL_RUNNER`
 A runner is private to the person who registered it until they turn on **Share** in **Settings >
 Runtimes**; sharing lets workspace members run commands on it as its user.
 
+## Turning the Claude agent off
+
+Threads can run on Anthropic's Claude Agent SDK with a person's own Claude subscription. It is on by
+default. Set `AVEN_CLAUDE_BACKEND=off` to hide it from the composer and Settings and to refuse new
+Claude threads; threads that already use it stay readable but cannot run.
+
 ## Aven Cloud
 
 Aven Cloud runs a thread in a sandbox of its own. It is off until you choose a provider, and boat.dev

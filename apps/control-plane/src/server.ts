@@ -10,6 +10,7 @@ import {
   threadRetention,
   threadWatcher,
 } from "./composition";
+import { claudeBackendEnabled } from "./modules/claude-setup/flag";
 import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
@@ -19,6 +20,7 @@ import { startPreviews } from "./modules/preview/start";
 
 export async function startControlPlane(edition: Edition) {
   editionInUse.current = edition;
+  claudeBackendEnabled();
 
   for (const route of edition.routes) app.use(route);
 
