@@ -50,6 +50,25 @@ describe("the Codex MCP server", () => {
     }
   });
 
+  test("opens an event stream for an authenticated GET", async () => {
+    const mcp = serveCodexMcp([tool]);
+    try {
+      const denied = await fetch(mcp.url, { method: "GET" });
+      expect(denied.status).toBe(401);
+
+      const stream = await fetch(mcp.url, {
+        method: "GET",
+        headers: { authorization: `Bearer ${mcp.token}` },
+      });
+      expect(stream.status).toBe(200);
+      expect(stream.headers.get("content-type")).toContain("text/event-stream");
+      expect(stream.headers.get("mcp-session-id")?.length).toBeGreaterThan(0);
+      expect(await stream.text()).toBe("event: ready\ndata: {}\n\n");
+    } finally {
+      mcp.close();
+    }
+  });
+
   test("refuses a call with no token, the wrong token, or a browser Origin", async () => {
     const mcp = serveCodexMcp([tool]);
     try {

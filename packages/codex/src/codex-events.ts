@@ -93,13 +93,18 @@ function usageOf(usage: CodexUsage): TokenUsage {
   };
 }
 
+const KEY_REJECTION =
+  /incorrect api key|invalid api key|invalid_api_key|\bunauthorized\b|\bunauthenticated\b/;
+
 function rejectedKey(message: string) {
   const lower = message.toLowerCase();
+
+  if (KEY_REJECTION.test(lower)) return true;
+
   return (
-    lower.includes("401") ||
-    lower.includes("incorrect api key") ||
-    lower.includes("invalid api key") ||
-    lower.includes("unauthorized")
+    /^\s*401\b/.test(lower) ||
+    /\bhttp\s+401\b/.test(lower) ||
+    /\bstatus(?:\s+code)?\s*[:= ]\s*401\b/.test(lower)
   );
 }
 

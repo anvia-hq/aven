@@ -38,3 +38,4 @@ Status: accepted. Adds to 0220, 0222 and 0242.
 
 - A runner that offers `codex` must be able to spawn the Codex CLI. Tests and the e2e spec set `AVEN_CODEX_FAKE=1` and never do.
 - The menu alias, not the resolved slug, is what `CodexTurn` uses for the context window. Passing `gpt-6.1-terra` as the model id would fall through to Astra's window, so the wire carries the alias (`terra`).
+- A turn error is a rejected key when it names an API key, says unauthorized, or is an HTTP 401 status (`401` at the start, `HTTP 401`, or `status code 401`). A 401 inside a byte count or an id stays the original message.

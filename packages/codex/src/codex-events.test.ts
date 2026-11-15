@@ -144,9 +144,25 @@ describe("Codex stream events become thread events", () => {
     rejected.take({ type: "error", message: "401 Incorrect API key provided" });
     expect(rejected.error).toBe("The Codex API key was rejected. Replace it in Settings.");
 
+    const http = new CodexTurn("default");
+    http.take({ type: "turn.failed", error: { message: "HTTP 401 Unauthorized" } });
+    expect(http.error).toBe("The Codex API key was rejected. Replace it in Settings.");
+
+    const status = new CodexTurn("default");
+    status.take({ type: "error", message: "status code: 401" });
+    expect(status.error).toBe("The Codex API key was rejected. Replace it in Settings.");
+
     const failed = new CodexTurn("default", redact);
     failed.take({ type: "turn.failed", error: { message: `boom ${TOKEN}` } });
     expect(failed.error).toBe("boom [redacted]");
+
+    const counted = new CodexTurn("default");
+    counted.take({ type: "error", message: "wrote 401 bytes" });
+    expect(counted.error).toBe("wrote 401 bytes");
+
+    const numbered = new CodexTurn("default");
+    numbered.take({ type: "error", message: "request id 40123" });
+    expect(numbered.error).toBe("request id 40123");
   });
 
   test("aliases a second ask_user call onto the question already open", () => {
