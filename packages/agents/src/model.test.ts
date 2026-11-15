@@ -5,7 +5,7 @@ import { AnthropicClient } from "@anvia/anthropic";
 import { createCodingAgent } from "./coding-agent";
 import { azureApiFor, createModel, providerOptionsFor, reasoningControlsFor } from "./model";
 import type { ModelConfig } from "./types";
-import { PROVIDERS } from "@aven/protocol/runtime-wire";
+import { MODEL_APIS } from "@aven/protocol/runtime-wire";
 
 describe("providerOptionsFor", () => {
   test("only anthropic gets automatic prompt caching", () => {
@@ -383,8 +383,8 @@ describe("createModel", () => {
     }
   });
 
-  test("every wire provider has a model", () => {
-    for (const provider of PROVIDERS) {
+  test("every model API has a model, and a subscription is not one", () => {
+    for (const provider of MODEL_APIS) {
       expect(() =>
         createModel({ provider, modelId: "m", baseUrl: "http://localhost:1/v1" }, "k"),
       ).not.toThrow();

@@ -1,6 +1,5 @@
 import { createHmac } from "node:crypto";
 
-import type { Provider } from "@aven/agents/model";
 import { errorMessage } from "@aven/agents/values";
 
 import { assertProviderAddress } from "../providers/address-guard";
@@ -9,7 +8,7 @@ import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
 import { bearerToken } from "./bearer";
 import type { ModelConfig } from "@aven/agents/types";
-import type { RunModel } from "@aven/protocol/types";
+import type { ModelApi, RunModel } from "@aven/protocol/types";
 
 const TOKEN_PREFIX = "avgw_";
 
@@ -34,9 +33,9 @@ const SEGMENTS = {
   vertex: "vertex",
   azure: "azure",
   "openai-compatible": "compatible",
-} as const satisfies Record<Provider, string>;
+} as const satisfies Record<ModelApi, string>;
 
-const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
+const ALLOWED_PATHS: Record<ModelApi, readonly string[]> = {
   anthropic: ["/v1/messages"],
   openai: ["/responses", "/chat/completions"],
   gemini: [],
@@ -48,7 +47,7 @@ const ALLOWED_PATHS: Record<Provider, readonly string[]> = {
 
 const GEMINI_PATH = /^\/v1(?:beta)?\/models\/[^/:?]+:(generateContent|streamGenerateContent)$/;
 
-const allowed = (provider: Provider, path: string) =>
+const allowed = (provider: ModelApi, path: string) =>
   provider === "gemini" ? GEMINI_PATH.test(path) : ALLOWED_PATHS[provider].includes(path);
 
 const PASS_REQUEST_HEADERS = ["accept", "anthropic-version", "anthropic-beta"];

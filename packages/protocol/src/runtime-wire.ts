@@ -1,4 +1,4 @@
-export const PROVIDERS = [
+export const MODEL_APIS = [
   "openai",
   "anthropic",
   "gemini",
@@ -7,6 +7,8 @@ export const PROVIDERS = [
   "azure",
   "openai-compatible",
 ] as const;
+
+export const PROVIDERS = [...MODEL_APIS, "claude-subscription", "codex-subscription"] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 
 export const AGENT_BACKENDS = ["native", "claude", "codex"] as const;

@@ -1,6 +1,25 @@
-import type { Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
+import { MODEL_APIS } from "./runtime-wire";
+import type { AgentBackendKind, ModelApi, Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
+
+export const isModelApi = (kind: string): kind is ModelApi =>
+  (MODEL_APIS as readonly string[]).includes(kind);
 
 export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
+
+export const SUBSCRIPTION_PROVIDERS = ["claude-subscription", "codex-subscription"] as const;
+
+export const isSubscriptionProvider = (
+  kind: Provider,
+): kind is "claude-subscription" | "codex-subscription" =>
+  kind === "claude-subscription" || kind === "codex-subscription";
+
+export const providerBackend = (kind: Provider): AgentBackendKind => {
+  if (kind === "claude-subscription") return "claude";
+
+  if (kind === "codex-subscription") return "codex";
+
+  return "native";
+};
 
 export const bedrockBaseUrl = (region: string) => `https://bedrock-mantle.${region}.api.aws/v1`;
 

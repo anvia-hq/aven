@@ -88,6 +88,34 @@ const compatible = {
   isDefault,
 };
 
+const claudeSubscription = {
+  kind: z.literal("claude-subscription"),
+  name: providerName,
+  modelId: providerModelId.optional(),
+  isDefault,
+};
+
+const codexSubscription = {
+  kind: z.literal("codex-subscription"),
+  name: providerName,
+  modelId: providerModelId.optional(),
+  isDefault,
+};
+
+const claudeSetupToken = z
+  .string()
+  .trim()
+  .min(20)
+  .max(4096)
+  .regex(/^sk-ant-oat01-\S+$/, "A Claude setup token starts with sk-ant-oat01-");
+
+const codexApiKey = z
+  .string()
+  .trim()
+  .min(20)
+  .max(4096)
+  .regex(/^sk-(?!ant)\S+$/, "A Codex API key starts with sk- and is a single line");
+
 export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...openai, apiKey }),
   z.object({ ...anthropic, apiKey }),
@@ -96,6 +124,8 @@ export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...vertex, apiKey: vertexCredential }),
   z.object({ ...azure, apiKey }),
   z.object({ ...compatible, apiKey: apiKey.optional() }),
+  z.object({ ...claudeSubscription, apiKey: claudeSetupToken }),
+  z.object({ ...codexSubscription, apiKey: codexApiKey }),
 ]);
 
 export const keylessProviderBody = z.discriminatedUnion("kind", [
@@ -106,11 +136,13 @@ export const keylessProviderBody = z.discriminatedUnion("kind", [
   z.object(vertex),
   z.object(azure),
   z.object(compatible),
+  z.object(claudeSubscription),
+  z.object(codexSubscription),
 ]);
 
 export const updateProviderBody = z.object({
   name: providerName.optional(),
-  apiKey: z.union([apiKey, vertexCredential]).optional(),
+  apiKey: z.union([apiKey, vertexCredential, claudeSetupToken, codexApiKey]).optional(),
   baseUrl: providerBaseUrl.optional(),
   modelId: providerModelId.nullable().optional(),
   isDefault: z.literal(true).optional(),

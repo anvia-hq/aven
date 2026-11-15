@@ -205,7 +205,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
   test("a teammate's run looks up the teammate's providers and the creator's the creator's", async () => {
     const thread = await driven();
     const lookedUp: string[] = [];
-    const spy = spyOn(providersService, "forRun").mockImplementation(async (id: string) => {
+    const spy = spyOn(providersService, "forNativeRun").mockImplementation(async (id: string) => {
       lookedUp.push(id);
       return undefined as never;
     });

@@ -10,6 +10,7 @@ import type {
   RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
+  MODEL_APIS,
 } from "./runtime-wire";
 
 export type Bot = {
@@ -391,6 +392,8 @@ export type RunThreadInfo = {
 
 export type Provider = (typeof PROVIDERS)[number];
 
+export type ModelApi = (typeof MODEL_APIS)[number];
+
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
@@ -404,7 +407,7 @@ export type RuntimeLifetime = (typeof RUNTIME_LIFETIMES)[number];
 export type RuntimeGithubMode = (typeof RUNTIME_GITHUB_MODES)[number];
 
 export type RunModel = {
-  provider: Provider;
+  provider: ModelApi;
   modelId?: string;
   reasoningEffort?: string;
   effortLevels?: string[];

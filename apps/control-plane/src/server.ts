@@ -11,8 +11,7 @@ import {
   threadRetention,
   threadWatcher,
 } from "./composition";
-import { claudeBackendEnabled } from "./modules/claude-setup/flag";
-import { codexBackendEnabled } from "./modules/codex-setup/flag";
+import { claudeBackendEnabled, codexBackendEnabled } from "./modules/providers/backends";
 import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";

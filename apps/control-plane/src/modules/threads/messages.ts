@@ -7,13 +7,14 @@ import { codexEffortOf } from "@aven/protocol/codex-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
-import { claudeSetupService } from "../claude-setup/service";
-import { codexSetupService } from "../codex-setup/service";
+import { providerBackend } from "@aven/protocol/providers";
+import { providersService } from "../providers/service";
+import { requireSubscriptionToken } from "../providers/token";
 import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { runtimesService } from "../runtimes/service";
-import { assertSeesImages, resolveModel } from "../providers/resolve-model";
+import { assertSeesImages, InvalidSelectionError, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
 import { webSearchForRun } from "../runs/web-search";
 import { mcpService } from "../mcp/service";
@@ -365,26 +366,43 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
   };
 };
 
+async function assertSubscriptionChoice(
+  ownerId: string,
+  backend: "claude" | "codex",
+  providerId: string | undefined,
+) {
+  if (!providerId) return;
+
+  const row = await providersService.forRun(ownerId, providerId);
+
+  if (!row || providerBackend(row.kind) !== backend)
+    throw new InvalidSelectionError(
+      "This thread runs on another agent: choose a model of its own provider",
+    );
+}
+
 async function hostedRun(
   backend: string | null | undefined,
   ownerId: string,
-  selection: { modelId?: string; reasoningEffort?: string },
+  selection: { providerId?: string; modelId?: string; reasoningEffort?: string },
 ) {
+  if (backend !== "claude" && backend !== "codex") return {};
+
+  await assertSubscriptionChoice(ownerId, backend, selection.providerId);
+
+  const token = await requireSubscriptionToken(ownerId, backend);
+
   if (backend === "claude") {
     return {
-      claudeToken: await claudeSetupService.requireFor(ownerId),
+      claudeToken: token,
       claudeModel: selection.modelId,
       claudeEffort: claudeEffortOf(selection.reasoningEffort),
     };
   }
 
-  if (backend === "codex") {
-    return {
-      codexToken: await codexSetupService.requireFor(ownerId),
-      codexModel: selection.modelId,
-      codexEffort: codexEffortOf(selection.reasoningEffort),
-    };
-  }
-
-  return {};
+  return {
+    codexToken: token,
+    codexModel: selection.modelId,
+    codexEffort: codexEffortOf(selection.reasoningEffort),
+  };
 }
