@@ -19,6 +19,7 @@ import { TooltipProvider } from "@aven/ui/tooltip";
 import { UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
+import { BotRailPeers } from "@/modules/bots/components/bot-rail-peers";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { AnnouncementBanner } from "@/modules/announcements/components/announcement-banner";
 import { MentionsButton } from "@/modules/mentions/components/mentions-button";
@@ -61,7 +62,7 @@ export function AppShell({ user, sidebar }: Props) {
       <TooltipProvider delay={300}>
         <nav
           aria-label="Aven"
-          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center py-2.5 md:flex"
+          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center overflow-auto py-2.5 md:flex"
         >
           <RailLink
             to="/threads"
@@ -75,6 +76,7 @@ export function AppShell({ user, sidebar }: Props) {
           <div className="flex flex-col items-center gap-1.5">
             <CockpitRailLink />
             <BotRailLink />
+            <BotRailPeers />
           </div>
           <div className="mt-auto flex flex-col items-center gap-1.5">
             <MachinesRailIcon width={sidebarSize.width} />

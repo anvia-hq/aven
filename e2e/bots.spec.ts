@@ -12,6 +12,9 @@ const bubble = (page: Page, text: string) =>
     .locator('[data-slot="bubble-content"], [data-role="user"]')
     .filter({ hasText: new RegExp(`^${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
 
+const botRow = (page: Page, name: string) =>
+  page.locator('[data-slot="sidebar"]').getByRole("link", { name: new RegExp(`^${name}\\b`) });
+
 test.describe("bots", () => {
   test("bubbles in a row of one speaker lose the rounding of their left side where they touch", async ({
     page,
@@ -455,12 +458,12 @@ test.describe("bots", () => {
     expect(provider.ok()).toBe(true);
 
     await page.goto("/bot");
-    await expect(page.getByRole("link", { name: "Scout" })).toBeHidden();
+    await expect(botRow(page, "Scout")).toBeHidden();
     await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
-    const scout = page.getByRole("link", { name: /Scout/ });
+    const scout = botRow(page, "Scout");
     await expect(scout).toBeVisible();
     await expect(scout).toContainText("Researches what you ask.");
     await scout.click();
@@ -513,7 +516,7 @@ test.describe("bots", () => {
     await message.press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await botRow(page, "Scout").click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
@@ -537,13 +540,14 @@ test.describe("bots", () => {
     await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
     await expect(bubble(page, "I asked Scout")).toBeVisible();
     await expect(message).toHaveText("");
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood]')).toHaveAttribute(
-      "data-mood",
-      "working",
-    );
+    await expect(
+      page.locator('[data-slot="sidebar"] a[href^="/bot/"] svg[data-mood]'),
+    ).toHaveAttribute("data-mood", "working");
 
     await expect(bubble(page, "Scout answered")).toBeVisible();
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="sidebar"] a[href^="/bot/"] svg[data-mood="idle"]'),
+    ).toBeVisible();
 
     const activity = page.locator('[data-activity="bots"]');
     await expect(activity).toContainText("2 messages with");
@@ -553,7 +557,7 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Aven → Scout A, B and C");
     await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await botRow(page, "Scout").click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(activity).toContainText("2 messages with");
@@ -797,7 +801,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await botRow(page, "Scout").click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
@@ -1066,5 +1070,76 @@ test.describe("bots", () => {
     await expect
       .poll(async () => Math.abs((await top(input)) - (await top(send))))
       .toBeLessThan(20);
+  });
+
+  test("a bot that works stands in the rail under Aven, stays there when it is done, and goes when it is opened", async ({
+    page,
+  }, testInfo) => {
+    test.slow();
+    await registerUser(page, "bot-rail", "Rail Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const rail = page.getByRole("navigation", { name: "Aven", exact: true });
+    const inRail = rail.getByRole("link", { name: "Scout" });
+    const mood = rail.locator('a[aria-label="Scout"] svg[data-mood]');
+
+    await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
+    await page.getByRole("textbox", { name: "Message" }).press("Enter");
+    await expect(bubble(page, "Scout is ready")).toBeVisible();
+    await expect(inRail).toBeVisible();
+
+    await botRow(page, "Scout").click();
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
+    await expect(inRail).toBeHidden();
+
+    const phrase = "keep working";
+    const held = await page.request.post("http://localhost:8102/e2e/hold", {
+      data: { phrase },
+    });
+    expect(held.ok()).toBe(true);
+
+    try {
+      await page.getByRole("textbox", { name: "Message" }).fill(phrase);
+      await page.getByRole("textbox", { name: "Message" }).press("Enter");
+      await expect(bubble(page, phrase)).toBeVisible();
+      await expect(mood).toHaveAttribute("data-mood", "working");
+
+      await rail.getByRole("link", { name: "Bot", exact: true }).click();
+      await expect(page).toHaveURL(/\/bot$/);
+      await expect(inRail).toBeVisible();
+      await expect(mood).toHaveAttribute("data-mood", "working");
+      await expect(mood).toHaveAttribute("data-color", /^#[0-9a-f]{6}$/i);
+      await page.screenshot({ path: testInfo.outputPath("rail-working.png") });
+    } finally {
+      await page.request.post("http://localhost:8102/e2e/release", { data: { phrase } });
+    }
+
+    await expect(mood).toHaveAttribute("data-mood", "idle");
+    await expect(inRail).toBeVisible();
+    const aven = rail.getByRole("link", { name: "Bot", exact: true });
+    await expect(aven).toBeVisible();
+
+    const railBox = (await rail.boundingBox())!;
+    const avenBox = (await aven.boundingBox())!;
+    const scoutBox = (await inRail.boundingBox())!;
+    expect(scoutBox.x).toBe(avenBox.x);
+    expect(scoutBox.y).toBeGreaterThan(avenBox.y + avenBox.height);
+    expect(scoutBox.y + scoutBox.height).toBeLessThanOrEqual(railBox.y + railBox.height);
+    await page.screenshot({ path: testInfo.outputPath("rail-done.png") });
+
+    await inRail.click();
+    await expect(page).toHaveURL(/\/bot\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
+    await expect(inRail).toBeHidden();
+    await expect(rail.getByRole("link", { name: "Bot", exact: true })).toBeVisible();
   });
 });

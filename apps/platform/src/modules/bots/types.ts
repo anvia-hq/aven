@@ -56,6 +56,18 @@ export type BotsWorkingStore = {
   snapshot: () => ReadonlySet<string>;
 };
 
+export type BotRailState = {
+  shown: readonly string[];
+  opened: readonly string[];
+};
+
+export type BotRailStore = {
+  subscribe: (listener: () => void) => () => void;
+  snapshot: () => BotRailState;
+  markOpened: (id: string) => void;
+  reset: () => void;
+};
+
 export type MentionPart =
   | { type: "text"; text: string }
   | { type: "mention"; bot: Pick<Bot, "id" | "name" | "avatar"> }

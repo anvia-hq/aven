@@ -8,6 +8,7 @@ import { createListStore } from "@/lib/list-store";
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
 import { botsAtom } from "../atoms/bots-atom";
 import type { Bot, BotPatch } from "../types";
+import { botRailStore } from "./use-bot-rail";
 
 const botsStore = createListStore<Bot>({ path: "/bots", atom: botsAtom, label: "bots" });
 
@@ -15,6 +16,7 @@ export const refreshBots = () => botsStore.refresh();
 
 export function resetBots() {
   botsStore.reset();
+  botRailStore.reset();
   getDefaultStore().set(botLastMessagesAtom, {});
 }
 

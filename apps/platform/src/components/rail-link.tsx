@@ -7,19 +7,21 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 
 type Props = {
   to: NonNullable<LinkProps["to"]>;
+  params?: LinkProps["params"];
   label: string;
   tooltip?: string;
   active: boolean;
   children: ReactNode;
 };
 
-export function RailLink({ to, label, tooltip = label, active, children }: Props) {
+export function RailLink({ to, params, label, tooltip = label, active, children }: Props) {
   return (
     <Tooltip>
       <TooltipTrigger
         render={
           <Link
             to={to}
+            params={params}
             aria-label={label}
             aria-current={active ? "page" : undefined}
             className={cn(
