@@ -175,7 +175,7 @@ export function SidebarThreads() {
   const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   const shared = others.filter((thread) => thread.state === "open");
-  const { runtimes } = useRuntimes({ poll: true });
+  const { computers: runtimes } = useRuntimes({ poll: true });
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();

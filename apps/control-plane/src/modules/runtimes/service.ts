@@ -219,7 +219,6 @@ export const runtimesService = {
           visibleTo(organizationId),
           usableBy(userId),
           isNull(runtimes.revokedAt),
-          isNull(runtimes.parentRuntimeId),
           cloudApiKey() ? undefined : ne(runtimes.id, CLOUD_RUNTIME_ID),
         ),
       )

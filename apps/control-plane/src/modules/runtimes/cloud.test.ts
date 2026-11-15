@@ -64,7 +64,7 @@ run("Aven Cloud runtime (postgres)", async () => {
     expect((await runtimesService.get(orgA, CLOUD_RUNTIME_ID))?.name).toBe("Aven Cloud");
   });
 
-  test("a thread on Aven Cloud gets a computer of its own that the runtime list does not show", async () => {
+  test("a thread on Aven Cloud gets a computer of its own that is listed only to its owner", async () => {
     const { project } = await seedProject(orgA, userId, null, "cloud-repo");
     const first = await threadsService.create(orgA, userId, {
       projectId: project.id,
@@ -91,8 +91,8 @@ run("Aven Cloud runtime (postgres)", async () => {
     expect(child!.boatRunnerTokenEncrypted).not.toBeNull();
 
     const listed = (await runtimesService.list(orgA, userId)).map(({ id }) => id);
-    expect(listed).not.toContain(first.runtimeId);
-    expect(listed).not.toContain(second.runtimeId);
+    expect(listed).toContain(first.runtimeId);
+    expect(listed).toContain(second.runtimeId);
 
     const record = await runtimesService.boatRecord(first.runtimeId);
     expect(record).toMatchObject({
@@ -120,6 +120,9 @@ run("Aven Cloud runtime (postgres)", async () => {
       await joinOrganization(teammate, orgA, "member");
       expect(await runtimesService.get(orgA, mine.runtimeId, userId)).not.toBeNull();
       expect(await runtimesService.get(orgA, mine.runtimeId, teammate.userId)).toBeNull();
+      expect((await runtimesService.list(orgA, teammate.userId)).map(({ id }) => id)).not.toContain(
+        mine.runtimeId,
+      );
       await expect(requireUsableRuntime(teammate.userId, mine.runtimeId)).rejects.toThrow(
         "not one you can use",
       );
@@ -178,7 +181,7 @@ run("Aven Cloud runtime (postgres)", async () => {
     await expect(
       threadsService.create(orgB, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
     ).rejects.toThrow("2 Aven Cloud computers");
-    expect((await runtimesService.list(orgB, userId)).length).toBe(existing);
+    expect((await runtimesService.list(orgB, userId)).length).toBe(existing + 2);
   });
 
   test("without a boat key Aven Cloud cannot start a thread", async () => {

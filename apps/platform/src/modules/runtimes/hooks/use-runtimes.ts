@@ -26,7 +26,8 @@ export const resetRuntimes = runtimesStore.reset;
 const POLL_MS = 10_000;
 
 export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
-  const [runtimes] = useAtom(runtimesAtom);
+  const [listed] = useAtom(runtimesAtom);
+  const runtimes = listed === null ? null : listed.filter((runtime) => !runtime.parentRuntimeId);
   const { data: session } = authClient.useSession();
   const { refresh } = runtimesStore;
 
@@ -133,6 +134,7 @@ export function useRuntimes({ poll = false }: { poll?: boolean } = {}) {
 
   return {
     runtimes: runtimes ?? [],
+    computers: listed ?? [],
     loaded: runtimes !== null,
     defaultRunner,
     isOwnedByMe,

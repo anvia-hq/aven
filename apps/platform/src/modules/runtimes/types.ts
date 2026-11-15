@@ -27,6 +27,7 @@ export type Runtime = {
   updateTo: string | null;
   isControlPlane: boolean;
   isCloud: boolean;
+  parentRuntimeId: string | null;
   canUpdate: boolean;
   stats: RuntimeStats | null;
   lastSeenAt: string | null;
