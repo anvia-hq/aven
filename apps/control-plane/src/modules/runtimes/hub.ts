@@ -2,6 +2,7 @@ import type { MemoryStore } from "@anvia/core";
 import { AGENT_BACKENDS, CloseCode, WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
 import { describeError, UnavailableError } from "@aven/server-kit/errors";
+import { RuntimeOfflineError } from "./offline";
 import { MachineProcessWatch } from "./machine-process-watch";
 import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
@@ -33,11 +34,7 @@ import type {
   RuntimeToControlPlane,
 } from "@aven/protocol/types";
 
-export class RuntimeOfflineError extends UnavailableError {
-  constructor(message = "The runtime for this project is offline") {
-    super(message);
-  }
-}
+export { RuntimeOfflineError };
 
 export class BackendUnavailableError extends UnavailableError {
   constructor() {

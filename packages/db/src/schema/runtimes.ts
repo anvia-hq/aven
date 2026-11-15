@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 
 import {
+  BOAT_MACHINE_TYPES,
   RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
@@ -23,6 +24,11 @@ export const runtimes = pgTable(
     provider: text("provider", { enum: RUNTIME_PROVIDERS }).notNull().default("manual"),
     lifetime: text("lifetime", { enum: RUNTIME_LIFETIMES }).notNull().default("persistent"),
     githubMode: text("github_mode", { enum: RUNTIME_GITHUB_MODES }).notNull().default("machine"),
+    boatApiKeyEncrypted: text("boat_api_key_encrypted"),
+    boatKeyHint: text("boat_key_hint"),
+    boatMachineType: text("boat_machine_type", { enum: BOAT_MACHINE_TYPES }),
+    boatSandboxId: text("boat_sandbox_id"),
+    boatRunnerTokenEncrypted: text("boat_runner_token_encrypted"),
     shared: boolean("shared").notNull().default(false),
     directories: text("directories")
       .array()

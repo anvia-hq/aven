@@ -1,4 +1,4 @@
-import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
+import type { BoatMachineType, RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 
 export type RuntimeStats = {
   cores: number;
@@ -18,6 +18,10 @@ export type Runtime = {
   host: boolean;
   shared: boolean;
   githubMode: RuntimeGithubMode;
+  provider: "manual" | "boat";
+  boatMachineType: BoatMachineType | null;
+  boatSandboxId: string | null;
+  boatKeyHint: string | null;
   github: RunnerGithub | null;
   directories: string[];
   tokenHint: string;

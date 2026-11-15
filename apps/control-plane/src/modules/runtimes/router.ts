@@ -21,6 +21,7 @@ import {
 import { runnerFolders } from "./folders";
 import { requestUpdate } from "./update";
 import { updateTarget } from "./update-target";
+import { stopBoatRuntime } from "./providers";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { LatestRelease } from "./types";
 
@@ -181,6 +182,11 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           await runtimesService.revoke(organizationId, user.id, params.id),
           "Runtime not found",
         );
+        await stopBoatRuntime(params.id).catch((error: unknown) => {
+          console.error(
+            `Could not stop the boat sandbox of runtime ${params.id}: ${error instanceof Error ? error.message : error}`,
+          );
+        });
         hub.disconnect(params.id, "Revoked");
         return revoked;
       },
