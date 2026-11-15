@@ -61,6 +61,19 @@ Docker. The server's own built-in runner serves folders too: `AVEN_LOCAL_RUNNER`
 A runner is private to the person who registered it until they turn on **Share** in **Settings >
 Runtimes**; sharing lets workspace members run commands on it as its user.
 
+## A boat.dev sandbox
+
+**Settings > Runtimes** can add a [boat.dev](https://boat.dev) sandbox instead of a computer you
+install. Create an API key that can create and drive sandboxes
+([API keys](https://docs.boat.dev/api-keys)) and paste it there. It is stored encrypted with the
+other provider keys and is not an environment variable.
+
+The sandbox runs `aven runner` and connects out to this server, so the server has to be reachable
+from the public internet. When `BETTER_AUTH_URL` is a localhost or private address, set
+`AVEN_BOAT_RUNNER_URL` to the public one, for example `https://aven.example.com/api`. A paid
+sandbox keeps running, and billing, until you revoke the runtime. A free trial stops after two
+hours and the next thread resumes it. A project chooses it like any other runtime.
+
 ## Update
 
 Run the install command again, or:

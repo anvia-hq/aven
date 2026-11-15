@@ -64,7 +64,9 @@ export function backendRefusal(kind: string, capability: AgentBackendCapability)
 export const CLAUDE_TOKEN_MISSING =
   "Set a Claude setup token in Settings before this thread can run on the Claude agent";
 
-export const RUNTIME_PROVIDERS = ["manual"] as const;
+export const RUNTIME_PROVIDERS = ["manual", "boat"] as const;
+
+export const BOAT_MACHINE_TYPES = ["small", "default", "large", "xlarge"] as const;
 
 export const RUNTIME_LIFETIMES = ["persistent", "ephemeral"] as const;
 

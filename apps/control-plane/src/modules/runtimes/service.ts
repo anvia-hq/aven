@@ -4,11 +4,13 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 
-import { ConflictError } from "@aven/server-kit/errors";
+import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
+import { BoatApiError, BoatClient } from "./boat/client";
 import { LOCAL_RUNTIME_ID } from "./local-id";
+import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { RuntimeGithubMode } from "@aven/protocol/types";
+import type { BoatMachineType, RuntimeGithubMode } from "@aven/protocol/types";
 
 export { LOCAL_RUNTIME_ID };
 
@@ -68,10 +70,62 @@ const ownedBy = (organizationId: string, ownerId: string, id: string) =>
 const sameToken = (a: string, b: string) =>
   timingSafeEqual(Buffer.from(hashToken(a)), Buffer.from(hashToken(b)));
 
-const publicRuntime = ({ tokenHash: _hash, ...runtime }: RuntimeRow) => ({
+const publicRuntime = ({
+  tokenHash: _hash,
+  boatApiKeyEncrypted: _apiKey,
+  boatRunnerTokenEncrypted: _runnerToken,
+  ...runtime
+}: RuntimeRow) => ({
   ...runtime,
   githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
 });
+
+function fromBoat(error: unknown): never {
+  if (error instanceof BoatApiError && (error.status === 401 || error.status === 400))
+    throw new UnprocessableError(error.message);
+
+  if (error instanceof BoatApiError) throw new UnavailableError(error.message);
+
+  throw new UnavailableError("Could not reach boat.dev");
+}
+
+async function readBoatSecret(stored: string | null, id: string, label: string) {
+  if (!stored) return null;
+
+  const { decryptOrUnavailable } = await import("@aven/server-kit/crypto");
+  return decryptOrUnavailable(stored, {
+    logged: `Could not decrypt the boat ${label} of runtime ${id}:`,
+    message: "This runtime's saved boat key could not be read; add the runtime again",
+  });
+}
+
+async function encryptedRunnerToken(token: string) {
+  const { encryptSecret } = await import("@aven/server-kit/crypto");
+  return { boatRunnerTokenEncrypted: encryptSecret(token) };
+}
+
+async function boatColumns(
+  body: Extract<CreateRuntimeBody, { provider: "boat" }>,
+  token: string,
+  fetchFn: typeof fetch,
+) {
+  try {
+    await new BoatClient(fetchFn).me(body.apiKey);
+  } catch (error) {
+    fromBoat(error);
+  }
+
+  const { encryptSecret } = await import("@aven/server-kit/crypto");
+  const machineType: BoatMachineType = body.machineType ?? "default";
+  return {
+    provider: "boat" as const,
+    githubMode: "person" as const,
+    boatMachineType: machineType,
+    boatApiKeyEncrypted: encryptSecret(body.apiKey),
+    boatKeyHint: body.apiKey.slice(-4),
+    boatRunnerTokenEncrypted: encryptSecret(token),
+  };
+}
 
 export const runtimesService = {
   localToken,
@@ -112,13 +166,54 @@ export const runtimesService = {
     return row ? publicRuntime(row) : null;
   },
 
-  async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
+  async create(
+    organizationId: string,
+    ownerId: string,
+    body: CreateRuntimeBody,
+    fetchFn: typeof fetch = fetch,
+  ) {
     const { token, columns } = issueToken();
+    const boat = body.provider === "boat" ? await boatColumns(body, token, fetchFn) : {};
     const [row] = await db
       .insert(runtimes)
-      .values({ organizationId, ownerId, name: body.name, ...columns })
+      .values({
+        organizationId,
+        ownerId,
+        name: body.name,
+        ...boat,
+        ...columns,
+      })
       .returning();
     return { runtime: publicRuntime(row!), token };
+  },
+
+  async boatRecord(id: string, revoked = false): Promise<BoatWakeRecord | null> {
+    const [row] = await db
+      .select()
+      .from(runtimes)
+      .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+
+    if (!row || row.provider !== "boat") return null;
+
+    const apiKey = await readBoatSecret(row.boatApiKeyEncrypted, row.id, "API key");
+    const runnerToken = await readBoatSecret(row.boatRunnerTokenEncrypted, row.id, "runner token");
+
+    if (!apiKey || !runnerToken) return null;
+
+    return {
+      runtimeId: row.id,
+      apiKey,
+      runnerToken,
+      sandboxId: row.boatSandboxId,
+      machineType: row.boatMachineType ?? "default",
+    };
+  },
+
+  async setBoatSandbox(id: string, sandboxId: string) {
+    await db
+      .update(runtimes)
+      .set({ boatSandboxId: sandboxId })
+      .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
   },
 
   async setHost(id: string, host: boolean) {
@@ -149,9 +244,17 @@ export const runtimesService = {
 
   async rotate(organizationId: string, ownerId: string, id: string) {
     const { token, columns } = issueToken();
+    const [current] = await db
+      .select({ provider: runtimes.provider })
+      .from(runtimes)
+      .where(ownedBy(organizationId, ownerId, id));
+
+    if (!current) return null;
+
+    const encrypted = current.provider === "boat" ? await encryptedRunnerToken(token) : {};
     const [row] = await db
       .update(runtimes)
-      .set(columns)
+      .set({ ...columns, ...encrypted })
       .where(ownedBy(organizationId, ownerId, id))
       .returning();
     return row ? { runtime: publicRuntime(row), token } : null;

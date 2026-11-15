@@ -131,4 +131,72 @@ run("runtimes service (real postgres)", async () => {
     await runtimesService.revoke(seed.orgA, seed.userId, runtime.id);
     expect(await runtimesService.rename(seed.orgA, runtime.id, "again")).toBeNull();
   });
+
+  const encryptionReady =
+    Buffer.from(process.env.PROVIDER_ENCRYPTION_KEY ?? "", "base64").length === 32;
+
+  test.skipIf(!encryptionReady)(
+    "a boat runtime keeps its key encrypted and checks it with boat",
+    async () => {
+      const apiKey = "boat_unit_test_key_zzzz";
+      const seen: { url: string; authorization: string }[] = [];
+      const fetchFn = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const headers = new Headers(init?.headers);
+        seen.push({ url: String(input), authorization: headers.get("authorization") ?? "" });
+        return Response.json({ ok: true, type: "user.info", user: { login: "octocat" } });
+      }) as typeof fetch;
+
+      const { runtime, token } = await runtimesService.create(
+        seed.orgA,
+        seed.userId,
+        { name: "boat-cloud", provider: "boat", apiKey, machineType: "small" },
+        fetchFn,
+      );
+
+      expect(seen).toEqual([
+        { url: "https://boat.dev/api/v1/me", authorization: `Bearer ${apiKey}` },
+      ]);
+      expect(runtime.provider).toBe("boat");
+      expect(runtime.githubMode).toBe("person");
+      expect(runtime.boatMachineType).toBe("small");
+      expect(runtime.boatKeyHint).toBe("zzzz");
+      expect(runtime.boatSandboxId).toBeNull();
+
+      const listed = JSON.stringify(await runtimesService.list(seed.orgA, seed.userId));
+      expect(listed).not.toContain(apiKey);
+      expect(listed).not.toContain(token);
+      expect(listed).not.toContain("boatApiKeyEncrypted");
+      expect(listed).not.toContain("boatRunnerTokenEncrypted");
+
+      expect(await runtimesService.boatRecord(runtime.id)).toMatchObject({
+        apiKey,
+        runnerToken: token,
+        machineType: "small",
+        sandboxId: null,
+      });
+
+      const rotated = await runtimesService.rotate(seed.orgA, seed.userId, runtime.id);
+      expect(typeof rotated?.token).toBe("string");
+      expect((await runtimesService.boatRecord(runtime.id))?.runnerToken).toBe(rotated?.token);
+      expect(await runtimesService.authenticate(token)).toBeNull();
+      expect((await runtimesService.authenticate(rotated!.token))?.id).toBe(runtime.id);
+
+      const rejected = (async () =>
+        Response.json(
+          { ok: false, code: "unauthorized", message: "Unauthorized" },
+          { status: 401 },
+        )) as unknown as typeof fetch;
+      await expect(
+        runtimesService.create(
+          seed.orgA,
+          seed.userId,
+          { name: "boat-bad", provider: "boat", apiKey: "boat_rejected_key_xxxx" },
+          rejected,
+        ),
+      ).rejects.toThrow("Boat rejected this API key");
+      expect(
+        (await runtimesService.list(seed.orgA, seed.userId)).some((row) => row.name === "boat-bad"),
+      ).toBe(false);
+    },
+  );
 });
