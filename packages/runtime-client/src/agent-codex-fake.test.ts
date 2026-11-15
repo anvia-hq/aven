@@ -15,6 +15,7 @@ function input(): CodexQueryInput {
     cwd: "/work",
     codexHome: "/runner/codex/thread",
     mcpUrl: "http://127.0.0.1:9/mcp",
+    mcpToken: "mcp-token-for-the-fake",
     abortController: new AbortController(),
     tools: { catalog: [] },
     env: [],

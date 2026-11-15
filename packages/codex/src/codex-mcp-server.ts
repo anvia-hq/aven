@@ -88,10 +88,19 @@ async function answer(message: Rpc, tools: readonly CodexMcpTool[]) {
 
 export function serveCodexMcp(tools: readonly CodexMcpTool[]) {
   const session = crypto.randomUUID();
+  const token = crypto.randomUUID();
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
     async fetch(request) {
+      if (request.headers.has("origin")) {
+        return new Response(null, { status: 403 });
+      }
+
+      if (request.headers.get("authorization") !== `Bearer ${token}`) {
+        return new Response(null, { status: 401 });
+      }
+
       if (request.method === "GET") {
         return new Response("event: ready\ndata: {}\n\n", {
           headers: { "content-type": "text/event-stream", "mcp-session-id": session },
@@ -120,6 +129,7 @@ export function serveCodexMcp(tools: readonly CodexMcpTool[]) {
   });
   return {
     url: `http://127.0.0.1:${server.port}/mcp`,
+    token,
     close() {
       server.stop(true);
     },

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
 import {
+  CODEX_MCP_TOKEN_ENV,
   CODEX_SANDBOX,
   codexClientConfig,
   codexProcessEnv,
@@ -16,6 +17,7 @@ import type { CodexLoader } from "./codex-sdk";
 import type { CodexQueryInput, CodexSdkEvent } from "@aven/agent-backend/types";
 
 const TOKEN = "sk-codex-process-env-0001";
+const MCP_TOKEN = "mcp-token-for-the-run";
 
 describe("the Codex process environment", () => {
   test("keeps the run's API key and drops a project or machine key", () => {
@@ -27,6 +29,7 @@ describe("the Codex process environment", () => {
       ],
       TOKEN,
       "/runner/codex/thread-1",
+      MCP_TOKEN,
       {
         PATH: "/usr/bin",
         HOME: "/home/runner",
@@ -35,6 +38,7 @@ describe("the Codex process environment", () => {
       },
     );
     expect(env.CODEX_API_KEY).toBe(TOKEN);
+    expect(env[CODEX_MCP_TOKEN_ENV]).toBe(MCP_TOKEN);
     expect(env.CODEX_HOME).toBe("/runner/codex/thread-1");
     expect(env.PATH).toBe("/project/bin");
     expect(env.HOME).toBe("/home/runner");
@@ -50,14 +54,17 @@ describe("the Codex process environment", () => {
         { name: "OPENAI_BASE_URL", value: "https://attacker.example" },
         { name: "CODEX_HOME", value: "/tmp/elsewhere" },
         { name: "API_URL", value: "https://api.example" },
+        { name: CODEX_MCP_TOKEN_ENV, value: "project-mcp-token" },
       ],
       TOKEN,
       "/runner/codex/thread-1",
+      MCP_TOKEN,
       {},
     );
     expect(env.OPENAI_BASE_URL).toBeUndefined();
     expect(env.CODEX_HOME).toBe("/runner/codex/thread-1");
     expect(env.API_URL).toBe("https://api.example");
+    expect(env[CODEX_MCP_TOKEN_ENV]).toBe(MCP_TOKEN);
   });
 });
 
@@ -132,6 +139,9 @@ describe("a Codex turn", () => {
     expect(seen[0]?.config.features.shell_tool).toBe(false);
     expect(seen[0]?.config.mcp_servers.aven.url).toContain("127.0.0.1");
     expect(seen[0]?.config.mcp_servers.aven.default_tools_approval_mode).toBe("approve");
+    expect(seen[0]?.config.mcp_servers.aven.bearer_token_env_var).toBe(CODEX_MCP_TOKEN_ENV);
+    expect(seen[0]?.env[CODEX_MCP_TOKEN_ENV]).toBe(MCP_TOKEN);
+    expect(JSON.stringify(seen[0]?.config)).not.toContain(MCP_TOKEN);
     expect(threads[0]).toMatchObject({
       model: "gpt-6-astra",
       modelReasoningEffort: "medium",
@@ -146,9 +156,9 @@ describe("a Codex turn", () => {
       modelReasoningEffort: "high",
       resumed: "sess-1",
     });
-    expect(codexClientConfig("http://127.0.0.1:9/mcp").mcp_servers.aven.tool_timeout_sec).toBe(
-      86_400,
-    );
+    const config = codexClientConfig("http://127.0.0.1:9/mcp");
+    expect(config.mcp_servers.aven.tool_timeout_sec).toBe(86_400);
+    expect(config.mcp_servers.aven.bearer_token_env_var).toBe(CODEX_MCP_TOKEN_ENV);
   });
 });
 
@@ -174,6 +184,7 @@ function input(extra: Partial<CodexQueryInput> = {}): CodexQueryInput {
     cwd: "/work",
     codexHome: "/runner/codex/thread",
     mcpUrl: "http://127.0.0.1:9/mcp",
+    mcpToken: MCP_TOKEN,
     abortController: new AbortController(),
     tools: {},
     env: [],

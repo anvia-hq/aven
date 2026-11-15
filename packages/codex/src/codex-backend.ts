@@ -542,6 +542,7 @@ export class CodexRuns implements AgentBackend {
           cwd: live.cwd,
           codexHome: join(this.home, "codex", live.threadId),
           mcpUrl: mcp.url,
+          mcpToken: mcp.token,
           abortController: live.abort,
           tools: this.#host(live, context),
           env: context.env,

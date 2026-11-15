@@ -17,6 +17,8 @@ const AVEN_NOTE =
 
 const BLOCKED_ENV_PREFIXES = ["OPENAI_", "CODEX_"];
 
+export const CODEX_MCP_TOKEN_ENV = "AVEN_CODEX_MCP_TOKEN";
+
 const IMAGE_EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/jpeg": "jpg",
@@ -35,6 +37,7 @@ export function codexProcessEnv(
   project: readonly RunEnvVar[],
   token: string,
   codexHome: string,
+  mcpToken: string,
   inherited: Record<string, string | undefined> = process.env,
 ): Record<string, string> {
   const fromProject: Record<string, string> = {};
@@ -46,6 +49,7 @@ export function codexProcessEnv(
     ...fromProject,
     CODEX_API_KEY: token,
     CODEX_HOME: codexHome,
+    [CODEX_MCP_TOKEN_ENV]: mcpToken,
   };
 }
 
@@ -56,6 +60,7 @@ export function codexClientConfig(mcpUrl: string) {
         url: mcpUrl,
         tool_timeout_sec: 86_400,
         default_tools_approval_mode: "approve",
+        bearer_token_env_var: CODEX_MCP_TOKEN_ENV,
       },
     },
     features: CODEX_DISABLED_FEATURES,
@@ -140,7 +145,7 @@ export function createCodexQuery(load: CodexLoader = loadSdk): CodexQuery {
       mkdirSync(input.codexHome, { recursive: true });
       const codex = await load({
         apiKey: input.token,
-        env: codexProcessEnv(input.env, input.token, input.codexHome),
+        env: codexProcessEnv(input.env, input.token, input.codexHome, input.mcpToken),
         config: codexClientConfig(input.mcpUrl),
         codexPathOverride: process.env.CODEX_PATH,
       });

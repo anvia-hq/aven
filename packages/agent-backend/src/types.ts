@@ -241,6 +241,7 @@ export type CodexQueryInput = {
   cwd: string;
   codexHome: string;
   mcpUrl: string;
+  mcpToken: string;
   abortController: AbortController;
   tools: CodexToolHost;
   env: readonly RunEnvVar[];

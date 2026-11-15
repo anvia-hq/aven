@@ -16,10 +16,10 @@ describe("the Codex MCP server", () => {
   test("answers initialize, tools/list and tools/call over JSON-RPC", async () => {
     const mcp = serveCodexMcp([tool]);
     try {
-      const hello = await post(mcp.url, { jsonrpc: "2.0", id: 1, method: "initialize" });
+      const hello = await post(mcp, { jsonrpc: "2.0", id: 1, method: "initialize" });
       expect(hello.result.serverInfo).toEqual({ name: "aven", version: "1.0.0" });
 
-      const listed = await post(mcp.url, { jsonrpc: "2.0", id: 2, method: "tools/list" });
+      const listed = await post(mcp, { jsonrpc: "2.0", id: 2, method: "tools/list" });
       expect(listed.result.tools).toEqual([
         {
           name: "exec_command",
@@ -28,7 +28,7 @@ describe("the Codex MCP server", () => {
         },
       ]);
 
-      const called = await post(mcp.url, {
+      const called = await post(mcp, {
         jsonrpc: "2.0",
         id: 3,
         method: "tools/call",
@@ -38,7 +38,10 @@ describe("the Codex MCP server", () => {
 
       const note = await fetch(mcp.url, {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${mcp.token}`,
+        },
         body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
       });
       expect(note.status).toBe(202);
@@ -46,12 +49,50 @@ describe("the Codex MCP server", () => {
       mcp.close();
     }
   });
+
+  test("refuses a call with no token, the wrong token, or a browser Origin", async () => {
+    const mcp = serveCodexMcp([tool]);
+    try {
+      const open = await fetch(mcp.url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
+      });
+      expect(open.status).toBe(401);
+
+      const wrong = await fetch(mcp.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer not-the-token",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call" }),
+      });
+      expect(wrong.status).toBe(401);
+
+      const browser = await fetch(mcp.url, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${mcp.token}`,
+          origin: "https://evil.example",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call" }),
+      });
+      expect(browser.status).toBe(403);
+    } finally {
+      mcp.close();
+    }
+  });
 });
 
-async function post(url: string, body: unknown) {
-  const response = await fetch(url, {
+async function post(mcp: { url: string; token: string }, body: unknown) {
+  const response = await fetch(mcp.url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${mcp.token}`,
+    },
     body: JSON.stringify(body),
   });
   return (await response.json()) as {
