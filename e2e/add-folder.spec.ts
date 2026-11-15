@@ -18,6 +18,7 @@ test.describe("adding a folder", () => {
     await page.goto("/projects");
     await page.getByRole("button", { name: "Add project" }).click();
     const dialog = page.getByRole("dialog", { name: "Add a project" });
+    await dialog.getByRole("tab", { name: "Folder" }).click();
     await expect(dialog.getByRole("button", { name: "Add", exact: true })).toBeDisabled();
 
     await dialog.getByRole("button", { name: "code" }).dblclick();
@@ -45,7 +46,7 @@ test.describe("adding a folder", () => {
     await page.goto("/projects");
     await page.getByRole("button", { name: "Add project" }).click();
     const dialog = page.getByRole("dialog", { name: "Add a project" });
-    await dialog.getByRole("tab", { name: "Repository" }).click();
+    await dialog.getByRole("tab", { name: "Clone" }).click();
     const clone = dialog.getByRole("button", { name: "Clone and add" });
     await expect(clone).toBeDisabled();
 
@@ -66,6 +67,7 @@ test.describe("adding a folder", () => {
     await page.goto("/projects");
     await page.getByRole("button", { name: "Add project" }).click();
     const dialog = page.getByRole("dialog", { name: "Add a project" });
+    await dialog.getByRole("tab", { name: "Folder" }).click();
     await dialog.getByRole("button", { name: "code" }).dblclick();
     await dialog.getByRole("button", { name: "notes" }).click();
     await dialog.getByRole("button", { name: "Add", exact: true }).click();
