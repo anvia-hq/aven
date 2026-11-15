@@ -3,7 +3,20 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { and, count, desc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import {
@@ -21,9 +34,10 @@ import {
   templateProvider,
 } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
-import type { CloudSandboxThread, SandboxRecord } from "@aven/sandbox/types";
+import type { CloudSandboxPage, SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
+import type { CloudSandboxCursor } from "./types";
 import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
 
 export { CLOUD_OFF, CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
@@ -222,27 +236,32 @@ export const runtimesService = {
       .limit(limit);
   },
 
-  async liveCloudSandboxes(limit = 500): Promise<CloudSandboxThread[]> {
+  async liveCloudSandboxes({
+    limit = 200,
+    after,
+  }: CloudSandboxCursor = {}): Promise<CloudSandboxPage> {
     const sandboxes = await db
       .select({ id: runtimes.id })
       .from(runtimes)
-      .where(and(inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS), isNull(runtimes.revokedAt)))
-      .limit(limit);
-
-    if (sandboxes.length === 0) return [];
-
-    return db
-      .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
-      .from(threads)
       .where(
         and(
-          inArray(
-            threads.runtimeId,
-            sandboxes.map(({ id }) => id),
-          ),
-          ne(threads.state, "archived"),
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+          after === undefined ? undefined : gt(runtimes.id, after),
         ),
-      );
+      )
+      .orderBy(asc(runtimes.id))
+      .limit(limit);
+    const sandboxIds = sandboxes.map(({ id }) => id);
+
+    if (sandboxIds.length === 0) return { sandboxIds, threads: [] };
+
+    const rows = await db
+      .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
+      .from(threads)
+      .where(and(inArray(threads.runtimeId, sandboxIds), ne(threads.state, "archived")));
+
+    return { sandboxIds, threads: rows };
   },
 
   async openThreadsOn(runtimeId: string) {

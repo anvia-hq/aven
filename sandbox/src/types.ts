@@ -108,3 +108,8 @@ export type CloudSandboxThread = {
   threadId: string;
   updatedAt: Date;
 };
+
+export type CloudSandboxPage = {
+  sandboxIds: string[];
+  threads: CloudSandboxThread[];
+};

@@ -6,12 +6,15 @@ import { runtimesService } from "./service";
 import type { CloudSandboxThread, IdleWindows } from "@aven/sandbox/types";
 import type { RuntimeHub } from "./hub";
 
+const SANDBOX_PAGE = 200;
+
 type Options = {
   intervalMs: number;
   hub: Pick<RuntimeHub, "get">;
   running: (threadId: string) => boolean;
   lastEventAt: (threadId: string) => number | undefined;
   windows?: IdleWindows;
+  pageSize?: number;
   now?: () => number;
   stop?: (runtimeId: string) => Promise<void>;
   extend?: (runtimeId: string) => Promise<void>;
@@ -36,6 +39,7 @@ export function createCloudIdle({
   running,
   lastEventAt,
   windows = idleWindows(),
+  pageSize = SANDBOX_PAGE,
   now = Date.now,
   stop = stopCloudRuntime,
   extend = extendCloudRuntime,
@@ -44,57 +48,72 @@ export function createCloudIdle({
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking: Promise<unknown> | undefined;
 
-  async function sweep(at = now()) {
-    const sandboxes = grouped(await runtimesService.liveCloudSandboxes());
-    let stopped = 0;
-
-    for (const [runtimeId, threads] of sandboxes) {
-      if (!hub.get(runtimeId)) {
-        seen.delete(runtimeId);
-        continue;
-      }
-
-      const known = seen.get(runtimeId) ?? { since: at, extendedAt: 0 };
-      seen.set(runtimeId, known);
-
-      const agentRunning = threads.some((thread) => running(thread.threadId));
-      const lastAgentAt = threads.reduce(
-        (latest, thread) =>
-          Math.max(latest, thread.updatedAt.getTime(), lastEventAt(thread.threadId) ?? 0),
-        0,
-      );
-      const lastUserAt = Math.max(lastAgentAt, known.since, runtimeActivity.lastAt(runtimeId) ?? 0);
-
-      if (shouldStopSandbox({ windows, now: at, lastAgentAt, lastUserAt, agentRunning })) {
-        try {
-          await stop(runtimeId);
-          runtimeActivity.forget(runtimeId);
-          seen.delete(runtimeId);
-          stopped += 1;
-        } catch (error) {
-          known.extendedAt = at;
-          console.warn(
-            `Could not stop the idle Aven Cloud computer ${runtimeId}:`,
-            describeError(error),
-          );
-        }
-
-        continue;
-      }
-
-      if (at - known.extendedAt < EXTEND_EVERY_MS) continue;
-
-      known.extendedAt = at;
-
-      await extend(runtimeId).catch((error: unknown) =>
-        console.warn(
-          `Could not extend the Aven Cloud computer ${runtimeId}:`,
-          describeError(error),
-        ),
-      );
+  async function visit(runtimeId: string, threads: CloudSandboxThread[], at: number) {
+    if (!hub.get(runtimeId)) {
+      seen.delete(runtimeId);
+      return false;
     }
 
-    for (const runtimeId of seen.keys()) if (!sandboxes.has(runtimeId)) seen.delete(runtimeId);
+    const known = seen.get(runtimeId) ?? { since: at, extendedAt: 0 };
+    seen.set(runtimeId, known);
+
+    const agentRunning = threads.some((thread) => running(thread.threadId));
+    const lastAgentAt = threads.reduce(
+      (latest, thread) =>
+        Math.max(latest, thread.updatedAt.getTime(), lastEventAt(thread.threadId) ?? 0),
+      0,
+    );
+    const lastUserAt = Math.max(lastAgentAt, known.since, runtimeActivity.lastAt(runtimeId) ?? 0);
+
+    if (shouldStopSandbox({ windows, now: at, lastAgentAt, lastUserAt, agentRunning })) {
+      try {
+        await stop(runtimeId);
+        runtimeActivity.forget(runtimeId);
+        seen.delete(runtimeId);
+        return true;
+      } catch (error) {
+        known.extendedAt = at;
+        console.warn(
+          `Could not stop the idle Aven Cloud computer ${runtimeId}:`,
+          describeError(error),
+        );
+        return false;
+      }
+    }
+
+    if (at - known.extendedAt < EXTEND_EVERY_MS) return false;
+
+    known.extendedAt = at;
+
+    await extend(runtimeId).catch((error: unknown) =>
+      console.warn(`Could not extend the Aven Cloud computer ${runtimeId}:`, describeError(error)),
+    );
+
+    return false;
+  }
+
+  async function sweep(at = now()) {
+    const visited = new Set<string>();
+    let stopped = 0;
+    let after: string | undefined;
+
+    for (;;) {
+      const page = await runtimesService.liveCloudSandboxes({ limit: pageSize, after });
+
+      for (const [runtimeId, threads] of grouped(page.threads)) {
+        visited.add(runtimeId);
+
+        if (await visit(runtimeId, threads, at)) stopped += 1;
+      }
+
+      const last = page.sandboxIds.at(-1);
+
+      if (page.sandboxIds.length < pageSize || last === undefined) break;
+
+      after = last;
+    }
+
+    for (const runtimeId of seen.keys()) if (!visited.has(runtimeId)) seen.delete(runtimeId);
 
     return stopped;
   }

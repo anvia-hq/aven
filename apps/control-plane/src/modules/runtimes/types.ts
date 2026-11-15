@@ -141,3 +141,8 @@ export type ViewerHandle = {
 export type TerminalHandle = ViewerHandle & {
   resize(cols: number, rows: number): void;
 };
+
+export type CloudSandboxCursor = {
+  limit?: number;
+  after?: string;
+};

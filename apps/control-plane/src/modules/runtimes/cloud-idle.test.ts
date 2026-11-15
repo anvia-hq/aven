@@ -53,7 +53,7 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
     return { ...thread, name };
   }
 
-  function harness(options: { connected: string[]; running?: string[] }) {
+  function harness(options: { connected: string[]; running?: string[]; pageSize?: number }) {
     const stopped: string[] = [];
     const extended: string[] = [];
     const clock = { at: Date.now() };
@@ -66,6 +66,7 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
       running: (threadId) => (options.running ?? []).includes(threadId),
       lastEventAt: () => undefined,
       windows: WINDOWS,
+      pageSize: options.pageSize,
       now: () => clock.at,
       stop: async (runtimeId) => {
         stopped.push(runtimeId);
@@ -123,7 +124,7 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
     const second = await cloudThread("pair-two", new Date());
     await db.update(threads).set({ runtimeId: first.runtimeId }).where(eq(threads.id, second.id));
 
-    const rows = await runtimesService.liveCloudSandboxes(1);
+    const { threads: rows } = await runtimesService.liveCloudSandboxes({ limit: 1 });
     const [chosen] = rows;
     const ofSandbox = await db
       .select({ threadId: threads.id })
@@ -134,6 +135,19 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
     expect(rows.map(({ threadId }) => threadId).sort()).toEqual(
       ofSandbox.map(({ threadId }) => threadId).sort(),
     );
+  });
+
+  test("looks at every sandbox, however many there are, one page at a time", async () => {
+    const old = new Date(Date.now() - 3 * 60 * MINUTE);
+    const one = await cloudThread("page-one", old);
+    const two = await cloudThread("page-two", old);
+    const sweep = harness({ connected: [one.runtimeId, two.runtimeId], pageSize: 1 });
+
+    await sweep.idle.sweep();
+    sweep.clock.at += 21 * MINUTE;
+
+    expect(await sweep.idle.sweep()).toBe(2);
+    expect(sweep.stopped.sort()).toEqual([one.runtimeId, two.runtimeId].sort());
   });
 
   test("a sandbox keeps a whole idle window after the server sees it, so a restart stops nothing early", async () => {
