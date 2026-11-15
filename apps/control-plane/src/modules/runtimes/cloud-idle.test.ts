@@ -3,7 +3,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { and, eq, ne } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import type { RuntimeConnection } from "./hub";
 import { threadsService } from "../threads/service";
@@ -119,22 +119,28 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
     expect(sweep.extended).toEqual([]);
   });
 
-  test("reads every thread of a sandbox, so a capped list of sandboxes never hides a running one", async () => {
+  test("reads every thread of a sandbox, not just a page of them", async () => {
     const first = await cloudThread("pair-one", new Date());
     const second = await cloudThread("pair-two", new Date());
     await db.update(threads).set({ runtimeId: first.runtimeId }).where(eq(threads.id, second.id));
 
-    const { threads: rows } = await runtimesService.liveCloudSandboxes({ limit: 1 });
-    const [chosen] = rows;
-    const ofSandbox = await db
-      .select({ threadId: threads.id })
-      .from(threads)
-      .where(and(eq(threads.runtimeId, chosen!.runtimeId), ne(threads.state, "archived")));
+    let found: string[] = [];
+    let after: string | undefined;
 
-    expect(new Set(rows.map(({ runtimeId }) => runtimeId)).size).toBe(1);
-    expect(rows.map(({ threadId }) => threadId).sort()).toEqual(
-      ofSandbox.map(({ threadId }) => threadId).sort(),
-    );
+    for (let page = 0; page < 500 && found.length === 0; page++) {
+      const answered = await runtimesService.liveCloudSandboxes({ limit: 5, after });
+      const last = answered.sandboxIds.at(-1);
+
+      found = answered.threads.flatMap(({ runtimeId, threadId }) =>
+        runtimeId === first.runtimeId ? [threadId] : [],
+      );
+
+      if (answered.sandboxIds.length === 0 || last === undefined) break;
+
+      after = last;
+    }
+
+    expect(found.sort()).toEqual([first.id, second.id].sort());
   });
 
   test("looks at every sandbox, however many there are, one page at a time", async () => {
