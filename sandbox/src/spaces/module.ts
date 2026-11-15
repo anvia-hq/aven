@@ -27,6 +27,12 @@ export const spacesModule: CloudProviderModule = {
     }),
   stop: async (record) => {
     await stopSpacesSandbox(record, client());
+    spacesLifetime.stopped(record.runtimeId);
+  },
+  extend: async (record) => {
+    if (!record.sandboxId) return;
+
+    await client().extend(record.apiKey, record.sandboxId);
   },
   removeSandbox: async (sandboxId) => {
     const apiKey = spacesApiKey();

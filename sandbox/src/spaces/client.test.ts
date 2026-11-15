@@ -45,20 +45,38 @@ describe("the spaces client", () => {
     expect(calls[0]?.headers.Authorization).toBe(`Bearer ${KEY}`);
   });
 
-  test("resumes and stops with an empty body, and deletes without a confirmation header", async () => {
+  test("resets the auto-stop on resume, so its reaper does not stop it again", async () => {
     const { calls, client } = recorded(() => Response.json({ ok: true }));
 
     await client.resume(KEY, ID);
+
+    expect(calls[0]?.method).toBe("POST");
+    expect(calls[0]?.url).toBe(`${BASE}/sandboxes/${ID}/resume`);
+    expect(calls[0]?.body).toEqual({ ttlSeconds: 7200 });
+  });
+
+  test("extends the auto-stop by moving the timer", async () => {
+    const { calls, client } = recorded(() => Response.json({ ok: true }));
+
+    await client.extend(KEY, ID);
+
+    expect(calls[0]?.method).toBe("PATCH");
+    expect(calls[0]?.url).toBe(`${BASE}/sandboxes/${ID}`);
+    expect(calls[0]?.body).toEqual({ ttlSeconds: 7200 });
+  });
+
+  test("stops with an empty body, and deletes without a confirmation header", async () => {
+    const { calls, client } = recorded(() => Response.json({ ok: true }));
+
     await client.stop(KEY, ID);
     await client.deleteSandbox(KEY, ID);
 
     expect(calls.map((call) => `${call.method} ${call.url.replace(BASE, "")}`)).toEqual([
-      `POST /sandboxes/${ID}/resume`,
       `POST /sandboxes/${ID}/stop`,
       `DELETE /sandboxes/${ID}`,
     ]);
     expect(calls[0]?.body).toEqual({});
-    expect(calls[2]?.headers["X-Ascii-Confirm-Delete"]).toBeUndefined();
+    expect(calls[1]?.headers["X-Ascii-Confirm-Delete"]).toBeUndefined();
   });
 
   test("runs a command with its timeout, and reports one that fails", async () => {

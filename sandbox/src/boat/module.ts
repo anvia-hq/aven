@@ -16,6 +16,12 @@ export const boatModule: CloudProviderModule = {
     }),
   stop: async (record) => {
     await stopBoatSandbox(record, new BoatClient());
+    boatLifetime.stopped(record.runtimeId);
+  },
+  extend: async (record) => {
+    if (!record.sandboxId) return;
+
+    await new BoatClient().extend(record.apiKey, record.sandboxId);
   },
   removeSandbox: (sandboxId) => removeBoatSandbox(sandboxId),
   lifetime: boatLifetime,

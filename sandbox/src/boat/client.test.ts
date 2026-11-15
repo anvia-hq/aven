@@ -105,6 +105,23 @@ describe("boat client", () => {
     expect(headers(calls[1]!.init)["X-Ascii-Confirm-Delete"]).toBe(ID);
   });
 
+  test("extends the auto-stop by moving the timer, and never extends one it has no id for", async () => {
+    const { calls, fetchFn } = recorded(() => ({
+      json: {
+        ok: true,
+        type: "sandbox",
+        sandbox: { id: ID, state: "running", dataExpiredAt: null },
+      },
+    }));
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+
+    await client.extend(KEY, ID);
+
+    expect(calls[0]!.init.method).toBe("PATCH");
+    expect(calls[0]!.url).toBe(`https://boat.test/api/v1/sandboxes/${ID}`);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ ttlSeconds: 7200 });
+  });
+
   test("refuses a sandbox id that is not one boat would issue", async () => {
     const { fetchFn } = recorded(() => ({
       json: { ok: true, type: "sandbox.info", sandbox: { id: "bx_00000000", state: "ready" } },
