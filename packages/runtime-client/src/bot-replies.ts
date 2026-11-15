@@ -530,7 +530,9 @@ function hostedAgent(
   return {
     async generate({ prompt, abortSignal }) {
       const signal = abortSignal ?? abort.signal;
+      signal.throwIfAborted();
       const agent = await context.backends!.get(backend);
+      signal.throwIfAborted();
       const cwd =
         (await context.sandbox.workspace?.(bot.id).catch(() => undefined)) ??
         context.sandbox.paths?.(bot.id)?.workspace ??
@@ -561,6 +563,9 @@ function hostedAgent(
       );
       const stop = () => void followed.cancel();
       signal.addEventListener("abort", stop, { once: true });
+
+      if (signal.aborted) stop();
+
       try {
         const end = await followed.done;
 

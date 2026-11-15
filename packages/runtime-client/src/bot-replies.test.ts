@@ -1442,6 +1442,34 @@ describe("a bot on another agent (decision 0310)", () => {
     expect(run.sent).toContainEqual({ type: "bot.end", replyId: "r1" });
   });
 
+  test("a reply cancelled while the backend is starting never starts it", async () => {
+    const started: string[] = [];
+    const set = {
+      offered: ["native", "claude"],
+      get: async () => {
+        await Bun.sleep(20);
+
+        return {
+          kind: "claude" as const,
+          capabilities: {},
+          async start(runId: string) {
+            started.push(runId);
+            throw new Error("should not start");
+          },
+        } as never;
+      },
+      async close() {},
+    } as never;
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    run.replies.cancel("r1", "the person stopped it");
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(started).toEqual([]);
+    expect(run.sent.at(-1)).toMatchObject({ type: "bot.end", error: expect.any(String) });
+  });
+
   test("a reply with no model says so, and one whose runner has no backends cannot run", async () => {
     const run = harnessWith(undefined);
 

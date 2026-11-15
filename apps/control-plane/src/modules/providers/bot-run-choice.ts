@@ -83,5 +83,5 @@ export async function assertBotModel(userId: string, bot: BotSettingsModel) {
 
   await requireSubscriptionToken(userId, providerBackend(row.kind));
 
-  checkCatalog(row.kind, bot.modelId, bot.reasoningEffort);
+  checkCatalog(row.kind, bot.modelId ?? row.modelId, bot.reasoningEffort);
 }
