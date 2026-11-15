@@ -16,9 +16,7 @@ export const projects = pgTable(
     createdBy: text("created_by")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    runtimeId: uuid("runtime_id")
-      .notNull()
-      .references(() => runtimes.id, { onDelete: "restrict" }),
+    runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "restrict" }),
     githubInstallationId: uuid("github_installation_id").references(() => githubInstallations.id, {
       onDelete: "restrict",
     }),

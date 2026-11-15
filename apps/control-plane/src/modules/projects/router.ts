@@ -4,6 +4,7 @@ import { orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import {
   addFolderBody,
+  addGithubRepositoryBody,
   addRepositoryBody,
   commitParams,
   commitsQuery,
@@ -34,6 +35,12 @@ export const projectsRouter = (putAway: PutAwayThread, folders: ProjectFolders) 
       ({ body, organizationId, user }) =>
         projectsService.addRepository(organizationId, user.id, body, folders),
       { auth: true, org: true, body: addRepositoryBody },
+    )
+    .post(
+      "/github",
+      ({ body, organizationId, user }) =>
+        projectsService.addGithubRepository(organizationId, user.id, body),
+      { auth: true, org: true, body: addGithubRepositoryBody },
     )
     .get(
       "/:id",

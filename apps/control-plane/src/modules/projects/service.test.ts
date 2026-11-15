@@ -16,6 +16,7 @@ import {
   FolderNotServedError,
   projectsService,
   RepositoryAlreadyImportedError,
+  RepositoryNotInstalledError,
   RuntimeNotFoundError,
 } from "./service";
 import type { ProjectFolders } from "./types";
@@ -44,6 +45,48 @@ run("projectsService (postgres)", async () => {
   const runnerA = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
   const runnerB = (await runtimesService.create(orgB, userId, { name: "b" })).runtime;
   const { installation, project: seeded } = await seedProject(orgA, userId, runnerA.id, "seed");
+
+  test("a repository the GitHub app can reach becomes a project that belongs to no runtime", async () => {
+    const listed = spyOn(githubService, "repositories").mockResolvedValue([
+      {
+        fullName: "acme/widgets",
+        cloneUrl: "https://github.com/acme/widgets.git",
+        defaultBranch: "trunk",
+        private: true,
+      },
+    ]);
+
+    try {
+      const project = await projectsService.addGithubRepository(orgA, userId, {
+        installationId: installation.id,
+        repository: "Acme/Widgets",
+      });
+
+      expect(project).toMatchObject({
+        runtimeId: null,
+        directory: null,
+        repoFullName: "acme/widgets",
+        cloneUrl: "https://github.com/acme/widgets.git",
+        defaultBranch: "trunk",
+        githubInstallationId: installation.id,
+        name: "widgets",
+      });
+      await expect(
+        projectsService.addGithubRepository(orgA, userId, {
+          installationId: installation.id,
+          repository: "acme/widgets",
+        }),
+      ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+      await expect(
+        projectsService.addGithubRepository(orgA, userId, {
+          installationId: installation.id,
+          repository: "acme/hidden",
+        }),
+      ).rejects.toBeInstanceOf(RepositoryNotInstalledError);
+    } finally {
+      listed.mockRestore();
+    }
+  });
 
   test("a project can be a folder that its runner serves", async () => {
     const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });

@@ -43,6 +43,13 @@ export type GithubUserProfile = { id: number; login: string; name: string | null
 
 export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
 
+export type GithubRepository = {
+  fullName: string;
+  cloneUrl: string;
+  defaultBranch: string;
+  private: boolean;
+};
+
 export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };
 
 export type GithubCommit = {
