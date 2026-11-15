@@ -18,9 +18,14 @@ export function useStartThread() {
   const navigate = useNavigate();
   const { add, refresh } = useThreads();
 
-  function createThread(projectId: string, title: string, backend: AgentBackendKind) {
+  function createThread(
+    projectId: string,
+    title: string,
+    backend: AgentBackendKind,
+    runtimeId: string | undefined,
+  ) {
     return attempt("Could not start thread", () =>
-      postJson<Thread>("/threads", { projectId, title, backend }),
+      postJson<Thread>("/threads", { projectId, runtimeId, title, backend }),
     );
   }
 
@@ -29,13 +34,14 @@ export function useStartThread() {
     message: OutgoingMessage,
     selection: RunSelection = {},
     backend: AgentBackendKind = "native",
+    runtimeId?: string,
   ) => {
     if (!projectId) {
       toast.add({ title: "Choose a project first", type: "error" });
       return false;
     }
 
-    const thread = await createThread(projectId, titleOf(message), backend);
+    const thread = await createThread(projectId, titleOf(message), backend, runtimeId);
 
     if (!thread) return false;
 

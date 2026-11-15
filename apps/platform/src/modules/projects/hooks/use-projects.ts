@@ -47,6 +47,22 @@ export function useProjects() {
     return project;
   }
 
+  async function addGithubRepository(input: {
+    installationId: string;
+    repository: string;
+    name?: string;
+  }) {
+    const project = await attempt("Could not add the repository", () =>
+      postJson<Project>("/projects/github", input),
+    );
+
+    if (!project) return null;
+
+    setProjects((current) => (current ? [project, ...current] : [project]));
+    toast.add({ title: "Repository added", description: project.name, type: "success" });
+    return project;
+  }
+
   async function moveProject(project: Project, runtimeId: string) {
     const moved = await attempt("Could not change the runner", () =>
       postJson<Project>(`/projects/${project.id}`, { runtimeId }, "PATCH"),
@@ -71,6 +87,7 @@ export function useProjects() {
     refresh: projectsStore.refresh,
     addFolder,
     addRepository,
+    addGithubRepository,
     moveProject,
   };
 }

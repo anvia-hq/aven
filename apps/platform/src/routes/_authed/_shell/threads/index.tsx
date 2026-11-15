@@ -5,6 +5,8 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
 import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
+import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
+import { useRuntimeChoice } from "@/modules/runtimes/hooks/use-runtime-choice";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
@@ -35,8 +37,11 @@ function NewThread() {
   const credential = useClaudeSetup();
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
 
+  const project = projects.find((candidate) => candidate.id === projectId);
+  const computer = useRuntimeChoice(project);
+
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, claude ? "claude" : "native");
+    startThread(projectId, message, selection, claude ? "claude" : "native", computer.runtimeId);
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
@@ -69,7 +74,18 @@ function NewThread() {
                 autoFocus
                 onSubmit={start}
                 claude={{ choice: claude, onChange: setClaude }}
-                tools={<ProjectPicker value={projectId} onChange={setProjectId} />}
+                tools={
+                  <>
+                    <ProjectPicker value={projectId} onChange={setProjectId} />
+                    {project && (
+                      <RuntimePicker
+                        choices={computer.choices}
+                        value={computer.runtimeId}
+                        onChange={computer.choose}
+                      />
+                    )}
+                  </>
+                }
               />
               {claude && credential.loaded && !credential.setup.configured && (
                 <p className="px-1 text-center text-xs text-muted-foreground">

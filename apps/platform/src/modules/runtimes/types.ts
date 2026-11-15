@@ -30,6 +30,7 @@ export type Runtime = {
   outdated: boolean;
   updateTo: string | null;
   isControlPlane: boolean;
+  isCloud: boolean;
   canUpdate: boolean;
   stats: RuntimeStats | null;
   lastSeenAt: string | null;
@@ -51,3 +52,9 @@ export type MachineMetric = {
 export type MeterLevel = "low" | "busy" | "high";
 
 export type UpdateAsked = { from: string | null; at: number };
+
+export type RuntimeChoice = {
+  runtime: Runtime;
+  disabled: boolean;
+  note: string | null;
+};

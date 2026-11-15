@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
 import { useAddProject } from "../hooks/use-add-project";
 import { FolderPicker } from "./folder-picker";
+import { GithubRepositoryChoice } from "./github-repository-choice";
 import type { Project } from "../types";
 
 type Props = {
@@ -40,64 +41,73 @@ export function AddProjectDialog({ onAdded, variant, size }: Props) {
           <DialogHeader>
             <DialogTitle>Add a project</DialogTitle>
             <DialogDescription>
-              A project is a folder on a computer whose runner serves it. A thread works in its own
-              copy of it, as the person who runs the runner, with that computer's tools.
+              A repository on GitHub can run on any computer, including Aven Cloud. A folder is a
+              project that stays on the computer that serves it.
             </DialogDescription>
           </DialogHeader>
-          {state.hasHosts ? (
-            <>
-              <Tabs value={state.kind} onValueChange={(next) => state.setKind(next)}>
-                <TabsList>
-                  <TabsTrigger value="folder">Folder</TabsTrigger>
-                  <TabsTrigger value="repository">Repository</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <LabeledSelect
-                label="Computer"
-                options={state.runners}
-                value={state.chosenRunner}
-                onChange={state.chooseRunner}
-                placeholder="Choose a computer"
-              />
-              {state.kind === "folder" ? (
-                <FolderPicker
-                  key={state.chosenRunner}
-                  runtimeId={state.chosenRunner}
-                  path={state.path}
-                  onChange={state.setPath}
-                />
-              ) : (
-                <div className="flex flex-col gap-1 text-sm">
-                  <Label htmlFor="project-repository">Repository</Label>
-                  <Input
-                    id="project-repository"
-                    value={state.repository}
-                    onChange={(event) => state.setRepository(event.target.value)}
-                    placeholder="owner/name or https://github.com/owner/name"
-                    autoFocus
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    The computer clones it once into its own repos folder and keeps it up to date.
-                    It uses the git sign-in that computer already has, so a private repository needs
-                    that.
-                  </span>
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No computer serves a folder yet. On the computer, run a runner that works on it
-              directly and gives the folders it may use: AVEN_DIRS=/path/to/code (or aven runner
-              install --dir /path/to/code).
-            </p>
-          )}
+          <Tabs value={state.kind} onValueChange={(next) => state.setKind(next)}>
+            <TabsList>
+              <TabsTrigger value="github">GitHub</TabsTrigger>
+              <TabsTrigger value="folder">Folder</TabsTrigger>
+              <TabsTrigger value="repository">Clone</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <ProjectSource state={state} />
           <DialogFooter>
             <Button type="submit" disabled={state.submitting || !state.canSubmit}>
-              {state.kind === "folder" ? "Add" : "Clone and add"}
+              {state.kind === "repository" ? "Clone and add" : "Add"}
             </Button>
           </DialogFooter>
         </Form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ProjectSource({ state }: { state: ReturnType<typeof useAddProject> }) {
+  if (state.kind === "github") return <GithubRepositoryChoice state={state} />;
+
+  if (!state.hasHosts)
+    return (
+      <p className="text-sm text-muted-foreground">
+        No computer serves a folder yet. On the computer, run a runner that works on it directly and
+        gives the folders it may use: AVEN_DIRS=/path/to/code (or aven runner install --dir
+        /path/to/code).
+      </p>
+    );
+
+  return (
+    <>
+      <LabeledSelect
+        label="Computer"
+        options={state.runners}
+        value={state.chosenRunner}
+        onChange={state.chooseRunner}
+        placeholder="Choose a computer"
+      />
+      {state.kind === "folder" ? (
+        <FolderPicker
+          key={state.chosenRunner}
+          runtimeId={state.chosenRunner}
+          path={state.path}
+          onChange={state.setPath}
+        />
+      ) : (
+        <div className="flex flex-col gap-1 text-sm">
+          <Label htmlFor="project-repository">Repository</Label>
+          <Input
+            id="project-repository"
+            value={state.repository}
+            onChange={(event) => state.setRepository(event.target.value)}
+            placeholder="owner/name or https://github.com/owner/name"
+            autoFocus
+          />
+          <span className="text-xs text-muted-foreground">
+            The computer clones it once into its own repos folder and keeps it up to date. It uses
+            the git sign-in that computer already has, so a private repository needs that.
+          </span>
+        </div>
+      )}
+    </>
   );
 }
