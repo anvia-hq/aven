@@ -60,6 +60,7 @@ export type ProviderFactory = <T extends SandboxRunner>(
 
 export type SandboxLifetime = {
   woke(runtimeId: string, started: boolean, autoStopMs: number, now?: number): void;
+  stopped(runtimeId: string, now?: number): void;
   mayHaveStopped(runtimeId: string, now?: number): boolean;
 };
 
@@ -68,6 +69,7 @@ export type CloudProviderModule = {
   ready(): boolean;
   create: ProviderFactory;
   stop(record: SandboxRecord): Promise<void>;
+  extend(record: SandboxRecord): Promise<void>;
   removeSandbox(sandboxId: string): Promise<boolean>;
   lifetime: SandboxLifetime;
 };
@@ -86,4 +88,28 @@ export type CloudExpiryOptions = {
   idle(before: Date): Promise<IdleCloudSandbox[]>;
   expire(runtimeId: string): Promise<void>;
   remove(provider: RuntimeProviderKind, sandboxId: string): Promise<boolean>;
+};
+
+export type IdleWindows = {
+  agentIdleMs: number;
+  userIdleMs: number;
+};
+
+export type SandboxIdle = {
+  windows: IdleWindows;
+  now: number;
+  lastAgentAt: number;
+  lastUserAt: number;
+  agentRunning: boolean;
+};
+
+export type CloudSandboxThread = {
+  runtimeId: string;
+  threadId: string;
+  updatedAt: Date;
+};
+
+export type CloudSandboxPage = {
+  sandboxIds: string[];
+  threads: CloudSandboxThread[];
 };

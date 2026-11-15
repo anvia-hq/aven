@@ -3,6 +3,7 @@ import {
   botApiApp,
   botRunner,
   cloudExpiry,
+  cloudIdle,
   goalDriver,
   previews,
   runsService,
@@ -56,6 +57,7 @@ export async function startControlPlane(edition: Edition) {
     await threadWatcher.close();
     await threadRetention.close();
     await cloudExpiry.close();
+    await cloudIdle.close();
     runsService.dispose();
     process.exit(0);
   };
@@ -67,6 +69,7 @@ export async function startControlPlane(edition: Edition) {
   threadWatcher.start();
   threadRetention.start();
   cloudExpiry.start();
+  cloudIdle.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

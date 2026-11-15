@@ -464,6 +464,15 @@ export const threadsService = {
       });
   },
 
+  async runtimeOf(id: string) {
+    const [row] = await db
+      .select({ runtimeId: threads.runtimeId })
+      .from(threads)
+      .where(eq(threads.id, id));
+
+    return row?.runtimeId;
+  },
+
   async touch(id: string) {
     await db.update(threads).set({ updatedAt: new Date() }).where(eq(threads.id, id));
   },

@@ -93,11 +93,19 @@ export class SpacesClient {
   }
 
   async resume(apiKey: string, sandboxId: string) {
-    await this.#request("POST", `${this.#path(sandboxId)}/resume`, apiKey, {});
+    await this.#request("POST", `${this.#path(sandboxId)}/resume`, apiKey, {
+      ttlSeconds: spacesAutoStopSeconds(),
+    });
   }
 
   async stop(apiKey: string, sandboxId: string) {
     await this.#request("POST", `${this.#path(sandboxId)}/stop`, apiKey, {});
+  }
+
+  async extend(apiKey: string, sandboxId: string) {
+    await this.#request("PATCH", this.#path(sandboxId), apiKey, {
+      ttlSeconds: spacesAutoStopSeconds(),
+    });
   }
 
   async deleteSandbox(apiKey: string, sandboxId: string) {

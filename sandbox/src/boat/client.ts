@@ -142,6 +142,12 @@ export class BoatClient {
     return this.#request("POST", `${this.#sandboxPath(sandboxId)}/stop`, apiKey);
   }
 
+  extend(apiKey: string, sandboxId: string) {
+    return this.#request("PATCH", this.#sandboxPath(sandboxId), apiKey, {
+      ttlSeconds: autoStopSeconds(),
+    });
+  }
+
   deleteSandbox(apiKey: string, sandboxId: string) {
     return this.#request("DELETE", this.#sandboxPath(sandboxId), apiKey, undefined, {
       "X-Ascii-Confirm-Delete": sandboxId,

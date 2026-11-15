@@ -89,5 +89,13 @@ export function createSandboxRuntime<T extends SandboxRunner>(store: SandboxStor
     }
   }
 
-  return { reachRunner, releaseThread, stopCloudRuntime };
+  async function extendCloudRuntime(runtimeId: string) {
+    for (const name of cloudProviderNames()) {
+      const record = await store.record({ provider: name, runtimeId, revoked: true });
+
+      if (record) await cloudProvider(name).extend(record);
+    }
+  }
+
+  return { reachRunner, releaseThread, stopCloudRuntime, extendCloudRuntime };
 }
