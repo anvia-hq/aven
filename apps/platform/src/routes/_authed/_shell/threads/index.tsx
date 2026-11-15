@@ -61,18 +61,11 @@ function NewThread() {
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
-        {loaded && projects.length > 0 && (
-          <AddProjectDialog size="sm" onAdded={(project) => setProjectId(project.id)} />
-        )}
-      </header>
-
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
         <div className="flex flex-col gap-1.5 text-center">
-          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             What should we build?
-          </h2>
+          </h1>
           <p className="hidden text-sm text-muted-foreground md:block">
             Start a thread inside a project. The agent reads, edits and runs code there.
           </p>
