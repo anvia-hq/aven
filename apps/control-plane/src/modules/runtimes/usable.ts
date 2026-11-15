@@ -4,7 +4,7 @@ import { runtimes } from "@aven/db/schema/runtimes";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
-import { isCloudTemplate } from "./cloud-config";
+import { isCloudTemplate } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./service";
 
 export async function requireUsableRuntime(userId: string, runtimeId: string) {

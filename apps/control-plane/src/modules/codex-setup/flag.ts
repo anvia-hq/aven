@@ -1,4 +1,4 @@
-import { featureChoice } from "../../features";
+import { featureChoice } from "@aven/server-kit/features";
 
 export const CODEX_BACKEND_OFF = "The Codex agent is turned off on this server";
 

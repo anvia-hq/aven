@@ -7,13 +7,14 @@ import {
   spacesBootEnv,
 } from "./boot";
 import { SpacesApiError, type SpacesClient } from "./client";
-import type { SpacesClock, SpacesSandbox, SpacesWake } from "./types";
+import type { SpacesSandbox, SpacesWake } from "./types";
+import type { SandboxClock } from "../types";
 
 const READY = new Set(["ready", "idle", "running"]);
 
 const WAITING = new Set(["init", "provisioning", "provisioned", "cloning", "archiving"]);
 
-const realClock: SpacesClock = {
+const realClock: SandboxClock = {
   now: () => Date.now(),
   sleep: (ms) => Bun.sleep(ms),
 };
@@ -56,7 +57,7 @@ export async function wakeSpacesSandbox(input: SpacesWake) {
   );
 }
 
-async function ensureSandbox(input: SpacesWake, clock: SpacesClock, readyTimeoutMs: number) {
+async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeoutMs: number) {
   const { record, client } = input;
 
   if (record.sandboxId) {
@@ -88,7 +89,7 @@ async function prepare(
   client: SpacesClient,
   apiKey: string,
   sandboxId: string,
-  clock: SpacesClock,
+  clock: SandboxClock,
   readyTimeoutMs: number,
 ) {
   let sandbox: SpacesSandbox;
@@ -130,7 +131,7 @@ async function watch(
   client: SpacesClient,
   apiKey: string,
   sandboxId: string,
-  clock: SpacesClock,
+  clock: SandboxClock,
   readyTimeoutMs: number,
 ) {
   const deadline = clock.now() + readyTimeoutMs;
@@ -149,7 +150,7 @@ async function watch(
   return sandbox;
 }
 
-async function waitFor(connected: () => boolean, clock: SpacesClock, deadline: number) {
+async function waitFor(connected: () => boolean, clock: SandboxClock, deadline: number) {
   for (let i = 0; i < 400; i++) {
     if (connected()) return true;
 

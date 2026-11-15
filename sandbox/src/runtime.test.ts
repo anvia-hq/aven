@@ -1,0 +1,130 @@
+import { afterEach, describe, expect, test } from "bun:test";
+
+import { CLOUD_OFF } from "./cloud-config";
+import { RuntimeOfflineError } from "./offline";
+import { EXPIRED_COMPUTER, createSandboxRuntime } from "./runtime";
+import type { SandboxRunner, SandboxStore } from "./types";
+import type { RuntimeProviderKind } from "@aven/protocol/types";
+
+const connection: SandboxRunner = { call: async () => ({}) };
+
+const keptProviders = process.env.AVEN_CLOUD_PROVIDERS;
+
+afterEach(() => {
+  if (keptProviders === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
+  else process.env.AVEN_CLOUD_PROVIDERS = keptProviders;
+});
+
+function store(overrides: Partial<SandboxStore> = {}): SandboxStore {
+  return {
+    record: async () => null,
+    saveSandboxId: async () => undefined,
+    providerOf: async () => undefined,
+    isExpiredCloud: async () => false,
+    ...overrides,
+  };
+}
+
+function unreachable(message: string) {
+  return new RuntimeOfflineError(message);
+}
+
+describe("reaching a runtime's sandbox", () => {
+  test("uses a connected runner without asking which provider it is", async () => {
+    let asked = false;
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({
+        providerOf: async () => {
+          asked = true;
+          return undefined;
+        },
+      }),
+    );
+
+    expect(await sandbox.reachRunner({ get: () => connection }, { runtimeId: "r1" })).toBe(
+      connection,
+    );
+    expect(asked).toBe(false);
+  });
+
+  test("says a runtime whose sandbox was deleted after 48 hours is gone", async () => {
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({ isExpiredCloud: async () => true }),
+    );
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toThrow(new RuntimeOfflineError(EXPIRED_COMPUTER));
+  });
+
+  test("never starts a runner nobody recorded, and says what the caller asked it to say", async () => {
+    const sandbox = createSandboxRuntime<SandboxRunner>(store());
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1", threadId: "t1" }),
+    ).rejects.toThrow(unreachable("The runtime for this project is offline"));
+
+    await expect(
+      sandbox.reachRunner(
+        { get: () => undefined },
+        { runtimeId: "r1", threadId: "t1" },
+        "The bot's computer is offline",
+      ),
+    ).rejects.toThrow(new RuntimeOfflineError("The bot's computer is offline"));
+  });
+
+  test("a manual runtime that is not connected is offline", async () => {
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({ providerOf: async () => "manual" }),
+    );
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toBeInstanceOf(RuntimeOfflineError);
+  });
+
+  test("a cloud provider this server does not offer cannot wake its sandbox", async () => {
+    process.env.AVEN_CLOUD_PROVIDERS = "";
+    const sandbox = createSandboxRuntime<SandboxRunner>(store({ providerOf: async () => "boat" }));
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toThrow(CLOUD_OFF);
+  });
+
+  test("a thread on a runtime nobody recorded has no runner to ask to free it", async () => {
+    const asked: string[] = [];
+    const sandbox = createSandboxRuntime<SandboxRunner>(store());
+
+    await sandbox.releaseThread(
+      {
+        get: (id: string) => {
+          asked.push(id);
+          return connection;
+        },
+      },
+      { runtimeId: "r1", threadId: "t1" },
+    );
+
+    expect(asked).toEqual([]);
+  });
+
+  test("stopping a runtime asks each provider, revoked included, for its sandbox", async () => {
+    const asked: { provider: RuntimeProviderKind; revoked?: boolean }[] = [];
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({
+        record: async (input) => {
+          asked.push({ provider: input.provider, revoked: input.revoked });
+          return null;
+        },
+      }),
+    );
+
+    await sandbox.stopCloudRuntime("r1");
+
+    expect(asked).toEqual([
+      { provider: "boat", revoked: true },
+      { provider: "spaces", revoked: true },
+    ]);
+  });
+});

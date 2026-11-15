@@ -1,9 +1,9 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { SpacesApiError, type SpacesClient } from "./client";
-import type { SpacesWakeRecord } from "./types";
+import type { SandboxRecord } from "../types";
 
-export async function stopSpacesSandbox(record: SpacesWakeRecord, client: SpacesClient) {
+export async function stopSpacesSandbox(record: SandboxRecord, client: SpacesClient) {
   if (!record.sandboxId) return;
 
   try {

@@ -3,7 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { SPACES_BOOT_COMMAND, SPACES_BOOT_PATH } from "./boot";
 import { SpacesClient } from "./client";
 import { wakeSpacesSandbox } from "./wake";
-import type { SpacesClock, SpacesWake, SpacesWakeRecord } from "./types";
+import type { SpacesWake } from "./types";
+import type { SandboxClock, SandboxRecord } from "../types";
 
 const KEY = "sk_test_key_value";
 const TOKEN = "avrt_runner_token_value";
@@ -13,7 +14,7 @@ const BASE = "https://spaces.test/api/v1";
 
 function timed() {
   let time = 0;
-  const clock: SpacesClock = {
+  const clock: SandboxClock = {
     now: () => time,
     sleep: async (ms) => {
       time += ms;
@@ -22,7 +23,7 @@ function timed() {
   return { clock, at: () => time };
 }
 
-function record(sandboxId: string | null): SpacesWakeRecord {
+function record(sandboxId: string | null): SandboxRecord {
   return {
     runtimeId: "11111111-1111-4111-8111-111111111111",
     apiKey: KEY,

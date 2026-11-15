@@ -6,11 +6,10 @@ import { threads } from "@aven/db/schema/threads";
 import { eq } from "drizzle-orm";
 
 import { threadsService } from "../threads/service";
-import { BoatApiError } from "./boat/client";
-import { SPACES_RUNTIME_ID } from "./cloud-id";
+import { BoatApiError } from "@aven/sandbox/boat/client";
 import { CLOUD_SANDBOX_LIFE_MS, createCloudExpiry } from "./cloud-expiry";
 import { EXPIRED_COMPUTER, reachRunner } from "./providers";
-import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID, runtimesService } from "./service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 const HOUR_MS = 3_600_000;
@@ -89,11 +88,10 @@ run("Aven Cloud expiry (postgres)", async () => {
     const deleted: string[] = [];
     const expiry = createCloudExpiry({
       intervalMs: 60_000,
-      client: {
-        deleteSandbox: async (key, id) => {
-          expect(key).toBe("boat_test_key_for_expiry");
+      remove: {
+        boat: async (id) => {
           deleted.push(id);
-          return {};
+          return true;
         },
       },
     });
@@ -120,9 +118,9 @@ run("Aven Cloud expiry (postgres)", async () => {
     await backdate(stuck, 60);
     const expiry = createCloudExpiry({
       intervalMs: 60_000,
-      client: {
-        deleteSandbox: async (_key, id) => {
-          if (id === "bx_gone0000") throw new BoatApiError(404, "not_found", "Gone");
+      remove: {
+        boat: async (id) => {
+          if (id === "bx_gone0000") return true;
 
           throw new BoatApiError(502, "bad_gateway", "Boat is down");
         },
@@ -151,14 +149,15 @@ run("Aven Cloud expiry (postgres)", async () => {
 
     await createCloudExpiry({
       intervalMs: 60_000,
-      client: {
-        deleteSandbox: async (_key, id) => {
+      remove: {
+        boat: async (id) => {
           boat.push(id);
-          return {};
+          return true;
         },
-      },
-      destroySpaces: async (id) => {
-        spaces.push(id);
+        spaces: async (id) => {
+          spaces.push(id);
+          return true;
+        },
       },
     }).sweep();
 
@@ -182,8 +181,12 @@ run("Aven Cloud expiry (postgres)", async () => {
     try {
       await createCloudExpiry({
         intervalMs: 60_000,
-        destroySpaces: async (id) => {
-          if (id === "bx_stuck000") throw new Error("spaces is down");
+        remove: {
+          spaces: async (id) => {
+            if (id === "bx_stuck000") throw new Error("spaces is down");
+
+            return true;
+          },
         },
       }).sweep();
     } finally {
@@ -204,7 +207,7 @@ run("Aven Cloud expiry (postgres)", async () => {
     expect(
       await createCloudExpiry({
         intervalMs: 60_000,
-        client: { deleteSandbox: async () => ({}) },
+        remove: { boat: async () => true },
       }).sweep(new Date(0)),
     ).toBe(0);
   });
