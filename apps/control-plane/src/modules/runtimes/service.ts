@@ -3,7 +3,7 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { and, count, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, ne, notInArray, or, sql } from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import {
@@ -21,7 +21,7 @@ import {
   templateProvider,
 } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
-import type { SandboxRecord } from "@aven/sandbox/types";
+import type { CloudSandboxThread, SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
 import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
@@ -220,6 +220,30 @@ export const runtimesService = {
         ),
       )
       .limit(limit);
+  },
+
+  async liveCloudSandboxes(limit = 500): Promise<CloudSandboxThread[]> {
+    return db
+      .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
+      .from(threads)
+      .innerJoin(runtimes, eq(runtimes.id, threads.runtimeId))
+      .where(
+        and(
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+          ne(threads.state, "archived"),
+        ),
+      )
+      .limit(limit);
+  },
+
+  async openThreadsOn(runtimeId: string) {
+    const [row] = await db
+      .select({ total: count() })
+      .from(threads)
+      .where(and(eq(threads.runtimeId, runtimeId), ne(threads.state, "archived")));
+
+    return row?.total ?? 0;
   },
 
   async expireCloudSandbox(id: string) {

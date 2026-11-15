@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import { runtimeActivity } from "../runtimes/activity";
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
 import { fileAnswer, folderAnswer, searchAnswer } from "./schema";
@@ -22,16 +23,19 @@ export function createFilesService(hub: RuntimeHub) {
 
   return {
     async list(organizationId: string, threadId: string, path: string): Promise<FolderResult> {
+      void runtimeActivity.touchThread(threadId);
       const folder = await ask(organizationId, "files.list", { threadId, path }, folderAnswer);
       return folder ? { available: true, entries: folder.entries } : { available: false };
     },
 
     async read(organizationId: string, threadId: string, path: string): Promise<FileResult> {
+      void runtimeActivity.touchThread(threadId);
       const file = await ask(organizationId, "files.read", { threadId, path }, fileAnswer);
       return file ? { available: true, ...file } : { available: false };
     },
 
     async search(organizationId: string, threadId: string, query: string): Promise<SearchResult> {
+      void runtimeActivity.touchThread(threadId);
       const found = await ask(organizationId, "files.search", { threadId, query }, searchAnswer);
       return found ? { available: true, paths: found.paths } : { available: false };
     },

@@ -2,7 +2,9 @@ import { Elysia } from "elysia";
 
 import { bytesOf } from "@aven/server-kit/bytes";
 import { bridgeToRunner, originAllowed } from "../../websocket";
+import { runtimeActivity } from "../runtimes/activity";
 import { threadAccess } from "../threads/access";
+import { threadsService } from "../threads/service";
 import type { RuntimeHub } from "../runtimes/hub";
 import { threadParams } from "../threads/schema";
 import { terminalControl, terminalSize } from "./schema";
@@ -12,6 +14,7 @@ import type { TerminalHandle } from "../runtimes/types";
 export const terminalRouter = (hub: RuntimeHub) => {
   const service = createTerminalService(hub);
   const terminals = bridgeToRunner<TerminalHandle>("The terminal is too slow");
+  const runtimes = new WeakMap<object, string>();
   return new Elysia({ prefix: "/threads" }).use(threadAccess).ws("/:id/terminal/stream", {
     thread: "own",
     params: threadParams,
@@ -24,8 +27,19 @@ export const terminalRouter = (hub: RuntimeHub) => {
     async open(ws) {
       const { organizationId, params, query } = ws.data;
       await terminals.open(ws, (sink) => service.open(organizationId, params.id, query, sink));
+
+      const runtimeId = await threadsService.runtimeOf(params.id);
+
+      if (!runtimeId) return;
+
+      runtimes.set(ws.raw, runtimeId);
+      runtimeActivity.touch(runtimeId);
     },
     message(ws, message) {
+      const runtimeId = runtimes.get(ws.raw);
+
+      if (runtimeId) runtimeActivity.touch(runtimeId);
+
       const terminal = terminals.handle(ws);
 
       if (!terminal) return;

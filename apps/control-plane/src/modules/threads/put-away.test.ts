@@ -22,7 +22,7 @@ run("putting a thread away (real postgres)", async () => {
   const { runtime } = await runtimesService.create(seed.orgA, seed.userId, { name: "manual" });
   const thread = { id: "t-1", runtimeId: runtime.id };
 
-  function harness({ connected = true } = {}) {
+  function harness({ connected = true, open = 0 } = {}) {
     const calls: { method: string; params: unknown }[] = [];
     const asked: string[] = [];
     const hub = {
@@ -39,8 +39,20 @@ run("putting a thread away (real postgres)", async () => {
       },
     } as unknown as Pick<RuntimeHub, "get">;
     const cancelled: string[] = [];
-    const putAway = createPutAwayThread({ cancel: (id) => cancelled.push(id), hub });
-    return { asked, calls, cancelled, putAway };
+    const stopped: string[] = [];
+    const looked: string[] = [];
+    const putAway = createPutAwayThread({
+      cancel: (id) => cancelled.push(id),
+      hub,
+      openThreads: async (runtimeId) => {
+        looked.push(runtimeId);
+        return open;
+      },
+      stop: async (runtimeId) => {
+        stopped.push(runtimeId);
+      },
+    });
+    return { asked, calls, cancelled, looked, stopped, putAway };
   }
 
   test("stops the run and asks the thread's runner to free its sandbox", async () => {
@@ -62,5 +74,25 @@ run("putting a thread away (real postgres)", async () => {
 
     expect(asked).toEqual([thread.runtimeId]);
     expect(calls).toEqual([]);
+  });
+
+  test("a sandbox no other thread uses is stopped as soon as the thread is put away", async () => {
+    const { looked, putAway, stopped } = harness();
+
+    putAway(thread);
+    await until(() => stopped.length > 0);
+
+    expect(looked).toEqual([thread.runtimeId]);
+    expect(stopped).toEqual([thread.runtimeId]);
+  });
+
+  test("a sandbox another thread is still open on is left running", async () => {
+    const { looked, putAway, stopped } = harness({ open: 1 });
+
+    putAway(thread);
+    await until(() => looked.length > 0);
+    await Bun.sleep(20);
+
+    expect(stopped).toEqual([]);
   });
 });

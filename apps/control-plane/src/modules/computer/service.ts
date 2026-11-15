@@ -1,4 +1,5 @@
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
+import { runtimeActivity } from "../runtimes/activity";
 import { computerInfo } from "./schema";
 import type { ComputerStatus } from "./types";
 import type { Refusal, Runner } from "../runtimes/types";
@@ -24,6 +25,8 @@ export function createComputerService(runner: Runner) {
     },
 
     async wake(scope: string, threadId: string): Promise<ComputerStatus> {
+      void runtimeActivity.touchThread(threadId);
+
       const info = await runner.ask(
         scope,
         "computer.wake",

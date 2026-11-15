@@ -10,6 +10,6 @@ const sandboxRuntime = createSandboxRuntime<RuntimeConnection>({
   isExpiredCloud: (runtimeId) => runtimesService.isExpiredCloud(runtimeId),
 });
 
-export const { reachRunner, releaseThread, stopCloudRuntime } = sandboxRuntime;
+export const { reachRunner, releaseThread, stopCloudRuntime, extendCloudRuntime } = sandboxRuntime;
 
 export { EXPIRED_COMPUTER } from "@aven/sandbox/runtime";
