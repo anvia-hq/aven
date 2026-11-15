@@ -1,8 +1,10 @@
 import { featureList } from "../../features";
-import { CLOUD_RUNTIME_ID } from "./cloud-id";
+import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
+import { spacesConfigured } from "./spaces/config";
 
 const CLOUD_PROVIDERS = {
   boat: { templateId: CLOUD_RUNTIME_ID, ready: () => cloudApiKey() !== null },
+  spaces: { templateId: SPACES_RUNTIME_ID, ready: () => spacesConfigured() },
 } as const;
 
 type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
@@ -18,6 +20,9 @@ export const cloudProviders = (configured: string | undefined) =>
 
 export const enabledCloudProviders = () =>
   cloudProviders(process.env.AVEN_CLOUD_PROVIDERS).filter((name) => CLOUD_PROVIDERS[name].ready());
+
+export const isCloudProvider = (name: string): name is CloudProviderName =>
+  NAMES.some((known) => known === name);
 
 export const cloudEnabled = (name: string) =>
   enabledCloudProviders().some((enabled) => enabled === name);

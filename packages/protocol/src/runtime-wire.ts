@@ -76,7 +76,7 @@ export const CLAUDE_TOKEN_MISSING =
 export const CODEX_TOKEN_MISSING =
   "Set a Codex API key in Settings before this thread can run on the Codex agent";
 
-export const RUNTIME_PROVIDERS = ["manual", "boat"] as const;
+export const RUNTIME_PROVIDERS = ["manual", "boat", "spaces"] as const;
 
 export const BOAT_MACHINE_TYPES = ["small", "default", "large", "xlarge"] as const;
 
