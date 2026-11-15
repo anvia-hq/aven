@@ -2,7 +2,8 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
-import { and, count, desc, eq, isNull, ne, or } from "drizzle-orm";
+import { threads } from "@aven/db/schema/threads";
+import { and, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { BoatApiError, BoatClient } from "./boat/client";
@@ -212,6 +213,32 @@ export const runtimesService = {
       })
       .returning();
     return publicRuntime(row!);
+  },
+
+  async idleCloudSandboxes(before: Date, limit = 100) {
+    const lastUsed = sql`greatest(
+      ${runtimes.createdAt},
+      coalesce(${runtimes.lastSeenAt}, ${runtimes.createdAt}),
+      coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
+    )`;
+    return db
+      .select({ id: runtimes.id, sandboxId: runtimes.boatSandboxId })
+      .from(runtimes)
+      .where(
+        and(
+          eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID),
+          isNull(runtimes.revokedAt),
+          sql`${lastUsed} < ${before.toISOString()}::timestamptz`,
+        ),
+      )
+      .limit(limit);
+  },
+
+  async expireCloudSandbox(id: string) {
+    await db
+      .update(runtimes)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(runtimes.id, id), eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID)));
   },
 
   async list(organizationId: string, userId: string) {
