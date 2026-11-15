@@ -25,7 +25,12 @@ export function GithubRepositoryChoice({ state }: Props) {
           Install the Aven app on GitHub and choose the repositories it may reach.
         </p>
         {github.installUrl && (
-          <Button variant="outline" size="sm" render={<a href={github.installUrl} />}>
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<a href={github.installUrl} />}
+          >
             Install on GitHub
           </Button>
         )}
