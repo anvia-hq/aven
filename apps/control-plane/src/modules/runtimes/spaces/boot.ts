@@ -8,12 +8,13 @@ const SPACES_BOOT = `set -a
 . /home/user/.aven/runner-boot.env
 set +a
 export DEBIAN_FRONTEND=noninteractive
+as_root() { if [ "$(id -u)" = 0 ]; then "$@"; else sudo -n "$@"; fi; }
 need=""
 for tool in curl git tar sha256sum; do
   command -v $tool >/dev/null 2>&1 || need=1
 done
 if [ -n "$need" ]; then
-  apt-get update -qq && apt-get install -y -qq ca-certificates curl git tar coreutils || exit 1
+  as_root apt-get update -qq && as_root apt-get install -y -qq ca-certificates curl git tar coreutils || exit 1
 fi
 if ! command -v aven >/dev/null 2>&1; then
   case "$(uname -m)" in
@@ -28,7 +29,7 @@ if ! command -v aven >/dev/null 2>&1; then
   curl -fsSL "$releases/download/$tag/$file" -o "$tmp/$file" || exit 1
   curl -fsSL "$releases/download/$tag/checksums.txt" -o "$tmp/checksums.txt" || exit 1
   (cd "$tmp" && grep " $file$" checksums.txt | sha256sum -c -) || exit 1
-  tar -xzf "$tmp/$file" -C "$tmp" && install -m 755 "$tmp/aven" /usr/local/bin/aven || exit 1
+  tar -xzf "$tmp/$file" -C "$tmp" && as_root install -m 755 "$tmp/aven" /usr/local/bin/aven || exit 1
   rm -rf "$tmp"
 fi
 pidfile=/home/user/.aven/runner.pid

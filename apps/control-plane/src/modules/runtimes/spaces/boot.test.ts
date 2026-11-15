@@ -16,6 +16,12 @@ describe("how a spaces sandbox starts its runner", () => {
     expect(SPACES_BOOT_COMMAND).toContain(SPACES_BOOT_PATH);
   });
 
+  test("takes root through sudo for the install when the sandbox runs as a plain user", () => {
+    expect(SPACES_BOOT_COMMAND).toContain('sudo -n "$@"');
+    expect(SPACES_BOOT_COMMAND).toContain("as_root install -m 755");
+    expect(SPACES_BOOT_COMMAND).toContain("as_root apt-get install");
+  });
+
   test("is wrapped in single quotes and holds none of its own", () => {
     const wrapped = SPACES_BOOT_COMMAND.slice(SPACES_BOOT_COMMAND.indexOf("bash -lc ") + 9);
 

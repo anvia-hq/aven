@@ -18,5 +18,6 @@ Spaces runs sandboxes as microVMs on hardware the operator controls, and its API
 ## Consequences
 
 - The guest image must be Debian or Ubuntu with `apt-get` (`SPACES_MSB_IMAGE=ubuntu`): the runner is a glibc program.
+- The boot script takes root through `sudo -n` when the sandbox runs as a plain user (the deployed guest runs as `user`, uid 1000, with passwordless sudo), and installs the runner to `/usr/local/bin`.
 - Tested against a real spaces server with real microVMs: the first start installs and connects the runner in about 34 seconds, spaces stops the sandbox at its TTL, and the next wake brings the runner back in about a second. Not tested: a spaces server on another machine reached over a network, and a run that clones a real repository inside the sandbox.
 - A sandbox stopped by hand can leave a dead runner connection until the hub notices, the same limit as boat's.
