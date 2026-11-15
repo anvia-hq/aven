@@ -2,17 +2,18 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, count, desc, eq, isNull, ne, or } from "drizzle-orm";
 
 import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { BoatApiError, BoatClient } from "./boat/client";
+import { CLOUD_RUNTIME_ID } from "./cloud-id";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
 import type { BoatMachineType, RuntimeGithubMode } from "@aven/protocol/types";
 
-export { LOCAL_RUNTIME_ID };
+export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -46,11 +47,26 @@ const localToken = configuredLocalToken
   ? localRunnerToken(configuredLocalToken, process.env.AVEN_LOCAL_RUNNER)
   : localRunnerToken(undefined, LOCAL_RUNNER_OFF);
 
+const SANDBOX_LIMIT = 20;
+
+const cloudApiKey = () => process.env.AVEN_BOAT_API_KEY?.trim() || null;
+
+const sandboxLimit = () => Number(process.env.AVEN_CLOUD_MAX_SANDBOXES) || SANDBOX_LIMIT;
+
 const visibleTo = (organizationId: string) =>
-  or(eq(runtimes.organizationId, organizationId), eq(runtimes.id, LOCAL_RUNTIME_ID));
+  or(
+    eq(runtimes.organizationId, organizationId),
+    eq(runtimes.id, LOCAL_RUNTIME_ID),
+    cloudApiKey() ? eq(runtimes.id, CLOUD_RUNTIME_ID) : undefined,
+  );
 
 const usableBy = (userId: string) =>
-  or(eq(runtimes.host, false), eq(runtimes.id, LOCAL_RUNTIME_ID), eq(runtimes.ownerId, userId));
+  or(
+    eq(runtimes.host, false),
+    eq(runtimes.id, LOCAL_RUNTIME_ID),
+    eq(runtimes.id, CLOUD_RUNTIME_ID),
+    eq(runtimes.ownerId, userId),
+  );
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
@@ -142,11 +158,75 @@ export const runtimesService = {
       .onConflictDoNothing();
   },
 
+  async ensureCloud() {
+    if (!cloudApiKey()) return;
+
+    await db
+      .insert(runtimes)
+      .values({
+        id: CLOUD_RUNTIME_ID,
+        name: "Aven Cloud",
+        provider: "boat",
+        lifetime: "ephemeral",
+        githubMode: "person",
+        tokenHash: hashToken(randomBytes(32).toString("hex")),
+        tokenHint: "",
+      })
+      .onConflictDoNothing();
+  },
+
+  async createCloudSandbox(organizationId: string, ownerId: string) {
+    if (!cloudApiKey())
+      throw new UnavailableError("Aven Cloud is not set up on this control plane");
+
+    const [live] = await db
+      .select({ total: count() })
+      .from(runtimes)
+      .where(
+        and(
+          eq(runtimes.organizationId, organizationId),
+          eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID),
+          isNull(runtimes.revokedAt),
+        ),
+      );
+
+    if ((live?.total ?? 0) >= sandboxLimit())
+      throw new ConflictError(
+        `This workspace has ${sandboxLimit()} Aven Cloud computers. Archive a thread, or wait for one to expire`,
+      );
+
+    const { token, columns } = issueToken();
+    const [row] = await db
+      .insert(runtimes)
+      .values({
+        organizationId,
+        ownerId,
+        parentRuntimeId: CLOUD_RUNTIME_ID,
+        name: "Aven Cloud",
+        provider: "boat",
+        lifetime: "ephemeral",
+        githubMode: "person",
+        boatMachineType: "default",
+        ...(await encryptedRunnerToken(token)),
+        ...columns,
+      })
+      .returning();
+    return publicRuntime(row!);
+  },
+
   async list(organizationId: string, userId: string) {
     const rows = await db
       .select()
       .from(runtimes)
-      .where(and(visibleTo(organizationId), usableBy(userId), isNull(runtimes.revokedAt)))
+      .where(
+        and(
+          visibleTo(organizationId),
+          usableBy(userId),
+          isNull(runtimes.revokedAt),
+          isNull(runtimes.parentRuntimeId),
+          cloudApiKey() ? undefined : ne(runtimes.id, CLOUD_RUNTIME_ID),
+        ),
+      )
       .orderBy(desc(runtimes.createdAt));
     return rows.map(publicRuntime);
   },
@@ -195,7 +275,9 @@ export const runtimesService = {
 
     if (!row || row.provider !== "boat") return null;
 
-    const apiKey = await readBoatSecret(row.boatApiKeyEncrypted, row.id, "API key");
+    const apiKey = row.parentRuntimeId
+      ? cloudApiKey()
+      : await readBoatSecret(row.boatApiKeyEncrypted, row.id, "API key");
     const runnerToken = await readBoatSecret(row.boatRunnerTokenEncrypted, row.id, "runner token");
 
     if (!apiKey || !runnerToken) return null;

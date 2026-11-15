@@ -4,7 +4,7 @@ import { runtimes } from "@aven/db/schema/runtimes";
 import { and, eq, isNull } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
-import { LOCAL_RUNTIME_ID } from "./service";
+import { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID } from "./service";
 
 export async function requireUsableRuntime(userId: string, runtimeId: string) {
   const [row] = await db
@@ -19,7 +19,7 @@ export async function requireUsableRuntime(userId: string, runtimeId: string) {
 
   if (!row) throw refused;
 
-  if (runtimeId === LOCAL_RUNTIME_ID) return;
+  if (runtimeId === LOCAL_RUNTIME_ID || runtimeId === CLOUD_RUNTIME_ID) return;
 
   if (row.host) {
     if (row.ownerId !== userId) throw refused;

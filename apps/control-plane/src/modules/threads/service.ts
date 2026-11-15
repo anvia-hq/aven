@@ -19,7 +19,7 @@ import {
 import { claudeSetupService } from "../claude-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
-import { runtimesService } from "../runtimes/service";
+import { CLOUD_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
@@ -229,15 +229,26 @@ export const threadsService = {
 
     if (!project) throw new ProjectNotFoundError("Project not found");
 
-    const runtimeId = placement?.runtimeId ?? project.runtimeId;
+    const requested = placement?.runtimeId ?? body.runtimeId ?? project.runtimeId;
 
-    if (!runtimeId) throw new UnprocessableError("Choose a computer to run this thread on");
+    if (!requested) throw new UnprocessableError("Choose a computer to run this thread on");
 
-    if (!(await runtimesService.get(organizationId, runtimeId, userId))) {
+    if (project.directory && requested !== project.runtimeId) {
+      throw new UnprocessableError(
+        "This project is a folder on one computer, so its threads run there",
+      );
+    }
+
+    if (!(await runtimesService.get(organizationId, requested, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
     }
 
     if (body.backend === "claude") await claudeSetupService.requireFor(userId);
+
+    const runtimeId =
+      requested === CLOUD_RUNTIME_ID
+        ? (await runtimesService.createCloudSandbox(organizationId, userId)).id
+        : requested;
 
     const [thread] = await db
       .insert(threads)

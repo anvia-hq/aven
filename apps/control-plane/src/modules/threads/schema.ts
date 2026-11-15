@@ -13,6 +13,7 @@ export const messagesBeforeQuery = z.object({ before: z.coerce.number().int().mi
 
 export const createThreadBody = z.object({
   projectId: z.uuid(),
+  runtimeId: z.uuid().optional(),
   title: z.string().trim().min(1).max(THREAD_TITLE_MAX).optional(),
   backend: z.enum(AGENT_BACKENDS).optional(),
 });

@@ -13,6 +13,7 @@ import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
 import { startLocalRunner } from "./modules/runtimes/local";
+import { runtimesService } from "./modules/runtimes/service";
 import { startPreviews } from "./modules/preview/start";
 
 export async function startControlPlane(edition: Edition) {
@@ -38,6 +39,7 @@ export async function startControlPlane(edition: Edition) {
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
+  await runtimesService.ensureCloud();
   const previewListener = startPreviews(previews);
 
   const shutdown = async () => {
