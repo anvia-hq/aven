@@ -7,6 +7,7 @@ import { and, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import { CLOUD_RUNTIME_ID } from "./cloud-id";
+import { cloudApiKey, cloudEnabled } from "./cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
@@ -14,6 +15,8 @@ import type { RuntimeRow } from "@aven/db/schema/types";
 import type { RuntimeGithubMode } from "@aven/protocol/types";
 
 export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
+
+export const CLOUD_OFF = "Aven Cloud is turned off on this server";
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -49,15 +52,13 @@ const localToken = configuredLocalToken
 
 const SANDBOX_LIMIT = 20;
 
-const cloudApiKey = () => process.env.AVEN_BOAT_API_KEY?.trim() || null;
-
 const sandboxLimit = () => Number(process.env.AVEN_CLOUD_MAX_SANDBOXES) || SANDBOX_LIMIT;
 
 const visibleTo = (organizationId: string) =>
   or(
     eq(runtimes.organizationId, organizationId),
     eq(runtimes.id, LOCAL_RUNTIME_ID),
-    cloudApiKey() ? eq(runtimes.id, CLOUD_RUNTIME_ID) : undefined,
+    cloudEnabled() ? eq(runtimes.id, CLOUD_RUNTIME_ID) : undefined,
   );
 
 const usableBy = (userId: string) =>
@@ -129,7 +130,7 @@ export const runtimesService = {
   },
 
   async ensureCloud() {
-    if (!cloudApiKey()) return;
+    if (!cloudEnabled()) return;
 
     await db
       .insert(runtimes)
@@ -146,8 +147,7 @@ export const runtimesService = {
   },
 
   async createCloudSandbox(organizationId: string, ownerId: string) {
-    if (!cloudApiKey())
-      throw new UnavailableError("Aven Cloud is not set up on this control plane");
+    if (!cloudEnabled()) throw new UnavailableError(CLOUD_OFF);
 
     const [live] = await db
       .select({ total: count() })
@@ -219,7 +219,7 @@ export const runtimesService = {
           visibleTo(organizationId),
           usableBy(userId),
           isNull(runtimes.revokedAt),
-          cloudApiKey() ? undefined : ne(runtimes.id, CLOUD_RUNTIME_ID),
+          cloudEnabled() ? undefined : ne(runtimes.id, CLOUD_RUNTIME_ID),
         ),
       )
       .orderBy(desc(runtimes.createdAt));
@@ -261,7 +261,7 @@ export const runtimesService = {
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat" || !row.parentRuntimeId) return null;
+    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled()) return null;
 
     const apiKey = cloudApiKey();
     const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);

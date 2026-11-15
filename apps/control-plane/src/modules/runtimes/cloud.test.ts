@@ -7,7 +7,9 @@ import { eq } from "drizzle-orm";
 import { joinOrganization, signUp } from "../../testing/sign-up";
 import { projectsService } from "../projects/service";
 import { threadsService } from "../threads/service";
-import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { cloudProvider } from "./cloud-config";
+import { reachRunner } from "./providers";
+import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -18,10 +20,12 @@ run("Aven Cloud runtime (postgres)", async () => {
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
   const keptKey = process.env.AVEN_BOAT_API_KEY;
   const keptLimit = process.env.AVEN_CLOUD_MAX_SANDBOXES;
+  const keptProvider = process.env.AVEN_CLOUD_PROVIDER;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
   beforeAll(() => {
     process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
+    process.env.AVEN_CLOUD_PROVIDER = "boat";
     delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
   });
 
@@ -35,6 +39,9 @@ run("Aven Cloud runtime (postgres)", async () => {
 
     if (keptLimit === undefined) delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
     else process.env.AVEN_CLOUD_MAX_SANDBOXES = keptLimit;
+
+    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDER;
+    else process.env.AVEN_CLOUD_PROVIDER = keptProvider;
   });
 
   test("Aven Cloud is listed for every workspace once the platform has a boat key, and only then", async () => {
@@ -170,26 +177,67 @@ run("Aven Cloud runtime (postgres)", async () => {
     const existing = (await runtimesService.list(orgB, userId)).length;
     process.env.AVEN_CLOUD_MAX_SANDBOXES = "2";
 
-    await threadsService.create(orgB, userId, {
-      projectId: project.id,
-      runtimeId: CLOUD_RUNTIME_ID,
-    });
-    await threadsService.create(orgB, userId, {
-      projectId: project.id,
-      runtimeId: CLOUD_RUNTIME_ID,
-    });
-    await expect(
-      threadsService.create(orgB, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
-    ).rejects.toThrow("2 Aven Cloud computers");
-    expect((await runtimesService.list(orgB, userId)).length).toBe(existing + 2);
+    try {
+      await threadsService.create(orgB, userId, {
+        projectId: project.id,
+        runtimeId: CLOUD_RUNTIME_ID,
+      });
+      await threadsService.create(orgB, userId, {
+        projectId: project.id,
+        runtimeId: CLOUD_RUNTIME_ID,
+      });
+      await expect(
+        threadsService.create(orgB, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
+      ).rejects.toThrow("2 Aven Cloud computers");
+      expect((await runtimesService.list(orgB, userId)).length).toBe(existing + 2);
+    } finally {
+      delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
+    }
   });
 
   test("without a boat key Aven Cloud cannot start a thread", async () => {
     delete process.env.AVEN_BOAT_API_KEY;
     const { project } = await seedProject(orgA, userId, null, "no-key-repo");
 
-    await expect(
-      threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
-    ).rejects.toThrow();
+    try {
+      await expect(
+        threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
+      ).rejects.toThrow(CLOUD_OFF);
+    } finally {
+      process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
+    }
+  });
+
+  test("with the provider off Aven Cloud is hidden, refuses new threads and cannot wake the ones it has", async () => {
+    const { project } = await seedProject(orgA, userId, null, "off-repo");
+    const mine = await threadsService.create(orgA, userId, {
+      projectId: project.id,
+      runtimeId: CLOUD_RUNTIME_ID,
+    });
+    process.env.AVEN_CLOUD_PROVIDER = "off";
+
+    try {
+      const listed = (await runtimesService.list(orgA, userId)).map(({ id }) => id);
+      expect(listed).not.toContain(CLOUD_RUNTIME_ID);
+      expect(listed).toContain(mine.runtimeId);
+      await expect(
+        threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
+      ).rejects.toThrow(CLOUD_OFF);
+      expect(await runtimesService.boatRecord(mine.runtimeId)).toBeNull();
+      await expect(
+        reachRunner({ get: () => undefined }, { runtimeId: mine.runtimeId }),
+      ).rejects.toThrow(CLOUD_OFF);
+    } finally {
+      process.env.AVEN_CLOUD_PROVIDER = "boat";
+    }
+
+    expect(await runtimesService.boatRecord(mine.runtimeId)).not.toBeNull();
+  });
+
+  test("the provider is off unless it is named, and a name that is not a provider is refused", () => {
+    expect(cloudProvider(undefined)).toBe("off");
+    expect(cloudProvider("")).toBe("off");
+    expect(cloudProvider(" boat ")).toBe("boat");
+    expect(() => cloudProvider("vercel")).toThrow('must be off or boat, got "vercel"');
   });
 });

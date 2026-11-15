@@ -63,12 +63,17 @@ Runtimes**; sharing lets workspace members run commands on it as its user.
 
 ## Aven Cloud
 
-Aven Cloud runs a thread in a [boat.dev](https://boat.dev) sandbox of its own. It appears in the new
-thread composer once the control plane has a boat API key:
+Aven Cloud runs a thread in a sandbox of its own. It is off until you choose a provider, and boat.dev
+is the one there is. It then appears in the new thread composer:
 
 ```sh
+AVEN_CLOUD_PROVIDER=boat
 AVEN_BOAT_API_KEY=boat_...
 ```
+
+With the provider off (or unset) Aven Cloud is hidden and refuses new threads. Threads that already
+have a computer stay readable, but cannot start it again, and expired computers are still deleted
+while the boat key is set.
 
 Create the key at [boat.dev](https://docs.boat.dev/api-keys) with permission to create and drive
 sandboxes. It belongs to the platform, so people using it bring no key of their own. A free trial

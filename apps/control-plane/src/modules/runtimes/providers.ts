@@ -1,9 +1,10 @@
 import { BoatClient } from "./boat/client";
 import { boatLifetime } from "./boat/lifetime";
+import { cloudEnabled } from "./cloud-config";
 import { createBoatProvider } from "./boat/provider";
 import { stopBoatSandbox } from "./boat/stop";
 import { RuntimeOfflineError, type RuntimeHub } from "./hub";
-import { runtimesService } from "./service";
+import { CLOUD_OFF, runtimesService } from "./service";
 import type { RuntimeProviderKind } from "@aven/protocol/types";
 import type { RunnerPlace, RuntimeProvider, ThreadPlace } from "./types";
 
@@ -49,6 +50,8 @@ export async function reachRunner(hub: ProviderHub, place: RunnerPlace, offline?
 
     throw new RuntimeOfflineError(offline);
   }
+
+  if (kind === "boat" && !cloudEnabled()) throw new RuntimeOfflineError(CLOUD_OFF);
 
   return providers[kind](hub).start(place, offline);
 }

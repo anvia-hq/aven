@@ -19,7 +19,8 @@ import {
 import { claudeSetupService } from "../claude-setup/service";
 import { decisionModelService } from "../decision-model/service";
 import { projectsService } from "../projects/service";
-import { CLOUD_RUNTIME_ID, runtimesService } from "../runtimes/service";
+import { cloudEnabled } from "../runtimes/cloud-config";
+import { CLOUD_OFF, CLOUD_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import type { CreateThreadBody, UpdateThreadBody } from "./schema";
 import type { ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
@@ -238,6 +239,8 @@ export const threadsService = {
         "This project is a folder on one computer, so its threads run there",
       );
     }
+
+    if (requested === CLOUD_RUNTIME_ID && !cloudEnabled()) throw new UnprocessableError(CLOUD_OFF);
 
     if (!(await runtimesService.get(organizationId, requested, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
