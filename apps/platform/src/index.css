@@ -1696,6 +1696,16 @@
   --chart: var(--primary);
 }
 
+/* What the rail and the sidebar are painted with: the palette's frame in a light theme, and the frame
+   a little deeper in a dark one (decision 0304). */
+:root {
+  --chrome: var(--frame);
+}
+
+.dark {
+  --chrome: color-mix(in oklch, var(--frame), black 28%);
+}
+
 /* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
 :root {
   --brand: oklch(0.22 0.01 160);
