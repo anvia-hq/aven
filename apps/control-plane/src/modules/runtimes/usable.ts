@@ -10,6 +10,7 @@ export async function requireUsableRuntime(userId: string, runtimeId: string) {
   const [row] = await db
     .select({
       host: runtimes.host,
+      parentRuntimeId: runtimes.parentRuntimeId,
       ownerId: runtimes.ownerId,
       organizationId: runtimes.organizationId,
     })
@@ -21,7 +22,7 @@ export async function requireUsableRuntime(userId: string, runtimeId: string) {
 
   if (runtimeId === LOCAL_RUNTIME_ID || runtimeId === CLOUD_RUNTIME_ID) return;
 
-  if (row.host) {
+  if (row.host || row.parentRuntimeId) {
     if (row.ownerId !== userId) throw refused;
 
     return;

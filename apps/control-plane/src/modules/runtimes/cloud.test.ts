@@ -4,9 +4,11 @@ import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { eq } from "drizzle-orm";
 
+import { joinOrganization, signUp } from "../../testing/sign-up";
 import { projectsService } from "../projects/service";
 import { threadsService } from "../threads/service";
 import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { requireUsableRuntime } from "./usable";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -104,6 +106,33 @@ run("Aven Cloud runtime (postgres)", async () => {
     const rotated = await runtimesService.rotate(orgA, userId, first.runtimeId);
     expect((await runtimesService.boatRecord(first.runtimeId))?.runnerToken).toBe(rotated!.token);
     expect(await runtimesService.authenticate(record!.runnerToken)).toBeNull();
+  });
+
+  test("a teammate cannot put a thread on a computer that belongs to someone else's thread", async () => {
+    const { project } = await seedProject(orgA, userId, null, "teammate-repo");
+    const mine = await threadsService.create(orgA, userId, {
+      projectId: project.id,
+      runtimeId: CLOUD_RUNTIME_ID,
+    });
+    const teammate = await signUp("cloud-mate");
+
+    try {
+      await joinOrganization(teammate, orgA, "member");
+      expect(await runtimesService.get(orgA, mine.runtimeId, userId)).not.toBeNull();
+      expect(await runtimesService.get(orgA, mine.runtimeId, teammate.userId)).toBeNull();
+      await expect(requireUsableRuntime(teammate.userId, mine.runtimeId)).rejects.toThrow(
+        "not one you can use",
+      );
+      await expect(requireUsableRuntime(userId, mine.runtimeId)).resolves.toBeUndefined();
+      await expect(
+        threadsService.create(orgA, teammate.userId, {
+          projectId: project.id,
+          runtimeId: mine.runtimeId,
+        }),
+      ).rejects.toThrow("private to its owner");
+    } finally {
+      await teammate.remove();
+    }
   });
 
   test("a repository project with no runtime runs wherever the thread is started, and a folder project only on its own computer", async () => {

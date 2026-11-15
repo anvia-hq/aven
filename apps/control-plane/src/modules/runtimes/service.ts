@@ -61,11 +61,14 @@ const visibleTo = (organizationId: string) =>
   );
 
 const usableBy = (userId: string) =>
-  or(
-    eq(runtimes.host, false),
-    eq(runtimes.id, LOCAL_RUNTIME_ID),
-    eq(runtimes.id, CLOUD_RUNTIME_ID),
-    eq(runtimes.ownerId, userId),
+  and(
+    or(
+      eq(runtimes.host, false),
+      eq(runtimes.id, LOCAL_RUNTIME_ID),
+      eq(runtimes.id, CLOUD_RUNTIME_ID),
+      eq(runtimes.ownerId, userId),
+    ),
+    or(isNull(runtimes.parentRuntimeId), eq(runtimes.ownerId, userId)),
   );
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
