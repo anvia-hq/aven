@@ -150,7 +150,14 @@ export class RuntimeConnection {
     input: {
       bot: BotReplyInfo;
       prompt: string;
-      model: RunModel;
+      model?: RunModel;
+      backend?: AgentBackendKind;
+      claudeToken?: string;
+      claudeModel?: string;
+      claudeEffort?: string;
+      codexToken?: string;
+      codexModel?: string;
+      codexEffort?: string;
       attachments?: RunAttachment[];
       skills?: RunSkill[];
       mcp?: RunMcpServer[];

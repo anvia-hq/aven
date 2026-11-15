@@ -198,6 +198,7 @@ export function startRuntime(options: RuntimeOptions) {
 
   const bots: BotReplies = new BotReplies({
     sandbox: options.sandbox,
+    backends,
     machines: botMachines,
     machineCall: (botId) => botMachines.call(botId),
     createAgent: options.createBotAgent ?? defaultCreateBotAgent(origin),

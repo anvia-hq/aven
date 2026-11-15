@@ -73,42 +73,50 @@ type BotAgentOptions = ModelSource & {
   onActivity?: (label: string | null) => void;
 };
 
-export function createBotAgent({
-  id,
-  name,
-  handle,
-  instruction,
-  send,
-  react,
-  memory,
-  compactAfterTokens,
-  computer = [],
-  createBot,
-  deleteBot,
-  peers,
-  askQuestion,
-  goals,
-  schedules,
-  timezone,
-  description = "",
-  updateSelf,
-  skills,
-  mcp,
-  mcpServers,
-  providers,
-  threads,
-  api,
-  notes,
-  cockpit,
-  paths,
-  onActivity,
-  ...source
-}: BotAgentOptions) {
-  const agentModel = resolveAgentModel(source);
-  const compaction = compactionFor(source, agentModel.model, compactAfterTokens);
-  return new Agent({
-    ...agentModel,
-    id: `bot-${id}`,
+type BotPartsOptions = Omit<
+  BotAgentOptions,
+  | "id"
+  | "memory"
+  | "compactAfterTokens"
+  | "onActivity"
+  | "provider"
+  | "modelId"
+  | "apiKey"
+  | "baseUrl"
+  | "reasoningEffort"
+  | "effortLevels"
+  | "contextWindow"
+>;
+
+export function botAgentParts(options: BotPartsOptions) {
+  const {
+    name,
+    handle,
+    instruction,
+    send,
+    react,
+    computer = [],
+    createBot,
+    deleteBot,
+    peers,
+    askQuestion,
+    goals,
+    schedules,
+    timezone,
+    description = "",
+    updateSelf,
+    skills,
+    mcp,
+    mcpServers,
+    providers,
+    threads,
+    api,
+    notes,
+    cockpit,
+    paths,
+  } = options;
+
+  return {
     instructions: forPaths(
       botInstructions({
         name,
@@ -133,15 +141,7 @@ export function createBotAgent({
       }),
       paths ?? SANDBOX_PATHS,
     ),
-    lifecycle: onActivity && {
-      onStart: () => onActivity(THINKING_LABEL),
-      onToolStart: ({ toolName, input }) => onActivity(activityLabelOf(toolName, input)),
-      onToolFinish: () => onActivity(THINKING_LABEL),
-      onFinish: () => onActivity(null),
-      onError: () => onActivity(null),
-    },
     maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
-    memory: compaction ? { ...memory, compaction } : memory,
     tools: [
       createSendMessageTool(send),
       createListBotsTool(() => peers),
@@ -161,6 +161,29 @@ export function createBotAgent({
       ...keepingNotes(notes?.host),
       ...workingCockpit(cockpit),
     ],
+  };
+}
+
+export function createBotAgent(options: BotAgentOptions) {
+  const { id, memory, compactAfterTokens, onActivity, ...rest } = options;
+  const agentModel = resolveAgentModel(rest);
+  const compaction = compactionFor(rest, agentModel.model, compactAfterTokens);
+  const parts = botAgentParts(rest);
+
+  return new Agent({
+    ...agentModel,
+    id: `bot-${id}`,
+    instructions: parts.instructions,
+    lifecycle: onActivity && {
+      onStart: () => onActivity(THINKING_LABEL),
+      onToolStart: ({ toolName, input }) => onActivity(activityLabelOf(toolName, input)),
+      onToolFinish: () => onActivity(THINKING_LABEL),
+      onFinish: () => onActivity(null),
+      onError: () => onActivity(null),
+    },
+    maxTurns: parts.maxTurns,
+    memory: compaction ? { ...memory, compaction } : memory,
+    tools: parts.tools,
   });
 }
 

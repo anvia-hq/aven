@@ -68,6 +68,7 @@ import type { ArtifactStore } from "./artifacts";
 import type { UploadStore } from "./uploads";
 import type { SkillStore } from "./skills";
 import type {
+  AgentBackendSet,
   DurableEnd,
   GoalState,
   Emit,
@@ -108,6 +109,7 @@ export type CreateBotReplyAgent = (input: {
 
 export type BotRepliesContext = {
   sandbox: ThreadWorkspaces;
+  backends?: AgentBackendSet;
   machines?: ThreadWorkspaces;
   machineCall?: (botId: string) => MachineCall;
   createAgent: CreateBotReplyAgent;

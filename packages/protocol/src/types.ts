@@ -688,7 +688,14 @@ export type ControlPlaneToRuntime =
       replyId: string;
       bot: BotReplyInfo;
       prompt: string;
-      model: RunModel;
+      model?: RunModel;
+      backend?: AgentBackendKind;
+      claudeToken?: string;
+      claudeModel?: string;
+      claudeEffort?: string;
+      codexToken?: string;
+      codexModel?: string;
+      codexEffort?: string;
       attachments?: RunAttachment[];
       skills?: RunSkill[];
       mcp?: RunMcpServer[];

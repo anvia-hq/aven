@@ -1,6 +1,6 @@
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
-import { createBotAgent } from "@aven/agents/bot-agent";
+import { botAgentParts, createBotAgent } from "@aven/agents/bot-agent";
 import { keepFiles } from "@aven/agents/bot-files";
 import { typingDelay } from "@aven/agents/bot-delay";
 import { errorMessage } from "@aven/agents/values";
@@ -26,9 +26,10 @@ import type {
   CockpitAccess,
   ProviderKeyAsk,
   RunMemory,
-  RunModel,
+  RunEvent,
   RunSkill,
 } from "@aven/protocol/types";
+import type { RunInput } from "@aven/agent-backend/types";
 import type {
   BotRepliesContext,
   BotReplyMessage,
@@ -161,20 +162,8 @@ export class BotReplies {
     for (const reply of this.#live.values()) reply.abort.abort(new Error(reason));
   }
 
-  async #answer(
-    {
-      replyId,
-      bot,
-      prompt,
-      model,
-      attachments,
-      skills,
-      mcp: servers,
-      memory,
-      cockpit,
-    }: BotReplyMessage,
-    abort: AbortController,
-  ) {
+  async #answer(message: BotReplyMessage, abort: AbortController) {
+    const { replyId, bot, prompt, attachments, skills, mcp: servers, memory, cockpit } = message;
     const { send } = this.#context;
     const { signal } = abort;
     let mcp: ConnectedMcp | undefined;
@@ -187,7 +176,7 @@ export class BotReplies {
       );
       const agent = await this.#agentFor(
         replyId,
-        { bot, prompt, model, skills: skills ?? [], memory, cockpit },
+        { message, skills: skills ?? [], memory, cockpit },
         mcp,
         abort,
       );
@@ -277,16 +266,12 @@ export class BotReplies {
   async #agentFor(
     replyId: string,
     {
-      bot,
-      prompt,
-      model,
+      message,
       skills,
       memory,
       cockpit,
     }: {
-      bot: BotReplyInfo;
-      prompt: string;
-      model: RunModel;
+      message: BotReplyMessage;
       skills: readonly RunSkill[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
@@ -294,6 +279,7 @@ export class BotReplies {
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
   ) {
+    const { bot, prompt } = message;
     const { boxes, starting, call, send: post, createAgent } = this.#context;
     const sandbox = this.#computer(bot.id);
     await starting(bot.id);
@@ -368,9 +354,8 @@ export class BotReplies {
       shown = label;
       post({ type: "bot.activity", replyId, label });
     };
-    return createAgent({
+    const hosts: BotHosts = {
       bot,
-      model,
       send,
       react,
       onActivity,
@@ -491,6 +476,112 @@ export class BotReplies {
             return gone;
           }
         : undefined,
-    });
+    };
+
+    if (!message.backend || message.backend === "native")
+      return createAgent({ ...hosts, model: nativeModel(message) });
+
+    return hostedAgent(this.#context, message, hosts, abort);
   }
+}
+
+type BotHosts = Omit<Parameters<CreateBotReplyAgent>[0], "model">;
+
+type ReplyAgent = {
+  generate(input: { prompt: AgentPrompt; abortSignal?: AbortSignal }): Promise<unknown>;
+};
+
+function partsOf(bot: BotReplyInfo, hosts: BotHosts) {
+  return botAgentParts({
+    ...hosts,
+    name: bot.name,
+    handle: bot.handle,
+    instruction: bot.instruction,
+    description: bot.description,
+  });
+}
+
+function activityOf(event: RunEvent) {
+  if (event.type === "tool_start") return event.tool.name;
+
+  if (event.type === "text" || event.type === "reasoning") return null;
+
+  return undefined;
+}
+
+function hostedAgent(
+  context: BotRepliesContext,
+  message: BotReplyMessage,
+  hosts: BotHosts,
+  abort: AbortController,
+): ReplyAgent {
+  const backend = message.backend;
+
+  if (!backend || backend === "native") throw new Error("This bot does not run on another agent");
+
+  if (!context.backends) throw new Error(`This runner cannot drive the ${backend} agent for a bot`);
+
+  const { bot, claudeToken, claudeModel, claudeEffort, codexToken, codexModel, codexEffort } =
+    message;
+  const parts = partsOf(bot, hosts);
+  const runOf = (suffix: string) => `${message.replyId}-${bot.id}${suffix}`;
+  let turns = 0;
+
+  return {
+    async generate({ prompt, abortSignal }) {
+      const signal = abortSignal ?? abort.signal;
+      signal.throwIfAborted();
+      const agent = await context.backends!.get(backend);
+      signal.throwIfAborted();
+      const cwd =
+        (await context.sandbox.workspace?.(bot.id).catch(() => undefined)) ??
+        context.sandbox.paths?.(bot.id)?.workspace ??
+        process.cwd();
+      const input: RunInput = {
+        [backend]: {
+          token: backend === "claude" ? claudeToken : codexToken,
+          workspace: () => Promise.resolve(cwd),
+          redact: (text: string) => text,
+          env: [],
+          instructions: parts.instructions,
+          model: backend === "claude" ? claudeModel : codexModel,
+          effort: backend === "claude" ? claudeEffort : codexEffort,
+          questions: true,
+          tools: { catalog: parts.tools, questions: true },
+        },
+      } as RunInput;
+      const followed = await agent.start(
+        runOf(turns++ === 0 ? "" : `-${turns}`),
+        bot.id,
+        prompt,
+        input,
+        (event) => {
+          const label = activityOf(event);
+
+          if (label !== undefined) hosts.onActivity?.(label);
+        },
+      );
+      const stop = () => void followed.cancel();
+      signal.addEventListener("abort", stop, { once: true });
+
+      if (signal.aborted) stop();
+
+      try {
+        const end = await followed.done;
+
+        if (end.type === "error") throw new Error(end.error);
+
+        if (end.type === "interaction")
+          throw new Error("This bot cannot park on a question from its agent");
+      } finally {
+        signal.removeEventListener("abort", stop);
+      }
+    },
+  };
+}
+
+function nativeModel(message: BotReplyMessage) {
+  if (!message.model) throw new Error("The control plane sent no model for this bot");
+
+  return message.model;
 }

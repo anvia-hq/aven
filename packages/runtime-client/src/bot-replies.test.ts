@@ -12,13 +12,14 @@ import { createUpdateSelfTool } from "@aven/agents/tools/update-self";
 import { z } from "zod";
 
 import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
+import type { Emit, RunInput } from "@aven/agent-backend/types";
 import { ArtifactStore } from "./artifacts";
 import { noProcesses } from "./thread-processes";
 import { SkillStore } from "./skills";
 import { UploadStore } from "./uploads";
 import type { McpNote, SkillListing } from "@aven/agents/types";
 import type { AskQuestion, CreateBot } from "@aven/agents/tools/types";
-import type { RunAttachment, RuntimeToControlPlane } from "@aven/protocol/types";
+import type { RunAttachment, RunEvent, RuntimeToControlPlane } from "@aven/protocol/types";
 import type {
   BotReplyMessage,
   CreateBotReplyAgent,
@@ -1347,5 +1348,137 @@ describe("BotReplies", () => {
     expect(run.sent).toEqual([
       { type: "bot.end", replyId: "r1", error: "The connection to the control plane dropped" },
     ]);
+  });
+});
+
+describe("a bot on another agent (decision 0310)", () => {
+  const hosted: BotReplyMessage = {
+    ...message,
+    model: undefined,
+    backend: "claude",
+    claudeToken: "sk-ant-oat01-test",
+    claudeModel: "opus",
+    claudeEffort: "max",
+  };
+
+  function backendSet(inputs: RunInput[], events: RunEvent[][] = []) {
+    const started: { runId: string; threadId: string; prompt: unknown }[] = [];
+    const set = {
+      offered: ["native", "claude"],
+      async get() {
+        return {
+          kind: "claude" as const,
+          capabilities: {},
+          async start(
+            runId: string,
+            threadId: string,
+            prompt: unknown,
+            input: RunInput,
+            emit: Emit,
+          ) {
+            started.push({ runId, threadId, prompt });
+            inputs.push(input);
+
+            for (const event of events.shift() ?? []) emit(event);
+
+            return {
+              durableId: runId,
+              done: Promise.resolve({ type: "response" as const, messages: [] }),
+              cancel: async () => undefined,
+            };
+          },
+        } as never;
+      },
+      async close() {},
+    } as never;
+    return { set, started };
+  }
+
+  function harnessWith(backends: unknown) {
+    const sent: RuntimeToControlPlane[] = [];
+    const replies = new BotReplies({
+      sandbox: sandboxWith(),
+      backends: backends as never,
+      createAgent: () => {
+        throw new Error("a hosted bot must not build a native agent");
+      },
+      send: (frame) => (sent.push(frame), true),
+      call: async (_method, params) => memoryAnswer(params),
+      boxes: new Map(),
+      starting: async () => undefined,
+      finished: () => undefined,
+    });
+    return { replies, sent };
+  }
+
+  const until = async (check: () => boolean) => {
+    for (let i = 0; i < 100 && !check(); i++) await Bun.sleep(10);
+  };
+
+  test("runs the reply on its backend, with the person's token, its model and its tools", async () => {
+    const inputs: RunInput[] = [];
+    const { set, started } = backendSet(inputs, [
+      [
+        {
+          type: "tool_start",
+          tool: { id: "t1", name: "send_message", target: "", status: "running" },
+        },
+      ],
+    ]);
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(started.map(({ runId }) => runId)).toEqual(["r1-bot-1", "r1-bot-1-2"]);
+    expect(started[0]).toMatchObject({ threadId: "bot-1", prompt: "hello" });
+    expect(started[1]?.prompt).toContain("You answered without sending anything");
+    expect(inputs[0]?.claude).toMatchObject({
+      token: "sk-ant-oat01-test",
+      model: "opus",
+      effort: "max",
+    });
+    expect(inputs[0]?.claude?.tools.catalog?.map((tool) => tool.name)).toContain("send_message");
+    expect(run.sent).toContainEqual({ type: "bot.end", replyId: "r1" });
+  });
+
+  test("a reply cancelled while the backend is starting never starts it", async () => {
+    const started: string[] = [];
+    const set = {
+      offered: ["native", "claude"],
+      get: async () => {
+        await Bun.sleep(20);
+
+        return {
+          kind: "claude" as const,
+          capabilities: {},
+          async start(runId: string) {
+            started.push(runId);
+            throw new Error("should not start");
+          },
+        } as never;
+      },
+      async close() {},
+    } as never;
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    run.replies.cancel("r1", "the person stopped it");
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(started).toEqual([]);
+    expect(run.sent.at(-1)).toMatchObject({ type: "bot.end", error: expect.any(String) });
+  });
+
+  test("a reply with no model says so, and one whose runner has no backends cannot run", async () => {
+    const run = harnessWith(undefined);
+
+    run.replies.start(hosted);
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(run.sent.at(-1)).toMatchObject({
+      type: "bot.end",
+      error: expect.stringContaining("cannot drive"),
+    });
   });
 });

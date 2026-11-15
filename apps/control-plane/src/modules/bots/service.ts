@@ -5,7 +5,7 @@ import { BOT_LIMIT, botHandleOf, freeBotHandle, MAIN_BOT_HANDLE } from "@aven/pr
 import { and, count, desc, eq, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
-import { resolveModel } from "../providers/resolve-model";
+import { assertBotModel } from "../providers/bot-run-choice";
 import { requireUsableRuntime } from "../runtimes/usable";
 import type { UpdateBotBody } from "./schema";
 import type { NewBot } from "./types";
@@ -132,7 +132,7 @@ async function checkedModel(userId: string, current: BotModel, change: ModelChan
   if (change.providerId) await requireOwnProvider(userId, change.providerId);
 
   const model = modelAfter(current, change);
-  await requireEffortOf(userId, model);
+  await assertBotModel(userId, model);
   return model;
 }
 
@@ -152,16 +152,6 @@ function modelAfter(current: BotModel, change: ModelChange): BotModel {
     reasoningEffort:
       change.reasoningEffort === undefined ? kept.reasoningEffort : change.reasoningEffort,
   };
-}
-
-async function requireEffortOf(userId: string, model: BotModel) {
-  if (!model.providerId || !model.reasoningEffort) return;
-
-  await resolveModel(userId, {
-    providerId: model.providerId,
-    modelId: model.modelId ?? undefined,
-    reasoningEffort: model.reasoningEffort,
-  });
 }
 
 async function requireOwnProvider(userId: string, providerId: string) {
