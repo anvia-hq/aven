@@ -28,7 +28,6 @@ run("Aven Cloud expiry (postgres)", async () => {
 
   afterAll(async () => {
     await cleanup();
-    await db.delete(runtimes).where(eq(runtimes.parentRuntimeId, CLOUD_RUNTIME_ID));
 
     if (!kept) await db.delete(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
