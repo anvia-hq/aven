@@ -10,6 +10,7 @@ Bun workspace monorepo (TypeScript, ESM).
 apps/              control-plane (API), platform (web), runtime (runner), cli (`aven`)
 clients/           Native clients (macos, ios: Swift, no TypeScript)
 packages/          Shared internal packages: db, agents, protocol, agent-backend, claude, codex, runtime-client, server-kit, github, ui
+sandbox/           The sandbox providers (boat, spaces) and the Aven Cloud registry (@aven/sandbox)
 docs/              Project knowledge (see docs/README.md)
 deploy/            Self-hosting: compose file, env template
 ```
@@ -24,7 +25,7 @@ bun run dev            # start every app that defines a `dev` script
 bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
-bun test apps packages tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
+bun test apps packages sandbox tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
 bun run test:macos     # AvenKit's Swift tests
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
