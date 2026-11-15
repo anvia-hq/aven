@@ -30,15 +30,13 @@ const sandbox = (state: string) => ({
 });
 
 describe("boat client", () => {
-  test("checks the key with a bearer token that stays out of the url", async () => {
-    const { calls, fetchFn } = recorded(() => ({
-      json: { ok: true, type: "user.info", user: { login: "octocat" } },
-    }));
+  test("sends the key as a bearer token that stays out of the url", async () => {
+    const { calls, fetchFn } = recorded(() => ({ json: sandbox("ready") }));
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
 
-    await client.me(KEY);
+    await client.getSandbox(KEY, ID);
 
-    expect(calls[0]?.url).toBe("https://boat.test/api/v1/me");
+    expect(calls[0]?.url).toBe(`https://boat.test/api/v1/sandboxes/${ID}`);
     expect(calls[0]?.url).not.toContain(KEY);
     expect(headers(calls[0]!.init).Authorization).toBe(`Bearer ${KEY}`);
   });
@@ -57,7 +55,7 @@ describe("boat client", () => {
     }));
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
 
-    await expect(client.me(KEY)).rejects.toEqual(
+    await expect(client.getSandbox(KEY, ID)).rejects.toEqual(
       new BoatApiError(401, "unauthorized", "Boat rejected this API key"),
     );
   });
@@ -174,7 +172,7 @@ describe("boat client", () => {
     }) as unknown as typeof fetch;
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
 
-    await expect(client.me(KEY)).rejects.toEqual(
+    await expect(client.getSandbox(KEY, ID)).rejects.toEqual(
       new BoatApiError(0, "network", "Could not reach boat.dev"),
     );
   });

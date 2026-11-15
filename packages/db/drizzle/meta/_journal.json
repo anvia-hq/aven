@@ -512,6 +512,13 @@
       "when": 1794720011385,
       "tag": "0072_clean_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1794720493694,
+      "tag": "0073_goofy_rick_jones",
+      "breakpoints": true
     }
   ]
 }

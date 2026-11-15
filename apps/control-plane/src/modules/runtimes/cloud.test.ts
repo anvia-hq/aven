@@ -99,6 +99,12 @@ run("Aven Cloud runtime (postgres)", async () => {
       apiKey: "boat_test_key_for_cloud",
       sandboxId: null,
     });
+    expect((await runtimesService.authenticate(record!.runnerToken))?.id).toBe(first.runtimeId);
+    expect(JSON.stringify(child)).not.toContain(record!.runnerToken);
+
+    const rotated = await runtimesService.rotate(orgA, userId, first.runtimeId);
+    expect((await runtimesService.boatRecord(first.runtimeId))?.runnerToken).toBe(rotated!.token);
+    expect(await runtimesService.authenticate(record!.runnerToken)).toBeNull();
   });
 
   test("a repository project with no runtime runs wherever the thread is started, and a folder project only on its own computer", async () => {

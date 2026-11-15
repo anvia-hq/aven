@@ -5,14 +5,13 @@ import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
 import { and, count, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 
-import { ConflictError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
-import { BoatApiError, BoatClient } from "./boat/client";
+import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
 import { CLOUD_RUNTIME_ID } from "./cloud-id";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import type { BoatWakeRecord } from "./boat/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { BoatMachineType, RuntimeGithubMode } from "@aven/protocol/types";
+import type { RuntimeGithubMode } from "@aven/protocol/types";
 
 export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
 
@@ -89,7 +88,6 @@ const sameToken = (a: string, b: string) =>
 
 const publicRuntime = ({
   tokenHash: _hash,
-  boatApiKeyEncrypted: _apiKey,
   boatRunnerTokenEncrypted: _runnerToken,
   ...runtime
 }: RuntimeRow) => ({
@@ -97,51 +95,19 @@ const publicRuntime = ({
   githubMode: runtime.lifetime === "ephemeral" ? ("person" as const) : runtime.githubMode,
 });
 
-function fromBoat(error: unknown): never {
-  if (error instanceof BoatApiError && (error.status === 401 || error.status === 400))
-    throw new UnprocessableError(error.message);
-
-  if (error instanceof BoatApiError) throw new UnavailableError(error.message);
-
-  throw new UnavailableError("Could not reach boat.dev");
-}
-
-async function readBoatSecret(stored: string | null, id: string, label: string) {
+async function readRunnerToken(stored: string | null, id: string) {
   if (!stored) return null;
 
   const { decryptOrUnavailable } = await import("@aven/server-kit/crypto");
   return decryptOrUnavailable(stored, {
-    logged: `Could not decrypt the boat ${label} of runtime ${id}:`,
-    message: "This runtime's saved boat key could not be read; add the runtime again",
+    logged: `Could not decrypt the runner token of Aven Cloud computer ${id}:`,
+    message: "This Aven Cloud computer's saved token could not be read",
   });
 }
 
 async function encryptedRunnerToken(token: string) {
   const { encryptSecret } = await import("@aven/server-kit/crypto");
   return { boatRunnerTokenEncrypted: encryptSecret(token) };
-}
-
-async function boatColumns(
-  body: Extract<CreateRuntimeBody, { provider: "boat" }>,
-  token: string,
-  fetchFn: typeof fetch,
-) {
-  try {
-    await new BoatClient(fetchFn).me(body.apiKey);
-  } catch (error) {
-    fromBoat(error);
-  }
-
-  const { encryptSecret } = await import("@aven/server-kit/crypto");
-  const machineType: BoatMachineType = body.machineType ?? "default";
-  return {
-    provider: "boat" as const,
-    githubMode: "person" as const,
-    boatMachineType: machineType,
-    boatApiKeyEncrypted: encryptSecret(body.apiKey),
-    boatKeyHint: body.apiKey.slice(-4),
-    boatRunnerTokenEncrypted: encryptSecret(token),
-  };
 }
 
 export const runtimesService = {
@@ -273,21 +239,14 @@ export const runtimesService = {
     return row ? publicRuntime(row) : null;
   },
 
-  async create(
-    organizationId: string,
-    ownerId: string,
-    body: CreateRuntimeBody,
-    fetchFn: typeof fetch = fetch,
-  ) {
+  async create(organizationId: string, ownerId: string, body: CreateRuntimeBody) {
     const { token, columns } = issueToken();
-    const boat = body.provider === "boat" ? await boatColumns(body, token, fetchFn) : {};
     const [row] = await db
       .insert(runtimes)
       .values({
         organizationId,
         ownerId,
         name: body.name,
-        ...boat,
         ...columns,
       })
       .returning();
@@ -300,12 +259,10 @@ export const runtimesService = {
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat") return null;
+    if (!row || row.provider !== "boat" || !row.parentRuntimeId) return null;
 
-    const apiKey = row.parentRuntimeId
-      ? cloudApiKey()
-      : await readBoatSecret(row.boatApiKeyEncrypted, row.id, "API key");
-    const runnerToken = await readBoatSecret(row.boatRunnerTokenEncrypted, row.id, "runner token");
+    const apiKey = cloudApiKey();
+    const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
 
     if (!apiKey || !runnerToken) return null;
 

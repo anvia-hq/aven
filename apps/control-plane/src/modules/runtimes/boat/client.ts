@@ -107,10 +107,6 @@ export class BoatClient {
     private base = boatApiBase(),
   ) {}
 
-  me(apiKey: string) {
-    return this.#request("GET", "/me", apiKey);
-  }
-
   async createSandbox(apiKey: string, input: { runtimeId: string; machineType: BoatMachineType }) {
     return sandboxOf(
       await this.#request(
