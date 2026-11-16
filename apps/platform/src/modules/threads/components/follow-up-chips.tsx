@@ -30,7 +30,7 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
           <Button
             variant="outline"
             size="sm"
-            className="max-w-full gap-1.5 pr-2.5 pl-1.5 shadow-md"
+            className="max-w-full gap-1.5 pr-2.5 pl-1.5 rounded-full shadow-md"
             onClick={() => onPick(text)}
           >
             <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">

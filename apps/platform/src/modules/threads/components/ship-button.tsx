@@ -58,7 +58,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
     return (
       <Button
         size="sm"
-        className="shadow-md"
+        className="rounded-full in-data-[slot=button-group]:rounded-full shadow-md"
         nativeButton={false}
         render={<a href={`/api/github/connect?next=${next}${app}`} />}
       >
@@ -100,11 +100,15 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
   if (action.kind === "none") return null;
 
   return (
-    <ButtonGroup>
+    <ButtonGroup className="[&>[data-slot]:first-child]:rounded-l-full! [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-full!">
       <Button
         variant={action.primary ? "default" : "outline"}
         size="sm"
-        className={action.primary ? "shadow-md" : FLOATING_BUTTON}
+        className={
+          action.primary
+            ? "rounded-full in-data-[slot=button-group]:rounded-full shadow-md"
+            : FLOATING_BUTTON
+        }
         disabled={action.disabled}
         onClick={() => onShip()}
       >
