@@ -26,6 +26,7 @@ bun run typecheck      # tsc across all workspaces; must pass before committing
 bun run lint           # oxlint (lint:fix to autofix)
 bun run format         # oxfmt (format:check to verify only)
 bun test apps packages sandbox tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
+bun run test            # the unit tests
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
 bun run test:macos     # AvenKit's Swift tests
 bun add <pkg> --cwd apps/<name>   # add a dependency to one workspace
@@ -74,7 +75,7 @@ Before non-trivial work, check `docs/` (format `xxxx-name.md`, numbers per folde
 - Keep changes small and focused; match the code around them. Read the area's section of the system reference first.
 - The remote's default branch is `staging`; `main` takes one pull request, from `staging` (decision 0302). Work reaches `staging` through pull requests of its own, and the e2e suite runs on the `staging` to `main` pull request.
 - Make small atomic commits with a short imperative subject. A change that spans layers goes in one pull request, one commit per step.
-- Run `bun run typecheck`, `bun run lint`, `bun run format` and the tests for what you changed before every commit. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
+- Run `bun run typecheck`, `bun run lint`, `bun run format` and the tests for what you changed before every commit. Husky runs typecheck, lint and `format:check` on every commit (decision 0316); the unit tests and the e2e suite stay in CI. Do not skip the hooks with `--no-verify`. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
 - Record a significant choice as a decision doc in the same pull request. When a change alters how a part works, update its section of `docs/products/0007-system-reference.md`.
 - Do not commit, push, merge or release unless asked. Before merging, read every review comment, including the ones a reviewer filtered out.
 - Docs and migrations numbered in two open pull requests collide: renumber the second when it merges.
