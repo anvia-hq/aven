@@ -291,6 +291,14 @@ Bun.serve({
         return reply({ content: null, tool_calls: [file] }, "tool_calls");
       }
 
+      if (calledTool(call, "exec_command") && /send the page/i.test(heardNow(body.messages))) {
+        const page = toolCall("call_2", "send_message", {
+          text: "Here is the page",
+          files: [{ path: "page.html", title: "Types page" }],
+        });
+        return reply({ content: null, tool_calls: [page] }, "tool_calls");
+      }
+
       const said = Object.entries(SAID_AFTER).find(([tool]) => calledTool(call, tool))?.[1];
 
       if (!said) return reply({ content: "ok" }, "stop");
@@ -304,6 +312,13 @@ Bun.serve({
       const version = /update the report/i.test(heard) ? 2 : 1;
       const write = toolCall("call_1", "exec_command", {
         command: `printf '# Weekly report\n\nAll good in version ${version}.' > report.md`,
+      });
+      return reply({ content: null, tool_calls: [write] }, "tool_calls");
+    }
+
+    if (/send the page/i.test(heard)) {
+      const write = toolCall("call_1", "exec_command", {
+        command: `printf '%s' '<!doctype html><html><head><style>html,body{margin:0;height:100%}</style></head><body><p id="cheat">Types and their values</p></body></html>' > page.html`,
       });
       return reply({ content: null, tool_calls: [write] }, "tool_calls");
     }

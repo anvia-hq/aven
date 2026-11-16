@@ -38,6 +38,7 @@ const bot: Bot = {
   compactAfterTokens: 30_000,
   runtimeId: null,
   isMain: true,
+  attention: null,
   createdAt: "",
   updatedAt: "",
 };
@@ -64,13 +65,18 @@ function fakeRunner(
     refuseRuntime?: string;
     runtimeId?: string;
     online?: boolean | ((runtimeId: string) => boolean);
+    offers?: string[];
   } = {},
 ) {
   const started: {
     replyId: string;
     bot: BotReplyInfo;
     prompt: string;
-    model: RunModel;
+    model?: RunModel;
+    backend?: string;
+    claudeToken?: string;
+    claudeModel?: string;
+    claudeEffort?: string;
     attachments?: RunAttachment[];
     skills?: RunSkill[];
     mcp?: RunMcpServer[];
@@ -81,12 +87,17 @@ function fakeRunner(
   const cancelled: { replyId: string; reason: string }[] = [];
   const sinks = new Map<string, BotReplySink>();
   const connection = {
+    offers: (backend: string) => (options.offers ?? ["native"]).includes(backend),
     startBotReply(
       replyId: string,
       input: {
         bot: BotReplyInfo;
         prompt: string;
-        model: RunModel;
+        model?: RunModel;
+        backend?: string;
+        claudeToken?: string;
+        claudeModel?: string;
+        claudeEffort?: string;
         attachments?: RunAttachment[];
         skills?: RunSkill[];
         mcp?: RunMcpServer[];
@@ -229,7 +240,7 @@ const input = (
 ) => ({
   bot: own,
   userId: "u1",
-  model: { provider: "openai" as const },
+  choice: { backend: "native" as const, model: { provider: "openai" as const } },
   prompt: "ahoy",
   hops: 0,
   onPersonsWord: true,
@@ -243,10 +254,49 @@ const personsWord = (prompt: string) =>
   !prompt.startsWith("[note]") &&
   !(prompt.startsWith("[from ") && !prompt.startsWith("[from main]"));
 
+const native = { backend: "native" as const, model: openai };
+
+describe("a bot on another agent (decision 0310)", () => {
+  const claude = {
+    backend: "claude" as const,
+    token: "sk-ant-oat01-test",
+    modelId: "opus",
+    effort: "max",
+  };
+
+  test("a reply carries the person's token, the bot's model and its effort", async () => {
+    const run = fakeRunner({ agentOnControlPlane: true, offers: ["native", "claude"] });
+    const answering = run.replier.answer({
+      ...input(() => undefined),
+      choice: claude,
+    });
+    await Bun.sleep(0);
+
+    expect(run.started[0]).toMatchObject({
+      backend: "claude",
+      claudeToken: "sk-ant-oat01-test",
+      claudeModel: "opus",
+      claudeEffort: "max",
+    });
+    expect(run.started[0]?.model).toBeUndefined();
+    expect(run.grants.issued).toEqual([]);
+
+    run.only().end();
+    await answering;
+  });
+
+  test("a runner that does not drive the agent is told to update, before the reply is sent", () => {
+    const run = fakeRunner({ agentOnControlPlane: true });
+
+    expect(() => run.replier.ready(claude, bot)).toThrow("update its runner");
+    expect(run.started).toEqual([]);
+  });
+});
+
 describe("RemoteBotReplier", () => {
   test("is refused when the bot's runner is offline", () => {
     const { replier, asked } = fakeRunner({ online: false });
-    expect(() => replier.ready(openai, bot)).toThrow(RuntimeOfflineError);
+    expect(() => replier.ready(native, bot)).toThrow(RuntimeOfflineError);
     expect(asked).toEqual(["runner-1"]);
   });
 
@@ -256,7 +306,7 @@ describe("RemoteBotReplier", () => {
         agentOnControlPlane: true,
         online: (id) => id === LOCAL_RUNTIME_ID,
       });
-      run.replier.ready(openai, bot);
+      run.replier.ready(native, bot);
       const answering = run.replier.answer(input(() => undefined));
       await Bun.sleep(0);
 
@@ -274,7 +324,7 @@ describe("RemoteBotReplier", () => {
         agentOnControlPlane: true,
         online: (id) => id === LOCAL_RUNTIME_ID,
       });
-      run.replier.ready(openai, own);
+      run.replier.ready(native, own);
       const answering = run.replier.answer(input(() => undefined, undefined, own));
       await Bun.sleep(0);
 
@@ -302,7 +352,7 @@ describe("RemoteBotReplier", () => {
         agentOnControlPlane: true,
         online: (id) => id !== LOCAL_RUNTIME_ID,
       });
-      expect(() => replier.ready(openai, bot)).toThrow(
+      expect(() => replier.ready(native, bot)).toThrow(
         "The control plane's own runner is not running",
       );
       expect(asked).toEqual([LOCAL_RUNTIME_ID]);
@@ -339,11 +389,11 @@ describe("RemoteBotReplier", () => {
 
   test("is refused when the model has no key, before any grant is made", () => {
     const run = fakeRunner({ keyless: true });
-    expect(() => run.replier.ready(openai, bot)).toThrow(ModelUnavailableError);
+    expect(() => run.replier.ready(native, bot)).toThrow(ModelUnavailableError);
     expect(run.grants.issued).toEqual([]);
 
     const usable = fakeRunner();
-    usable.replier.ready(openai, bot);
+    usable.replier.ready(native, bot);
     expect(usable.grants.checked).toEqual(["openai"]);
     expect(usable.grants.issued).toEqual([]);
   });

@@ -53,7 +53,6 @@ export function AppShell({ user, sidebar }: Props) {
       style={
         {
           "--sidebar-width": `${sidebarSize.width}px`,
-          "--chrome": "color-mix(in oklch, var(--frame), black 28%)",
           "--sidebar": "var(--chrome)",
           "--sidebar-accent": "color-mix(in oklch, var(--chrome), var(--foreground) 9%)",
         } as CSSProperties

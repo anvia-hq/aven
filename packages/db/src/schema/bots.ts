@@ -32,6 +32,9 @@ export const bots = pgTable(
     compactAfterTokens: integer("compact_after_tokens"),
     runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "set null" }),
     isMain: boolean("is_main").notNull().default(false),
+    lastSaidAt: timestamp("last_said_at", { withTimezone: true }),
+    lastReadAt: timestamp("last_read_at", { withTimezone: true }),
+    questionAskedAt: timestamp("question_asked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

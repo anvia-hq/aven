@@ -6,6 +6,7 @@ import type { GoalInput } from "../goals/types";
 import type { MemoryCaller, MemoryOwner } from "../memory/types";
 import type { ScheduleInput, SchedulePatch } from "../schedules/types";
 import type { ModelConfig } from "@aven/agents/types";
+import type { BotRunChoice } from "../providers/types";
 import type { AskQuestion, ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
   ToolArtifact,
@@ -73,7 +74,7 @@ export type BotSkills = {
 export type BotReplyInput = {
   bot: Bot;
   userId: string;
-  model: ModelConfig;
+  choice: BotRunChoice;
   prompt: string;
   attachments?: RunAttachment[];
   onPersonsWord: boolean;
@@ -87,9 +88,11 @@ export type BotReplyInput = {
 };
 
 export type BotReplier = {
-  ready(model: ModelConfig, bot: Pick<Bot, "runtimeId">): void;
+  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId">): void;
   answer(input: BotReplyInput): Promise<void>;
 };
+
+export type BotSaid = (botId: string, askedQuestion: boolean) => void;
 
 export type BotSettled = (reply: {
   userId: string;
@@ -105,7 +108,7 @@ export type BotDelivery = {
   text: string;
   hops: number;
   relaysPersonsWord: boolean;
-  model: ModelConfig;
+  choice: BotRunChoice;
 };
 
 export type NewBot = Omit<BotCreateParams, "replyId">;

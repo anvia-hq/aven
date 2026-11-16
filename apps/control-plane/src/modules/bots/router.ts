@@ -38,6 +38,14 @@ export const botsRouter = (chats: BotChats) =>
       },
       { auth: true, params: botParams },
     )
+    .post(
+      "/:id/read",
+      async ({ params, user }) => {
+        await orNotFound(await botsService.markRead(user.id, params.id), "Bot not found");
+        return { ok: true };
+      },
+      { auth: true, params: botParams },
+    )
     .get(
       "/working",
       async function* ({ user, request }) {

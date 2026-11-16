@@ -2,6 +2,7 @@ import type { RunEnding } from "../runs/types";
 import type { createThreadContinuation } from "./continuation";
 import type { acting, createThreadMessages } from "./messages";
 import type {
+  AgentBackendKind,
   BotProjectView,
   BotThreadDetail,
   BotThreadView,
@@ -53,6 +54,14 @@ export type ProcessEnds = {
 };
 
 export type PutAwayThread = (thread: { id: string; runtimeId: string }) => void;
+
+export type NewThread = {
+  projectId: string;
+  runtimeId?: string;
+  title?: string;
+  providerId?: string;
+  backend?: AgentBackendKind;
+};
 
 export type ThreadPullRequest = {
   number: number;

@@ -1,6 +1,6 @@
 # The Codex agent runs on an API key
 
-Status: accepted. Adds to 0220, 0222 and 0242.
+Status: accepted. Adds to 0220, 0222 and 0242. Superseded in part by 0309: the key is now a `codex-subscription` provider row, not a `codex_setup_tokens` one.
 
 ## Context
 

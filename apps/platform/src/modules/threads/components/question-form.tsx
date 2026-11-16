@@ -9,11 +9,13 @@ import { Label } from "@aven/ui/label";
 import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
 
 import { useModelSelection } from "../hooks/use-model-selection";
+import type { AgentBackendKind } from "@aven/protocol/types";
 import type { Draft, QuestionAnswer, QuestionPrompt, RunSelection, ToolPart } from "../types";
 
 type Props = {
   tool: ToolPart;
   threadId: string;
+  backend?: AgentBackendKind;
   onSubmit: (answers: QuestionAnswer[], selection: RunSelection) => boolean | Promise<boolean>;
 };
 
@@ -70,8 +72,8 @@ export function Question({
   );
 }
 
-export function QuestionForm({ tool, threadId, onSubmit }: Props) {
-  const model = useModelSelection(threadId);
+export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
+  const model = useModelSelection(threadId, backend);
   const prompts = tool.questions ?? [];
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
   const [step, setStep] = useState(0);

@@ -20,6 +20,7 @@ import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { localRunnerMode } from "./modules/runtimes/local";
 import { reachRunner } from "./modules/runtimes/providers";
+import { idleCheckMs } from "@aven/sandbox/idle";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./modules/runtimes/service";
 import { createPreviewService } from "./modules/preview/service";
 import { previewSettings } from "./modules/preview/config";
@@ -49,6 +50,7 @@ import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
 import { createCloudExpiry } from "./modules/runtimes/cloud-expiry";
+import { createCloudIdle } from "./modules/runtimes/cloud-idle";
 import { createThreadRetention } from "./modules/threads/retention";
 import { threadsService } from "./modules/threads/service";
 
@@ -147,6 +149,7 @@ export const threadContinuation = createThreadContinuation({
 export const putAwayThread = createPutAwayThread({
   cancel: (threadId) => runsService.cancel(threadId),
   hub: runtimeHub,
+  openThreads: (runtimeId) => runtimesService.openThreadsOn(runtimeId),
 });
 
 const botThreads = createBotThreads({
@@ -215,6 +218,11 @@ export const botRunner = new BotRunner({
     localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
   ),
   settled: (reply) => goalDriver.settled(reply),
+  said: (botId, askedQuestion) => {
+    void botsService
+      .markSaid(botId, askedQuestion)
+      .catch((error: unknown) => console.warn(`Could not note that bot ${botId} spoke:`, error));
+  },
 });
 
 export const botChats = createBotChats(botRunner);
@@ -245,6 +253,13 @@ export const threadRetention = createThreadRetention({
 });
 
 export const cloudExpiry = createCloudExpiry({ intervalMs: 10 * 60_000 });
+
+export const cloudIdle = createCloudIdle({
+  intervalMs: idleCheckMs(),
+  hub: runtimeHub,
+  running: (threadId) => runsService.isRunning(threadId),
+  lastEventAt: (threadId) => runsService.activity(threadId)?.lastEventAt,
+});
 
 export const threadWatcher = createThreadWatcher({
   get: (userId, threadId) => botThreads.get(userId, threadId),

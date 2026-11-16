@@ -19,8 +19,8 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
-import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
-import type { ModelConfig } from "@aven/agents/types";
+import type { BotDelivery, BotReplier, BotReplyInput, BotSaid, BotSettled } from "./types";
+import type { BotRunChoice } from "../providers/types";
 import type {
   Bot,
   BotChatMessage,
@@ -59,26 +59,33 @@ export class BotRunner {
   #store: MemoryStore;
   #replier: BotReplier;
   #settled?: BotSettled;
+  #said?: BotSaid;
   #shutdown = new AbortController();
 
-  constructor(deps: { store: MemoryStore; replier: BotReplier; settled?: BotSettled }) {
+  constructor(deps: {
+    store: MemoryStore;
+    replier: BotReplier;
+    settled?: BotSettled;
+    said?: BotSaid;
+  }) {
     this.#store = deps.store;
     this.#replier = deps.replier;
     this.#settled = deps.settled;
+    this.#said = deps.said;
   }
 
   async send(
     bot: Bot,
     userId: string,
     text: string,
-    model: ModelConfig,
+    choice: BotRunChoice,
     attachments: RunAttachment[] = [],
     quoteId?: string,
   ) {
     await this.#enqueue({
       bot,
       userId,
-      model,
+      choice,
       body: personPrompt(text),
       attachments,
       hops: 0,
@@ -87,12 +94,12 @@ export class BotRunner {
     });
   }
 
-  async deliver({ bot, userId, from, text, hops, relaysPersonsWord, model }: BotDelivery) {
+  async deliver({ bot, userId, from, text, hops, relaysPersonsWord, choice }: BotDelivery) {
     const peer = { id: from.id, name: from.name, handle: from.handle };
     await this.#enqueue({
       bot,
       userId,
-      model,
+      choice,
       body: botPrompt(from.handle, text),
       hops,
       onPersonsWord: relaysPersonsWord,
@@ -105,13 +112,13 @@ export class BotRunner {
     userId: string,
     note: string,
     hops: number,
-    model: ModelConfig,
+    choice: BotRunChoice,
     aboutThread?: string,
   ) {
     await this.#enqueue({
       bot,
       userId,
-      model,
+      choice,
       body: botNote(note),
       hops,
       onPersonsWord: false,
@@ -128,7 +135,7 @@ export class BotRunner {
 
   async #enqueue(input: ReplyRequest & { body: string; shown: Shown | null }) {
     const { shown, body, ...reply } = input;
-    this.#replier.ready(reply.model, reply.bot);
+    this.#replier.ready(reply.choice, reply.bot);
     const channel = await this.#open(reply.bot.id, reply.userId);
 
     if (channel.pending >= MAX_PENDING) {
@@ -345,6 +352,8 @@ export class BotRunner {
     if (artifacts?.length) message.artifacts = artifacts;
 
     if (quote) message.quote = quote;
+
+    if (role === "bot") this.#said?.(channel.botId, Boolean(questions?.length));
 
     this.#emit(channel, { type: "message", message });
   }

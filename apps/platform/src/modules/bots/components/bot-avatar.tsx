@@ -93,11 +93,13 @@ export function BotAvatar({
   mood = "idle",
   className,
   children,
+  delayMs,
 }: {
   bot: Pick<Bot, "id" | "avatar">;
   mood?: BotMood;
   className?: string;
   children?: ReactNode;
+  delayMs?: number;
 }) {
   const setting = parseAvatarSetting(bot.avatar);
   const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
@@ -118,7 +120,7 @@ export function BotAvatar({
           data-color={look.color}
           data-mood={mood}
           className="bot-avatar size-full!"
-          style={{ "--bot-delay": `-${look.delay}ms` } as CSSProperties}
+          style={{ "--bot-delay": `-${delayMs ?? look.delay}ms` } as CSSProperties}
         >
           <g className="bot-hop">
             <g className="bot-body">

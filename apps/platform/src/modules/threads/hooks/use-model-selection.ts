@@ -4,6 +4,7 @@ import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";
 import type { ModelChoice } from "@/modules/providers/types";
 
 import { modelSelectionAtom, threadModelSelectionsAtom } from "../atoms/model-selection-atom";
+import type { AgentBackendKind } from "@aven/protocol/types";
 import type { RunSelection, SavedSelection } from "../types";
 
 const MAX_THREADS = 200;
@@ -38,8 +39,17 @@ export function rememberModelSelection(threadId: string, selection: RunSelection
   });
 }
 
-export function useModelSelection(threadId?: string) {
-  const { providers, loaded, byProvider, choices, loading, labelOf } = useModelChoices();
+export function useModelSelection(threadId?: string, backend?: AgentBackendKind) {
+  const {
+    providers: all,
+    loaded,
+    byProvider,
+    choices: every,
+    loading,
+    labelOf,
+  } = useModelChoices();
+  const providers = backend ? all.filter((item) => item.backend === backend) : all;
+  const choices = backend ? every.filter((choice) => choice.provider.backend === backend) : every;
   const last = useAtomValue(modelSelectionAtom);
   const threads = useAtomValue(threadModelSelectionsAtom);
   const saved = (threadId ? threads[threadId] : undefined) ?? last;

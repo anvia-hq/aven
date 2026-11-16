@@ -19,16 +19,9 @@ import { useMentions } from "../hooks/use-mentions";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useSendComposer } from "../hooks/use-send-composer";
 import { AGENT_ENTITY, COMPACT_COMMAND, mentionOf, personIdOf } from "../mentions";
-import { CODEX_DEFAULT_EFFORT } from "@aven/protocol/codex-models";
+import type { AgentBackendKind } from "@aven/protocol/types";
 
-import { runSelectionOf } from "../run-selection";
-import type {
-  ClaudeControl,
-  CodexControl,
-  MentionPerson,
-  OutgoingMessage,
-  RunSelection,
-} from "../types";
+import type { MentionPerson, OutgoingMessage, RunSelection } from "../types";
 import { AttachButton } from "./attach-button";
 import { CommandChip, MentionChip } from "./mention-chip";
 import { MentionMenu } from "./mention-menu";
@@ -46,8 +39,7 @@ type Props = {
   autoFocus?: boolean;
   threadId?: string;
   tools?: ReactNode;
-  claude?: ClaudeControl;
-  codex?: CodexControl;
+  backend?: AgentBackendKind;
 };
 
 const renderEntity =
@@ -108,22 +100,16 @@ function Composer({
   autoFocus,
   threadId,
   tools,
-  claude,
-  codex,
+  backend,
   people,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
-  const model = useModelSelection(threadId);
+  const model = useModelSelection(threadId, backend);
   useComposerDraft(threadId, composer);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
-  let selection = model.selection;
-
-  if (claude?.choice) selection = runSelectionOf(claude.choice, model.selection);
-  else if (codex?.choice) {
-    selection = runSelectionOf(codex.choice, model.selection, CODEX_DEFAULT_EFFORT);
-  }
+  const selection = model.selection;
 
   const { canSend, submit } = useSendComposer({
     composer,
@@ -186,7 +172,7 @@ function Composer({
         />
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-          <ModelMenu model={model} claude={claude} codex={codex} />
+          <ModelMenu model={model} />
           {running && (
             <Button
               size="icon-sm"

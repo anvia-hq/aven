@@ -179,22 +179,6 @@ export type SplitPair = [string, string];
 
 export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: boolean };
 
-export type ClaudeChoice = { modelId?: string; effort?: string };
-
-export type ClaudeControl = {
-  choice: ClaudeChoice | null;
-  onChange: (choice: ClaudeChoice | null) => void;
-  only?: boolean;
-};
-
-export type CodexChoice = { modelId?: string; effort?: string };
-
-export type CodexControl = {
-  choice: CodexChoice | null;
-  onChange: (choice: CodexChoice | null) => void;
-  only?: boolean;
-};
-
 export type RecencyGroupId = "today" | "week" | "month";
 
 export type RecencyGroup = { id: RecencyGroupId; label: string; threads: Thread[] };

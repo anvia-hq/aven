@@ -526,6 +526,27 @@
       "when": 1794727499373,
       "tag": "0074_parallel_surge",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1794768658109,
+      "tag": "0075_subscriptions-are-providers",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1794768673102,
+      "tag": "0076_wealthy_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1794815839078,
+      "tag": "0077_careful_agent_brand",
+      "breakpoints": true
     }
   ]
 }

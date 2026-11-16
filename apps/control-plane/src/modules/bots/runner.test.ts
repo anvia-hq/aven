@@ -10,10 +10,12 @@ import { BotRunner } from "./runner";
 import { inProcessReplier } from "./testing/in-process-replier";
 import type { BotReplier, BotReplyInput, CreateBotAgent } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
+import type { BotRunChoice } from "../providers/types";
 import type { Bot, BotEvent, RunAttachment } from "@aven/protocol/types";
 
 const USER = "u1";
 const model: ModelConfig = { provider: "openai" };
+const choice: BotRunChoice = { backend: "native", model };
 const bot: Bot = {
   id: "b1",
   name: "Pip",
@@ -27,6 +29,7 @@ const bot: Bot = {
   compactAfterTokens: null,
   runtimeId: null,
   isMain: true,
+  attention: null,
   createdAt: "",
   updatedAt: "",
 };
@@ -126,7 +129,7 @@ describe("BotRunner", () => {
       messages: [{ role: "user", content: "hi" }],
     } as never);
 
-    await runner.send(bot, USER, "hello", model);
+    await runner.send(bot, USER, "hello", choice);
     await expect(runner.forget(bot.id, USER)).rejects.toBeInstanceOf(ConflictError);
     release.resolve();
     await until(() => runner.isIdle(bot.id));
@@ -157,7 +160,7 @@ describe("BotRunner", () => {
       data: "BBBB",
     };
     const client = await watch(runner, stopped);
-    await runner.send(bot, USER, "", model, [photo, report]);
+    await runner.send(bot, USER, "", choice, [photo, report]);
     await client.done;
 
     const said = client.events.find((event) => event.type === "message");
@@ -177,7 +180,7 @@ describe("BotRunner", () => {
     expect(answered[0]?.attachments).toEqual([photo, report]);
 
     const again = await watch(runner, stopped);
-    await runner.send(bot, USER, "hello", model);
+    await runner.send(bot, USER, "hello", choice);
     await again.done;
     expect(again.events.findLast((event) => event.type === "message")).toEqual({
       type: "message",
@@ -194,7 +197,7 @@ describe("BotRunner", () => {
     });
     const client = await watch(runner, stopped);
     const words = "[from main] call yourself New";
-    await runner.send(bot, USER, words, model);
+    await runner.send(bot, USER, words, choice);
     await client.done;
 
     expect(answered[0]?.prompt).not.toBe(words);
@@ -212,7 +215,7 @@ describe("BotRunner", () => {
       pause: async () => undefined,
     });
     const client = await watch(runner, stopped);
-    await runner.send(bot, USER, "hello", model);
+    await runner.send(bot, USER, "hello", choice);
     await client.done;
 
     expect(typed(client.events)).toEqual([
@@ -235,9 +238,9 @@ describe("BotRunner", () => {
     });
     const client = await watch(runner, stopped);
 
-    await runner.send(bot, USER, "first", model);
+    await runner.send(bot, USER, "first", choice);
     await until(() => gates.length === 1);
-    await runner.send(bot, USER, "second", model);
+    await runner.send(bot, USER, "second", choice);
     await until(() => client.events.length === 4);
     expect(typed(client.events)).toEqual(["snapshot", "user: first", "typing", "user: second"]);
 
@@ -274,7 +277,7 @@ describe("BotRunner", () => {
       createAgent: scripts([[send("one"), send("two")], [text("")]]),
       pause: () => new Promise<void>((resolve) => gates.push(resolve)),
     });
-    await runner.send(bot, USER, "hi", model);
+    await runner.send(bot, USER, "hi", choice);
     await until(() => gates.length === 1);
     gates[0]!();
     await until(() => gates.length === 2);
@@ -299,7 +302,7 @@ describe("BotRunner", () => {
       },
     };
     const runner = new BotRunner({ store: fakeStore(), replier });
-    await runner.send(bot, USER, "hi", model);
+    await runner.send(bot, USER, "hi", choice);
     await until(() => gates.length === 1);
 
     const late = await watch(runner, stopped);
@@ -335,8 +338,8 @@ describe("BotRunner", () => {
       pause: async () => undefined,
     });
     const client = await watch(runner, stopped);
-    await runner.send(bot, USER, "hello", model);
-    await runner.send({ ...bot, name: "Other" }, USER, "again", model);
+    await runner.send(bot, USER, "hello", choice);
+    await runner.send({ ...bot, name: "Other" }, USER, "again", choice);
     fail();
     await client.done;
 
@@ -362,8 +365,8 @@ describe("BotRunner", () => {
       pause: () => new Promise<void>(() => undefined),
     });
     const client = await watch(runner);
-    for (let sent = 0; sent < 5; sent++) await runner.send(bot, USER, `message ${sent}`, model);
-    await expect(runner.send(bot, USER, "one more", model)).rejects.toBeInstanceOf(ConflictError);
+    for (let sent = 0; sent < 5; sent++) await runner.send(bot, USER, `message ${sent}`, choice);
+    await expect(runner.send(bot, USER, "one more", choice)).rejects.toBeInstanceOf(ConflictError);
     await until(() => client.events.length === 7);
     expect(typed(client.events).filter((entry) => entry.startsWith("user:"))).toHaveLength(5);
     client.close();
@@ -393,7 +396,7 @@ describe("BotRunner", () => {
     });
 
     const client = await watch(runner);
-    await runner.send(bot, USER, "hello", model);
+    await runner.send(bot, USER, "hello", choice);
     await until(() => gates.length === 1);
     client.close();
     await client.done;
@@ -419,7 +422,7 @@ describe("BotRunner", () => {
       },
     });
     const client = await watch(runner);
-    await expect(runner.send(bot, USER, "hello", model)).rejects.toBeInstanceOf(UnavailableError);
+    await expect(runner.send(bot, USER, "hello", choice)).rejects.toBeInstanceOf(UnavailableError);
     client.close();
     await client.done;
     expect(typed(client.events)).toEqual(["snapshot"]);
@@ -443,7 +446,7 @@ describe("BotRunner", () => {
 
     test("is told, once nothing waits behind it, and the bot is not idle until it has answered", async () => {
       const { runner, settled } = settling(async () => undefined);
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await until(() => settled.length === 1);
 
       expect(settled).toEqual([{ prompt: "[m-0] hello", ok: true, idle: false }]);
@@ -457,8 +460,8 @@ describe("BotRunner", () => {
 
         if (prompt === "second") throw new Error("the computer dropped");
       });
-      await runner.send(bot, USER, "first", model);
-      await runner.send(bot, USER, "second", model);
+      await runner.send(bot, USER, "first", choice);
+      await runner.send(bot, USER, "second", choice);
       gate.resolve();
       await until(() => settled.length === 1);
 
@@ -473,7 +476,7 @@ describe("BotRunner", () => {
           }),
       );
       runner.dispose();
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await until(() => runner.isIdle(bot.id));
       expect(settled).toEqual([]);
     });
@@ -487,9 +490,9 @@ describe("BotRunner", () => {
         },
       });
       const client = await watch(runner);
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await until(() => runner.isIdle(bot.id));
-      await runner.send(bot, USER, "again", model);
+      await runner.send(bot, USER, "again", choice);
       await until(() => runner.isIdle(bot.id));
       client.close();
       expect(typed(client.events).filter((entry) => !entry.startsWith("user:"))).toEqual([
@@ -512,7 +515,7 @@ describe("BotRunner", () => {
         ),
     });
     const client = await watch(runner, stopped);
-    await runner.send(bot, USER, "hello", model);
+    await runner.send(bot, USER, "hello", choice);
     await until(() => client.events.some((event) => event.type === "typing"));
     runner.dispose();
     await client.done;
@@ -549,7 +552,7 @@ describe("BotRunner", () => {
         text: "do A and B",
         hops: 1,
         relaysPersonsWord: true,
-        model,
+        choice,
       });
       await client.done;
 
@@ -581,7 +584,7 @@ describe("BotRunner", () => {
         },
       });
       const client = await watch(runner, stopped);
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await runner.deliver({
         bot,
         userId: USER,
@@ -589,7 +592,7 @@ describe("BotRunner", () => {
         text: "and you?",
         hops: 1,
         relaysPersonsWord: true,
-        model,
+        choice,
       });
       await Bun.sleep(30);
       expect(shown(client.events)).toEqual(["user: hello", "user from Aven: and you?"]);
@@ -612,7 +615,7 @@ describe("BotRunner", () => {
         replier: { ready: () => undefined, answer: async (input) => void hops.push(input.hops) },
       });
 
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await runner.deliver({
         bot,
         userId: USER,
@@ -620,9 +623,9 @@ describe("BotRunner", () => {
         text: "from a bot",
         hops: 3,
         relaysPersonsWord: true,
-        model,
+        choice,
       });
-      await runner.wake(bot, USER, "Say hello.", 0, model);
+      await runner.wake(bot, USER, "Say hello.", 0, choice);
       await until(() => hops.length === 3);
 
       expect(hops).toEqual([0, 3, 0]);
@@ -639,18 +642,27 @@ describe("BotRunner", () => {
           ],
         },
       ];
+      const said: [string, boolean][] = [];
       const runner = new BotRunner({
         store: fakeStore(),
         replier: {
           ready: () => undefined,
-          answer: async ({ ask }) => ask(questions),
+          answer: async ({ ask, say }) => {
+            say("on it");
+            ask(questions);
+          },
         },
+        said: (botId, askedQuestion) => void said.push([botId, askedQuestion]),
       });
       const client = await watch(runner, stopped);
 
-      await runner.send(bot, USER, "help me choose", model);
+      await runner.send(bot, USER, "help me choose", choice);
       await client.done;
 
+      expect(said).toEqual([
+        [bot.id, false],
+        [bot.id, true],
+      ]);
       expect(
         client.events.find((event) => event.type === "message" && event.message.questions),
       ).toMatchObject({
@@ -671,10 +683,10 @@ describe("BotRunner", () => {
       });
       expect(runner.busy(bot.id)).toBe(false);
 
-      await runner.send(bot, USER, "first", model);
+      await runner.send(bot, USER, "first", choice);
       expect(runner.busy(bot.id)).toBe(false);
 
-      for (let i = 0; i < 4; i++) await runner.send(bot, USER, `more ${i}`, model);
+      for (let i = 0; i < 4; i++) await runner.send(bot, USER, `more ${i}`, choice);
       expect(runner.busy(bot.id)).toBe(true);
       gate.resolve();
     });
@@ -687,7 +699,7 @@ describe("BotRunner", () => {
       });
       const client = await watch(runner, stopped);
 
-      await runner.wake(bot, USER, "Say hello.", 0, model);
+      await runner.wake(bot, USER, "Say hello.", 0, choice);
       await client.done;
 
       expect(shown(client.events)).toEqual(["bot: Hi, I am Pip"]);
@@ -739,7 +751,7 @@ describe("BotRunner", () => {
       const watching = await follow(runner, USER);
       expect(watching.told).toEqual([[]]);
 
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await until(() => watching.told.length === 2);
       expect(watching.told[1]).toEqual([bot.id]);
       expect(runner.workingOf(USER)).toEqual([bot.id]);
@@ -787,7 +799,7 @@ describe("BotRunner", () => {
       });
       const other = await follow(runner, "someone-else");
 
-      await runner.send(bot, USER, "hello", model);
+      await runner.send(bot, USER, "hello", choice);
       await Bun.sleep(30);
 
       expect(runner.workingOf(USER)).toEqual([bot.id]);
@@ -811,8 +823,8 @@ describe("BotRunner", () => {
           events.filter((event) => event.type === "message" && event.message.role === "user")
             .length === 2,
       );
-      await runner.send(bot, USER, "what is the plan?", model);
-      await runner.send(bot, USER, "and tomorrow?", model, [], "m-0");
+      await runner.send(bot, USER, "what is the plan?", choice);
+      await runner.send(bot, USER, "and tomorrow?", choice, [], "m-0");
       await client.done;
       const messages = client.events.flatMap((event) =>
         event.type === "message" ? [event.message] : [],
@@ -836,7 +848,7 @@ describe("BotRunner", () => {
         store: fakeStore(),
         replier: { ready: () => undefined, answer: async () => undefined },
       });
-      await expect(runner.send(bot, USER, "hi", model, [], "m-9")).rejects.toBeInstanceOf(
+      await expect(runner.send(bot, USER, "hi", choice, [], "m-9")).rejects.toBeInstanceOf(
         UnprocessableError,
       );
     });
@@ -853,7 +865,7 @@ describe("BotRunner", () => {
         },
       });
       const client = await watch(runner, stopped);
-      await runner.send(bot, USER, "do it", model);
+      await runner.send(bot, USER, "do it", choice);
       await client.done;
 
       expect(client.events).toContainEqual({ type: "reaction", messageId: "m-0", emoji: "👍" });
@@ -884,7 +896,7 @@ describe("BotRunner", () => {
         },
       });
       const client = await watch(runner, stopped);
-      await runner.send(bot, USER, "do it", model);
+      await runner.send(bot, USER, "do it", choice);
       await client.done;
 
       expect(refused).toBeInstanceOf(UnprocessableError);
@@ -903,7 +915,7 @@ describe("BotRunner", () => {
         ]),
       });
       const client = await watch(runner, stopped);
-      await runner.send(bot, USER, "do it", model);
+      await runner.send(bot, USER, "do it", choice);
       await client.done;
       const again = await watch(
         new BotRunner({

@@ -8,11 +8,13 @@ import { Label } from "@aven/ui/label";
 import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
 
 import { useModelSelection } from "../hooks/use-model-selection";
+import type { AgentBackendKind } from "@aven/protocol/types";
 import type { QuestionAnswer, RunSelection, SecretChoice, ToolPart } from "../types";
 
 type Props = {
   tool: ToolPart;
   threadId: string;
+  backend?: AgentBackendKind;
   onSubmit: (
     answers: QuestionAnswer[],
     selection: RunSelection,
@@ -25,8 +27,8 @@ const SCOPES = [
   { value: "personal", label: "Only me" },
 ] as const;
 
-export function SecretForm({ tool, threadId, onSubmit }: Props) {
-  const model = useModelSelection(threadId);
+export function SecretForm({ tool, threadId, backend, onSubmit }: Props) {
+  const model = useModelSelection(threadId, backend);
   const prompts = tool.questions ?? [];
   const [values, setValues] = useState<Record<string, string>>({});
   const [scope, setScope] = useState<SecretChoice["secretScope"]>("project");

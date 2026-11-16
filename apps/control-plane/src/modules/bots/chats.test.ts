@@ -22,6 +22,7 @@ run("createBotChats (postgres)", async () => {
   const { inProcessReplier } = await import("./testing/in-process-replier");
   const { loopbackReplier } = await import("./testing/loopback-replier");
   const { botsService } = await import("./service");
+  const { bots } = await import("@aven/db/schema/bots");
 
   const suffix = crypto.randomUUID().slice(0, 8);
   const alice = `u-alice-${suffix}`;
@@ -679,5 +680,36 @@ run("createBotChats (postgres)", async () => {
     ]);
     await botMemoryStore.clear({ scope });
     await botsService.update(alice, mine!.id, { compactAfterTokens: null });
+  });
+
+  test("a letter clears a bot's question only when it carries the person's word", async () => {
+    const [main] = await botsService.list(alice);
+    const scout = await botsService.create(alice, { name: "Scout", instruction: "You research." });
+    const { botChats } = writingBack();
+    await db.update(bots).set({ questionAskedAt: new Date() }).where(eq(bots.id, scout.id));
+
+    await botChats.deliver({
+      userId: alice,
+      from: main!,
+      hops: 0,
+      handle: scout.handle,
+      text: "do A",
+      relaysPersonsWord: false,
+    });
+    expect(
+      (await botsService.list(alice)).find((bot) => bot.id === scout.id)?.attention,
+    ).toMatchObject({ reason: "question" });
+
+    await botChats.deliver({
+      userId: alice,
+      from: main!,
+      hops: 0,
+      handle: scout.handle,
+      text: "the person says A",
+      relaysPersonsWord: true,
+    });
+    expect(
+      (await botsService.list(alice)).find((bot) => bot.id === scout.id)?.attention?.reason,
+    ).not.toBe("question");
   });
 });

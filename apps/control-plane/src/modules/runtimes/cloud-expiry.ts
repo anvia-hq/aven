@@ -1,77 +1,35 @@
-import { describeError } from "@aven/server-kit/errors";
-
-import { BoatApiError, BoatClient } from "./boat/client";
+import { cloudSandboxRemover, isCloudProvider } from "@aven/sandbox/cloud-config";
+import {
+  CLOUD_SANDBOX_LIFE_MS,
+  createCloudExpiry as createSweep,
+} from "@aven/sandbox/cloud-expiry";
+import type { CloudProviderName } from "@aven/sandbox/cloud-config";
+import type { SandboxRemover } from "@aven/sandbox/types";
+import type { RuntimeProviderKind } from "@aven/protocol/types";
 import { runtimesService } from "./service";
 
-const HOUR_MS = 3_600_000;
-
-export const CLOUD_SANDBOX_LIFE_MS = 48 * HOUR_MS;
+export { CLOUD_SANDBOX_LIFE_MS };
 
 type Options = {
   intervalMs: number;
   afterMs?: number;
-  client?: Pick<BoatClient, "deleteSandbox">;
+  remove?: Partial<Record<CloudProviderName, SandboxRemover>>;
 };
 
-export function createCloudExpiry({
-  intervalMs,
-  afterMs = CLOUD_SANDBOX_LIFE_MS,
-  client = new BoatClient(),
-}: Options) {
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<unknown> | undefined;
+export function createCloudExpiry({ intervalMs, afterMs, remove }: Options) {
+  const remover = async (provider: RuntimeProviderKind, sandboxId: string) => {
+    const override = isCloudProvider(provider) ? remove?.[provider] : undefined;
 
-  async function sweep(now = new Date()) {
-    const apiKey = process.env.AVEN_BOAT_API_KEY?.trim();
+    if (override) return override(sandboxId);
 
-    if (!apiKey) return 0;
-
-    const idle = await runtimesService.idleCloudSandboxes(new Date(now.getTime() - afterMs));
-    let expired = 0;
-
-    for (const { id, sandboxId } of idle) {
-      try {
-        if (sandboxId) {
-          await client.deleteSandbox(apiKey, sandboxId).catch((error: unknown) => {
-            if (!(error instanceof BoatApiError && error.status === 404)) throw error;
-          });
-        }
-
-        await runtimesService.expireCloudSandbox(id);
-        expired += 1;
-      } catch (error) {
-        console.warn(`Could not expire the Aven Cloud computer ${id}:`, describeError(error));
-      }
-    }
-
-    return expired;
-  }
-
-  const guarded = () => {
-    if (ticking) return;
-
-    ticking = sweep()
-      .catch((error: unknown) =>
-        console.warn("A sweep for expired Aven Cloud computers failed:", describeError(error)),
-      )
-      .finally(() => {
-        ticking = undefined;
-      });
+    return cloudSandboxRemover(provider, sandboxId);
   };
 
-  return {
-    sweep,
-    start() {
-      if (timer) return;
-
-      guarded();
-      timer = setInterval(guarded, intervalMs);
-      timer.unref();
-    },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+  return createSweep({
+    intervalMs,
+    afterMs,
+    idle: (before) => runtimesService.idleCloudSandboxes(before),
+    expire: (runtimeId) => runtimesService.expireCloudSandbox(runtimeId),
+    remove: remover,
+  });
 }

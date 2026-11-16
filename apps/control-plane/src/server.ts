@@ -1,8 +1,10 @@
+import { cloudSettingsService } from "./modules/cloud-settings/service";
 import { app } from "./app";
 import {
   botApiApp,
   botRunner,
   cloudExpiry,
+  cloudIdle,
   goalDriver,
   previews,
   runsService,
@@ -10,8 +12,7 @@ import {
   threadRetention,
   threadWatcher,
 } from "./composition";
-import { claudeBackendEnabled } from "./modules/claude-setup/flag";
-import { codexBackendEnabled } from "./modules/codex-setup/flag";
+import { claudeBackendEnabled, codexBackendEnabled } from "./modules/providers/backends";
 import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
@@ -44,6 +45,7 @@ export async function startControlPlane(edition: Edition) {
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
+  await cloudSettingsService.apply();
   await runtimesService.ensureCloud();
   const previewListener = startPreviews(previews);
 
@@ -56,6 +58,7 @@ export async function startControlPlane(edition: Edition) {
     await threadWatcher.close();
     await threadRetention.close();
     await cloudExpiry.close();
+    await cloudIdle.close();
     runsService.dispose();
     process.exit(0);
   };
@@ -67,6 +70,7 @@ export async function startControlPlane(edition: Edition) {
   threadWatcher.start();
   threadRetention.start();
   cloudExpiry.start();
+  cloudIdle.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

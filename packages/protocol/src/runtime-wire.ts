@@ -1,4 +1,4 @@
-export const PROVIDERS = [
+export const MODEL_APIS = [
   "openai",
   "anthropic",
   "gemini",
@@ -7,6 +7,8 @@ export const PROVIDERS = [
   "azure",
   "openai-compatible",
 ] as const;
+
+export const PROVIDERS = [...MODEL_APIS, "claude-subscription", "codex-subscription"] as const;
 export const DIFF_SCOPES = ["turn", "all", "unshipped"] as const;
 
 export const AGENT_BACKENDS = ["native", "claude", "codex"] as const;
@@ -76,7 +78,7 @@ export const CLAUDE_TOKEN_MISSING =
 export const CODEX_TOKEN_MISSING =
   "Set a Codex API key in Settings before this thread can run on the Codex agent";
 
-export const RUNTIME_PROVIDERS = ["manual", "boat"] as const;
+export const RUNTIME_PROVIDERS = ["manual", "boat", "spaces"] as const;
 
 export const BOAT_MACHINE_TYPES = ["small", "default", "large", "xlarge"] as const;
 

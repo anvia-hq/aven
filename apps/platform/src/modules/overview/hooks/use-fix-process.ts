@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
-import type { ProcessLogs, ProcessView } from "@aven/protocol/types";
+import type { AgentBackendKind, ProcessLogs, ProcessView } from "@aven/protocol/types";
 
 const OUTPUT_CHARS = 6_000;
 
@@ -21,9 +21,9 @@ export function fixPrompt(process: ProcessView, logs: ProcessLogs) {
   ].join("\n");
 }
 
-export function useFixProcess(threadId: string) {
+export function useFixProcess(threadId: string, backend?: AgentBackendKind) {
   const [fixing, setFixing] = useState<string | null>(null);
-  const { selection } = useModelSelection(threadId);
+  const { selection } = useModelSelection(threadId, backend);
 
   async function fix(process: ProcessView) {
     setFixing(process.id);

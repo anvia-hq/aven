@@ -1,5 +1,5 @@
 import type { Provider } from "@aven/agents/model";
-import { providerNeedsKey } from "@aven/protocol/providers";
+import { isModelApi, providerNeedsKey } from "@aven/protocol/providers";
 
 import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { readKey } from "./crypto";
@@ -10,6 +10,8 @@ import { effortsFor } from "./model-list";
 import { providersService } from "./service";
 import type { ModelSelection } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
+import type { ProviderRow } from "@aven/db/schema/types";
+import type { ModelApi } from "@aven/protocol/types";
 
 export const ENV_KEYS: Partial<Record<Provider, string>> = {
   anthropic: "ANTHROPIC_API_KEY",
@@ -38,13 +40,20 @@ export function environmentModel(): ModelConfig {
 
 export class InvalidSelectionError extends UnprocessableError {}
 
+function kindOf(row: ProviderRow): ModelApi {
+  if (!isModelApi(row.kind))
+    throw new InvalidSelectionError(`${row.name} is a subscription; the agent it hosts runs it`);
+
+  return row.kind;
+}
+
 type ProviderKind = ModelConfig["provider"];
 
 export async function resolveModel(
   userId: string,
   selection: ModelSelection = {},
 ): Promise<ModelConfig | null> {
-  const row = await providersService.forRun(userId, selection.providerId);
+  const row = await providersService.forNativeRun(userId, selection.providerId);
 
   if (!row) return noProvider(selection);
 
@@ -55,7 +64,7 @@ export async function resolveModel(
   }
 
   const config: ModelConfig = {
-    provider: row.kind,
+    provider: kindOf(row),
     modelId: selection.modelId ?? row.modelId ?? undefined,
     baseUrl: row.baseUrl ?? undefined,
     apiKey: readKey(row),

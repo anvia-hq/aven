@@ -2,23 +2,24 @@ import { BOT_MAX_HOPS } from "@aven/protocol/bots";
 
 import { prepareAttachments, type AttachmentBody } from "@aven/server-kit/attachments";
 import { orNotFound, UnprocessableError } from "@aven/server-kit/errors";
-import { assertSeesImages, environmentModel, resolveModel } from "../providers/resolve-model";
+import { botRunChoice } from "../providers/bot-run-choice";
+import { assertSeesImages, environmentModel } from "../providers/resolve-model";
 import type { BotRunner } from "./runner";
 import { botsService } from "./service";
 import type { BotLetter } from "./types";
 import type { Bot, BotEvent, BotSent } from "@aven/protocol/types";
+import type { BotRunChoice } from "../providers/types";
 
 const GREETING =
   "You were just created. Introduce yourself to the person now: a short hello, who you are, and what you can do for them, in one or two short messages. You may end with one easy question to get started. Do not mention this note.";
 
-async function modelOf(userId: string, bot: Bot) {
-  return (
-    (await resolveModel(userId, {
-      providerId: bot.providerId ?? undefined,
-      modelId: bot.modelId ?? undefined,
-      reasoningEffort: bot.reasoningEffort ?? undefined,
-    })) ?? environmentModel()
-  );
+async function choiceOf(userId: string, bot: Bot): Promise<BotRunChoice> {
+  const choice = await botRunChoice(userId, bot);
+
+  if (choice.backend === "native" && !choice.model)
+    return { backend: "native", model: environmentModel() };
+
+  return choice;
 }
 
 export const createBotChats = (runner: BotRunner) => ({
@@ -31,11 +32,13 @@ export const createBotChats = (runner: BotRunner) => ({
   ) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
     const attachments = prepareAttachments(files);
-    const model = await modelOf(userId, bot);
+    const choice = await choiceOf(userId, bot);
 
-    if (attachments.some((file) => file.image)) await assertSeesImages(model);
+    if (attachments.some((file) => file.image)) await assertSeesImages(choice.model ?? null);
 
-    await runner.send(bot, userId, text, model, attachments, quote);
+    await runner.send(bot, userId, text, choice, attachments, quote);
+    await botsService.answerQuestion(bot.id);
+    await botsService.markRead(userId, bot.id);
   },
 
   async deliver({
@@ -67,7 +70,7 @@ export const createBotChats = (runner: BotRunner) => ({
       text,
       hops: hops + 1,
       relaysPersonsWord,
-      model: await modelOf(userId, target),
+      choice: await choiceOf(userId, target),
     });
     runner.note(from.id, "bot", text, {
       id: target.id,
@@ -75,6 +78,9 @@ export const createBotChats = (runner: BotRunner) => ({
       handle: target.handle,
       direction: "to",
     });
+
+    if (relaysPersonsWord) await botsService.answerQuestion(target.id);
+
     return { handle: target.handle, name: target.name };
   },
 
@@ -90,12 +96,12 @@ export const createBotChats = (runner: BotRunner) => ({
 
   async greet(userId: string, botId: string, hops: number) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
-    await runner.wake(bot, userId, GREETING, hops, await modelOf(userId, bot));
+    await runner.wake(bot, userId, GREETING, hops, await choiceOf(userId, bot));
   },
 
   async fire(userId: string, botId: string, note: string, aboutThread?: string) {
     const bot = orNotFound(await botsService.get(userId, botId), "Bot not found");
-    await runner.wake(bot, userId, note, 0, await modelOf(userId, bot), aboutThread);
+    await runner.wake(bot, userId, note, 0, await choiceOf(userId, bot), aboutThread);
   },
 
   working: (userId: string, signal: AbortSignal) => runner.working(userId, signal),

@@ -10,7 +10,12 @@ import type {
   RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
+  MODEL_APIS,
 } from "./runtime-wire";
+
+export type BotAttentionReason = "question" | "goal" | "schedule" | "message";
+
+export type BotAttention = { reason: BotAttentionReason; since: string };
 
 export type Bot = {
   id: string;
@@ -25,6 +30,7 @@ export type Bot = {
   compactAfterTokens: number | null;
   runtimeId: string | null;
   isMain: boolean;
+  attention: BotAttention | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -391,6 +397,8 @@ export type RunThreadInfo = {
 
 export type Provider = (typeof PROVIDERS)[number];
 
+export type ModelApi = (typeof MODEL_APIS)[number];
+
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
@@ -404,7 +412,7 @@ export type RuntimeLifetime = (typeof RUNTIME_LIFETIMES)[number];
 export type RuntimeGithubMode = (typeof RUNTIME_GITHUB_MODES)[number];
 
 export type RunModel = {
-  provider: Provider;
+  provider: ModelApi;
   modelId?: string;
   reasoningEffort?: string;
   effortLevels?: string[];
@@ -685,7 +693,14 @@ export type ControlPlaneToRuntime =
       replyId: string;
       bot: BotReplyInfo;
       prompt: string;
-      model: RunModel;
+      model?: RunModel;
+      backend?: AgentBackendKind;
+      claudeToken?: string;
+      claudeModel?: string;
+      claudeEffort?: string;
+      codexToken?: string;
+      codexModel?: string;
+      codexEffort?: string;
       attachments?: RunAttachment[];
       skills?: RunSkill[];
       mcp?: RunMcpServer[];

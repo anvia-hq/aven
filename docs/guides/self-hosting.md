@@ -75,19 +75,19 @@ threads that already use it stay readable but cannot run.
 
 ## Aven Cloud
 
-Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer, and
-boat.dev is the one there is. Each provider is its own entry in the new thread composer, and you can
-name several, separated by commas:
+Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer:
+boat.dev, or a spaces server of your own. Each provider is its own entry in the new thread composer,
+and you can name several, separated by commas:
 
 ```sh
 AVEN_CLOUD_PROVIDERS=boat
 AVEN_BOAT_API_KEY=boat_...
 ```
 
-A provider that is not named, or that lacks what it needs (boat needs its key), is hidden and refuses
-new threads. Threads that already
+A provider that is not named, or that lacks what it needs (boat needs its key, spaces its address and
+key), is hidden and refuses new threads. Threads that already
 have a computer stay readable, but cannot start it again, and expired computers are still deleted
-while the boat key is set.
+while the key of the provider that made them is set.
 
 Create the key at [boat.dev](https://docs.boat.dev/api-keys) with permission to create and drive
 sandboxes. It belongs to the platform, so people using it bring no key of their own. A free trial
@@ -104,6 +104,30 @@ from the public internet. When `BETTER_AUTH_URL` is a localhost or private addre
 hours (`AVEN_BOAT_AUTO_STOP_SECONDS`) and the next message resumes it. It is deleted after 48 hours
 without use, and work that was not pushed is lost with it. A workspace may hold 20 Aven Cloud
 computers at once (`AVEN_CLOUD_MAX_SANDBOXES`).
+
+### A spaces server
+
+[spaces](https://github.com/anvia-hq/spaces) runs sandboxes as microVMs on hardware you control and
+speaks boat's API. Aven has a provider of its own for it, apart from boat's:
+
+```sh
+AVEN_CLOUD_PROVIDERS=spaces
+AVEN_SPACES_API_BASE=https://spaces.example.com/api/v1
+AVEN_SPACES_API_KEY=sk_...
+```
+
+- **The guest image must be Debian or Ubuntu.** The runner is a glibc program, so run the spaces server
+  with `SPACES_MSB_IMAGE=ubuntu`; spaces' default, Alpine, cannot run it. On the first start of a
+  sandbox Aven installs `curl`, `git` and the runner into it (about 30 seconds), checks the download
+  against the release's checksums, and starts `aven runner run` as a process, since a spaces sandbox
+  has no service manager. Stopping a sandbox ends every process in it, so Aven starts the runner again
+  on each resume, which takes about a second once it is installed.
+- **The sandbox must reach this server.** A spaces sandbox may sit on a private network, so
+  `AVEN_SPACES_RUNNER_URL` may be a private address, for example `http://192.168.1.10:8000`. Spaces'
+  default network profile only lets a guest reach public addresses (`SPACES_NET=public`); set
+  `SPACES_NET=all` on the spaces server if the control plane is on a private address.
+- A sandbox stops itself after `AVEN_SPACES_AUTO_STOP_SECONDS` (two hours), and is deleted after 48
+  hours without use, like a boat one.
 
 ## Update
 

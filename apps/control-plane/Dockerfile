@@ -24,12 +24,14 @@ COPY packages/protocol/package.json packages/protocol/
 COPY packages/runtime-client/package.json packages/runtime-client/
 COPY packages/server-kit/package.json packages/server-kit/
 COPY packages/ui/package.json packages/ui/
+COPY sandbox/package.json sandbox/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./
 COPY LICENSE /LICENSE
 COPY apps/control-plane apps/control-plane
 COPY packages packages
+COPY sandbox sandbox
 
 ENV NODE_ENV=production PORT=8000 AVEN_LOCAL_RUNNER=off
 # Nothing here needs root: the server only writes temporary files.

@@ -1,10 +1,7 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useClaudeSetup } from "@/modules/claude-setup/hooks/use-claude-setup";
-import { useCodexSetup } from "@/modules/codex-setup/hooks/use-codex-setup";
-import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
 import { ProjectPicker } from "@/modules/projects/components/project-picker";
 import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
@@ -14,12 +11,7 @@ import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
-import type {
-  ClaudeChoice,
-  CodexChoice,
-  OutgoingMessage,
-  RunSelection,
-} from "@/modules/threads/types";
+import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -40,39 +32,20 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const [claude, setClaude] = useState<ClaudeChoice | null>(null);
-  const [codex, setCodex] = useState<CodexChoice | null>(null);
-  const credential = useClaudeSetup();
-  const codexCredential = useCodexSetup();
-  const { config } = usePlatformConfig();
-  const claudeOffered = config?.claudeBackend === true;
-  const codexOffered = config?.codexBackend === true;
   const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
-  let backend: "native" | "claude" | "codex" = "native";
-
-  if (codexOffered && codex) backend = "codex";
-  else if (claudeOffered && claude) backend = "claude";
-
   const project = projects.find((candidate) => candidate.id === projectId);
   const computer = useRuntimeChoice(project);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
-    startThread(projectId, message, selection, backend, computer.runtimeId);
+    startThread(projectId, message, selection, computer.runtimeId);
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <h1 className="min-w-0 flex-1 truncate text-sm font-medium">New thread</h1>
-        {loaded && projects.length > 0 && (
-          <AddProjectDialog size="sm" onAdded={(project) => setProjectId(project.id)} />
-        )}
-      </header>
-
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
         <div className="flex flex-col gap-1.5 text-center">
-          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             What should we build?
-          </h2>
+          </h1>
           <p className="hidden text-sm text-muted-foreground md:block">
             Start a thread inside a project. The agent reads, edits and runs code there.
           </p>
@@ -89,8 +62,6 @@ function NewThread() {
               <PromptInput
                 autoFocus
                 onSubmit={start}
-                claude={claudeOffered ? { choice: claude, onChange: setClaude } : undefined}
-                codex={codexOffered ? { choice: codex, onChange: setCodex } : undefined}
                 tools={
                   <>
                     <ProjectPicker value={projectId} onChange={setProjectId} />
@@ -104,25 +75,6 @@ function NewThread() {
                   </>
                 }
               />
-              {claudeOffered && claude && credential.loaded && !credential.setup.configured && (
-                <p className="px-1 text-center text-xs text-muted-foreground">
-                  <Link to="/settings/claude" className="underline">
-                    Set a Claude setup token
-                  </Link>{" "}
-                  before this thread can run.
-                </p>
-              )}
-              {codexOffered &&
-                codex &&
-                codexCredential.loaded &&
-                !codexCredential.setup.configured && (
-                  <p className="px-1 text-center text-xs text-muted-foreground">
-                    <Link to="/settings/codex" className="underline">
-                      Set a Codex API key
-                    </Link>{" "}
-                    before this thread can run.
-                  </p>
-                )}
             </>
           ))}
 

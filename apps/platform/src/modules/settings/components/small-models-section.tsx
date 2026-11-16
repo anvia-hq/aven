@@ -13,7 +13,9 @@ import { useFollowUpSettings } from "../hooks/use-follow-up-settings";
 
 export function SmallModelsSection() {
   const { settings, save } = useFollowUpSettings();
-  const { providers, choices, loading, labelOf } = useModelChoices();
+  const { providers: every, choices: all, loading, labelOf } = useModelChoices();
+  const providers = every.filter((item) => item.backend === "native");
+  const choices = all.filter((choice) => choice.provider.backend === "native");
   const provider = providers.find((item) => item.id === settings?.providerId);
   const modelId = settings?.modelId ?? provider?.modelId ?? null;
   const serverModel = settings?.serverModel ?? null;

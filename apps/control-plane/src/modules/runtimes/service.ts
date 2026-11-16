@@ -3,30 +3,44 @@ import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { db } from "@aven/db/client";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
-import { and, count, desc, eq, inArray, isNull, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  inArray,
+  isNull,
+  ne,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
-import { CLOUD_RUNTIME_ID } from "./cloud-id";
 import {
+  CLOUD_OFF,
+  CLOUD_RUNTIME_ID,
   CLOUD_TEMPLATE_IDS,
-  cloudApiKey,
+  SPACES_RUNTIME_ID,
   cloudEnabled,
+  cloudProviderApiKey,
   cloudTemplateId,
   cloudTemplateName,
   disabledTemplateIds,
   enabledCloudProviders,
   enabledTemplateIds,
   templateProvider,
-} from "./cloud-config";
+} from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
-import type { BoatWakeRecord } from "./boat/types";
+import type { CloudSandboxPage, SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { RuntimeGithubMode } from "@aven/protocol/types";
+import type { CloudSandboxCursor } from "./types";
+import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
 
-export { CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID };
-
-export const CLOUD_OFF = "Aven Cloud is turned off on this server";
+export { CLOUD_OFF, CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -210,7 +224,7 @@ export const runtimesService = {
       coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
     )`;
     return db
-      .select({ id: runtimes.id, sandboxId: runtimes.boatSandboxId })
+      .select({ id: runtimes.id, provider: runtimes.provider, sandboxId: runtimes.boatSandboxId })
       .from(runtimes)
       .where(
         and(
@@ -220,6 +234,43 @@ export const runtimesService = {
         ),
       )
       .limit(limit);
+  },
+
+  async liveCloudSandboxes({
+    limit = 200,
+    after,
+  }: CloudSandboxCursor = {}): Promise<CloudSandboxPage> {
+    const sandboxes = await db
+      .select({ id: runtimes.id })
+      .from(runtimes)
+      .where(
+        and(
+          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
+          isNull(runtimes.revokedAt),
+          after === undefined ? undefined : gt(runtimes.id, after),
+        ),
+      )
+      .orderBy(asc(runtimes.id))
+      .limit(limit);
+    const sandboxIds = sandboxes.map(({ id }) => id);
+
+    if (sandboxIds.length === 0) return { sandboxIds, threads: [] };
+
+    const rows = await db
+      .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
+      .from(threads)
+      .where(and(inArray(threads.runtimeId, sandboxIds), ne(threads.state, "archived")));
+
+    return { sandboxIds, threads: rows };
+  },
+
+  async openThreadsOn(runtimeId: string) {
+    const [row] = await db
+      .select({ total: count() })
+      .from(threads)
+      .where(and(eq(threads.runtimeId, runtimeId), ne(threads.state, "archived")));
+
+    return row?.total ?? 0;
   },
 
   async expireCloudSandbox(id: string) {
@@ -276,16 +327,20 @@ export const runtimesService = {
     return { runtime: publicRuntime(row!), token };
   },
 
-  async boatRecord(id: string, revoked = false): Promise<BoatWakeRecord | null> {
+  async cloudRecord(
+    id: string,
+    provider: RuntimeProviderKind,
+    revoked = false,
+  ): Promise<SandboxRecord | null> {
     const [row] = await db
       .select()
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== "boat" || !row.parentRuntimeId || !cloudEnabled(row.provider))
+    if (!row || row.provider !== provider || !row.parentRuntimeId || !cloudEnabled(row.provider))
       return null;
 
-    const apiKey = cloudApiKey();
+    const apiKey = cloudProviderApiKey(provider);
     const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
 
     if (!apiKey || !runnerToken) return null;
@@ -356,7 +411,7 @@ export const runtimesService = {
 
     if (!current) return null;
 
-    const encrypted = current.provider === "boat" ? await encryptedRunnerToken(token) : {};
+    const encrypted = current.provider !== "manual" ? await encryptedRunnerToken(token) : {};
     const [row] = await db
       .update(runtimes)
       .set({ ...columns, ...encrypted })

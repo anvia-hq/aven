@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { addSubscription, registerUser, threadOnFakeRunner } from "./helpers";
 
 test.describe("steering a running agent", () => {
   let runner: ChildProcess | undefined;
@@ -143,14 +143,15 @@ test.describe("steering a running agent", () => {
     page,
   }) => {
     await registerUser(page, "strc", "Claude Steer");
-    const saved = await page.request.put("/api/claude-setup-token", {
-      data: { token: "sk-ant-oat01-e2e-steer-picture-9f3a" },
-    });
-    expect(saved.ok(), await saved.text()).toBe(true);
+    const providerId = await addSubscription(
+      page,
+      "claude-subscription",
+      "sk-ant-oat01-e2e-steer-picture-9f3a",
+    );
     const { child, threadId } = await threadOnFakeRunner(
       page,
       { FAKE_RUN_ENDS_AFTER: "120000", FAKE_STEER_APPLIES_AFTER: "60000" },
-      "claude",
+      providerId,
     );
     runner = child;
     await page.goto(`/threads/${threadId}`);

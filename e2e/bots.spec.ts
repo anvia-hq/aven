@@ -149,6 +149,44 @@ test.describe("bots", () => {
     await expect(page).not.toHaveURL(/artifact=/);
   });
 
+  test("a page a bot sends fills the side panel", async ({ page }) => {
+    await registerUser(page, "bot-page", "Page Person");
+    const provider = await page.request.post("/api/providers", {
+      data: {
+        kind: "openai-compatible",
+        name: "Fake",
+        baseUrl: "http://localhost:8102/v1",
+        modelId: "fake-model",
+      },
+    });
+    expect(provider.ok()).toBe(true);
+
+    await page.goto("/bot");
+    const box = page.getByRole("textbox", { name: "Message" });
+    await box.fill("send the page");
+    await box.press("Enter");
+
+    const card = page.locator('[data-role="artifact-card"]');
+    await expect(card).toHaveCount(1);
+    await card.click();
+    const panel = page.locator('[data-role="artifact-panel"]');
+    await expect(panel).toBeVisible();
+
+    const frame = panel.locator("iframe");
+    await expect(frame).toHaveAttribute("sandbox", "allow-scripts");
+    await expect(panel.frameLocator("iframe").locator("#cheat")).toHaveText(
+      "Types and their values",
+    );
+    await expect
+      .poll(async () => {
+        const frameBox = await frame.boundingBox();
+        const panelBox = await panel.boundingBox();
+        const gap = (panelBox?.height ?? 0) - (frameBox?.height ?? 0);
+        return gap > 20 && gap < 60;
+      })
+      .toBe(true);
+  });
+
   test("a bot quotes the message it answers and reacts to it, and the person quotes one too", async ({
     page,
   }) => {
@@ -543,7 +581,7 @@ test.describe("bots", () => {
     );
 
     await expect(bubble(page, "Scout answered")).toBeVisible();
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]')).toBeVisible();
+    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]').first()).toBeVisible();
 
     const activity = page.locator('[data-activity="bots"]');
     await expect(activity).toContainText("2 messages with");
