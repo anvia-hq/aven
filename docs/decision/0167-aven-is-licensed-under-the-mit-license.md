@@ -1,6 +1,6 @@
 # Aven is licensed under the MIT license
 
-Status: accepted.
+Status: superseded by 0315 (Apache 2.0). Was: accepted.
 
 ## Context
 

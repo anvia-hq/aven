@@ -35,7 +35,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 
 ## Constraints
 
-- **License: MIT.** Raise it before adding a dependency whose license asks more of Aven than MIT does (a copyleft one).
+- **License: Apache 2.0.** Raise it before adding a dependency whose license asks more of Aven than Apache 2.0 does (a copyleft one). Commits are signed off (`git commit -s`, the DCO).
 - **Bun only.** Use `bun`/`bunx`, never npm, yarn or pnpm, and no other lockfiles. Prefer Bun built-ins (`Bun.serve`, `Bun.file`, `bun:test`, `bun:sqlite`).
 - **TypeScript strict.** Avoid `any`; where it cannot be avoided, say why in the pull request.
 - **No comments in TypeScript.** Names, types and tests say what code does; why goes in `docs/decision/`. Tool directives (`@ts-*`, `oxlint-disable`, `/// <reference>`) stay. `aven/no-comments` in lint enforces it.

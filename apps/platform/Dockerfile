@@ -32,8 +32,8 @@ RUN bunx vite build
 
 FROM caddy:2-alpine
 LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
-LABEL org.opencontainers.image.licenses="MIT"
-COPY LICENSE /LICENSE
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+COPY LICENSE NOTICE /
 COPY apps/platform/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/apps/platform/dist /srv
 EXPOSE 80 443

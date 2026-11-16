@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the aven binary for every platform a release supports and packs each as
-# aven-<version>-<os>-<arch>.tar.gz (holding `aven` and the `LICENSE`), with a checksums.txt. The installer and
+# aven-<version>-<os>-<arch>.tar.gz (holding `aven`, the `LICENSE` and the `NOTICE`), with a checksums.txt. The installer and
 # `aven update` download these by that name (decision 0073).
 #
 #   apps/cli/scripts/build-release.sh 0.3.0 dist/release
@@ -12,6 +12,7 @@ version="${version#v}"
 
 cli="$(cd "$(dirname "$0")/.." && pwd)"
 license="$cli/../../LICENSE"
+notice="$cli/../../NOTICE"
 mkdir -p "$out"
 out="$(cd "$out" && pwd)"
 work="$(mktemp -d)"
@@ -26,7 +27,8 @@ for target in bun-darwin-arm64:darwin-arm64 bun-darwin-x64:darwin-amd64 bun-linu
   (cd "$cli" && bun build --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --target="$bun_target" --external @valibot/to-json-schema \
     --define "AVEN_VERSION=\"$version\"" src/main.ts --outfile "$work/$platform/aven")
   cp "$license" "$work/$platform/LICENSE"
-  tar -C "$work/$platform" -czf "$out/aven-$version-$platform.tar.gz" aven LICENSE
+  cp "$notice" "$work/$platform/NOTICE"
+  tar -C "$work/$platform" -czf "$out/aven-$version-$platform.tar.gz" aven LICENSE NOTICE
 done
 
 cd "$out"
