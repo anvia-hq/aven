@@ -2,10 +2,12 @@ import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { offerCloudProviders } from "@aven/sandbox/cloud-config";
 import { setSpacesSettings, spacesRunnerUrl } from "@aven/sandbox/spaces/config";
+import type { SpacesSettings } from "@aven/sandbox/spaces/types";
 import { eq } from "drizzle-orm";
 
 import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
 import { ConflictError, NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import { runtimesService } from "../runtimes/service";
 import type { SaveCloudSettingsBody } from "./schema";
 import { storedCloudSettings } from "./schema";
 import type { CloudSettingsView, StoredCloudSettings } from "./types";
@@ -47,8 +49,27 @@ async function readStored(): Promise<StoredCloudSettings | null> {
 
   if (!row) return null;
 
-  const parsed = storedCloudSettings.safeParse(JSON.parse(row.value));
-  return parsed.success ? parsed.data : null;
+  try {
+    const parsed = storedCloudSettings.safeParse(JSON.parse(row.value));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    console.error(`The saved Aven Cloud sandbox is not a readable value (${KEY})`);
+    return null;
+  }
+}
+
+function settingsOf(stored: StoredCloudSettings | null): SpacesSettings | null {
+  if (!stored) return null;
+
+  try {
+    return { base: stored.base, apiKey: keyOf(stored), runnerUrl: stored.runnerUrl };
+  } catch (error) {
+    console.error(
+      "Could not read the saved Aven Cloud sandbox settings:",
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
 }
 
 function fromEnv(env: Env): CloudSettingsView | null {
@@ -120,7 +141,8 @@ export const cloudSettingsService = {
         set: { value, updatedAt: new Date() },
       });
 
-    await this.apply();
+    await this.apply(env);
+    await runtimesService.ensureCloud();
     return this.view(env);
   },
 
@@ -133,15 +155,14 @@ export const cloudSettingsService = {
 
     if (removed.length === 0) throw new NotFoundError("No Aven Cloud sandbox is saved here");
 
-    await this.apply();
+    await this.apply(env);
   },
 
-  async apply() {
-    const stored = await readStored();
+  async apply(env: Env = process.env) {
+    const stored = ENV.some((name) => env[name]?.trim()) ? null : await readStored();
+    const settings = settingsOf(stored);
 
-    setSpacesSettings(
-      stored ? { base: stored.base, apiKey: keyOf(stored), runnerUrl: stored.runnerUrl } : null,
-    );
-    offerCloudProviders(stored ? ["spaces"] : []);
+    setSpacesSettings(settings);
+    offerCloudProviders(settings ? ["spaces"] : []);
   },
 };

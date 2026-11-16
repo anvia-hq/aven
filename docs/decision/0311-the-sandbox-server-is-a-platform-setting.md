@@ -25,13 +25,20 @@ four characters. `GET/PUT/DELETE /platform/cloud` are the platform owner's.
 - `apply()` reads the row and hands the sandbox package its settings (`setSpacesSettings` of
   `sandbox/src/spaces/config.ts`); the provider, the wake flow and the expiry sweep then read them
   instead of the environment. It runs at start, before the cloud templates are made, and after every
-  save or removal, so a change needs no restart.
+  save or removal, so a change needs no restart. A save also runs `runtimesService.ensureCloud()`, so
+  the template of a provider configured for the first time exists at once rather than at the next
+  start.
 - A saved row also offers its provider (`offerCloudProviders`), so `AVEN_CLOUD_PROVIDERS` may be
   left out entirely: a spaces server given in the app is offered by itself. Naming a provider in the
   environment still works and still keeps the others off.
 - The environment wins where it is set, as the default models do: a server configured by
   `AVEN_SPACES_*` shows the section read-only and refuses a save with a `409` naming the variable.
-  That keeps an installed server's `.env` the source of truth for what it is deployed with.
+  That keeps an installed server's `.env` the source of truth for what it is deployed with. It is
+  `apply()` that enforces it, by handing the package nothing while any of those variables is set: a
+  row saved before the operator moved to `.env` stops being used, so the two never disagree.
+- A row that cannot be read — a key encrypted under another `PROVIDER_ENCRYPTION_KEY`, or a value
+  that is not the shape written here — is left out with a line in the log rather than thrown: the
+  control plane still starts, Aven Cloud is simply not offered, and saving again replaces the row.
 - `AVEN_SPACES_AUTO_STOP_SECONDS` stays an environment variable: it is an operator's tuning, not a
   credential.
 
