@@ -15,7 +15,11 @@ const decoder = new TextDecoder();
 export const searchRoot = (workdir: string, path: string | undefined) => {
   const normalized = posix.normalize((path ?? ".").replaceAll("\\", "/"));
 
-  return posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) || "." : normalized;
+  const inside = posix.isAbsolute(normalized)
+    ? posix.relative(workdir, normalized) || "."
+    : normalized;
+
+  return inside.startsWith("-") ? `./${inside}` : inside;
 };
 
 const TYPE_TESTS = { file: ["-type", "f"], directory: ["-type", "d"], any: [] } as const;

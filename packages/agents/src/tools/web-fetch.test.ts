@@ -1,16 +1,19 @@
 import { describe, expect, test } from "bun:test";
 
+import { createServer } from "node:http";
+
+import { pinnedRequest } from "./pinned-request";
+import type { PinnedTarget } from "./types";
 import { createWebFetchTool, htmlToText, isPrivateAddress } from "./web-fetch";
 
 const publicHost = async () => ["93.184.216.34"];
 
 function serve(respond: (url: string) => Response) {
   const urls: string[] = [];
-  const impl = (async (input: RequestInfo | URL) => {
-    const url = input instanceof Request ? input.url : String(input);
-    urls.push(url);
-    return respond(url);
-  }) as typeof fetch;
+  const impl = async (target: PinnedTarget) => {
+    urls.push(target.url.href);
+    return respond(target.url.href);
+  };
   return { impl, urls };
 }
 
@@ -24,7 +27,7 @@ describe("web_fetch", () => {
         "<html><head><title>Docs</title><style>p{}</style></head><body><script>evil()</script><h1>Intro</h1><p>Read <a href='https://x.dev/a'>this</a> &amp; that.</p><ul><li>one</li><li>two</li></ul></body></html>",
       ),
     );
-    const output = await createWebFetchTool({ fetch: impl, resolve: publicHost }).call({
+    const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/docs",
     });
     expect(output.content).toBe(
@@ -36,7 +39,7 @@ describe("web_fetch", () => {
 
   test("returns JSON and plain text as they are", async () => {
     const { impl } = serve(() => Response.json({ a: 1 }));
-    const output = await createWebFetchTool({ fetch: impl, resolve: publicHost }).call({
+    const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/api",
     });
     expect(output.content).toBe('{"a":1}');
@@ -49,7 +52,7 @@ describe("web_fetch", () => {
           headers: { "content-type": "text/plain" },
         }),
     );
-    const tool = createWebFetchTool({ fetch: impl, resolve: publicHost });
+    const tool = createWebFetchTool({ request: impl, resolve: publicHost });
     const first = await tool.call({ url: "https://example.com/t", maxChars: 1000 });
     expect(first.content).toBe("a".repeat(1000));
     expect(first.next).toBe(1000);
@@ -68,7 +71,7 @@ describe("web_fetch", () => {
         : html("secret"),
     );
     const tool = createWebFetchTool({
-      fetch: impl,
+      request: impl,
       resolve: async (host) => (host === "intranet.test" ? ["10.0.0.5"] : ["93.184.216.34"]),
     });
     for (const url of [
@@ -90,7 +93,7 @@ describe("web_fetch", () => {
         ? new Response(null, { status: 301, headers: { location: "/new" } })
         : html("<p>moved</p>"),
     );
-    const output = await createWebFetchTool({ fetch: impl, resolve: publicHost }).call({
+    const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/old",
     });
     expect(output.url).toBe("https://example.com/new");
@@ -102,7 +105,7 @@ describe("web_fetch", () => {
       () => new Response(null, { status: 302, headers: { location: "/again" } }),
     );
     await expect(
-      createWebFetchTool({ fetch: impl, resolve: publicHost }).call({
+      createWebFetchTool({ request: impl, resolve: publicHost }).call({
         url: "https://example.com/a",
       }),
     ).rejects.toThrow("Too many redirects");
@@ -112,7 +115,7 @@ describe("web_fetch", () => {
     const { impl } = serve(
       () => new Response("x", { headers: { "content-type": "application/pdf" } }),
     );
-    const tool = createWebFetchTool({ fetch: impl, resolve: publicHost });
+    const tool = createWebFetchTool({ request: impl, resolve: publicHost });
     await expect(tool.call({ url: "file:///etc/passwd" })).rejects.toThrow("Only http and https");
     await expect(tool.call({ url: "https://example.com/a.pdf" })).rejects.toThrow("not text");
   });
@@ -120,7 +123,7 @@ describe("web_fetch", () => {
   test("an error status is an error", async () => {
     const { impl } = serve(() => new Response("nope", { status: 404 }));
     await expect(
-      createWebFetchTool({ fetch: impl, resolve: publicHost }).call({
+      createWebFetchTool({ request: impl, resolve: publicHost }).call({
         url: "https://example.com/x",
       }),
     ).rejects.toThrow("failed with 404");
@@ -142,10 +145,24 @@ describe("isPrivateAddress", () => {
       "fd00::1",
       "fe80::1",
       "::ffff:7f00:1",
+      "::ffff:10.0.0.1",
+      "64:ff9b::a00:1",
+      "64:ff9b::10.0.0.1",
+      "2002:7f00:1::1",
+      "2002:c0a8:101::",
+      "::",
     ]) {
       expect(isPrivateAddress(address)).toBe(true);
     }
-    for (const address of ["93.184.216.34", "8.8.8.8", "172.32.0.1", "2606:2800:220:1::1"]) {
+    for (const address of [
+      "93.184.216.34",
+      "8.8.8.8",
+      "172.32.0.1",
+      "2606:2800:220:1::1",
+      "64:ff9b::808:808",
+      "2002:808:808::1",
+      "::ffff:8.8.8.8",
+    ]) {
       expect(isPrivateAddress(address)).toBe(false);
     }
   });
@@ -154,5 +171,50 @@ describe("isPrivateAddress", () => {
 describe("htmlToText", () => {
   test("keeps text order and drops comments", () => {
     expect(htmlToText("<div>a<!-- x --></div><div>b</div>")).toBe("a\nb");
+  });
+});
+
+describe("pinnedRequest", () => {
+  test("connects to the address it was given and sends the name in Host, whatever the name resolves to", async () => {
+    const hosts: (string | undefined)[] = [];
+    const server = createServer((request, response) => {
+      hosts.push(request.headers.host);
+      response.setHeader("content-type", "text/plain");
+      response.end("pinned");
+    });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const { port } = server.address() as { port: number };
+
+    try {
+      const response = await pinnedRequest(
+        { url: new URL(`http://rebinding.invalid:${port}/x`), address: "127.0.0.1" },
+        new AbortController().signal,
+      );
+      expect(await response.text()).toBe("pinned");
+      expect(hosts).toEqual([`rebinding.invalid:${port}`]);
+    } finally {
+      server.close();
+    }
+  });
+
+  test("hands back a redirect as it is, without following it", async () => {
+    const server = createServer((_request, response) => {
+      response.statusCode = 302;
+      response.setHeader("location", "/elsewhere");
+      response.end();
+    });
+    await new Promise<void>((done) => server.listen(0, "127.0.0.1", done));
+    const { port } = server.address() as { port: number };
+
+    try {
+      const response = await pinnedRequest(
+        { url: new URL(`http://a.invalid:${port}/`), address: "127.0.0.1" },
+        new AbortController().signal,
+      );
+      expect(response.status).toBe(302);
+      expect(response.headers.get("location")).toBe("/elsewhere");
+    } finally {
+      server.close();
+    }
   });
 });
