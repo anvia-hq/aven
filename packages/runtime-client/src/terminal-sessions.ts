@@ -1,3 +1,4 @@
+import { SHELL_ENDED } from "@aven/protocol/terminal";
 import { errorMessage } from "@aven/agents/values";
 import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
@@ -68,7 +69,7 @@ export class TerminalSessions {
     const opened = session;
     this.#sessions.set(viewerId, opened);
     this.link.send({ type: "terminal.opened", viewerId });
-    void opened.proc.exited.then(() => this.#end(viewerId, opened, "The shell ended"));
+    void opened.proc.exited.then(() => this.#end(viewerId, opened, SHELL_ENDED));
   }
 
   write(viewerId: string, bytes: Uint8Array) {

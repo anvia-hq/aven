@@ -2,6 +2,8 @@ import { FitAddon } from "@xterm/addon-fit";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 
+import { SHELL_ENDED } from "@aven/protocol/terminal";
+
 import { wsUrl } from "@/lib/api";
 import { useTheme } from "@/modules/theme/hooks/use-theme";
 import type { Computer } from "@/modules/computer/types";
@@ -35,13 +37,15 @@ function terminalTheme() {
   };
 }
 
-export function useTerminal({ path }: Computer) {
+export function useTerminal({ path }: Computer, onExit: () => void) {
   const target = useRef<HTMLDivElement>(null);
   const terminal = useRef<Terminal | null>(null);
   const [phase, setPhase] = useState<TerminalPhase>("connecting");
   const [reason, setReason] = useState("");
   const [attempt, setAttempt] = useState(0);
   const { resolvedTheme } = useTheme();
+  const exited = useRef(onExit);
+  exited.current = onExit;
 
   useEffect(() => {
     const element = target.current;
@@ -79,6 +83,11 @@ export function useTerminal({ path }: Computer) {
       if (event.data instanceof ArrayBuffer) term.write(new Uint8Array(event.data));
     };
     ws.onclose = (event) => {
+      if (event.reason === SHELL_ENDED) {
+        exited.current();
+        return;
+      }
+
       setPhase("ended");
       setReason(event.reason || "The terminal could not be opened");
     };
