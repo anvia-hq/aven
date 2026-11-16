@@ -73,8 +73,8 @@ test.describe("prompt composer", () => {
     await page.reload();
     await expect(menu).toContainText("High");
     await expect(menu).toContainText("o3");
-    await page.getByRole("combobox", { name: "Project" }).click();
-    await page.getByRole("option", { name: "composer-app" }).click();
+    await page.getByRole("button", { name: "Project" }).click();
+    await page.getByRole("button", { name: "composer-app" }).click();
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
@@ -107,8 +107,8 @@ test.describe("prompt composer", () => {
 
     async function startOn(model: string) {
       await page.goto("/threads");
-      await page.getByRole("combobox", { name: "Project" }).click();
-      await page.getByRole("option", { name: "composer-app" }).click();
+      await page.getByRole("button", { name: "Project" }).click();
+      await page.getByRole("button", { name: "composer-app" }).click();
       await menu.click();
       await pickModel(page, model);
       await page.keyboard.press("Escape");
