@@ -40,7 +40,7 @@ test("the model of a provider is picked from a list that loads by itself", async
     route.fulfill({ json: { models: ["claude-haiku-5-5", "claude-sonnet-5"] } }),
   );
   await page.goto("/settings/providers");
-  await page.getByRole("button", { name: "Set up" }).nth(1).click();
+  await page.getByRole("button", { name: "Set up" }).nth(2).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: "Load models" })).toHaveCount(0);
   await dialog.getByLabel("API key").fill("sk-ant-test-1234");
