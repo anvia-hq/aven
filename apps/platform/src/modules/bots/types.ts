@@ -4,6 +4,7 @@ import type { Bot, BotChatMessage, ToolArtifact } from "@aven/protocol/types";
 
 export type {
   Bot,
+  BotAttention,
   BotChatMessage,
   BotChatPeer,
   BotChatQuote,

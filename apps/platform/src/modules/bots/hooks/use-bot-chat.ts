@@ -21,6 +21,19 @@ function parseEvent(data: string): BotEvent | null {
   }
 }
 
+const readAt = new Map<string, number>();
+
+function noteRead(botId: string) {
+  const now = Date.now();
+
+  if (now - (readAt.get(botId) ?? 0) < 1000) return;
+
+  readAt.set(botId, now);
+  void postJson(`/bots/${botId}/read`, {}).catch((error: unknown) =>
+    console.warn("Could not mark the bot read:", error),
+  );
+}
+
 function botSaid(event: BotEvent) {
   if (event.type === "snapshot") {
     return (
@@ -62,6 +75,14 @@ export function useBotChat(botId: string) {
       if (last !== undefined) setLastMessages((current) => ({ ...current, [botId]: last }));
 
       if (event.type === "error") setError(event.message);
+
+      if (event.type === "snapshot") noteRead(botId);
+
+      if (event.type === "message" && event.message.role === "bot") {
+        noteRead(botId);
+
+        if (event.message.questions?.length) void refreshBots();
+      }
 
       if (event.type === "typing" && event.typing) setError(null);
 

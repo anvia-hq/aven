@@ -4,6 +4,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { AvatarBadge } from "@aven/ui/avatar";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
+import { ATTENTION_LABEL } from "../attention";
 import { useBotLastMessages } from "../hooks/use-bot-last-messages";
 import { useBots } from "../hooks/use-bots";
 import { useBotsWorking } from "../hooks/use-bots-working";
@@ -37,6 +38,13 @@ export function BotSidebar() {
               <AvatarBadge className="size-5! [&>svg]:size-3!">
                 <Star />
               </AvatarBadge>
+              {main.attention && (
+                <AvatarBadge
+                  role="img"
+                  aria-label={ATTENTION_LABEL[main.attention.reason]}
+                  className="top-0 right-0 bottom-auto size-2.5! ring-sidebar"
+                />
+              )}
             </BotAvatar>
             <span className="max-w-full truncate group-data-[collapsible=icon]:hidden">
               {main.name}
@@ -58,7 +66,15 @@ export function BotSidebar() {
                 bot={bot}
                 mood={working.has(bot.id) ? "working" : "idle"}
                 className="size-10 group-data-[collapsible=icon]:size-8"
-              />
+              >
+                {bot.attention && (
+                  <AvatarBadge
+                    role="img"
+                    aria-label={ATTENTION_LABEL[bot.attention.reason]}
+                    className="size-2.5! ring-sidebar"
+                  />
+                )}
+              </BotAvatar>
               <div className="flex min-w-0 flex-1 flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
                 <span className="truncate text-sm font-medium">{bot.name}</span>
                 <span className="truncate text-xs text-muted-foreground">
