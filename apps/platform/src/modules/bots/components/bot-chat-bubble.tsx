@@ -9,6 +9,7 @@ import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 import { cn } from "cn";
 
 import { titleOf } from "../artifacts";
+import { avatarFor, parseAvatarSetting } from "../avatar";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
 import type { Bot, BotChatMessage, BotChatQuote } from "../types";
@@ -38,6 +39,9 @@ export function BotChatBubble({
   joined?: { above: boolean; below: boolean };
 }) {
   const mine = isPersons(message);
+  const setting = parseAvatarSetting(bot.avatar);
+  const tinted = setting !== null || bot.avatar === "" || bot.avatar.startsWith("{");
+  const tint = tinted ? avatarFor(bot.id, setting ?? undefined).color : undefined;
   const actions = (
     <Button
       type="button"
@@ -68,7 +72,11 @@ export function BotChatBubble({
           <div className="relative w-fit max-w-[80%] self-end">
             <div
               data-role="user"
-              className="rounded-lg bg-accent px-3 py-2 text-sm whitespace-pre-wrap"
+              style={tint ? { backgroundColor: tint } : undefined}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
+                tint ? "text-avatar-face" : "bg-accent",
+              )}
             >
               {reply}
               {message.text && <MentionedText text={message.text} bots={bots} />}
