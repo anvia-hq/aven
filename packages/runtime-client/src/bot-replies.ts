@@ -1,3 +1,4 @@
+import { renewCodexAuth } from "./codex-auth-renewal";
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 import { botAgentParts, createBotAgent } from "@aven/agents/bot-agent";
@@ -563,6 +564,7 @@ function hostedAgent(
           instructions: parts.instructions,
           model: backend === "claude" ? claudeModel : codexModel,
           effort: backend === "claude" ? claudeEffort : codexEffort,
+          renewed: (token: string, previous: string) => renewCodexAuth(context, previous, token),
           questions: false,
           tools: { catalog: parts.tools, questions: false },
         },

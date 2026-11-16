@@ -69,6 +69,7 @@ const callMethods = [
   "repo.folder",
   "skills.get",
   "mcp.report",
+  "codex.auth",
   "bot.memory",
   "bot.create",
   "bot.delete",
@@ -438,6 +439,11 @@ const appendParams = memoryParams.extend({
 
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
+const codexAuthParams = z.object({
+  previous: z.string().min(1).max(20_000),
+  token: z.string().min(20).max(20_000),
+});
+
 const mcpReportParams = memoryParams.extend({
   results: z
     .array(z.object({ id: z.uuid(), error: z.string().trim().max(500).optional() }))
@@ -654,5 +660,6 @@ export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpit
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
 export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);
+export const parseCodexAuthParams = (params: unknown) => parseParams(codexAuthParams, params);
 
 export type WireRunEvent = z.infer<typeof runEvent>;

@@ -1,3 +1,5 @@
+import { renewCodexAuth } from "./codex-auth-renewal";
+import { codexAuthSecrets, parseCodexAuth } from "@aven/protocol/codex-auth";
 import type { AgentPrompt, AnyTool, Message } from "@anvia/core";
 import {
   parseAgentContinuation,
@@ -502,7 +504,13 @@ export function createRunDriver(context: DriverContext) {
       const token = kind === "claude" ? secrets.claudeToken : secrets.codexToken;
       const variables = env ? [...env] : [];
 
-      if (token) {
+      const auth = kind === "codex" && token ? parseCodexAuth(token) : undefined;
+
+      if (auth) {
+        codexAuthSecrets(auth).forEach((value, index) =>
+          variables.push({ name: `CODEX_AUTH_${index}`, value, secret: true }),
+        );
+      } else if (token) {
         variables.push({
           name: kind === "claude" ? "CLAUDE_CODE_OAUTH_TOKEN" : "CODEX_API_KEY",
           value: token,
@@ -510,7 +518,7 @@ export function createRunDriver(context: DriverContext) {
         });
       }
 
-      const redact = secretRedactor(variables);
+      let redact = secretRedactor(variables);
       const hide = <T>(value: T): T => (redact ? redact(value) : value);
       const hideText = (text: string) => hide(text);
       const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
@@ -539,6 +547,18 @@ export function createRunDriver(context: DriverContext) {
         ),
         model: kind === "claude" ? state.record.claudeModel : state.record.codexModel,
         effort: kind === "claude" ? state.record.claudeEffort : state.record.codexEffort,
+        renewed: (token: string, previous: string) => {
+          const fresh = parseCodexAuth(token);
+
+          if (fresh) {
+            codexAuthSecrets(fresh).forEach((value, index) =>
+              variables.push({ name: `CODEX_RENEWED_${index}`, value, secret: true }),
+            );
+            redact = secretRedactor(variables);
+          }
+
+          renewCodexAuth(context, previous, token);
+        },
         questions: attended,
         tools: {
           catalog: tools,

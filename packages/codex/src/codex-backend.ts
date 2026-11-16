@@ -13,7 +13,8 @@ import { CodexTurn } from "./codex-events";
 import { runCodexGoal } from "./codex-goals";
 import { codexMcpTools } from "./codex-mcp";
 import { serveCodexMcp } from "./codex-mcp-server";
-import { codexSdkQuery } from "./codex-sdk";
+import { codexSdkQuery, readCodexAuth } from "./codex-sdk";
+import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { CodexSessions } from "./codex-sessions";
 import type {
   AgentBackend,
@@ -516,7 +517,26 @@ export class CodexRuns implements AgentBackend {
   ) {
     const prompt = live.prompt;
     const remember = options.rememberSession !== false;
-    const token = context.token ?? "";
+    let token = context.token ?? "";
+    const codexHome = join(this.home, "codex", live.threadId);
+    const renew = () => {
+      const refreshed = readCodexAuth(codexHome);
+      const was = parseCodexAuth(token);
+      const now = refreshed ? parseCodexAuth(refreshed) : undefined;
+
+      if (!refreshed || !was || !now) return;
+
+      if (
+        was.tokens.access_token === now.tokens.access_token &&
+        was.tokens.refresh_token === now.tokens.refresh_token
+      ) {
+        return;
+      }
+
+      const previous = token;
+      token = refreshed;
+      context.renewed?.(refreshed, previous);
+    };
     let sessionId = options.sessionId ?? this.sessions.get(live.threadId);
     let mcp: ReturnType<typeof serveCodexMcp> | undefined;
     try {
@@ -541,7 +561,7 @@ export class CodexRuns implements AgentBackend {
           sessionId,
           token,
           cwd: live.cwd,
-          codexHome: join(this.home, "codex", live.threadId),
+          codexHome,
           mcpUrl: mcp.url,
           mcpToken: mcp.token,
           abortController: live.abort,
@@ -583,6 +603,7 @@ export class CodexRuns implements AgentBackend {
           if (live.abort.signal.aborted) break;
         }
         live.close = undefined;
+        renew();
       }
       this.#settle(live, prompt);
     } catch (error) {
@@ -611,6 +632,7 @@ export class CodexRuns implements AgentBackend {
     } finally {
       live.accepting = false;
       mcp?.close();
+      renew();
       this.#byDurable.delete(live.durableId);
 
       if (this.#byThread.get(live.threadId) === live) this.#byThread.delete(live.threadId);

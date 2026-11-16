@@ -14,7 +14,9 @@ import {
 import { Form } from "@aven/ui/form";
 import { TextField } from "@aven/ui/text-field";
 
+import { useCodexSignIn } from "../hooks/use-codex-sign-in";
 import { useProviderForm } from "../hooks/use-provider-form";
+import { CodexSignIn } from "./codex-sign-in";
 import { PROVIDER_LABELS } from "../types";
 import type { CompatiblePreset, Provider, ProviderKind } from "../types";
 import { ModelField } from "./model-field";
@@ -28,7 +30,7 @@ const keyPlaceholders: Record<ProviderKind, string> = {
   azure: "Key 1 or Key 2 from the resource",
   "openai-compatible": "sk-…",
   "claude-subscription": "sk-ant-oat01-…",
-  "codex-subscription": "sk-…",
+  "codex-subscription": "",
 };
 
 const modelWaiting: Record<ProviderKind, string> = {
@@ -40,14 +42,12 @@ const modelWaiting: Record<ProviderKind, string> = {
   azure: "Enter the resource URL and key to load deployments",
   "openai-compatible": "Enter the base URL to load models",
   "claude-subscription": "The models your subscription runs",
-  "codex-subscription": "The models your key runs",
+  "codex-subscription": "The models your ChatGPT plan runs",
 };
 
 const SUBSCRIPTION_HELP: Partial<Record<ProviderKind, string>> = {
   "claude-subscription":
     "Run `claude setup-token` on your own computer and sign in: it prints a token that starts with sk-ant-oat01-. You need Claude Code and a Claude Pro or Max subscription. Every thread you start on it uses this token.",
-  "codex-subscription":
-    "Create a key at platform.openai.com/api-keys. The runner also needs the Codex CLI, from the SDK's install or from CODEX_PATH. Every thread you start on it uses this key.",
 };
 
 function SubscriptionHelp({ kind }: { kind: ProviderKind }) {
@@ -70,6 +70,8 @@ export function ProviderDialog({ kind, provider, preset, label, prominent = fals
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false), preset);
   const { compatible, azure, bedrock, vertex, subscription } = form;
+  const codex = kind === "codex-subscription";
+  const signIn = useCodexSignIn(provider, form.modelId, () => setOpen(false));
   const keyOptional = compatible && preset?.needsKey !== true;
   const keyLabel =
     (vertex && "Credential") ||
@@ -87,6 +89,7 @@ export function ProviderDialog({ kind, provider, preset, label, prominent = fals
         form.loadOnOpen(next);
 
         if (!next) {
+          signIn.cancel();
           form.reset();
         }
       }}
@@ -163,19 +166,30 @@ export function ProviderDialog({ kind, provider, preset, label, prominent = fals
               />
             </>
           )}
-          {subscription && <SubscriptionHelp kind={kind} />}
-          <TextField
-            label={keyLabel}
-            name="apiKey"
-            type="password"
-            autoComplete="off"
-            required={(!compatible || preset?.needsKey === true) && !editing}
-            placeholder={
-              editing && provider.keyHint
-                ? `Leave blank to keep …${provider.keyHint}`
-                : (preset?.keyPlaceholder ?? keyPlaceholders[kind])
-            }
-          />
+          {codex ? (
+            <CodexSignIn
+              state={signIn.state}
+              connected={editing}
+              onStart={() => void signIn.start()}
+              onCancel={signIn.cancel}
+            />
+          ) : (
+            <>
+              {subscription && <SubscriptionHelp kind={kind} />}
+              <TextField
+                label={keyLabel}
+                name="apiKey"
+                type="password"
+                autoComplete="off"
+                required={(!compatible || preset?.needsKey === true) && !editing}
+                placeholder={
+                  editing && provider.keyHint
+                    ? `Leave blank to keep …${provider.keyHint}`
+                    : (preset?.keyPlaceholder ?? keyPlaceholders[kind])
+                }
+              />
+            </>
+          )}
           <ModelField
             label={kind === "azure" ? "Deployment" : "Model"}
             state={form.modelsState}
@@ -184,12 +198,14 @@ export function ProviderDialog({ kind, provider, preset, label, prominent = fals
             waiting={modelWaiting[kind]}
           />
           <DialogFooter>
-            <Button
-              type="submit"
-              disabled={form.submitting || ((modelRequired || subscription) && !form.modelId)}
-            >
-              {editing ? "Save changes" : "Add provider"}
-            </Button>
+            {(editing || !codex) && (
+              <Button
+                type="submit"
+                disabled={form.submitting || ((modelRequired || subscription) && !form.modelId)}
+              >
+                {editing ? "Save changes" : "Add provider"}
+              </Button>
+            )}
           </DialogFooter>
         </Form>
       </DialogContent>

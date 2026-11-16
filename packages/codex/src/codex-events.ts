@@ -19,7 +19,8 @@ import type {
 
 const MAX_OUTPUT = 8_000;
 
-const AUTH_FAILURE = "The Codex API key was rejected. Replace it in Settings.";
+const AUTH_FAILURE =
+  "The Codex sign-in was rejected. Sign in again with codex login and replace it in Settings.";
 
 type Part = Record<string, unknown>;
 

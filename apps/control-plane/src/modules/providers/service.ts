@@ -1,3 +1,4 @@
+import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { db } from "@aven/db/client";
 import { providers } from "@aven/db/schema/providers";
 import { isModelApi, providerBackend, providerNeedsKey } from "@aven/protocol/providers";
@@ -103,8 +104,20 @@ function changedBaseUrl(kind: Provider, baseUrl: string | undefined) {
 }
 
 function hint(apiKey: string) {
+  const codex = parseCodexAuth(apiKey);
+
+  if (codex) return codex.tokens.refresh_token.slice(-4);
+
   const account = parseServiceAccount(apiKey);
   return account ? (account.private_key_id ?? "json").slice(-4) : apiKey.slice(-4);
+}
+
+function readableKey(row: ProviderRow) {
+  try {
+    return readKey(row);
+  } catch {
+    return undefined;
+  }
 }
 
 const secretColumns = (apiKey: string | undefined) =>
@@ -286,6 +299,35 @@ export const providersService = {
       .limit(1);
 
     return row;
+  },
+
+  async renewCodexAuth(previous: string, token: string) {
+    const before = parseCodexAuth(previous);
+    const after = parseCodexAuth(token);
+
+    if (!before || !after) return false;
+
+    if ((before.tokens.account_id ?? null) !== (after.tokens.account_id ?? null)) return false;
+
+    const rows = await db.select().from(providers).where(eq(providers.kind, "codex-subscription"));
+    const row = rows.find((candidate) => {
+      const saved = readableKey(candidate);
+
+      return (
+        saved !== undefined &&
+        parseCodexAuth(saved)?.tokens.refresh_token === before.tokens.refresh_token
+      );
+    });
+
+    if (!row) return false;
+
+    const updated = await db
+      .update(providers)
+      .set(secretColumns(token.trim()))
+      .where(and(eq(providers.id, row.id), eq(providers.apiKeyEncrypted, row.apiKeyEncrypted!)))
+      .returning({ id: providers.id });
+
+    return updated.length > 0;
   },
 
   async tokenFor(userId: string, backend: string) {
