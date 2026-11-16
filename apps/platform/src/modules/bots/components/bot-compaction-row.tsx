@@ -2,12 +2,24 @@ import { BOT_COMPACT_TOKENS } from "@aven/protocol/bots";
 
 import { Input } from "@aven/ui/input";
 import { SettingsRow } from "@/components/settings-section";
+import { isSubscription } from "@/modules/providers/types";
 
 import { useBotCompaction } from "../hooks/use-bot-compaction";
+import { useBotModel } from "../hooks/use-bot-model";
 import type { Bot } from "../types";
 
 export function BotCompactionRow({ bot }: { bot: Bot }) {
+  const { provider } = useBotModel(bot);
   const { text, setText, commit } = useBotCompaction(bot);
+
+  if (provider && isSubscription(provider)) {
+    return (
+      <SettingsRow
+        title="Summarize the chat after"
+        description={`${provider.name} keeps the bot's conversation in its own session, so Aven summarizes nothing here; you still see every message.`}
+      />
+    );
+  }
 
   return (
     <SettingsRow

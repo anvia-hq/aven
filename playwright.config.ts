@@ -106,6 +106,8 @@ export default defineConfig({
         AVEN_URL: API_URL,
         AVEN_RUNTIME_HOME: RUNTIME_HOME,
         E2E_BOT_RUNNER_PORT: String(BOT_RUNNER_PORT),
+        AVEN_CLAUDE_FAKE: "1",
+        AVEN_CODEX_FAKE: "1",
       },
     },
     {

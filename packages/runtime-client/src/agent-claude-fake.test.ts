@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createTool } from "@anvia/core";
+import { z } from "zod";
 
 import { claudeQueryForProcess } from "./agent-backends";
 import { CLAUDE_FAKE_REPLY, claudeFakeQuery } from "@aven/claude/claude-fake";
@@ -43,5 +45,23 @@ describe("a fake Claude query for tests", () => {
     expect(claudeQueryForProcess({ AVEN_CLAUDE_FAKE: "1" })).toBe(claudeFakeQuery);
     expect(claudeQueryForProcess({})).toBe(claudeSdkQuery);
     expect(claudeQueryForProcess({ AVEN_CLAUDE_FAKE: "0" })).toBe(claudeSdkQuery);
+  });
+
+  test("a bot is answered by sending it a message through its own tool", async () => {
+    const sent: { to?: string; text: string }[] = [];
+    const send = createTool({
+      name: "send_message",
+      description: "send",
+      inputSchema: z.object({ to: z.string().optional(), text: z.string() }),
+      handler: async (input) => {
+        sent.push(input);
+        return "Sent to the person.";
+      },
+    });
+    const messages = await taken(claudeFakeQuery({ ...input(), tools: { catalog: [send] } }));
+
+    expect(sent).toEqual([{ to: "user", text: CLAUDE_FAKE_REPLY }]);
+    expect(messages.map((message) => message.type)).toEqual(["assistant", "user", "result"]);
+    expect(JSON.stringify(messages)).toContain("Sent to the person.");
   });
 });
