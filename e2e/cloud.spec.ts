@@ -66,7 +66,7 @@ test.describe("Aven Cloud", () => {
 
     await page.goto("/threads");
     await page.getByRole("button", { name: "Project", exact: true }).click();
-    await page.getByRole("button", { name: "widgets", exact: true }).click();
+    await page.getByRole("button", { name: "widgets" }).click();
     await expect(page.getByRole("button", { name: "Project", exact: true })).toContainText(
       "widgets",
     );
