@@ -123,9 +123,8 @@ test.describe("threads", () => {
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
 
     await page.getByRole("link", { name: "New thread" }).click();
-    await expect(page.getByRole("button", { name: "Project", exact: true })).toContainText(
-      "project",
-    );
+    await page.getByRole("button", { name: "Project", exact: true }).click();
+    await expect(page.getByRole("button", { name: "project acme/project" })).toBeVisible();
   });
 
   test("a first prompt is shown in the thread at once, before the server has it (decision 0126)", async ({
