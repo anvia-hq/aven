@@ -6,6 +6,7 @@ import { addRunner, connectGithub, importRepository, registerUser } from "./help
 const NAME = "00000000-0000-4000-8000-000000000005.html";
 
 const PAGE = `<!doctype html><html><head><style>
+  html { height: 100% }
   body { margin: 0; height: 300px; color: var(--aven-foreground, red); }
 </style></head><body><p id="hello">Hello from the page</p><p id="network">checking</p><script>
   fetch("/api/threads").then(

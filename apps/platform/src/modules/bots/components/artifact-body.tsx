@@ -73,7 +73,7 @@ export function ArtifactBody({ botId, artifact }: { botId: string; artifact: Art
   }
 
   if (kind === "page") {
-    return <ArtifactFrame key={src} src={src} label={artifact.title} />;
+    return <ArtifactFrame key={src} src={src} label={artifact.title} fill />;
   }
 
   if (kind === "image") {
