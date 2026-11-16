@@ -30,19 +30,37 @@ export function UsageCard({
     totals.inputTokens - totals.cacheWriteTokens - totals.cacheReadTokens,
   );
   const rows = [
-    ["Input", totals.inputTokens],
-    ["Output", totals.outputTokens],
-    ["Cache write", totals.cacheWriteTokens],
-    ["Cache read", totals.cacheReadTokens],
-    ["Uncached", uncached],
+    { label: "Input", value: totals.inputTokens, tone: null },
+    { label: "Output", value: totals.outputTokens, tone: "bg-foreground" },
+    { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-foreground/65" },
+    { label: "Cache read", value: totals.cacheReadTokens, tone: "bg-foreground/40" },
+    { label: "Uncached", value: uncached, tone: "bg-foreground/20" },
   ] as const;
+  const total = totals.outputTokens + totals.cacheWriteTokens + totals.cacheReadTokens + uncached;
 
   return (
     <OverviewCard title="Usage">
+      <div aria-hidden className="flex h-2 w-full gap-px overflow-hidden rounded-full bg-muted">
+        {rows.map(({ label, value, tone }) =>
+          tone && value > 0 ? (
+            <span
+              key={label}
+              className={tone}
+              style={{ width: `${(value / total) * 100}%`, minWidth: 2 }}
+            />
+          ) : null,
+        )}
+      </div>
       <dl className="flex flex-col gap-1 text-xs">
-        {rows.map(([label, value]) => (
+        {rows.map(({ label, value, tone }) => (
           <div key={label} className="flex justify-between">
-            <dt className="text-muted-foreground">{label}</dt>
+            <dt className="flex items-center gap-2 text-muted-foreground">
+              <span
+                aria-hidden
+                className={`size-2 shrink-0 rounded-full ${tone ?? "border border-foreground/30"}`}
+              />
+              {label}
+            </dt>
             <dd className="tabular-nums">{compactNumber(value)}</dd>
           </div>
         ))}
