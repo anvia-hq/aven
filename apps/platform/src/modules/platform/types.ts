@@ -40,3 +40,15 @@ export type ServerModelOption = {
   defaultModel: string;
   keyLabel: string;
 };
+
+export type CloudSettingsSource = "env" | "platform";
+
+export type CloudSettings = {
+  provider: string;
+  base: string;
+  runnerUrl: string;
+  keyHint: string;
+  source: CloudSettingsSource;
+};
+
+export type CloudSettingsDraft = { base: string; runnerUrl: string; apiKey: string };
