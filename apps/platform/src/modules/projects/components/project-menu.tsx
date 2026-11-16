@@ -111,7 +111,9 @@ export function ProjectMenu({
           {sandbox ? (
             <Repositories
               query={query}
-              projects={projects}
+              projects={projects.filter(
+                (project) => !recent.some((shown) => shown.id === project.id),
+              )}
               value={value}
               adding={adding}
               onPick={choose}
@@ -133,17 +135,19 @@ export function ProjectMenu({
               }}
             />
           )}
-          <Projects
-            label="Repositories"
-            projects={projects.filter(
-              (project) =>
-                project.repoFullName !== null &&
-                !recent.some((shown) => shown.id === project.id) &&
-                matches(query, project.name, projectPlace(project)),
-            )}
-            value={value}
-            onPick={choose}
-          />
+          {!sandbox && (
+            <Projects
+              label="Repositories"
+              projects={projects.filter(
+                (project) =>
+                  project.repoFullName !== null &&
+                  !recent.some((shown) => shown.id === project.id) &&
+                  matches(query, project.name, projectPlace(project)),
+              )}
+              value={value}
+              onPick={choose}
+            />
+          )}
         </div>
       </PopoverContent>
     </Popover>
