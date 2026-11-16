@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { addSubscription, registerUser, threadOnFakeRunner } from "./helpers";
 
 const IN_TWO_HOURS = Date.now() + (2 * 60 + 10) * 60_000 + 30_000;
 const IN_THREE_DAYS = Date.now() + (3 * 24 + 5) * 3_600_000 + 60_000;
@@ -30,14 +30,15 @@ test.describe("the Limits card", () => {
 
   test("shows the subscription's 5-hour and weekly limits on a Claude thread", async ({ page }) => {
     await registerUser(page, "lim", "Limits User");
-    const saved = await page.request.put("/api/claude-setup-token", {
-      data: { token: "sk-ant-oat01-e2e-limits-card-9f3a" },
-    });
-    expect(saved.ok(), await saved.text()).toBe(true);
+    const providerId = await addSubscription(
+      page,
+      "claude-subscription",
+      "sk-ant-oat01-e2e-limits-card-9f3a",
+    );
     const { child, threadId } = await threadOnFakeRunner(
       page,
       { FAKE_LIMITS: LIMITS, FAKE_RUN_ENDS_AFTER: "120000" },
-      "claude",
+      providerId,
     );
     runner = child;
     await runOnce(page, threadId);

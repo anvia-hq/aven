@@ -7,6 +7,11 @@ import { expect, type Page } from "@playwright/test";
 
 import { fakeRunnerProcessEnv } from "./fake-runner-config";
 
+const PROVIDER_NAME = {
+  "claude-subscription": "Claude subscription",
+  "codex-subscription": "Codex subscription",
+} as const;
+
 export async function registerUser(page: Page, prefix: string, name = "E2E User") {
   const email = `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@aven.test`;
   await page.goto("/register");
@@ -76,10 +81,22 @@ export function tempRuntimeHome() {
   return mkdtempSync(join(tmpdir(), "aven-e2e-runner-"));
 }
 
+export async function addSubscription(
+  page: Page,
+  kind: "claude-subscription" | "codex-subscription",
+  apiKey: string,
+) {
+  const saved = await page.request.post("/api/providers", {
+    data: { kind, name: PROVIDER_NAME[kind], apiKey, isDefault: true },
+  });
+  expect(saved.ok(), await saved.text()).toBe(true);
+  return ((await saved.json()) as { id: string }).id;
+}
+
 export async function threadOnFakeRunner(
   page: Page,
   env: Record<string, string> = {},
-  backend?: "claude",
+  providerId?: string,
 ) {
   const created = await page.request.post("/api/runtimes", { data: { name: "fake runner" } });
   const { runtime, token } = (await created.json()) as { runtime: { id: string }; token: string };
@@ -112,7 +129,7 @@ export async function threadOnFakeRunner(
   await importRepository(page, "shiny-app");
   const projects = (await (await page.request.get("/api/projects")).json()) as { id: string }[];
   const made = await page.request.post("/api/threads", {
-    data: backend ? { projectId: projects[0]!.id, backend } : { projectId: projects[0]!.id },
+    data: providerId ? { projectId: projects[0]!.id, providerId } : { projectId: projects[0]!.id },
   });
   const thread = (await made.json()) as { id: string };
   return { child, events, threadId: thread.id };

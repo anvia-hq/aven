@@ -581,7 +581,7 @@ test.describe("bots", () => {
     );
 
     await expect(bubble(page, "Scout answered")).toBeVisible();
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]')).toBeVisible();
+    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]').first()).toBeVisible();
 
     const activity = page.locator('[data-activity="bots"]');
     await expect(activity).toContainText("2 messages with");

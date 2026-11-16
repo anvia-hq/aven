@@ -198,28 +198,34 @@ test.describe("a thread on the Codex backend", () => {
     expect(added.ok(), addedText).toBe(true);
     const project = JSON.parse(addedText) as { id: string };
 
-    await page.goto(`${WEB}/settings/codex`);
-    const tokenField = page.getByRole("textbox", { name: "Codex API key" });
-    await tokenField.fill(TOKEN);
-    await page.getByRole("button", { name: "Save" }).click();
-    await expect(page.getByText("Codex API key saved")).toBeVisible();
-    await expect(tokenField).toHaveAttribute("placeholder", "Saved, ending in 9f3a");
+    await page.goto(`${WEB}/settings/providers`);
+    await page
+      .getByRole("listitem")
+      .filter({ hasText: "Codex subscription" })
+      .getByRole("button", { name: "Set up" })
+      .click();
+    const dialog = page.getByRole("dialog", { name: /Set up Codex subscription/ });
+    await dialog.getByRole("textbox", { name: "API key" }).fill(TOKEN);
+    await dialog.getByRole("combobox", { name: "Model" }).click();
+    await page.getByRole("option", { name: "Default · Astra" }).click();
+    await dialog.getByRole("button", { name: "Add provider" }).click();
+    await expect(page.getByText("Provider added")).toBeVisible();
     await expect(page.getByText(TOKEN)).toHaveCount(0);
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
     await page.getByRole("button", { name: "Model and reasoning effort" }).click();
+    await page.getByRole("button", { name: /^(Provider default|Default · Astra)$/ }).click();
     await page.getByRole("option", { name: "Default · Astra" }).click();
     await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toContainText(
-      "Codex Astra",
+      "Default · Astra",
     );
-    await expect(page.getByText("Set a Codex API key")).toHaveCount(0);
     await page.getByRole("textbox", { name: "Prompt" }).fill(PROMPT);
     await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await expect(page.getByText(REPLY)).toBeVisible({ timeout: 45_000 });
     await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toContainText(
-      "Codex Astra",
+      "Default · Astra",
     );
     await expect(page.getByRole("img", { name: "Working" })).toHaveCount(0, { timeout: 15_000 });
     await expect(page.getByText(TOKEN)).toHaveCount(0);
