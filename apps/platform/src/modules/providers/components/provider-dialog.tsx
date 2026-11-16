@@ -63,9 +63,10 @@ type Props = {
   provider?: Provider;
   preset?: CompatiblePreset;
   label: string;
+  prominent?: boolean;
 };
 
-export function ProviderDialog({ kind, provider, preset, label }: Props) {
+export function ProviderDialog({ kind, provider, preset, label, prominent = false }: Props) {
   const [open, setOpen] = useState(false);
   const form = useProviderForm(kind, provider, () => setOpen(false), preset);
   const { compatible, azure, bedrock, vertex, subscription } = form;
@@ -90,7 +91,13 @@ export function ProviderDialog({ kind, provider, preset, label }: Props) {
         }
       }}
     >
-      <DialogTrigger render={<Button variant="outline" size="xs" />}>{label}</DialogTrigger>
+      <DialogTrigger
+        render={
+          <Button variant={prominent ? "default" : "outline"} size={prominent ? "lg" : "xs"} />
+        }
+      >
+        {label}
+      </DialogTrigger>
       <DialogContent>
         <Form
           ref={form.formRef}

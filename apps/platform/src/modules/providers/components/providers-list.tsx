@@ -14,6 +14,7 @@ import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
 
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
+const FEATURED: ProviderKind[] = ["claude-subscription", "codex-subscription"];
 
 const connectedPresets = (providers: Provider[]) =>
   new Set(providers.map((provider) => presetOf(provider)?.id));
@@ -31,6 +32,62 @@ const detail = (provider: Provider, label: string | undefined) =>
   [provider.baseUrl, label ?? provider.modelId, provider.keyHint && `…${provider.keyHint}`]
     .filter(Boolean)
     .join(" · ");
+
+function Highlight({
+  kind,
+  provider,
+  modelLabel,
+}: {
+  kind: ProviderKind;
+  provider?: Provider;
+  modelLabel?: string;
+}) {
+  return (
+    <li
+      aria-label={PROVIDER_LABELS[kind]}
+      className="relative flex flex-col gap-4 overflow-hidden rounded-xl bg-card p-5 shadow-sm ring-1 ring-foreground/10 sm:p-6"
+    >
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/40 to-transparent"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-24 -right-16 size-48 rounded-full bg-primary/[0.07] blur-2xl"
+      />
+      <div className="relative flex items-center gap-3.5">
+        <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-foreground/10">
+          <ProviderLogo kind={kind} size="lg" />
+        </span>
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="text-lg font-semibold tracking-tight">{PROVIDER_LABELS[kind]}</span>
+          {provider && <Badge variant="outline">Connected</Badge>}
+          {provider?.isDefault && <Badge variant="secondary">Default</Badge>}
+        </span>
+      </div>
+      <p className="relative max-w-prose text-sm leading-relaxed text-pretty text-muted-foreground">
+        {PROVIDER_DESCRIPTIONS[kind]}
+      </p>
+      {provider ? (
+        <div className="relative mt-auto flex flex-col gap-2 border-t pt-3">
+          <p className="truncate font-mono text-xs text-muted-foreground">
+            {detail(provider, modelLabel)}
+          </p>
+          <div className="flex flex-wrap items-center gap-1">
+            <ProviderActions
+              provider={provider}
+              edit={<ProviderDialog kind={kind} provider={provider} label="Edit" />}
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="relative mt-auto flex items-center pt-1">
+          <ProviderDialog kind={kind} label="Set up" prominent />
+        </div>
+      )}
+    </li>
+  );
+}
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -81,6 +138,9 @@ export function ProvidersList() {
 
   const taken = connectedPresets(providers);
   const presets = COMPATIBLE_PRESETS.filter((preset) => !taken.has(preset.id));
+  const featured = FEATURED.filter(offered);
+  const availableRows = available.filter((kind) => !featured.includes(kind));
+  const connected = providers.filter((provider) => !featured.includes(provider.kind));
   const kindRow = (kind: ProviderKind): Row => ({
     key: kind,
     kind,
@@ -89,7 +149,7 @@ export function ProvidersList() {
     label: MANY.has(kind) ? "Add" : "Set up",
   });
   const rows: Row[] = [
-    ...available.flatMap((kind) => (kind !== "openai-compatible" ? [kindRow(kind)] : [])),
+    ...availableRows.flatMap((kind) => (kind !== "openai-compatible" ? [kindRow(kind)] : [])),
     ...presets.map((preset): Row => ({
       key: preset.id,
       kind: "openai-compatible",
@@ -98,14 +158,42 @@ export function ProvidersList() {
       description: preset.description,
       label: "Set up",
     })),
-    ...available.flatMap((kind) => (kind === "openai-compatible" ? [kindRow(kind)] : [])),
+    ...availableRows.flatMap((kind) => (kind === "openai-compatible" ? [kindRow(kind)] : [])),
   ];
 
   return (
     <div className="flex flex-col">
-      {providers.length > 0 && (
+      {featured.length > 0 && (
+        <section className="flex flex-col gap-4 border-t py-6 md:py-8">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-base font-semibold tracking-tight">Subscription plans</h2>
+            <p className="max-w-2xl text-xs text-pretty text-muted-foreground">
+              Run threads on Claude's or Codex's own agent, with the plan or key you already have.
+            </p>
+          </div>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {featured.map((kind) => {
+              const provider = providers.find((item) => item.kind === kind);
+
+              return (
+                <Highlight
+                  key={kind}
+                  kind={kind}
+                  provider={provider}
+                  modelLabel={
+                    provider?.modelId
+                      ? byProvider[provider.id]?.labels?.[provider.modelId]
+                      : undefined
+                  }
+                />
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      {connected.length > 0 && (
         <Group title="Connected">
-          {providers.map((provider) => (
+          {connected.map((provider) => (
             <li
               key={provider.id}
               aria-label={provider.name}
