@@ -128,7 +128,7 @@ A host runner reads the login `gh` is signed in as on its machine (`github-login
 
 ### The agent is told which machine it is on (decision 0320)
 
-`run.start` and `run.resume` carry the runtime's `provider` on the thread (`manual`, `boat` or `spaces`; `RemoteRuntime` reads it when it places the run). The `<machine>` section of the coding instructions, and a subagent's, says a computer is the person's own machine, whose folder and tools stay, and a sandbox names its provider (`boat` or `spaces`), is deleted when the thread is idle, and works in a fresh clone of the repository. A run that names no provider is told it is on the person's computer.
+`run.start` and `run.resume` carry the runtime's `provider` on the thread (`manual`, `boat` or `spaces`; `RemoteRuntime` reads it when it places the run). The `<machine>` section of the coding instructions, and a subagent's, says a computer is the person's own machine, whose folder and tools stay, and a sandbox names its provider (`boat` or `spaces`), is deleted when the thread is idle, and works in a fresh clone of the repository. A Claude or Codex run carries the same provider on its context (`machine`), and a subagent it spawns reads that instead of the instructions. A run that names no provider is told it is on the person's computer.
 
 ### A pull in a thread fetches GitHub through the folder (decision 0273)
 

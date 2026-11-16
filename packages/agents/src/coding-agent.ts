@@ -5,14 +5,14 @@ import { forkInstructions } from "./fork-instruction";
 import { environmentInstructions } from "./environment";
 import { mcpInstructions } from "./mcp";
 import { memoryInstructions } from "./memory";
-import { codingInstructions, type MachineProvider } from "./instruction";
+import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
-import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
+import type { MachineProvider, McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type { RunMemory, RunWebSearch } from "@aven/protocol/types";
 
 type CodingAgentOptions = ModelSource & {

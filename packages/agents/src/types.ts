@@ -13,6 +13,8 @@ export type SandboxPaths = {
   skills: string;
 };
 
+export type MachineProvider = "boat" | "spaces";
+
 export type SentExtras = {
   paths?: SandboxPaths;
   attachments?: readonly KeptAttachment[];

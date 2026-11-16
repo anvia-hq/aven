@@ -12,6 +12,7 @@ import type { RunSubagent } from "@aven/agents/tools/types";
 import type { Agent, AgentOutcome, AgentPrompt, AnyTool, Message } from "@anvia/core";
 import type { DurableAgentRegistration } from "@anvia/durable";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
+import type { MachineProvider } from "@aven/agents/types";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 
 export type DurableEnd =
@@ -84,6 +85,7 @@ export type ClaudeRunContext = {
   redact(text: string): string;
   env: readonly RunEnvVar[];
   instructions?: string;
+  machine?: MachineProvider;
   model?: string;
   effort?: string;
   compact?: boolean;
@@ -173,6 +175,7 @@ export type CodexRunContext = {
   redact(text: string): string;
   env: readonly RunEnvVar[];
   instructions?: string;
+  machine?: MachineProvider;
   model?: string;
   effort?: string;
   compact?: boolean;

@@ -6,7 +6,7 @@ import {
 import { sentPrompt } from "@aven/agents/attachments";
 import { environmentInstructions } from "@aven/agents/environment";
 import { forkInstructions } from "@aven/agents/fork-instruction";
-import { codingInstructions, type MachineProvider } from "@aven/agents/instruction";
+import { codingInstructions } from "@aven/agents/instruction";
 import { forPaths, SANDBOX_PATHS } from "@aven/agents/sandbox-paths";
 import { mcpInstructions } from "@aven/agents/mcp";
 import { memoryInstructions } from "@aven/agents/memory";
@@ -28,11 +28,8 @@ import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
 import { backendRefusal } from "@aven/protocol/runtime-wire";
+import type { MachineProvider } from "@aven/agents/types";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
-
-function sandboxProvider(thread: RunThreadInfo): MachineProvider | undefined {
-  return thread.provider === "boat" || thread.provider === "spaces" ? thread.provider : undefined;
-}
 import type {
   AgentBackend,
   DurableEnd,
@@ -51,6 +48,10 @@ import type {
   ThreadWorkspaces,
   Timing,
 } from "./types";
+
+function sandboxProvider(thread: RunThreadInfo): MachineProvider | undefined {
+  return thread.provider === "boat" || thread.provider === "spaces" ? thread.provider : undefined;
+}
 
 type Live = {
   threadId: string;
@@ -531,6 +532,7 @@ export function createRunDriver(context: DriverContext) {
         workspace: () => Promise.resolve(cwd),
         redact: hideText,
         env: env ?? [],
+        machine: sandboxProvider(thread),
         instructions: forPaths(
           parts.filter((part) => part.length > 0).join("\n\n"),
           context.sandbox.paths?.(thread.id) ?? SANDBOX_PATHS,

@@ -1,3 +1,5 @@
+import type { MachineProvider } from "./types";
+
 function longTasks(maxTurns: number, canHandOff: boolean) {
   const plan = Math.round(maxTurns / 4);
   const late = Math.round((maxTurns * 3) / 5);
@@ -26,8 +28,6 @@ function goalReporting() {
   ];
   return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
 }
-
-export type MachineProvider = "boat" | "spaces";
 
 function place(provider?: MachineProvider) {
   if (provider)
