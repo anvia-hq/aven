@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, spyOn, test, type Mock } from "bun:test";
 
 import { BackendUnavailableError, RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
@@ -7,7 +7,15 @@ import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/
 
 const thread = { id: "t1", organizationId: "org-1", runtimeId: "rt-1" };
 
-runtimesService.providerOf = async () => "manual";
+let providerOf: Mock<typeof runtimesService.providerOf>;
+
+beforeAll(() => {
+  providerOf = spyOn(runtimesService, "providerOf").mockImplementation(async () => "manual");
+});
+
+afterAll(() => {
+  providerOf.mockRestore();
+});
 const model: RunModel = {
   provider: "anthropic",
   gatewayPath: "/gateway/anthropic",
@@ -332,7 +340,7 @@ describe("where a run's agent runs (decision 0222)", () => {
   });
 
   test("names the runtime's provider, so the agent is told which machine it is on", async () => {
-    runtimesService.providerOf = async () => "spaces";
+    providerOf.mockImplementation(async () => "spaces");
     try {
       const { posted, remote } = runtime();
       await remote.start({ thread, prompt: "go" } as never);
@@ -343,7 +351,7 @@ describe("where a run's agent runs (decision 0222)", () => {
         (posted[1] as Extract<ControlPlaneToRuntime, { type: "run.resume" }>).thread.provider,
       ).toBe("spaces");
     } finally {
-      runtimesService.providerOf = async () => "manual";
+      providerOf.mockImplementation(async () => "manual");
     }
   });
 
