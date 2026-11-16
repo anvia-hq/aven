@@ -30,32 +30,34 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
 
   return (
     <OverviewCard title="Environment">
-      <Row
-        icon={
-          sandbox ? (
-            <Cloud aria-label={starting ? "Starting" : "Aven Cloud"} />
-          ) : (
-            <Monitor aria-label={runtime?.online ? "Online" : "Offline"} />
-          )
-        }
-        action={
-          owned && thread.state !== "archived" ? <ContinueThreadDialog thread={thread} /> : null
-        }
-      >
-        {name ?? (loaded ? "Runner revoked" : "…")}
-        {starting && <span className="text-muted-foreground"> · starting</span>}
-      </Row>
-      {project && (
-        <Row icon={<Folder />}>
-          {project.name} <span className="text-muted-foreground">· {projectPlace(project)}</span>
+      <div className="flex flex-wrap gap-1.5">
+        <Row
+          icon={
+            sandbox ? (
+              <Cloud aria-label={starting ? "Starting" : "Aven Cloud"} />
+            ) : (
+              <Monitor aria-label={runtime?.online ? "Online" : "Offline"} />
+            )
+          }
+          action={
+            owned && thread.state !== "archived" ? <ContinueThreadDialog thread={thread} /> : null
+          }
+        >
+          {name ?? (loaded ? "Runner revoked" : "…")}
+          {starting && <span className="text-muted-foreground"> · starting</span>}
         </Row>
-      )}
-      <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
-      {github && (
-        <Row icon={<Github />}>
-          <span title={github.detail}>{github.label}</span>
-        </Row>
-      )}
+        {project && (
+          <Row icon={<Folder />}>
+            {project.name} <span className="text-muted-foreground">· {projectPlace(project)}</span>
+          </Row>
+        )}
+        <Row icon={<GitBranch />}>{threadBranch(thread.id)}</Row>
+        {github && (
+          <Row icon={<Github />}>
+            <span title={github.detail}>{github.label}</span>
+          </Row>
+        )}
+      </div>
     </OverviewCard>
   );
 }
@@ -70,7 +72,7 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <p className="flex min-w-0 items-center gap-2 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
+    <p className="flex max-w-full min-w-0 items-center gap-1.5 rounded-full border bg-muted/40 py-1 pr-3 pl-2.5 text-xs [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
       {icon}
       <span className="min-w-0 truncate">{children}</span>
       {action}

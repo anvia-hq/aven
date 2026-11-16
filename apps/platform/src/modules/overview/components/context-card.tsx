@@ -1,5 +1,4 @@
 import { Button } from "@aven/ui/button";
-import { Progress } from "@aven/ui/progress";
 import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
 
@@ -54,25 +53,62 @@ export function ContextCard({
   const percent = Math.min(100, (context.usedTokens / context.contextWindow) * 100);
   return (
     <OverviewCard title="Context">
-      <div className="flex min-h-6 items-center justify-between gap-2">
-        <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>
-        <span className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <ContextRing percent={percent} />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>
           <span className="text-xs text-muted-foreground">
             {compactNumber(context.usedTokens)} / {compactNumber(context.contextWindow)}
           </span>
-          {onCompact && percent >= COMPACT_FROM_PERCENT && (
-            <Button
-              variant="outline"
-              size="xs"
-              disabled={onCompact.busy || onCompact.disabled}
-              onClick={onCompact.run}
-            >
-              {onCompact.busy ? "Compacting…" : "Compact"}
-            </Button>
-          )}
-        </span>
+        </div>
+        {onCompact && percent >= COMPACT_FROM_PERCENT && (
+          <Button
+            variant="outline"
+            size="xs"
+            className="rounded-full"
+            disabled={onCompact.busy || onCompact.disabled}
+            onClick={onCompact.run}
+          >
+            {onCompact.busy ? "Compacting…" : "Compact"}
+          </Button>
+        )}
       </div>
-      <Progress value={percent} aria-label="Context used" />
     </OverviewCard>
+  );
+}
+
+const RING_RADIUS = 15;
+const RING_LENGTH = 2 * Math.PI * RING_RADIUS;
+
+function ContextRing({ percent }: { percent: number }) {
+  return (
+    <svg
+      role="progressbar"
+      aria-label="Context used"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(percent)}
+      viewBox="0 0 36 36"
+      className="size-12 shrink-0 -rotate-90"
+    >
+      <circle
+        cx="18"
+        cy="18"
+        r={RING_RADIUS}
+        fill="none"
+        strokeWidth="4"
+        className="stroke-muted"
+      />
+      <circle
+        cx="18"
+        cy="18"
+        r={RING_RADIUS}
+        fill="none"
+        strokeWidth="4"
+        strokeLinecap="round"
+        className="stroke-foreground"
+        strokeDasharray={`${(percent / 100) * RING_LENGTH} ${RING_LENGTH}`}
+      />
+    </svg>
   );
 }
