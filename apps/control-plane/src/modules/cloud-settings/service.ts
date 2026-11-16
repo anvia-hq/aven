@@ -90,8 +90,12 @@ function fromEnv(env: Env): CloudSettingsView | null {
   };
 }
 
+function namedInEnv(env: Env) {
+  return ENV.find((name) => env[name]?.trim());
+}
+
 function refuseWhenEnv(env: Env) {
-  const named = ENV.find((name) => env[name]?.trim());
+  const named = namedInEnv(env);
 
   if (named) {
     throw new ConflictError(
@@ -105,6 +109,8 @@ export const cloudSettingsService = {
     const inherited = fromEnv(env);
 
     if (inherited) return inherited;
+
+    if (namedInEnv(env)) return null;
 
     const stored = await readStored();
 
@@ -159,7 +165,7 @@ export const cloudSettingsService = {
   },
 
   async apply(env: Env = process.env) {
-    const stored = ENV.some((name) => env[name]?.trim()) ? null : await readStored();
+    const stored = namedInEnv(env) ? null : await readStored();
     const settings = settingsOf(stored);
 
     setSpacesSettings(settings);

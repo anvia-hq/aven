@@ -97,6 +97,15 @@ describe("the Aven Cloud sandbox settings", () => {
     expect(spacesApiKey()).toBe("spk_saved_key");
   });
 
+  test("a half-set environment uses neither it nor the row, and says so the same way either place", async () => {
+    const only = { AVEN_SPACES_RUNNER_URL: "https://aven.example.com/api" };
+
+    await cloudSettingsService.apply(only);
+
+    expect(spacesApiBase()).toBeNull();
+    expect(await cloudSettingsService.view(only)).toBeNull();
+  });
+
   test("the environment wins, and what it sets cannot be edited here", async () => {
     expect(await cloudSettingsService.view(fromEnv)).toEqual({
       provider: "spaces",
