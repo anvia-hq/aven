@@ -126,7 +126,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
   };
 
   const alive = async (pattern: string) =>
-    (await Bun.$`pgrep -f ${pattern}`.nothrow().quiet()).exitCode === 0;
+    (await Bun.$`pgrep -fx ${pattern}`.nothrow().quiet()).exitCode === 0;
 
   afterAll(async () => {
     await Promise.all(clients.map((client) => client.stop()));
@@ -497,7 +497,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
     await until(async () => !(await alive("sleep 3")));
     expect(await alive("sleep 43")).toBe(true);
     expect(JSON.stringify(await manager.history(thread))).not.toContain("never reached");
-    await Bun.$`pkill -f ${"sleep 43"}`.nothrow().quiet();
+    await Bun.$`pkill -fx ${"sleep 43"}`.nothrow().quiet();
   });
 
   test("a setup failure (no API key) surfaces from start and persists nothing", async () => {
@@ -609,7 +609,7 @@ run("RunManager (remote runtime, scripted model, real postgres)", async () => {
         reason: expect.stringContaining("ended"),
       });
       expect(manager.isRunning(thread.id)).toBe(false);
-      await Bun.$`pkill -f ${"sleep 41"}`.nothrow().quiet();
+      await Bun.$`pkill -fx ${"sleep 41"}`.nothrow().quiet();
     });
 
     test("has nowhere to go when the thread has no run", async () => {
