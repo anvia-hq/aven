@@ -4,7 +4,7 @@ Status: accepted.
 
 ## Context
 
-Aven is MIT and open source, and its owner also runs a hosted product with commercial features (plans, billing, usage metering, an admin console, persistent-only runners). Anyone can host the MIT code, so the commercial features have to live in code that is not published. The open code must not know about them, and a self-hosted install must behave exactly as before.
+Aven is open source (Apache 2.0, decision 0315), and its owner also runs a hosted product with commercial features (plans, billing, usage metering, an admin console, persistent-only runners). Anyone can host the MIT code, so the commercial features have to live in code that is not published. The open code must not know about them, and a self-hosted install must behave exactly as before.
 
 ## Decision
 

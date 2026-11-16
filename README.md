@@ -1,5 +1,7 @@
 # Aven
 
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 **Cloud agents that run on your own machines, with your own API keys.**
 
 Aven is a self-hosted platform for AI coding agents. Describe a task in a thread and an agent works
@@ -54,4 +56,12 @@ How installs and releases work: [docs/decision/0073](docs/decision/0073-install-
 
 ## License
 
-Aven is free software under the [MIT License](LICENSE).
+Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
+
+## Trademarks
+
+"Aven" and the Anvia name and logos are trademarks of Anvia. The Apache License does not grant permission to use them; forks must use a different name and branding.
+
+## Contributing
+
+Outside contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).

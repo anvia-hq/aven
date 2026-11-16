@@ -4,7 +4,7 @@
 # AVEN_LOCAL_RUNNER=off; compose sets host, and runners connect to the server (decision 0073).
 FROM oven/bun:1.4.4
 LABEL org.opencontainers.image.source="https://github.com/anvia-hq/aven"
-LABEL org.opencontainers.image.licenses="MIT"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
 WORKDIR /app
 
 # Workspace manifests first so the dependency layer is cached. Every workspace has to be
@@ -28,7 +28,7 @@ COPY sandbox/package.json sandbox/
 RUN bun install --frozen-lockfile --production --filter @aven/control-plane
 
 COPY tsconfig.json ./
-COPY LICENSE /LICENSE
+COPY LICENSE NOTICE /
 COPY apps/control-plane apps/control-plane
 COPY packages packages
 COPY sandbox sandbox

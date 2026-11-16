@@ -1,7 +1,7 @@
 {
   "name": "aven",
   "private": true,
-  "license": "MIT",
+  "license": "Apache-2.0",
   "workspaces": [
     "apps/*",
     "packages/*",
