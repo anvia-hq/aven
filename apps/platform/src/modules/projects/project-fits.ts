@@ -1,14 +1,10 @@
-import { isSandbox } from "@/modules/runtimes/sandbox";
-
 import type { Project } from "./types";
 
 export function projectFits(
-  project: Pick<Project, "repoFullName" | "directory" | "runtimeId">,
-  runtime: { id: string; isCloud: boolean; parentRuntimeId: string | null } | undefined,
+  project: Pick<Project, "directory" | "runtimeId">,
+  runtime: { id: string } | undefined,
 ) {
-  if (!runtime) return false;
+  if (!project.directory) return true;
 
-  if (isSandbox(runtime)) return project.repoFullName !== null && project.directory === null;
-
-  return project.directory !== null && project.runtimeId === runtime.id;
+  return project.runtimeId === runtime?.id;
 }

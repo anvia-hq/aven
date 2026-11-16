@@ -23,6 +23,7 @@ const runtime = (id: string, name: string, over: Record<string, unknown>) => ({
   updateTo: null,
   isControlPlane: false,
   isCloud: false,
+  parentRuntimeId: null,
   canUpdate: false,
   stats: null,
   lastSeenAt: null,

@@ -6,7 +6,6 @@ import { Input } from "@aven/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { GithubMark } from "@/components/brand-icons";
 import { Skeleton } from "@aven/ui/skeleton";
-import { isSandbox } from "@/modules/runtimes/sandbox";
 import type { Runtime } from "@/modules/runtimes/types";
 import type { Thread } from "@/modules/threads/types";
 
@@ -45,7 +44,7 @@ export function ProjectMenu({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const sandbox = isSandbox(runtime);
+  const sandbox = runtime?.isCloud === true;
   const chosen = projects.find((project) => project.id === value);
   const recent = recentProjects(projects, threads).filter(
     (project) =>
@@ -122,21 +121,62 @@ export function ProjectMenu({
               }}
             />
           ) : (
-            <Folders
-              runtime={runtime}
-              query={query}
-              projects={projects}
-              adding={adding}
-              onPick={choose}
-              onAdd={(path) => {
-                setOpen(false);
-                onAddFolder(path);
-              }}
-            />
+            <>
+              <Projects
+                label="Repositories"
+                projects={projects.filter(
+                  (project) =>
+                    project.repoFullName !== null &&
+                    matches(query, project.name, projectPlace(project)),
+                )}
+                value={value}
+                onPick={choose}
+              />
+              <Folders
+                runtime={runtime}
+                query={query}
+                projects={projects}
+                adding={adding}
+                onPick={choose}
+                onAdd={(path) => {
+                  setOpen(false);
+                  onAddFolder(path);
+                }}
+              />
+            </>
           )}
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function Projects({
+  label,
+  projects,
+  value,
+  onPick,
+}: {
+  label: string;
+  projects: Project[];
+  value: string | undefined;
+  onPick: (projectId: string) => void;
+}) {
+  if (projects.length === 0) return null;
+
+  return (
+    <MenuGroup label={label}>
+      {projects.map((project) => (
+        <MenuRow
+          key={project.id}
+          pressed={project.id === value}
+          icon={project.repoFullName ? <GithubMark className="size-4" /> : <Folder />}
+          label={project.name}
+          detail={projectPlace(project)}
+          onClick={() => onPick(project.id)}
+        />
+      ))}
+    </MenuGroup>
   );
 }
 
