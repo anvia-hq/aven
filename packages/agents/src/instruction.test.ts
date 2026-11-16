@@ -111,3 +111,18 @@ test("the agent is told its GitHub identity is the one its commands already use,
   expect(section).toContain("GH_TOKEN is set for the run");
   expect(section).toContain("never run gh auth login");
 });
+
+test("the agent is told what done means, to verify once with the narrowest check, and not to open guessed files", () => {
+  for (const canHandOff of [true, false]) {
+    const text = codingInstructions(200, canHandOff);
+    const delivery = text.split("<delivery>")[1]!.split("</delivery>")[0]!;
+    const verify = text.split("<verify>")[1]!.split("</verify>")[0]!;
+    const workflow = text.split("<workflow>")[1]!.split("</workflow>")[0]!;
+    expect(delivery).toContain("No stubs, placeholders");
+    expect(delivery).toContain("clean cutover");
+    expect(verify).toContain("narrowest check");
+    expect(verify).toContain("once");
+    expect(workflow).toContain("Never open guessed paths");
+    expect(workflow).toContain("Batch independent calls");
+  }
+});
