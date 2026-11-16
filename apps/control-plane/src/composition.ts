@@ -218,6 +218,11 @@ export const botRunner = new BotRunner({
     localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
   ),
   settled: (reply) => goalDriver.settled(reply),
+  said: (botId, askedQuestion) => {
+    void botsService
+      .markSaid(botId, askedQuestion)
+      .catch((error: unknown) => console.warn(`Could not note that bot ${botId} spoke:`, error));
+  },
 });
 
 export const botChats = createBotChats(botRunner);

@@ -38,6 +38,7 @@ const bot: Bot = {
   compactAfterTokens: 30_000,
   runtimeId: null,
   isMain: true,
+  attention: null,
   createdAt: "",
   updatedAt: "",
 };

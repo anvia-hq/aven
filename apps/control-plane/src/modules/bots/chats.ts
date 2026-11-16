@@ -37,6 +37,8 @@ export const createBotChats = (runner: BotRunner) => ({
     if (attachments.some((file) => file.image)) await assertSeesImages(choice.model ?? null);
 
     await runner.send(bot, userId, text, choice, attachments, quote);
+    await botsService.answerQuestion(bot.id);
+    await botsService.markRead(userId, bot.id);
   },
 
   async deliver({
@@ -76,6 +78,7 @@ export const createBotChats = (runner: BotRunner) => ({
       handle: target.handle,
       direction: "to",
     });
+    await botsService.answerQuestion(target.id);
     return { handle: target.handle, name: target.name };
   },
 

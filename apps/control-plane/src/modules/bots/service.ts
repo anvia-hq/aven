@@ -1,8 +1,10 @@
 import { db } from "@aven/db/client";
+import { botGoals } from "@aven/db/schema/bot-goals";
+import { botSchedules } from "@aven/db/schema/bot-schedules";
 import { bots } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
 import { BOT_LIMIT, botHandleOf, freeBotHandle, MAIN_BOT_HANDLE } from "@aven/protocol/bots";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { assertBotModel } from "../providers/bot-run-choice";
@@ -10,7 +12,7 @@ import { requireUsableRuntime } from "../runtimes/usable";
 import type { UpdateBotBody } from "./schema";
 import type { NewBot } from "./types";
 import type { BotRow } from "@aven/db/schema/types";
-import type { Bot } from "@aven/protocol/types";
+import type { Bot, BotAttention } from "@aven/protocol/types";
 
 const MAIN_BOT = {
   name: "Aven",
@@ -19,7 +21,7 @@ const MAIN_BOT = {
   avatar: "",
 } as const;
 
-const view = (row: BotRow): Bot => ({
+const view = (row: BotRow, attention: BotAttention | null): Bot => ({
   id: row.id,
   name: row.name,
   handle: row.handle,
@@ -32,11 +34,29 @@ const view = (row: BotRow): Bot => ({
   compactAfterTokens: row.compactAfterTokens,
   runtimeId: row.runtimeId,
   isMain: row.isMain,
+  attention,
   createdAt: row.createdAt.toISOString(),
   updatedAt: row.updatedAt.toISOString(),
 });
 
 const ownBot = (userId: string, id: string) => and(eq(bots.id, id), eq(bots.userId, userId));
+
+const attentionOf = (
+  row: BotRow,
+  goalSince?: Date | null,
+  scheduleSince?: Date | null,
+): BotAttention | null => {
+  if (row.questionAskedAt) return { reason: "question", since: row.questionAskedAt.toISOString() };
+
+  if (goalSince) return { reason: "goal", since: goalSince.toISOString() };
+
+  if (scheduleSince) return { reason: "schedule", since: scheduleSince.toISOString() };
+
+  if (row.lastSaidAt && (!row.lastReadAt || row.lastReadAt < row.lastSaidAt))
+    return { reason: "message", since: row.lastSaidAt.toISOString() };
+
+  return null;
+};
 
 export const botsService = {
   async makeMain(userId: string) {
@@ -45,7 +65,7 @@ export const botsService = {
       .values({ userId, isMain: true, handle: MAIN_BOT_HANDLE, ...MAIN_BOT })
       .onConflictDoNothing()
       .returning();
-    return made ? view(made) : null;
+    return made ? view(made, null) : null;
   },
 
   async list(userId: string) {
@@ -58,7 +78,61 @@ export const botsService = {
       .from(bots)
       .where(eq(bots.userId, userId))
       .orderBy(desc(bots.isMain), bots.createdAt);
-    return rows.map(view);
+    const ids = rows.map((row) => row.id);
+    const blocked = ids.length
+      ? await db
+          .select({ botId: botGoals.botId, since: max(botGoals.updatedAt) })
+          .from(botGoals)
+          .where(
+            and(
+              eq(botGoals.userId, userId),
+              eq(botGoals.phase, "blocked"),
+              inArray(botGoals.botId, ids),
+            ),
+          )
+          .groupBy(botGoals.botId)
+      : [];
+    const failing = ids.length
+      ? await db
+          .select({ botId: botSchedules.botId, since: max(botSchedules.updatedAt) })
+          .from(botSchedules)
+          .where(
+            and(
+              eq(botSchedules.userId, userId),
+              eq(botSchedules.enabled, true),
+              inArray(botSchedules.lastStatus, ["failed", "missed"]),
+              inArray(botSchedules.botId, ids),
+            ),
+          )
+          .groupBy(botSchedules.botId)
+      : [];
+    const blockedAt = new Map(blocked.map((each) => [each.botId, each.since]));
+    const failedAt = new Map(failing.map((each) => [each.botId, each.since]));
+
+    return rows.map((row) =>
+      view(row, attentionOf(row, blockedAt.get(row.id), failedAt.get(row.id))),
+    );
+  },
+
+  async markSaid(botId: string, askedQuestion: boolean) {
+    const now = new Date();
+    await db
+      .update(bots)
+      .set(askedQuestion ? { lastSaidAt: now, questionAskedAt: now } : { lastSaidAt: now })
+      .where(eq(bots.id, botId));
+  },
+
+  async markRead(userId: string, id: string) {
+    const [row] = await db
+      .update(bots)
+      .set({ lastReadAt: new Date() })
+      .where(ownBot(userId, id))
+      .returning({ id: bots.id });
+    return row?.id ?? null;
+  },
+
+  async answerQuestion(botId: string) {
+    await db.update(bots).set({ questionAskedAt: null }).where(eq(bots.id, botId));
   },
 
   async create(userId: string, { name, instruction, description = "" }: NewBot) {
@@ -79,13 +153,13 @@ export const botsService = {
         .insert(bots)
         .values({ userId, name, handle, instruction, description })
         .returning();
-      return view(row!);
+      return view(row!, null);
     });
   },
 
   async get(userId: string, id: string) {
     const [row] = await db.select().from(bots).where(ownBot(userId, id));
-    return row ? view(row) : null;
+    return row ? view(row, null) : null;
   },
 
   async getByHandle(userId: string, handle: string) {
@@ -93,7 +167,7 @@ export const botsService = {
       .select()
       .from(bots)
       .where(and(eq(bots.userId, userId), eq(bots.handle, handle)));
-    return row ? view(row) : null;
+    return row ? view(row, null) : null;
   },
 
   async remove(userId: string, id: string) {
@@ -101,7 +175,7 @@ export const botsService = {
       .delete(bots)
       .where(and(ownBot(userId, id), eq(bots.isMain, false)))
       .returning();
-    return row ? view(row) : null;
+    return row ? view(row, null) : null;
   },
 
   async update(userId: string, id: string, body: UpdateBotBody) {
@@ -121,10 +195,10 @@ export const botsService = {
       : {};
     const changes = { ...details, ...model, runtimeId };
 
-    if (Object.values(changes).every((value) => value === undefined)) return view(current);
+    if (Object.values(changes).every((value) => value === undefined)) return view(current, null);
 
     const [row] = await db.update(bots).set(changes).where(ownBot(userId, id)).returning();
-    return row ? view(row) : null;
+    return row ? view(row, null) : null;
   },
 };
 

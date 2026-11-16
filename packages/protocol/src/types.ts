@@ -13,6 +13,10 @@ import type {
   MODEL_APIS,
 } from "./runtime-wire";
 
+export type BotAttentionReason = "question" | "goal" | "schedule" | "message";
+
+export type BotAttention = { reason: BotAttentionReason; since: string };
+
 export type Bot = {
   id: string;
   name: string;
@@ -26,6 +30,7 @@ export type Bot = {
   compactAfterTokens: number | null;
   runtimeId: string | null;
   isMain: boolean;
+  attention: BotAttention | null;
   createdAt: string;
   updatedAt: string;
 };

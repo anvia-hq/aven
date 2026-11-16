@@ -29,6 +29,7 @@ const bot: Bot = {
   compactAfterTokens: null,
   runtimeId: null,
   isMain: true,
+  attention: null,
   createdAt: "",
   updatedAt: "",
 };
@@ -641,18 +642,27 @@ describe("BotRunner", () => {
           ],
         },
       ];
+      const said: [string, boolean][] = [];
       const runner = new BotRunner({
         store: fakeStore(),
         replier: {
           ready: () => undefined,
-          answer: async ({ ask }) => ask(questions),
+          answer: async ({ ask, say }) => {
+            say("on it");
+            ask(questions);
+          },
         },
+        said: (botId, askedQuestion) => void said.push([botId, askedQuestion]),
       });
       const client = await watch(runner, stopped);
 
       await runner.send(bot, USER, "help me choose", choice);
       await client.done;
 
+      expect(said).toEqual([
+        [bot.id, false],
+        [bot.id, true],
+      ]);
       expect(
         client.events.find((event) => event.type === "message" && event.message.questions),
       ).toMatchObject({

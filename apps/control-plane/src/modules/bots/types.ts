@@ -92,6 +92,8 @@ export type BotReplier = {
   answer(input: BotReplyInput): Promise<void>;
 };
 
+export type BotSaid = (botId: string, askedQuestion: boolean) => void;
+
 export type BotSettled = (reply: {
   userId: string;
   botId: string;
