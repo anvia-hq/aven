@@ -647,7 +647,7 @@ describe("Codex runs with the same preparation as Claude", () => {
     const running = driver.start({
       type: "run.start",
       runId: "run-rich",
-      thread: { id: "thread-rich", organizationId: "org-1" },
+      thread: { id: "thread-rich", organizationId: "org-1", provider: "boat" },
       prompt: "look at the notes",
       backend: "codex",
       codexToken: TOKEN,
@@ -713,6 +713,7 @@ describe("Codex runs with the same preparation as Claude", () => {
     expect(seen[0]?.instructions).toContain("review");
     expect(seen[0]?.instructions).toContain("API_URL");
     expect(seen[0]?.instructions).toContain("Docs");
+    expect(seen[0]?.instructions).toContain("on the boat provider");
     expect(prompts[0]).toContain("/uploads/notes.txt");
     expect(prompts[1]).toContain("pwd");
     expect(prompts[2]).toContain("[process] Process p1");

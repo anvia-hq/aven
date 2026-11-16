@@ -53,3 +53,11 @@ Your last message is all the sender gets. Make it stand on its own: what you did
 
 export const subagentInstructions = (type: SubagentType, provider?: MachineProvider) =>
   `${common(provider)}\n\n${type === "explore" ? EXPLORE : GENERAL}`;
+
+export function providerOf(instructions: string | undefined): MachineProvider | undefined {
+  if (instructions?.includes("on the boat provider")) return "boat";
+
+  if (instructions?.includes("on the spaces provider")) return "spaces";
+
+  return undefined;
+}

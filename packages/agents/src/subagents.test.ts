@@ -3,7 +3,7 @@ import { createTool, type AnyTool } from "@anvia/core";
 import { z } from "zod";
 
 import { SANDBOX_TOOL_NAMES } from "./sandbox-tools";
-import { subagentInstructions } from "./subagent-instruction";
+import { providerOf, subagentInstructions } from "./subagent-instruction";
 import { SUBAGENT_TYPES, subagentTools } from "./subagents";
 
 const named = (name: string): AnyTool =>
@@ -94,6 +94,13 @@ describe("subagentInstructions", () => {
     expect(subagentInstructions("explore", "boat")).toContain(
       "Aven Cloud sandbox, on the boat provider",
     );
+  });
+
+  test("the provider is read back from the instructions a parent was given", () => {
+    expect(providerOf(subagentInstructions("general", "spaces"))).toBe("spaces");
+    expect(providerOf(subagentInstructions("general", "boat"))).toBe("boat");
+    expect(providerOf(subagentInstructions("general"))).toBeUndefined();
+    expect(providerOf(undefined)).toBeUndefined();
   });
 
   test("an explorer is told to only read, a general subagent is not", () => {
