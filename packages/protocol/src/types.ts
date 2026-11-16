@@ -706,6 +706,7 @@ export type ControlPlaneToRuntime =
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      webSearch?: RunWebSearch;
       machine?: string;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }

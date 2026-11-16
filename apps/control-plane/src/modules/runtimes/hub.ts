@@ -26,6 +26,7 @@ import type {
   RunMcpServer,
   RunMemory,
   RunModel,
+  RunWebSearch,
   RunnerCallMethod,
   RunnerGithub,
   RunSecrets,
@@ -163,6 +164,7 @@ export class RuntimeConnection {
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      webSearch?: RunWebSearch;
       machine?: string;
     },
     sink: BotReplySink,

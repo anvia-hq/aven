@@ -21,6 +21,15 @@ describe("the sandbox's tools", () => {
     expect(target("stop_process", { processId: "p1" })).toBe("p1");
     expect(target("wait_for_port", { containerPort: 3000 })).toBe("3000");
     expect(target("web_search", { query: "bun" })).toBe("bun");
+    expect(target("grep", { pattern: "createTool" })).toBe("createTool");
+    expect(target("find", { name: "config" })).toBe("config");
+    expect(target("glob", { pattern: "src/**/*.ts" })).toBe("src/**/*.ts");
+    expect(target("web_fetch", { url: "https://bun.sh" })).toBe("https://bun.sh");
+    expect(
+      target("todo_write", {
+        todos: [{ status: "completed" }, { status: "pending" }, { status: "pending" }],
+      }),
+    ).toBe("1/3 done");
     expect(target("git_fetch", { branch: "main" })).toBe("main");
     expect(target("git_fetch", {})).toBe("default branch");
     expect(target("desktop_click", { x: 1, y: 2 })).toBe("");

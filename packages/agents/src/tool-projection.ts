@@ -13,7 +13,12 @@ import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
 import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { FORK_THREAD_TOOL_NAME } from "./tools/forks";
+import { FIND_TOOL_NAME } from "./tools/find";
 import { GIT_FETCH_TOOL_NAME } from "./tools/git-fetch";
+import { GLOB_TOOL_NAME } from "./tools/glob";
+import { GREP_TOOL_NAME } from "./tools/grep";
+import { TODO_TOOL_NAME, todoSummary } from "./tools/todo";
+import { WEB_FETCH_TOOL_NAME } from "./tools/web-fetch";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
@@ -86,6 +91,21 @@ export function toolTarget(name: string, input: unknown) {
   }
 
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
+
+  if (name === GREP_TOOL_NAME) return asString(args.pattern);
+
+  if (name === FIND_TOOL_NAME) return asString(args.name);
+
+  if (name === GLOB_TOOL_NAME) return asString(args.pattern);
+
+  if (name === WEB_FETCH_TOOL_NAME) return asString(args.url);
+
+  if (name === TODO_TOOL_NAME) {
+    const { todos } = args;
+    return Array.isArray(todos)
+      ? todoSummary(todos.map(asRecord).map((todo) => ({ status: asString(todo.status) })))
+      : "";
+  }
 
   if (name === DEFINE_GOAL_TOOL_NAME) return asString(args.objective);
 

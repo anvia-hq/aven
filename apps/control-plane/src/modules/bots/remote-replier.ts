@@ -11,6 +11,7 @@ import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
 import { runCockpitCommand } from "../cockpit/commands";
+import { webSearchForRun } from "../runs/web-search";
 import type {
   BotKeeper,
   BotMemoryNotes,
@@ -464,6 +465,7 @@ export class RemoteBotReplier implements BotReplier {
           mcp: mcpServers.length ? mcpServers : undefined,
           memory: { folders, writable: keepsNotes },
           cockpit: "write",
+          webSearch: webSearchForRun,
           machine,
         },
         sink,

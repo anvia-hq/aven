@@ -20,6 +20,8 @@ const list: Kind = { label: (count) => `listed ${plural(count, "directory", "dir
 const search: Kind = {
   label: (count) => (count === 1 ? "searched once" : `searched ${count} times`),
 };
+const webPage: Kind = { label: (count) => `read ${plural(count, "web page")}` };
+const tasks: Kind = { label: () => "updated the task list" };
 const artifacts: Kind = { label: () => "showed files" };
 const fetch: Kind = { label: () => "fetched from GitHub" };
 const computer: Kind = {
@@ -47,7 +49,14 @@ function kindOf(name: string): Kind {
     case "list_files":
       return list;
     case "web_search":
+    case "grep":
+    case "find":
+    case "glob":
       return search;
+    case "web_fetch":
+      return webPage;
+    case "todo_write":
+      return tasks;
     case "show_artifact":
     case "show_image":
       return artifacts;

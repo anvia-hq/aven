@@ -19,6 +19,7 @@ import { createMemoryTool } from "./tools/memory";
 import { createScheduleTools } from "./tools/schedules";
 import { createSendMessageTool } from "./tools/send-message";
 import { createUpdateSelfTool } from "./tools/update-self";
+import { createWebSearchTool } from "./tools/web-search";
 import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type {
   AskQuestion,
@@ -36,7 +37,7 @@ import type {
   ThreadsHost,
   UpdateSelf,
 } from "./tools/types";
-import type { BotPeer, CockpitAccess, RunMemory } from "@aven/protocol/types";
+import type { BotPeer, CockpitAccess, RunMemory, RunWebSearch } from "@aven/protocol/types";
 
 export const BOT_MAX_TURNS = 8;
 
@@ -70,6 +71,7 @@ type BotAgentOptions = ModelSource & {
   api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
+  webSearch?: RunWebSearch;
   onActivity?: (label: string | null) => void;
 };
 
@@ -114,6 +116,7 @@ export function botAgentParts(options: BotPartsOptions) {
     notes,
     cockpit,
     paths,
+    webSearch,
   } = options;
 
   return {
@@ -160,6 +163,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...usingApi(api),
       ...keepingNotes(notes?.host),
       ...workingCockpit(cockpit),
+      ...searching(webSearch),
     ],
   };
 }
@@ -187,6 +191,8 @@ export function createBotAgent(options: BotAgentOptions) {
   });
 }
 
+const searching = (webSearch?: RunWebSearch) =>
+  webSearch ? [createWebSearchTool({ apiKey: webSearch.apiKey })] : [];
 const usingApi = (host?: ApiHost) => (host ? createApiTools(host) : []);
 const reacting = (react?: ReactToMessage) => (react ? [createReactToMessageTool(react)] : []);
 const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
