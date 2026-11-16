@@ -1,3 +1,4 @@
+import { cloudSettingsService } from "./modules/cloud-settings/service";
 import { app } from "./app";
 import {
   botApiApp,
@@ -44,6 +45,7 @@ export async function startControlPlane(edition: Edition) {
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
+  await cloudSettingsService.apply();
   await runtimesService.ensureCloud();
   const previewListener = startPreviews(previews);
 
