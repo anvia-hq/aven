@@ -331,6 +331,7 @@ run("botsService (postgres)", async () => {
       expect(await attentionOf()).toBeNull();
       expect(await botsService.markRead(bob, id)).toBeNull();
 
+      await Bun.sleep(5);
       await botsService.markSaid(id, true);
       const [goal] = await db
         .insert(botGoals)
