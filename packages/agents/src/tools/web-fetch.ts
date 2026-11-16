@@ -87,6 +87,8 @@ export function isPrivateAddress(address: string): boolean {
 
   return (
     unspecifiedOrLoopback ||
+    (first === 0x2001 && (second === 0 || second === 0xdb8)) ||
+    (first === 0x3fff && (second & 0xf000) === 0) ||
     (first & 0xfe00) === 0xfc00 ||
     (first & 0xffc0) === 0xfe80 ||
     (first & 0xff00) === 0xff00

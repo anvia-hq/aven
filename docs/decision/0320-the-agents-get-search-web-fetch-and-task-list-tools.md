@@ -11,7 +11,7 @@ A thread agent and a bot with a computer searched files by running `grep`, `find
 ## Decision
 
 - `grep`, `find` and `glob` run `grep` and `find` on the computer with an argument list, never a shell string, and skip `.git` and `node_modules`. They cap the lines returned and say how many were left out. `glob` matches a path pattern, `find` matches a name.
-- `web_fetch` runs on the runner. It reads public http and https pages as text and pages long ones with `offset`. It resolves the name once, refuses private, loopback, link-local and reserved addresses (including IPv4 inside IPv6 forms such as `::ffff:`, `64:ff9b::` and `2002::`), and connects to that address, so a name that answers differently a second time cannot reach another one. Each redirect is checked and connected the same way.
+- `web_fetch` runs on the runner. It reads public http and https pages as text and pages long ones with `offset`. It resolves the name once, refuses private, loopback, link-local, Teredo, documentation and other reserved addresses (including IPv4 inside IPv6 forms such as `::ffff:`, `64:ff9b::` and `2002::`), and connects to that address, so a name that answers differently a second time cannot reach another one. Each redirect is checked and connected the same way.
 - `todo_write` takes the whole list each time and keeps nothing: the list lives in the conversation, so a restart loses nothing.
 - All five are added to the tools every computer gets (`sandboxTools`), so thread agents and bots with a computer have them. `grep`, `find`, `glob` and `web_fetch` also go to explorer subagents; `todo_write` stays with the parent.
 - `bot.reply` carries the web search key as a run does, so a bot has `web_search` too.
