@@ -3,6 +3,12 @@ import type { SpacesClient } from "./client";
 
 export type SpacesMachineType = "small" | "default" | "large" | "xlarge";
 
+export type SpacesSettings = {
+  base: string;
+  apiKey: string;
+  runnerUrl: string;
+};
+
 export type SpacesSandbox = {
   id: string;
   state: string;
