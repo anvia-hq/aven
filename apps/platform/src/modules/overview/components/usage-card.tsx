@@ -14,10 +14,13 @@ export function UsageCard({
   if (loading) {
     return (
       <OverviewCard title="Usage">
-        <div className="flex flex-col gap-1">
-          {Array.from({ length: 5 }, (_, index) => (
-            <Skeleton key={index} className="h-4 w-full" />
-          ))}
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-2 w-full rounded-full" />
+          <div className="flex flex-col gap-1">
+            {Array.from({ length: 5 }, (_, index) => (
+              <Skeleton key={index} className="h-4 w-full" />
+            ))}
+          </div>
         </div>
       </OverviewCard>
     );

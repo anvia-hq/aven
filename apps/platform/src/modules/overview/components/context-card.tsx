@@ -19,11 +19,13 @@ export function ContextCard({
   if (loading) {
     return (
       <OverviewCard title="Context">
-        <div className="flex min-h-6 items-center justify-between">
-          <Skeleton className="h-5 w-20" />
-          <Skeleton className="h-4 w-16" />
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-12 shrink-0 rounded-full" />
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-3 w-16" />
+          </div>
         </div>
-        <Skeleton className="h-1 w-full" />
       </OverviewCard>
     );
   }
