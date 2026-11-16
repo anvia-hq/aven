@@ -225,6 +225,7 @@ export type CreateRuntimeAgent = (input: {
   skillsUnavailable?: readonly string[];
   envNames?: readonly string[];
   paths?: SandboxPaths;
+  machine?: "boat" | "spaces";
   mcp?: McpNote;
   memory?: RunMemory;
   webSearch?: RunWebSearch;

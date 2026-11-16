@@ -393,6 +393,7 @@ export type RunThreadInfo = {
   projectId?: string;
   ownerId?: string;
   machine?: string;
+  provider?: RuntimeProviderKind;
 };
 
 export type Provider = (typeof PROVIDERS)[number];

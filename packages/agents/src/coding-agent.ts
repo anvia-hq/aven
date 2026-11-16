@@ -5,7 +5,7 @@ import { forkInstructions } from "./fork-instruction";
 import { environmentInstructions } from "./environment";
 import { mcpInstructions } from "./mcp";
 import { memoryInstructions } from "./memory";
-import { codingInstructions } from "./instruction";
+import { codingInstructions, type MachineProvider } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
@@ -30,6 +30,7 @@ type CodingAgentOptions = ModelSource & {
   forks?: boolean;
   memory?: RunMemory;
   paths?: SandboxPaths;
+  machine?: MachineProvider;
 };
 
 export function createCodingAgent(options: CodingAgentOptions) {
@@ -47,7 +48,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
     id: options.id ?? "coding",
     instructions: forPaths(
       [
-        options.instructions ?? codingInstructions(maxTurns, options.questions ?? true),
+        options.instructions ??
+          codingInstructions(maxTurns, options.questions ?? true, options.machine),
         skillsInstructions(options.skills ?? [], options.skillsUnavailable),
         environmentInstructions(options.envNames ?? []),
         mcpInstructions(options.mcp),
