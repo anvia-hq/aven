@@ -47,6 +47,7 @@ import type {
 import type { Agent, AgentMemoryOptions, AgentPrompt, AnyTool } from "@anvia/core";
 import type {
   KeptAttachment,
+  MachineProvider,
   McpNote,
   SandboxPaths,
   SkillListing,
@@ -226,7 +227,7 @@ export type CreateRuntimeAgent = (input: {
   skillsUnavailable?: readonly string[];
   envNames?: readonly string[];
   paths?: SandboxPaths;
-  machine?: "boat" | "spaces";
+  machine?: MachineProvider;
   mcp?: McpNote;
   memory?: RunMemory;
   webSearch?: RunWebSearch;

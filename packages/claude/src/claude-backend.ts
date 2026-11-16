@@ -1,7 +1,7 @@
 import type { AgentPrompt, Message } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import { NOTHING_TO_COMPACT } from "@aven/agents/compaction-agent";
-import { providerOf, subagentInstructions } from "@aven/agents/subagent-instruction";
+import { subagentInstructions } from "@aven/agents/subagent-instruction";
 import { SUBAGENT_MAX_TURNS, subagentTools } from "@aven/agents/subagents";
 import type { SubagentTask } from "@aven/agents/tools/spawn-agent";
 import { CODING_MAX_TURNS } from "@aven/agents/turn-limits";
@@ -507,7 +507,8 @@ export class ClaudeRuns implements AgentBackend {
           ...parent,
           questions: false,
           children: false,
-          instructions: subagentInstructions(task.type, providerOf(parent.instructions)),
+          instructions: subagentInstructions(task.type, parent.machine),
+          machine: parent.machine,
           tools: { catalog, questions: false, signal: meta.abortSignal, emit },
         },
         onEvent: (event) => {
