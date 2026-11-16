@@ -7,6 +7,7 @@ import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status"
 import { useProject } from "@/modules/projects/hooks/use-project";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { isSandbox } from "@/modules/runtimes/sandbox";
 import { githubIdentityNote } from "@/modules/threads/github-identity";
 import { useShipReadiness } from "@/modules/threads/hooks/use-ship-readiness";
 import { ContinueThreadDialog } from "@/modules/threads/components/continue-thread-dialog";
@@ -20,8 +21,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
   const { runtime, loaded } = useRuntime(thread.runtimeId);
   const { runtimes } = useRuntimes();
   const cloud = runtimes.find((candidate) => candidate.isCloud);
-  const sandbox =
-    runtime?.isCloud === true || runtime?.parentRuntimeId != null || (!runtime && Boolean(cloud));
+  const sandbox = isSandbox(runtime) || (!runtime && Boolean(cloud));
   const name = runtime?.name ?? (sandbox ? cloud?.name : undefined);
   const { status } = useComputerStatus(threadComputer(thread.id));
   const { githubMode, runnerGithub } = useShipReadiness(thread.id, thread.running);

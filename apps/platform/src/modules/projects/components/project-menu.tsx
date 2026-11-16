@@ -6,6 +6,7 @@ import { Input } from "@aven/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { GithubMark } from "@/components/brand-icons";
 import { Skeleton } from "@aven/ui/skeleton";
+import { isSandbox } from "@/modules/runtimes/sandbox";
 import type { Runtime } from "@/modules/runtimes/types";
 import type { Thread } from "@/modules/threads/types";
 
@@ -44,7 +45,7 @@ export function ProjectMenu({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const sandbox = runtime?.isCloud === true;
+  const sandbox = isSandbox(runtime);
   const chosen = projects.find((project) => project.id === value);
   const recent = recentProjects(projects, threads).filter(
     (project) =>

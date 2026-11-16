@@ -6,6 +6,7 @@ import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status"
 import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { isSandbox } from "@/modules/runtimes/sandbox";
 
 import { useWorkingWord } from "../hooks/use-working-word";
 
@@ -62,7 +63,7 @@ export function WorkingIndicator({
 }: Props & { running: boolean }) {
   const palettes = useProjectPalettes();
   const { runtime } = useRuntime(runtimeId);
-  const sandbox = runtime?.isCloud === true || runtime?.parentRuntimeId != null;
+  const sandbox = isSandbox(runtime);
   const { status } = useComputerStatus(threadComputer(threadId));
   const creating = sandbox && status?.available === true && status.state !== "awake";
 
