@@ -37,7 +37,7 @@ export type ModelSource = { kind: ProviderKind; apiKey?: string; baseUrl?: strin
 
 export type ModelSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
 
-export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "userId"> & {
+export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "keyDigest" | "userId"> & {
   hasKey: boolean;
   backend: AgentBackendKind;
 };

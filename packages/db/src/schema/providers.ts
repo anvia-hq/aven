@@ -18,6 +18,7 @@ export const providers = pgTable(
     modelId: text("model_id"),
     apiKeyEncrypted: text("api_key_encrypted"),
     keyHint: text("key_hint"),
+    keyDigest: text("key_digest"),
     isDefault: boolean("is_default").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -27,6 +28,7 @@ export const providers = pgTable(
   },
   (table) => [
     index("providers_user_idx").on(table.userId),
+    index("providers_key_digest_idx").on(table.keyDigest),
     uniqueIndex("providers_user_default_idx")
       .on(table.userId)
       .where(sql`${table.isDefault}`),

@@ -379,4 +379,31 @@ run("providersService (postgres)", async () => {
     });
     await providersService.remove(alice, created.id);
   });
+
+  test("a refreshed Codex sign-in replaces the saved one, found by its refresh token", async () => {
+    const file = (access: string, refresh: string, account: string) =>
+      JSON.stringify({
+        auth_mode: "chatgpt",
+        tokens: { access_token: access, refresh_token: refresh, account_id: account },
+      });
+    const first = file("access-1", "refresh-1-abcdefgh", "acct");
+    const created = await providersService.create(alice, {
+      kind: "codex-subscription",
+      name: "Codex",
+      apiKey: first,
+    });
+    const second = file("access-2", "refresh-2-abcdefgh", "acct");
+
+    expect(
+      await providersService.renewCodexAuth(file("x", "refresh-unknown-abc", "acct"), second),
+    ).toBe(false);
+    expect(
+      await providersService.renewCodexAuth(first, file("y", "refresh-3-abcdefgh", "other")),
+    ).toBe(false);
+    expect(await providersService.renewCodexAuth(first, second)).toBe(true);
+    expect(await providersService.tokenFor(alice, "codex")).toBe(second);
+    expect(await providersService.renewCodexAuth(first, second)).toBe(false);
+    expect(JSON.stringify(await providersService.list(alice))).not.toContain("keyDigest");
+    await providersService.remove(alice, created.id);
+  });
 });

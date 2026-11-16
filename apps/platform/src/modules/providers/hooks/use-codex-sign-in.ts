@@ -32,6 +32,8 @@ export function useCodexSignIn(
   const [state, setState] = useState<CodexSignInState>({ status: "idle" });
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const attempt = useRef(0);
+  const latestModel = useRef(modelId);
+  latestModel.current = modelId;
   const { refresh } = useProviders();
 
   const stop = () => {
@@ -54,7 +56,7 @@ export function useCodexSignIn(
         deviceAuthId: code.deviceAuthId,
         userCode: code.userCode,
         providerId: provider?.id,
-        modelId: modelId || undefined,
+        modelId: latestModel.current || undefined,
       });
 
       if (mine !== attempt.current) return;

@@ -20,7 +20,7 @@ On the runner, a JSON credential is written to `CODEX_HOME/auth.json` (mode 0600
 
 ## Refreshed tokens
 
-Codex refreshes the access token itself and the refresh token can rotate. After each turn (and when the run ends) the Codex backend reads `CODEX_HOME/auth.json`. When its tokens changed it uses them for the next turn and the runner calls `codex.auth` on the control plane with the previous and the new file. The control plane finds the `codex-subscription` row whose saved refresh token equals the previous one, checks the account id is the same, and replaces the credential only if the row has not changed meanwhile. A call that matches no row is ignored. A failed call is logged on the runner; the next run then starts from the saved sign-in.
+Codex refreshes the access token itself and the refresh token can rotate. After each turn (and when the run ends) the Codex backend reads `CODEX_HOME/auth.json`. When its tokens changed it uses them for the next turn and the runner calls `codex.auth` on the control plane with the previous and the new file. The control plane finds the `codex-subscription` row by `providers.key_digest`, the SHA-256 of its refresh token (a column that never leaves the server; a sign-in saved before it existed has none and is not renewed until it is signed in again), checks the account id is the same, and replaces the credential only if the row has not changed meanwhile. A call that matches no row is ignored. A failed call is logged on the runner; the next run then starts from the saved sign-in.
 
 The tokens of a refreshed file join the run's redaction list when they are adopted.
 

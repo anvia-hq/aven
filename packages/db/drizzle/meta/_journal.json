@@ -547,6 +547,13 @@
       "when": 1794815839078,
       "tag": "0077_careful_agent_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1794856892118,
+      "tag": "0078_provider_key_digest",
+      "breakpoints": true
     }
   ]
 }
