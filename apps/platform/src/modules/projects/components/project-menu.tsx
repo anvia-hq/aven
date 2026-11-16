@@ -121,30 +121,29 @@ export function ProjectMenu({
               }}
             />
           ) : (
-            <>
-              <Projects
-                label="Repositories"
-                projects={projects.filter(
-                  (project) =>
-                    project.repoFullName !== null &&
-                    matches(query, project.name, projectPlace(project)),
-                )}
-                value={value}
-                onPick={choose}
-              />
-              <Folders
-                runtime={runtime}
-                query={query}
-                projects={projects}
-                adding={adding}
-                onPick={choose}
-                onAdd={(path) => {
-                  setOpen(false);
-                  onAddFolder(path);
-                }}
-              />
-            </>
+            <Folders
+              runtime={runtime}
+              query={query}
+              projects={projects}
+              adding={adding}
+              onPick={choose}
+              onAdd={(path) => {
+                setOpen(false);
+                onAddFolder(path);
+              }}
+            />
           )}
+          <Projects
+            label="Repositories"
+            projects={projects.filter(
+              (project) =>
+                project.repoFullName !== null &&
+                !recent.some((shown) => shown.id === project.id) &&
+                matches(query, project.name, projectPlace(project)),
+            )}
+            value={value}
+            onPick={choose}
+          />
         </div>
       </PopoverContent>
     </Popover>

@@ -9,6 +9,16 @@ async function createProject(page: Page) {
   await importRepository(page, "composer-app");
 }
 
+async function projectId(page: Page, name: string) {
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    id: string;
+    name: string;
+  }[];
+  const project = projects.find((candidate) => candidate.name === name);
+  expect(project).toBeTruthy();
+  return project!.id;
+}
+
 async function pickModel(page: Page, model: string) {
   await page.getByRole("button", { name: /^(Provider default|gpt-4o|o3)$/ }).click();
   await page.getByRole("option", { name: model }).click();
@@ -106,9 +116,7 @@ test.describe("prompt composer", () => {
     const menu = page.getByRole("button", { name: "Model and reasoning effort" });
 
     async function startOn(model: string) {
-      await page.goto("/threads");
-      await page.getByRole("button", { name: "Project" }).click();
-      await page.getByRole("button", { name: "composer-app" }).click();
+      await page.goto("/threads?project=" + (await projectId(page, "composer-app")));
       await menu.click();
       await pickModel(page, model);
       await page.keyboard.press("Escape");
