@@ -200,24 +200,11 @@ function Repositories({
     projects.find((project) => project.repoFullName?.toLowerCase() === fullName.toLowerCase());
 
   if (!github.loaded || (github.installation && !github.repositoriesLoaded))
-    return <MenuSkeleton />;
+    return projects.length > 0 ? null : <MenuSkeleton />;
 
-  if (!github.configured)
-    return <MenuNote>GitHub is not set up on this control plane yet.</MenuNote>;
+  if (!github.configured) return projects.length > 0 ? null : <GithubNote />;
 
-  if (github.installations.length === 0)
-    return (
-      <MenuNote>
-        {github.installUrl ? (
-          <a href={github.installUrl} className="underline">
-            Install the Aven app on GitHub
-          </a>
-        ) : (
-          "Install the Aven app on GitHub"
-        )}{" "}
-        to add a repository.
-      </MenuNote>
-    );
+  if (github.installations.length === 0) return projects.length > 0 ? null : <GithubNote />;
 
   return (
     <MenuGroup label="Repositories">
@@ -254,6 +241,26 @@ function Repositories({
       })}
       {listed.length === 0 && <MenuNote>No repository matches.</MenuNote>}
     </MenuGroup>
+  );
+}
+
+function GithubNote() {
+  const github = useGithubRepositories(true);
+
+  if (!github.configured)
+    return <MenuNote>GitHub is not set up on this control plane yet.</MenuNote>;
+
+  return (
+    <MenuNote>
+      {github.installUrl ? (
+        <a href={github.installUrl} className="underline">
+          Install the Aven app on GitHub
+        </a>
+      ) : (
+        "Install the Aven app on GitHub"
+      )}{" "}
+      to add a repository.
+    </MenuNote>
   );
 }
 
