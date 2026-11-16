@@ -17,7 +17,7 @@ export const HTML_HEADERS = {
   ].join("; "),
 };
 
-const BRIDGE = `<script>(function(){var root=document.documentElement;addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d||d.aven!=="theme")return;var vars=d.vars||{};for(var k in vars)root.style.setProperty(k,vars[k]);root.style.colorScheme=d.scheme==="light"?"light":"dark"});function size(){parent.postMessage({aven:"height",value:Math.ceil(root.getBoundingClientRect().height)},"*")}function start(){new ResizeObserver(size).observe(root);size();parent.postMessage({aven:"ready"},"*")}if(document.readyState==="loading")addEventListener("DOMContentLoaded",start);else start()})()</script>`;
+const BRIDGE = `<script>(function(){var root=document.documentElement;addEventListener("message",function(e){var d=e.data;if(e.source!==parent||!d||d.aven!=="theme")return;var vars=d.vars||{};for(var k in vars)root.style.setProperty(k,vars[k]);root.style.colorScheme=d.scheme==="light"?"light":"dark"});function size(){parent.postMessage({aven:"height",value:Math.ceil(Math.max(root.getBoundingClientRect().height,root.scrollHeight))},"*")}function start(){var watch=new ResizeObserver(size);watch.observe(root);if(document.body)watch.observe(document.body);size();addEventListener("load",size);parent.postMessage({aven:"ready"},"*")}if(document.readyState==="loading")addEventListener("DOMContentLoaded",start);else start()})()</script>`;
 
 const AFTER = [/<head(\s[^>]*)?>/i, /<html(\s[^>]*)?>/i, /<!doctype[^>]*>/i];
 
