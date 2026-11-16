@@ -10,10 +10,11 @@ import type { Computer } from "@/modules/computer/types";
 
 type Props = {
   computer: Computer;
+  onExit: () => void;
 };
 
-export function TerminalViewer({ computer }: Props) {
-  const { target, phase, reason, reconnect } = useTerminal(computer);
+export function TerminalViewer({ computer, onExit }: Props) {
+  const { target, phase, reason, reconnect } = useTerminal(computer, onExit);
 
   return (
     <div className="relative size-full bg-background">

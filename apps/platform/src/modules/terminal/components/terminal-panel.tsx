@@ -26,7 +26,7 @@ export function TerminalPanel({ computer, onClose }: Props) {
       <div className="min-h-0 flex-1">
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "loading" && <Skeleton className="size-full rounded-none" />}
-        {view === "ready" && <TerminalViewer computer={computer} />}
+        {view === "ready" && <TerminalViewer computer={computer} onExit={onClose} />}
         {view === "no-computer" && (
           <ComputerAsleepNotice
             computer={computer}
