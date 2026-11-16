@@ -2,6 +2,8 @@
 
 Date: 2026-11-16
 
+Status: superseded by 0314 (there is no `staging` branch, so Hammer reviews every pull request).
+
 ## Decision
 
 The `review` job of `.github/workflows/hammer.yml` is skipped when the pull request comes from

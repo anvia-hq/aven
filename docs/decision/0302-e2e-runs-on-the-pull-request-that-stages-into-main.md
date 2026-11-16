@@ -2,6 +2,8 @@
 
 Date: 2026-11-15
 
+Status: superseded by 0314 (there is no `staging` branch; e2e runs on every pull request).
+
 ## Decision
 
 - A `staging` branch lives on the remote (there is no local one) and is the repository's default branch, so a new pull request asks for `staging` unless it is told otherwise: work reaches it through pull requests, and `staging` reaches `main` through one pull request of its own.

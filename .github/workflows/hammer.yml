@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   review:
-    if: github.head_ref != 'staging' || github.base_ref != 'main'
     concurrency:
       group: hammer-review-${{ github.event.pull_request.number }}
       cancel-in-progress: true
