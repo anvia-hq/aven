@@ -127,6 +127,15 @@ describe("find", () => {
     );
   });
 
+  test("a folder whose name starts with a dash is a folder, not an option", async () => {
+    mkdirSync(join(dir, "-odd"));
+    writeFileSync(join(dir, "-odd/inside.txt"), "x");
+    expect(await createFindTool(files()).call({ name: "inside", path: "-odd" })).toBe("inside.txt");
+    expect(await createGrepTool(files()).call({ pattern: "x", path: "-odd" })).toBe(
+      "-odd/inside.txt:1:x",
+    );
+  });
+
   test("a folder that does not exist is an error", async () => {
     await expect(createFindTool(files()).call({ name: "x", path: "nope" })).rejects.toThrow();
   });

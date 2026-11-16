@@ -181,3 +181,5 @@ export type SearchableFiles = {
     )
   >;
 };
+
+export type PinnedTarget = { url: URL; address: string };

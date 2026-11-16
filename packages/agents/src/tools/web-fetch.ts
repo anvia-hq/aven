@@ -4,6 +4,9 @@ import { isIP } from "node:net";
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
+import { pinnedRequest } from "./pinned-request";
+import type { PinnedTarget } from "./types";
+
 export const WEB_FETCH_TOOL_NAME = "web_fetch";
 
 export const MAX_FETCH_BYTES = 2 * 1024 * 1024;
@@ -19,7 +22,7 @@ const FETCH_TIMEOUT_MS = 20_000;
 type Resolve = (host: string) => Promise<string[]>;
 
 type WebFetchOptions = {
-  fetch?: typeof fetch;
+  request?: (target: PinnedTarget, signal: AbortSignal) => Promise<Response>;
   resolve?: Resolve;
 };
 
@@ -43,30 +46,50 @@ function privateV4(address: string) {
   );
 }
 
+function wordsOf(part: string) {
+  if (!part.includes(".")) return [Number.parseInt(part, 16)];
+
+  const [a = 0, b = 0, c = 0, d = 0] = part.split(".").map(Number);
+  return [a * 256 + b, c * 256 + d];
+}
+
+function groupsOf(address: string) {
+  const [head = "", tail] = address.split("::");
+  const parse = (text: string) => (text === "" ? [] : text.split(":").flatMap(wordsOf));
+  const left = parse(head);
+
+  if (tail === undefined) return left;
+
+  const right = parse(tail);
+
+  return [...left, ...Array.from({ length: 8 - left.length - right.length }, () => 0), ...right];
+}
+
+const fromWords = (high: number, low: number) =>
+  `${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`;
+
 export function isPrivateAddress(address: string): boolean {
-  const kind = isIP(address);
+  if (isIP(address) === 4) return privateV4(address);
 
-  if (kind === 4) return privateV4(address);
+  const groups = groupsOf(address.toLowerCase());
+  const [first = 0, second = 0] = groups;
+  const embedded = groups.slice(0, 5).every((word) => word === 0) && groups[5] === 0xffff;
 
-  const lower = address.toLowerCase();
-  const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (embedded) return privateV4(fromWords(groups[6] ?? 0, groups[7] ?? 0));
 
-  if (mapped) return privateV4(mapped[1]!);
+  if (first === 0x64 && second === 0xff9b)
+    return privateV4(fromWords(groups[6] ?? 0, groups[7] ?? 0));
 
-  const mappedHex = lower.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (first === 0x2002) return privateV4(fromWords(second, groups[2] ?? 0));
 
-  if (mappedHex) {
-    const high = Number.parseInt(mappedHex[1]!, 16);
-    const low = Number.parseInt(mappedHex[2]!, 16);
-    return privateV4(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
-  }
+  const unspecifiedOrLoopback =
+    groups.slice(0, 7).every((word) => word === 0) && (groups[7] ?? 0) <= 1;
 
   return (
-    lower === "::" ||
-    lower === "::1" ||
-    /^f[cd]/.test(lower) ||
-    /^fe[89ab]/.test(lower) ||
-    lower.startsWith("ff")
+    unspecifiedOrLoopback ||
+    (first & 0xfe00) === 0xfc00 ||
+    (first & 0xffc0) === 0xfe80 ||
+    (first & 0xff00) === 0xff00
   );
 }
 
@@ -95,7 +118,7 @@ async function checkedUrl(raw: string, resolve: Resolve) {
     throw new Error(`${host} is a private address; web_fetch reaches the public internet only`);
   }
 
-  return url;
+  return { url, address: addresses[0]! };
 }
 
 const ENTITIES: Record<string, string> = {
@@ -164,7 +187,7 @@ const TEXT_TYPE =
   /^(text\/|application\/(json|xml|xhtml\+xml|javascript|x-yaml|yaml|ld\+json)|[^;]*\+(json|xml))/i;
 
 export function createWebFetchTool(options: WebFetchOptions = {}) {
-  const request = options.fetch ?? fetch;
+  const request = options.request ?? pinnedRequest;
   const resolve = options.resolve ?? resolveAll;
 
   return createTool({
@@ -189,7 +212,7 @@ export function createWebFetchTool(options: WebFetchOptions = {}) {
 
       const signal = AbortSignal.any(signals);
       let target = await checkedUrl(url, resolve);
-      let response = await request(target, { redirect: "manual", signal });
+      let response = await request(target, signal);
 
       for (let hops = 0; response.status >= 300 && response.status < 400; hops++) {
         const location = response.headers.get("location");
@@ -199,20 +222,20 @@ export function createWebFetchTool(options: WebFetchOptions = {}) {
         if (hops >= MAX_REDIRECTS) throw new Error(`Too many redirects from ${url}`);
 
         await response.body?.cancel().catch(() => undefined);
-        target = await checkedUrl(new URL(location, target).href, resolve);
-        response = await request(target, { redirect: "manual", signal });
+        target = await checkedUrl(new URL(location, target.url).href, resolve);
+        response = await request(target, signal);
       }
 
       if (!response.ok) {
         await response.body?.cancel().catch(() => undefined);
-        throw new Error(`Fetching ${target.href} failed with ${response.status}`);
+        throw new Error(`Fetching ${target.url.href} failed with ${response.status}`);
       }
 
       const contentType = response.headers.get("content-type") ?? "";
 
       if (contentType !== "" && !TEXT_TYPE.test(contentType)) {
         await response.body?.cancel().catch(() => undefined);
-        throw new Error(`${target.href} is ${contentType}, which is not text`);
+        throw new Error(`${target.url.href} is ${contentType}, which is not text`);
       }
 
       const { bytes, cut } = await readCapped(response, MAX_FETCH_BYTES);
@@ -223,7 +246,7 @@ export function createWebFetchTool(options: WebFetchOptions = {}) {
       const next = offset + maxChars < text.length ? offset + maxChars : null;
 
       return {
-        url: target.href,
+        url: target.url.href,
         status: response.status,
         contentType,
         content: page,
