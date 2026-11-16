@@ -23,9 +23,9 @@ export function PullRequestChip({ pullRequests }: Props) {
 
   const more = pullRequests.length - 1;
   return (
-    <ButtonGroup>
+    <ButtonGroup className="[&>[data-slot]:first-child]:rounded-l-full! [&>[data-slot]:not(:has(~[data-slot]))]:rounded-r-full!">
       <Button
-        variant="secondary"
+        variant="outline"
         size="sm"
         className={FLOATING_BUTTON}
         nativeButton={false}
@@ -40,7 +40,7 @@ export function PullRequestChip({ pullRequests }: Props) {
           <DropdownMenuTrigger
             render={
               <Button
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 className={FLOATING_BUTTON}
                 title="Every pull request of this thread"

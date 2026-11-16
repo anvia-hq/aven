@@ -42,7 +42,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
           key={action.name}
           variant="outline"
           size="sm"
-          className="shadow-md"
+          className="rounded-full shadow-md"
           disabled={disabled(action)}
           onClick={() => void start(action)}
         >
@@ -51,7 +51,9 @@ export function ActionButtons({ thread }: { thread: Thread }) {
         </Button>
       ))}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger render={<Button variant="outline" size="sm" className="shadow-md" />}>
+        <PopoverTrigger
+          render={<Button variant="outline" size="sm" className="rounded-full shadow-md" />}
+        >
           <Play />
           Actions
         </PopoverTrigger>
