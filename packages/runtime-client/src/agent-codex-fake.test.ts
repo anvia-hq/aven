@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createTool } from "@anvia/core";
+import { z } from "zod";
 
 import { codexQueryForProcess } from "./agent-backends";
 import { CODEX_FAKE_REPLY, codexFakeQuery } from "@aven/codex/codex-fake";
@@ -45,5 +47,28 @@ describe("a fake Codex query for tests", () => {
     expect(codexQueryForProcess({ AVEN_CODEX_FAKE: "1" })).toBe(codexFakeQuery);
     expect(codexQueryForProcess({})).toBe(codexSdkQuery);
     expect(codexQueryForProcess({ AVEN_CODEX_FAKE: "0" })).toBe(codexSdkQuery);
+  });
+
+  test("a bot is answered by sending it a message through its own tool", async () => {
+    const sent: { to?: string; text: string }[] = [];
+    const send = createTool({
+      name: "send_message",
+      description: "send",
+      inputSchema: z.object({ to: z.string().optional(), text: z.string() }),
+      handler: async (input) => {
+        sent.push(input);
+        return "Sent to the person.";
+      },
+    });
+    const messages = await taken(codexFakeQuery({ ...input(), tools: { catalog: [send] } }));
+
+    expect(sent).toEqual([{ to: "user", text: CODEX_FAKE_REPLY }]);
+    expect(messages.map((message) => message.type)).toEqual([
+      "thread.started",
+      "item.started",
+      "item.completed",
+      "turn.completed",
+    ]);
+    expect(JSON.stringify(messages)).toContain("Sent to the person.");
   });
 });
