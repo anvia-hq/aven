@@ -72,7 +72,7 @@ Before non-trivial work, check `docs/` (format `xxxx-name.md`, numbers per folde
 ## Working style
 
 - Keep changes small and focused; match the code around them. Read the area's section of the system reference first.
-- The remote's default branch is `staging`; `main` takes one pull request, from `staging` (decision 0302). Work reaches `staging` through pull requests of its own, and the e2e suite runs on the `staging` to `main` pull request.
+- The remote's default branch is `main`. Work reaches it through pull requests, and typecheck, lint, format, the unit tests and the e2e suite run on every one (decision 0314).
 - Make small atomic commits with a short imperative subject. A change that spans layers goes in one pull request, one commit per step.
 - Run `bun run typecheck`, `bun run lint`, `bun run format` and the tests for what you changed before every commit. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
 - Record a significant choice as a decision doc in the same pull request. When a change alters how a part works, update its section of `docs/products/0007-system-reference.md`.
