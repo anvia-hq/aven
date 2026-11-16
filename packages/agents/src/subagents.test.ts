@@ -89,6 +89,13 @@ describe("subagentInstructions", () => {
     },
   );
 
+  test("a subagent is told which machine it works on", () => {
+    expect(subagentInstructions("general")).toContain("on the person's own computer");
+    expect(subagentInstructions("explore", "boat")).toContain(
+      "Aven Cloud sandbox, on the boat provider",
+    );
+  });
+
   test("an explorer is told to only read, a general subagent is not", () => {
     expect(subagentInstructions("explore")).toContain("do not create, edit or delete files");
     expect(subagentInstructions("general")).not.toContain("do not create, edit or delete files");

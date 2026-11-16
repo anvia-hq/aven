@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
 import { BackendUnavailableError, RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
-import { LOCAL_RUNTIME_ID } from "../runtimes/service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { RemoteRuntime } from "./remote-runtime";
 import type { ControlPlaneToRuntime, RunGithub, RunModel } from "@aven/protocol/types";
 
 const thread = { id: "t1", organizationId: "org-1", runtimeId: "rt-1" };
+
+runtimesService.providerOf = async () => "manual";
 const model: RunModel = {
   provider: "anthropic",
   gatewayPath: "/gateway/anthropic",
@@ -327,6 +329,20 @@ describe("where a run's agent runs (decision 0222)", () => {
     expect(asked).toEqual([thread.runtimeId]);
     expect(sentThread(posted).machine).toBeUndefined();
     expect(cancelled).toEqual([thread.runtimeId]);
+  });
+
+  test("names the runtime's provider, so the agent is told which machine it is on", async () => {
+    runtimesService.providerOf = async () => "spaces";
+    const { posted, remote } = runtime();
+    await remote.start({ thread, prompt: "go" } as never);
+    await remote.resume({ thread, continuation: {}, response: {} } as never);
+
+    expect(sentThread(posted).provider).toBe("spaces");
+    expect(
+      (posted[1] as Extract<ControlPlaneToRuntime, { type: "run.resume" }>).thread.provider,
+    ).toBe("spaces");
+
+    runtimesService.providerOf = async () => "manual";
   });
 
   test("a thread on the control plane's own runtime runs there, naming no machine", async () => {

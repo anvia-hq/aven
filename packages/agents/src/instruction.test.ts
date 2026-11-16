@@ -106,6 +106,19 @@ test("a request to pull from GitHub is fetched through the folder's own remote, 
   expect(section).toContain("Do not change the folder itself");
 });
 
+test("the agent is told which machine it is on", () => {
+  const computer = codingInstructions(200);
+  expect(computer).toContain("on the person's own computer");
+  expect(computer).toContain("a clone of the person's folder");
+  expect(computer).not.toContain("Aven Cloud sandbox");
+
+  const sandbox = codingInstructions(200, true, "spaces");
+  expect(sandbox).toContain("Aven Cloud sandbox, on the spaces provider");
+  expect(sandbox).toContain("a fresh clone of the project's repository");
+  expect(sandbox).not.toContain("a clone of the person's folder");
+  expect(codingInstructions(200, true, "boat")).toContain("on the boat provider");
+});
+
 test("the agent is told its GitHub identity is the one its commands already use, and not to change it", () => {
   const section = codingInstructions(200).split("<machine>")[1]!.split("</machine>")[0]!;
   expect(section).toContain("GH_TOKEN is set for the run");

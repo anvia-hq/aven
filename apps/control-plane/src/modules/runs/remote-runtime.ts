@@ -10,7 +10,7 @@ import {
   type RuntimeHub,
 } from "../runtimes/hub";
 import { reachRunner } from "../runtimes/providers";
-import { LOCAL_RUNTIME_ID } from "../runtimes/service";
+import { LOCAL_RUNTIME_ID, runtimesService } from "../runtimes/service";
 import { runIdentities, type RunIdentities } from "../workload-identity/grants";
 import type {
   Placement,
@@ -251,7 +251,7 @@ export class RemoteRuntime implements Runtime {
     ) => ControlPlaneToRuntime,
   ): Promise<RuntimeRun> {
     const { connection, hostId, machine } = await this.#placementFor(thread);
-    const placed = forkable(thread, machine);
+    const placed = forkable(thread, machine, await runtimesService.providerOf(thread.runtimeId));
     const runId = crypto.randomUUID();
     const backend = threadBackend(thread);
     const runModel =
@@ -388,7 +388,11 @@ function askedBy(continuation: unknown) {
   }
 }
 
-function forkable(thread: RunThread, machine?: string): RunThreadInfo {
+function forkable(
+  thread: RunThread,
+  machine: string | undefined,
+  provider: RunThreadInfo["provider"],
+): RunThreadInfo {
   return {
     id: thread.id,
     organizationId: thread.organizationId,
@@ -396,5 +400,6 @@ function forkable(thread: RunThread, machine?: string): RunThreadInfo {
     projectId: thread.projectId,
     ownerId: thread.createdBy,
     machine,
+    provider,
   };
 }

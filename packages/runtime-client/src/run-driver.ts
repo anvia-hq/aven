@@ -6,7 +6,7 @@ import {
 import { sentPrompt } from "@aven/agents/attachments";
 import { environmentInstructions } from "@aven/agents/environment";
 import { forkInstructions } from "@aven/agents/fork-instruction";
-import { codingInstructions } from "@aven/agents/instruction";
+import { codingInstructions, type MachineProvider } from "@aven/agents/instruction";
 import { forPaths, SANDBOX_PATHS } from "@aven/agents/sandbox-paths";
 import { mcpInstructions } from "@aven/agents/mcp";
 import { memoryInstructions } from "@aven/agents/memory";
@@ -29,6 +29,10 @@ import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
 import { backendRefusal } from "@aven/protocol/runtime-wire";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
+
+function sandboxProvider(thread: RunThreadInfo): MachineProvider | undefined {
+  return thread.provider === "boat" || thread.provider === "spaces" ? thread.provider : undefined;
+}
 import type {
   AgentBackend,
   DurableEnd,
@@ -469,6 +473,7 @@ export function createRunDriver(context: DriverContext) {
             thread,
             id: `${agentId}-${subagentId}`,
             attended: false,
+            machine: sandboxProvider(thread),
             tools,
             skills,
             skillsUnavailable: run.skillsUnavailable,
@@ -509,7 +514,7 @@ export function createRunDriver(context: DriverContext) {
       const hideText = (text: string) => hide(text);
       const { skills, envNames, forking, tools } = assembled(attended, `run-${runId}`);
       const parts = [
-        codingInstructions(CODING_MAX_TURNS, attended),
+        codingInstructions(CODING_MAX_TURNS, attended, sandboxProvider(thread)),
         skillsInstructions(skills ?? [], run.skillsUnavailable ?? []),
         environmentInstructions(envNames ?? []),
         mcpInstructions(mcp?.note),
@@ -561,6 +566,7 @@ export function createRunDriver(context: DriverContext) {
           id,
           attended,
           forks: forking,
+          machine: sandboxProvider(thread),
           paths: context.sandbox.paths?.(thread.id),
           tools,
           skills,
