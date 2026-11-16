@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ProjectMenu } from "@/modules/projects/components/project-menu";
+import { projectFits } from "@/modules/projects/project-fits";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -32,7 +33,8 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
+  const picked = projects.find((project) => project.id === (chosen ?? asked));
+  const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : undefined;
   const [adding, setAdding] = useState(false);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>

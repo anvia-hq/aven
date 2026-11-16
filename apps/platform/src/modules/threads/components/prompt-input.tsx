@@ -146,7 +146,7 @@ function Composer({
 
   return (
     <div
-      className="relative flex cursor-text flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      className="relative flex cursor-text flex-col rounded-3xl border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       {...drop}
       onKeyDownCapture={handleKeyDown}
       onClick={focusOnBoxClick}

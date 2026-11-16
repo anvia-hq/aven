@@ -15,6 +15,7 @@ The new-thread page listed projects first and the computer second, and the proje
 - On a sandbox it lists the GitHub repositories the workspace's app can reach and adds the one chosen, which is a repository project with no folder.
 - A folder or repository that is already a project is selected, not added again.
 - The five projects a thread touched last are listed under Recent, filtered to the kind the computer can run.
+- A project stays chosen only while it fits the computer. A folder fits only the machine that has it, and a repository fits only a sandbox. Changing the computer clears a project that no longer fits, including one named in the address.
 
 ## Consequences
 

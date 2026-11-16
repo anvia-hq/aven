@@ -11,6 +11,7 @@ import type { Thread } from "@/modules/threads/types";
 
 import { useFolderBrowser } from "../hooks/use-folder-browser";
 import { useGithubRepositories } from "../hooks/use-github-repositories";
+import { projectFits } from "../project-fits";
 import { projectPlace } from "../place";
 import { recentProjects } from "../recent-projects";
 import type { FolderEntry, GithubRepository, Project } from "../types";
@@ -45,8 +46,9 @@ export function ProjectMenu({
   const [query, setQuery] = useState("");
   const sandbox = runtime?.isCloud === true;
   const chosen = projects.find((project) => project.id === value);
-  const recent = recentProjects(projects, threads).filter((project) =>
-    fits(project, sandbox, runtime?.id, query),
+  const recent = recentProjects(projects, threads).filter(
+    (project) =>
+      projectFits(project, runtime) && matches(query, project.name, projectPlace(project)),
   );
 
   function choose(projectId: string) {
@@ -135,16 +137,6 @@ export function ProjectMenu({
       </PopoverContent>
     </Popover>
   );
-}
-
-function fits(project: Project, sandbox: boolean, runtimeId: string | undefined, query: string) {
-  const kind = sandbox ? Boolean(project.repoFullName) : project.directory !== null;
-
-  if (!kind) return false;
-
-  if (!sandbox && project.runtimeId !== runtimeId) return false;
-
-  return matches(query, project.name, projectPlace(project));
 }
 
 function Repositories({

@@ -117,6 +117,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
               <div ref={conversation} className="relative min-h-0 flex-1">
                 <ThreadMessages
                   threadId={thread.id}
+                  runtimeId={thread.runtimeId}
                   projectId={thread.projectId}
                   messages={messages}
                   earlier={earlier}
