@@ -38,13 +38,16 @@ const PRESET_LOGOS = {
   ollama: OllamaMark,
 } as const satisfies Record<CompatiblePreset["id"], unknown>;
 
+const SIZES = { sm: "size-4", lg: "size-7" } as const;
+
 type Props = {
   kind: ProviderKind;
   baseUrl?: string | null;
   preset?: CompatiblePreset["id"];
+  size?: keyof typeof SIZES;
 };
 
-export function ProviderLogo({ kind, baseUrl = null, preset }: Props) {
+export function ProviderLogo({ kind, baseUrl = null, preset, size = "sm" }: Props) {
   const service = preset ?? presetOf({ kind, baseUrl })?.id;
   let Logo: ComponentType<SVGProps<SVGSVGElement>> | undefined;
 
@@ -53,5 +56,5 @@ export function ProviderLogo({ kind, baseUrl = null, preset }: Props) {
 
   if (!Logo) return null;
 
-  return <Logo aria-hidden className="size-4 shrink-0 text-foreground" />;
+  return <Logo aria-hidden className={`${SIZES[size]} shrink-0 text-foreground`} />;
 }
