@@ -115,7 +115,11 @@ test("the agent is told which machine it is on", () => {
   const sandbox = codingInstructions(200, true, "spaces");
   expect(sandbox).toContain("Aven Cloud sandbox, on the spaces provider");
   expect(sandbox).toContain("a fresh clone of the project's repository");
+  expect(sandbox).toContain("origin is that repository");
+  expect(sandbox).toContain("git asks gh for it");
   expect(sandbox).not.toContain("a clone of the person's folder");
+  expect(sandbox).not.toContain("git -C <folder>");
+  expect(sandbox).not.toContain("the machine's own login");
   expect(codingInstructions(200, true, "boat")).toContain("on the boat provider");
 });
 
