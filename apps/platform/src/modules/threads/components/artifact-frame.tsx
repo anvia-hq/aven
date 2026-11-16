@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Maximize, Refresh } from "@mynaui/icons-react";
+import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@aven/ui/dialog";
@@ -43,15 +44,20 @@ export function ArtifactFrame({
   src,
   label,
   caption,
+  fill,
 }: {
   src: string;
   label: string;
   caption?: string;
+  fill?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <figure className="group relative flex min-w-0 flex-col gap-1.5" data-role="artifact-page">
-      <Frame src={src} label={label} />
+    <figure
+      className={cn("group relative flex min-w-0 flex-col gap-1.5", fill && "size-full")}
+      data-role="artifact-page"
+    >
+      <Frame src={src} label={label} fill={fill} />
       <Button
         variant="ghost"
         size="icon-sm"
