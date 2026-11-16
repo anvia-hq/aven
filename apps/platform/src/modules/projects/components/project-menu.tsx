@@ -203,48 +203,63 @@ function Repositories({
   const projectOf = (fullName: string) =>
     projects.find((project) => project.repoFullName?.toLowerCase() === fullName.toLowerCase());
 
-  if (!github.loaded || (github.installation && !github.repositoriesLoaded))
-    return projects.length > 0 ? null : <MenuSkeleton />;
+  const browsing = github.loaded && github.configured && github.installations.length > 0;
+  const waiting = !github.loaded || (github.installation !== "" && !github.repositoriesLoaded);
+  const shown = projects.filter(
+    (project) =>
+      project.repoFullName !== null &&
+      matches(query, project.name, projectPlace(project)) &&
+      !listed.some(
+        (repository) => repository.fullName.toLowerCase() === project.repoFullName?.toLowerCase(),
+      ),
+  );
 
-  if (!github.configured) return projects.length > 0 ? null : <GithubNote />;
+  if (waiting && shown.length === 0) return <MenuSkeleton />;
 
-  if (github.installations.length === 0) return projects.length > 0 ? null : <GithubNote />;
+  if (!browsing && shown.length === 0) return <GithubNote />;
 
   return (
-    <MenuGroup label="Repositories">
-      {github.installations.length > 1 && (
-        <div className="flex gap-1 px-1 pb-1">
-          {github.installations.map((installation) => (
-            <Button
-              key={installation.id}
-              type="button"
-              size="sm"
-              variant={installation.id === github.installation ? "secondary" : "ghost"}
-              onClick={() => github.chooseInstallation(installation.id)}
-            >
-              {installation.accountLogin}
-            </Button>
-          ))}
-        </div>
+    <>
+      <Projects label="Repositories" projects={shown} value={value} onPick={onPick} />
+      {browsing && (
+        <MenuGroup label="Repositories">
+          {github.installations.length > 1 && (
+            <div className="flex gap-1 px-1 pb-1">
+              {github.installations.map((installation) => (
+                <Button
+                  key={installation.id}
+                  type="button"
+                  size="sm"
+                  variant={installation.id === github.installation ? "secondary" : "ghost"}
+                  onClick={() => github.chooseInstallation(installation.id)}
+                >
+                  {installation.accountLogin}
+                </Button>
+              ))}
+            </div>
+          )}
+          {github.repositoriesError && <MenuNote>{github.repositoriesError}</MenuNote>}
+          {listed.map((repository) => {
+            const project = projectOf(repository.fullName);
+            const name = repository.fullName.split("/")[1] ?? repository.fullName;
+            return (
+              <MenuRow
+                key={repository.fullName}
+                pressed={project?.id === value}
+                icon={<GithubMark className="size-4" />}
+                label={name}
+                detail={repository.fullName}
+                disabled={adding && !project}
+                onClick={() =>
+                  project ? onPick(project.id) : onAdd(github.installation, repository)
+                }
+              />
+            );
+          })}
+          {listed.length === 0 && <MenuNote>No repository matches.</MenuNote>}
+        </MenuGroup>
       )}
-      {github.repositoriesError && <MenuNote>{github.repositoriesError}</MenuNote>}
-      {listed.map((repository) => {
-        const project = projectOf(repository.fullName);
-        const name = repository.fullName.split("/")[1] ?? repository.fullName;
-        return (
-          <MenuRow
-            key={repository.fullName}
-            pressed={project?.id === value}
-            icon={<GithubMark className="size-4" />}
-            label={name}
-            detail={repository.fullName}
-            disabled={adding && !project}
-            onClick={() => (project ? onPick(project.id) : onAdd(github.installation, repository))}
-          />
-        );
-      })}
-      {listed.length === 0 && <MenuNote>No repository matches.</MenuNote>}
-    </MenuGroup>
+    </>
   );
 }
 
