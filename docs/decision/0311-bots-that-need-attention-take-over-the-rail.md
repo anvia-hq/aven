@@ -22,7 +22,7 @@ What counts as attention, in this precedence for one bot: it asked a question th
 
 ## Proof
 
-`.aven/proof/bots-attention/before.png` is the slot the day before the change: one Aven avatar, whatever the bots below it were doing. `after.png` is the same rail with three bots waiting (`Scout · Needs your answer` in its tooltip), `after-working.png` a bot mid-run that has said nothing yet, `after-particles.png` a change caught mid-burst, and `after-sidebar.png` the dots in `/bot`'s sidebar.
+`.aven/proof/bots-attention/before.png` is the slot the day before the change: one Aven avatar, whatever the bots below it were doing. `after.png` is the same rail with three bots waiting (`Scout · Needs your answer` in its tooltip), `after-working.png` a bot mid-run that has said nothing yet, `after-particles.png` a change caught mid-burst, and `after-sidebar.png` the dots in `/bot`'s sidebar. `rotation.gif` is ten seconds of the slot itself: the avatar changing bot on its own animation beat, a particle burst on each change, and the tooltip while the pointer holds it.
 
 ## Consequences
 
