@@ -20,6 +20,10 @@ What counts as attention, in this precedence for one bot: it asked a question th
 - The rail has no extra trigger: a bot that is not its turn, or that needs nothing, is reached from `/bot`, whose sidebar lists every bot. The slot and that sidebar are the whole entry surface.
 - `/bot`'s sidebar puts a dot on the avatar of every bot that needs the person (Aven's sits top-right, opposite its star), so a bot that is not on screen is still marked in the list. The mobile tab bar is untouched: the rail it would replace is `hidden md:flex`.
 
+## Proof
+
+`.aven/proof/bots-attention/before.png` is the slot the day before the change: one Aven avatar, whatever the bots below it were doing. `after.png` is the same rail with three bots waiting (`Scout · Needs your answer` in its tooltip), `after-working.png` a bot mid-run that has said nothing yet, `after-particles.png` a change caught mid-burst, and `after-sidebar.png` the dots in `/bot`'s sidebar.
+
 ## Consequences
 
 - `bots` gains three nullable timestamptz columns and one migration; no index, because every query filters by `user_id` or `id` and a person has at most `BOT_LIMIT` rows.
