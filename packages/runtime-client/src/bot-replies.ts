@@ -24,6 +24,7 @@ import type {
   BotThreadDetail,
   BotThreadView,
   CockpitAccess,
+  RunWebSearch,
   ProviderKeyAsk,
   RunMemory,
   RunEvent,
@@ -164,7 +165,17 @@ export class BotReplies {
   }
 
   async #answer(message: BotReplyMessage, abort: AbortController) {
-    const { replyId, bot, prompt, attachments, skills, mcp: servers, memory, cockpit } = message;
+    const {
+      replyId,
+      bot,
+      prompt,
+      attachments,
+      skills,
+      mcp: servers,
+      memory,
+      cockpit,
+      webSearch,
+    } = message;
     const { send } = this.#context;
     const { signal } = abort;
     let mcp: ConnectedMcp | undefined;
@@ -177,7 +188,7 @@ export class BotReplies {
       );
       const agent = await this.#agentFor(
         replyId,
-        { message, skills: skills ?? [], memory, cockpit },
+        { message, skills: skills ?? [], memory, cockpit, webSearch },
         mcp,
         abort,
       );
@@ -271,11 +282,13 @@ export class BotReplies {
       skills,
       memory,
       cockpit,
+      webSearch,
     }: {
       message: BotReplyMessage;
       skills: readonly RunSkill[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      webSearch?: RunWebSearch;
     },
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
@@ -456,6 +469,7 @@ export class BotReplies {
         access: cockpit,
         host: (command) => call("bot.cockpit", { replyId, command }),
       },
+      webSearch,
       createBot: bot.canCreateBots
         ? async (input) => {
             const made = await call("bot.create", { ...input, replyId });

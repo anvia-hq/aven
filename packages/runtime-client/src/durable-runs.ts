@@ -9,6 +9,11 @@ import {
 } from "@anvia/durable";
 import { SqliteDurableStore } from "@anvia/durable/sqlite";
 import { projectToolEnd } from "@aven/agents/tool-projection";
+import { FIND_TOOL_NAME } from "@aven/agents/tools/find";
+import { GLOB_TOOL_NAME } from "@aven/agents/tools/glob";
+import { GREP_TOOL_NAME } from "@aven/agents/tools/grep";
+import { TODO_TOOL_NAME } from "@aven/agents/tools/todo";
+import { WEB_FETCH_TOOL_NAME } from "@aven/agents/tools/web-fetch";
 import { asRecord } from "@aven/agents/values";
 import { Database } from "bun:sqlite";
 import { existsSync, mkdirSync } from "node:fs";
@@ -46,6 +51,14 @@ const SAFE_TOOLS = new Set<string>([
   "read_process_logs",
   "wait_for_port",
 ] satisfies SandboxToolName[]);
+
+const SAFE_OWN_TOOLS = [
+  GREP_TOOL_NAME,
+  FIND_TOOL_NAME,
+  GLOB_TOOL_NAME,
+  WEB_FETCH_TOOL_NAME,
+  TODO_TOOL_NAME,
+];
 
 const MAX_PAYLOAD_BYTES = 64 * 1024 * 1024;
 
@@ -379,7 +392,9 @@ export class DurableRuns implements AgentBackend {
         compaction: input.compaction,
         toolRecovery: Object.fromEntries(
           agent.tools.flatMap((tool) =>
-            SAFE_TOOLS.has(tool.name) ? [[tool.name, "safe" as const]] : [],
+            SAFE_TOOLS.has(tool.name) || SAFE_OWN_TOOLS.includes(tool.name)
+              ? [[tool.name, "safe" as const]]
+              : [],
           ),
         ),
       },

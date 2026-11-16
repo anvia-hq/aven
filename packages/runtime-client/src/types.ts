@@ -105,6 +105,7 @@ export type CreateBotReplyAgent = (input: {
   api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
+  webSearch?: RunWebSearch;
 }) => Pick<Agent<unknown>, "generate">;
 
 export type BotRepliesContext = {

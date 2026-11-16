@@ -16,6 +16,11 @@ const named = (name: string): AnyTool =>
 
 const parentTools = [
   ...SANDBOX_TOOL_NAMES,
+  "grep",
+  "find",
+  "glob",
+  "web_fetch",
+  "todo_write",
   "edit",
   "show_artifact",
   "git_fetch",
@@ -38,6 +43,10 @@ describe("subagentTools", () => {
       "list_ports",
       "list_processes",
       "read_process_logs",
+      "grep",
+      "find",
+      "glob",
+      "web_fetch",
     ]);
   });
 
@@ -49,19 +58,23 @@ describe("subagentTools", () => {
     expect(names).toEqual(expect.arrayContaining(["start_process", "stop_process"]));
   });
 
-  test.each(SUBAGENT_TYPES)("a %s subagent cannot ask, take a goal, show or spawn", (type) => {
-    const names = namesFor(type);
-    for (const forbidden of [
-      "ask_user",
-      "request_secret",
-      "define_goal",
-      "computer_status",
-      "computer_wake",
-      "show_artifact",
-      "spawn_agent",
-    ])
-      expect(names).not.toContain(forbidden);
-  });
+  test.each(SUBAGENT_TYPES)(
+    "a %s subagent cannot ask, take a goal, show, spawn or keep a task list",
+    (type) => {
+      const names = namesFor(type);
+      for (const forbidden of [
+        "ask_user",
+        "request_secret",
+        "define_goal",
+        "computer_status",
+        "computer_wake",
+        "show_artifact",
+        "spawn_agent",
+        "todo_write",
+      ])
+        expect(names).not.toContain(forbidden);
+    },
+  );
 });
 
 describe("subagentInstructions", () => {

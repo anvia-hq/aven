@@ -126,3 +126,15 @@ test("the agent is told what done means, to verify once with the narrowest check
     expect(workflow).toContain("Batch independent calls");
   }
 });
+
+test("the agent is told to search with its own search tools, read pages with web_fetch and keep a task list", () => {
+  for (const canHandOff of [true, false]) {
+    const workflow = codingInstructions(200, canHandOff)
+      .split("<workflow>")[1]!
+      .split("</workflow>")[0]!;
+    expect(workflow).toContain("grep");
+    expect(workflow).toContain("glob");
+    expect(workflow).toContain("web_fetch");
+    expect(workflow).toContain("todo_write");
+  }
+});

@@ -2,8 +2,13 @@ import type { AnyTool } from "@anvia/core";
 import { createSandboxTools, type SandboxRuntime } from "@anvia/sandbox";
 import { SANDBOX_TOOL_NAMES } from "@aven/agents/sandbox-tools";
 import { createEditTool } from "@aven/agents/tools/edit";
+import { createFindTool } from "@aven/agents/tools/find";
+import { createGlobTool } from "@aven/agents/tools/glob";
+import { createGrepTool } from "@aven/agents/tools/grep";
 import { createShowArtifactTool } from "@aven/agents/tools/show-artifact";
+import { createTodoTool } from "@aven/agents/tools/todo";
 import { createViewImageTool } from "@aven/agents/tools/view-image";
+import { createWebFetchTool } from "@aven/agents/tools/web-fetch";
 
 import type { ArtifactStore } from "./artifacts";
 import { withBackground } from "./background-command";
@@ -27,6 +32,11 @@ export function sandboxTools(
       tool.name === "exec_command" && start ? withBackground(tool, start) : tool,
     ),
     createEditTool(sandbox),
+    createGrepTool(sandbox),
+    createFindTool(sandbox),
+    createGlobTool(sandbox),
+    createWebFetchTool(),
+    createTodoTool(),
     createViewImageTool(sandbox),
     createShowArtifactTool({
       readFile: (options) => sandbox.readFile(options),

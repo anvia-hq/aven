@@ -165,3 +165,19 @@ export type ThreadsHost = {
 };
 
 export type UpdateSelf = (changes: SelfChanges) => Promise<{ name: string; description: string }>;
+
+export type SearchableFiles = {
+  workdir: string;
+  exec(options: {
+    command: string;
+    args?: readonly string[];
+    cwd?: string;
+    timeoutMs?: number;
+    abortSignal?: AbortSignal | undefined;
+  }): Promise<
+    { stdout: Uint8Array; stderr: Uint8Array; stdoutTruncated: boolean } & (
+      | { status: "exited"; exitCode: number }
+      | { status: "timed_out" }
+    )
+  >;
+};
