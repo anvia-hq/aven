@@ -28,7 +28,7 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByText("Add a project to get started.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Project" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
@@ -99,7 +99,7 @@ test.describe("threads", () => {
     await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
 
     await page.getByRole("link", { name: "New thread" }).click();
-    await expect(page.getByRole("combobox", { name: "Project" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Project" })).toBeVisible();
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello again");
     await page.getByRole("button", { name: "Send" }).click();
 
@@ -123,8 +123,8 @@ test.describe("threads", () => {
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
 
     await page.getByRole("link", { name: "New thread" }).click();
-    await page.getByRole("combobox", { name: "Project" }).click();
-    await expect(page.getByRole("option", { name: "project" })).toBeVisible();
+    await page.getByRole("button", { name: "Project", exact: true }).click();
+    await expect(page.getByRole("button", { name: "project acme/project" })).toBeVisible();
   });
 
   test("a first prompt is shown in the thread at once, before the server has it (decision 0126)", async ({
@@ -166,7 +166,7 @@ test.describe("threads", () => {
     await expect(prompt).toContainText("hello");
 
     await prompt.blur();
-    await page.mouse.click(outer!.x + 3, outer!.y + 3);
+    await page.mouse.click(outer!.x + 10, outer!.y + 10);
     await expect(prompt).toBeFocused();
   });
 

@@ -220,7 +220,7 @@ test.describe("the project page", () => {
     await page.goto(`/projects/${id}`);
     await page.getByRole("button", { name: "Start thread" }).click();
     await expect(page).toHaveURL(new RegExp(`/threads\\?project=${id}$`));
-    await expect(page.getByRole("combobox", { name: "Project" })).toContainText("docs-site");
+    await expect(page.getByRole("button", { name: "Project" })).toContainText("docs-site");
 
     await page.getByRole("textbox", { name: "Prompt" }).fill("Look at the docs");
     await page.getByRole("button", { name: "Send" }).click();
@@ -237,7 +237,7 @@ test.describe("the project page", () => {
     await registerUser(page, "repo", "Repo Person");
     await projectOf(page, "shiny-app");
     await page.goto(`/threads?project=${crypto.randomUUID()}`);
-    await expect(page.getByRole("combobox", { name: "Project" })).toContainText("Choose a project");
+    await expect(page.getByRole("button", { name: "Project" })).toContainText("Choose a");
   });
 
   test("a repository with no README has no README section, and a path that is not a folder says so", async ({

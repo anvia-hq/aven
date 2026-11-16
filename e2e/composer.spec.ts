@@ -9,6 +9,16 @@ async function createProject(page: Page) {
   await importRepository(page, "composer-app");
 }
 
+async function projectId(page: Page, name: string) {
+  const projects = (await (await page.request.get("/api/projects")).json()) as {
+    id: string;
+    name: string;
+  }[];
+  const project = projects.find((candidate) => candidate.name === name);
+  expect(project).toBeTruthy();
+  return project!.id;
+}
+
 async function pickModel(page: Page, model: string) {
   await page.getByRole("button", { name: /^(Provider default|gpt-4o|o3)$/ }).click();
   await page.getByRole("option", { name: model }).click();
@@ -73,8 +83,8 @@ test.describe("prompt composer", () => {
     await page.reload();
     await expect(menu).toContainText("High");
     await expect(menu).toContainText("o3");
-    await page.getByRole("combobox", { name: "Project" }).click();
-    await page.getByRole("option", { name: "composer-app" }).click();
+    await page.getByRole("button", { name: "Project" }).click();
+    await page.getByRole("button", { name: "composer-app" }).click();
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
@@ -106,9 +116,7 @@ test.describe("prompt composer", () => {
     const menu = page.getByRole("button", { name: "Model and reasoning effort" });
 
     async function startOn(model: string) {
-      await page.goto("/threads");
-      await page.getByRole("combobox", { name: "Project" }).click();
-      await page.getByRole("option", { name: "composer-app" }).click();
+      await page.goto("/threads?project=" + (await projectId(page, "composer-app")));
       await menu.click();
       await pickModel(page, model);
       await page.keyboard.press("Escape");

@@ -2,13 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { AddProjectDialog } from "@/modules/projects/components/add-project-dialog";
-import { ProjectPicker } from "@/modules/projects/components/project-picker";
-import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
-import { useRuntimeChoice } from "@/modules/runtimes/hooks/use-runtime-choice";
+import { ProjectMenu } from "@/modules/projects/components/project-menu";
+import { projectFits } from "@/modules/projects/project-fits";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
+import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
 import { ThreadList } from "@/modules/threads/components/thread-list";
+import { useNewThreadComputer } from "@/modules/threads/hooks/use-new-thread-computer";
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
@@ -23,8 +23,9 @@ export const Route = createFileRoute("/_authed/_shell/threads/")({
 
 function NewThread() {
   const startThread = useStartThread();
-  const { projects, loaded } = useProjects();
-  const { threads, shared } = useThreads();
+  const { projects, addFolder, addGithubRepository } = useProjects();
+  const { threads, shared, all } = useThreads();
+  const computer = useNewThreadComputer();
   const wide = useMediaQuery("(min-width: 768px)");
   const open = threads.filter((thread) => thread.state === "open");
   const openShared = shared.filter((thread) => thread.state === "open");
@@ -32,12 +33,20 @@ function NewThread() {
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const projectId = chosen ?? projects.find((project) => project.id === asked)?.id;
-  const project = projects.find((candidate) => candidate.id === projectId);
-  const computer = useRuntimeChoice(project);
+  const picked = projects.find((project) => project.id === (chosen ?? asked));
+  const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : undefined;
+  const [adding, setAdding] = useState(false);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
     startThread(projectId, message, selection, computer.runtimeId);
+
+  async function addAndChoose(made: Promise<{ id: string } | null>) {
+    setAdding(true);
+    const project = await made;
+    setAdding(false);
+
+    if (project) setProjectId(project.id);
+  }
 
   return (
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
@@ -51,32 +60,41 @@ function NewThread() {
           </p>
         </div>
 
-        {loaded &&
-          (projects.length === 0 ? (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
-              <p className="text-sm text-muted-foreground">Add a project to get started.</p>
-              <AddProjectDialog onAdded={(project) => setProjectId(project.id)} />
-            </div>
-          ) : (
-            <>
-              <PromptInput
-                autoFocus
-                onSubmit={start}
-                tools={
-                  <>
-                    <ProjectPicker value={projectId} onChange={setProjectId} />
-                    {project && (
-                      <RuntimePicker
-                        choices={computer.choices}
-                        value={computer.runtimeId}
-                        onChange={computer.choose}
-                      />
-                    )}
-                  </>
-                }
-              />
-            </>
-          ))}
+        {computer.loaded && (
+          <PromptInput
+            autoFocus
+            onSubmit={start}
+            tools={
+              <>
+                <RuntimePicker
+                  choices={computer.choices}
+                  value={computer.runtimeId}
+                  onChange={computer.choose}
+                />
+                <ProjectMenu
+                  runtime={computer.runtime}
+                  projects={projects}
+                  threads={all}
+                  value={projectId}
+                  adding={adding}
+                  onPick={setProjectId}
+                  onAddFolder={(path) =>
+                    computer.runtime &&
+                    void addAndChoose(addFolder({ runtimeId: computer.runtime.id, path }))
+                  }
+                  onAddRepository={(installationId, repository) =>
+                    void addAndChoose(
+                      addGithubRepository({
+                        installationId,
+                        repository: repository.fullName,
+                      }),
+                    )
+                  }
+                />
+              </>
+            }
+          />
+        )}
 
         <section aria-label="Recent threads" className="flex flex-col gap-1">
           <h3 className="px-3 text-xs font-medium text-muted-foreground">Recent</h3>

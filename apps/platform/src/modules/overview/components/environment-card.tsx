@@ -1,8 +1,13 @@
-import { Folder, GitBranch, Github, Servers } from "@mynaui/icons-react";
+import { Cloud, Folder, GitBranch, Github, Monitor } from "@mynaui/icons-react";
+import type { ReactNode } from "react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
+import { threadComputer } from "@/modules/computer/computer";
+import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status";
 import { useProject } from "@/modules/projects/hooks/use-project";
+import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { isSandbox } from "@/modules/runtimes/sandbox";
 import { githubIdentityNote } from "@/modules/threads/github-identity";
 import { useShipReadiness } from "@/modules/threads/hooks/use-ship-readiness";
 import { ContinueThreadDialog } from "@/modules/threads/components/continue-thread-dialog";
@@ -13,19 +18,32 @@ import { projectPlace } from "@/modules/projects/place";
 
 export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: boolean }) {
   const { project } = useProject(thread.projectId);
-  const { runtime } = useRuntime(thread.runtimeId);
+  const { runtime, loaded } = useRuntime(thread.runtimeId);
+  const { runtimes } = useRuntimes();
+  const cloud = runtimes.find((candidate) => candidate.isCloud);
+  const sandbox = isSandbox(runtime) || (!runtime && Boolean(cloud));
+  const name = runtime?.name ?? (sandbox ? cloud?.name : undefined);
+  const { status } = useComputerStatus(threadComputer(thread.id));
   const { githubMode, runnerGithub } = useShipReadiness(thread.id, thread.running);
   const github = githubIdentityNote(runnerGithub, githubMode);
+  const starting = sandbox && status?.available === true && status.state !== "awake";
 
   return (
     <OverviewCard title="Environment">
       <Row
-        icon={<Servers aria-label={runtime?.online ? "Online" : "Offline"} />}
+        icon={
+          sandbox ? (
+            <Cloud aria-label={starting ? "Starting" : "Aven Cloud"} />
+          ) : (
+            <Monitor aria-label={runtime?.online ? "Online" : "Offline"} />
+          )
+        }
         action={
           owned && thread.state !== "archived" ? <ContinueThreadDialog thread={thread} /> : null
         }
       >
-        {runtime ? runtime.name : "Runner revoked"}
+        {name ?? (loaded ? "Runner revoked" : "…")}
+        {starting && <span className="text-muted-foreground"> · starting</span>}
       </Row>
       {project && (
         <Row icon={<Folder />}>
@@ -47,9 +65,9 @@ function Row({
   action,
   children,
 }: {
-  icon: React.ReactNode;
-  action?: React.ReactNode;
-  children: React.ReactNode;
+  icon: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
 }) {
   return (
     <p className="flex min-w-0 items-center gap-2 [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">

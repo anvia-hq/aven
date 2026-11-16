@@ -146,7 +146,7 @@ function Composer({
 
   return (
     <div
-      className="relative flex cursor-text flex-col rounded-lg border bg-card p-2 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      className="relative flex cursor-text flex-col rounded-3xl border bg-card px-2 pt-2 pb-0 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       {...drop}
       onKeyDownCapture={handleKeyDown}
       onClick={focusOnBoxClick}
@@ -160,7 +160,7 @@ function Composer({
         renderEntity={renderEntity(people)}
         className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6 [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
-      <div className="flex items-center gap-2 pt-2">
+      <div className="flex items-center gap-2 py-2">
         <AttachButton
           onPick={attachments.add}
           disabled={running && !filesWhileRunning}

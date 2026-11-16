@@ -23,6 +23,7 @@ const runtime = (id: string, name: string, over: Record<string, unknown>) => ({
   updateTo: null,
   isControlPlane: false,
   isCloud: false,
+  parentRuntimeId: null,
   canUpdate: false,
   stats: null,
   lastSeenAt: null,
@@ -64,8 +65,11 @@ test.describe("Aven Cloud", () => {
     await expect(page.getByRole("listitem", { name: "Aven Cloud" })).toHaveCount(0);
 
     await page.goto("/threads");
-    await page.getByRole("combobox", { name: "Project" }).click();
-    await page.getByRole("option", { name: "widgets" }).click();
+    await page.getByRole("button", { name: "Project", exact: true }).click();
+    await page.getByRole("button", { name: "widgets" }).click();
+    await expect(page.getByRole("button", { name: "Project", exact: true })).toContainText(
+      "widgets",
+    );
     const computer = page.getByRole("combobox", { name: "Computer" });
     await expect(computer).toContainText("Aven Cloud");
 
