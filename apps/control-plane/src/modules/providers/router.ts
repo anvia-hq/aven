@@ -3,7 +3,14 @@ import { Elysia } from "elysia";
 import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
 import { isModelApi } from "@aven/protocol/providers";
-import { createProviderBody, listModelsBody, providerParams, updateProviderBody } from "./schema";
+import { codexDevice } from "./codex-device";
+import {
+  codexDevicePollBody,
+  createProviderBody,
+  listModelsBody,
+  providerParams,
+  updateProviderBody,
+} from "./schema";
 import { labelsByModel, listAgentModels } from "./model-list";
 import { listedModels, providersService } from "./service";
 
@@ -14,6 +21,30 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     auth: true,
     body: createProviderBody,
   })
+  .post("/codex-device", () => codexDevice.start(), { auth: true })
+  .post(
+    "/codex-device/poll",
+    async ({ body, user }) => {
+      const polled = await codexDevice.poll(body.deviceAuthId, body.userCode);
+
+      if (polled.status === "pending") return polled;
+
+      const provider = body.providerId
+        ? orNotFound(
+            await providersService.update(user.id, body.providerId, { apiKey: polled.auth }),
+            "Provider not found",
+          )
+        : await providersService.create(user.id, {
+            kind: "codex-subscription",
+            name: "Codex subscription",
+            apiKey: polled.auth,
+            modelId: body.modelId,
+          });
+
+      return { status: "done" as const, provider };
+    },
+    { auth: true, body: codexDevicePollBody },
+  )
   .post(
     "/models",
     async ({ body }) => {

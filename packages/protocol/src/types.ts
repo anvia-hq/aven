@@ -815,6 +815,10 @@ export type BotCallMethod =
 
 export type McpReportCallMethod = "mcp.report";
 
+export type CodexAuthCallMethod = "codex.auth";
+
+export type CodexAuthParams = { previous: string; token: string };
+
 export type CallMethod =
   | MemoryCallMethod
   | CockpitCallMethod
@@ -822,6 +826,7 @@ export type CallMethod =
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
+  | CodexAuthCallMethod
   | MachineCallMethod
   | BotCallMethod;
 
@@ -1060,6 +1065,7 @@ export type RuntimeCalls = {
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };
+  "codex.auth": { params: CodexAuthParams; result: null };
   "machine.call": { params: MachineRelayParams; result: unknown };
 };
 

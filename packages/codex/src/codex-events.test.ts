@@ -142,15 +142,21 @@ describe("Codex stream events become thread events", () => {
   test("a rejected key becomes a settings error, and another failure stays the message", () => {
     const rejected = new CodexTurn("default");
     rejected.take({ type: "error", message: "401 Incorrect API key provided" });
-    expect(rejected.error).toBe("The Codex API key was rejected. Replace it in Settings.");
+    expect(rejected.error).toBe(
+      "The Codex sign-in was rejected. Sign in again with codex login and replace it in Settings.",
+    );
 
     const http = new CodexTurn("default");
     http.take({ type: "turn.failed", error: { message: "HTTP 401 Unauthorized" } });
-    expect(http.error).toBe("The Codex API key was rejected. Replace it in Settings.");
+    expect(http.error).toBe(
+      "The Codex sign-in was rejected. Sign in again with codex login and replace it in Settings.",
+    );
 
     const status = new CodexTurn("default");
     status.take({ type: "error", message: "status code: 401" });
-    expect(status.error).toBe("The Codex API key was rejected. Replace it in Settings.");
+    expect(status.error).toBe(
+      "The Codex sign-in was rejected. Sign in again with codex login and replace it in Settings.",
+    );
 
     const failed = new CodexTurn("default", redact);
     failed.take({ type: "turn.failed", error: { message: `boom ${TOKEN}` } });

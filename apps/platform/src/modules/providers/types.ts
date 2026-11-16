@@ -25,7 +25,7 @@ export const PROVIDER_DESCRIPTIONS: Record<ProviderKind, string> = {
   "claude-subscription":
     "Claude Pro or Max, through the Claude Agent SDK, with a setup token from claude setup-token.",
   "codex-subscription":
-    "GPT models on the Codex SDK, with an OpenAI API key, instead of Aven's own agent.",
+    "GPT models on the Codex SDK, on your ChatGPT subscription, instead of Aven's own agent.",
 };
 
 export type Provider = {

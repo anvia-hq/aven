@@ -170,6 +170,7 @@ export type CodexRunContext = {
   token?: string;
   workspace(): Promise<string>;
   tools: CodexToolHost;
+  renewed?(token: string, previous: string): void;
   redact(text: string): string;
   env: readonly RunEnvVar[];
   instructions?: string;

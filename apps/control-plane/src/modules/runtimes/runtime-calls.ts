@@ -1,3 +1,4 @@
+import { providersService } from "../providers/service";
 import { runCockpitCommand } from "../cockpit/commands";
 import { runMemoryCommand } from "../memory/commands";
 import { explainMachineCallError } from "./machine-call-error";
@@ -20,6 +21,7 @@ import {
   parseBotSkillParams,
   parseBotUpdateParams,
   parseMcpReportParams,
+  parseCodexAuthParams,
   parseMemoryParams,
   parseBotCockpitParams,
   parseCockpitReadParams,
@@ -116,6 +118,12 @@ export async function answerRuntimeCall(
     machines,
   }: RuntimeCallContext,
 ) {
+  if (method === "codex.auth") {
+    const { previous, token } = parseCodexAuthParams(params);
+    await providersService.renewCodexAuth(previous, token);
+    return null;
+  }
+
   if (method === "bot.memory") {
     return answerBotCall(params, parseBotMemoryParams, findBotReply, (reply, call) =>
       reply.memory(call),

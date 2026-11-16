@@ -1,3 +1,4 @@
+import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { BEDROCK_ENDPOINT, vertexPartsOf } from "@aven/protocol/providers";
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import type { Provider } from "@aven/protocol/types";
@@ -114,8 +115,11 @@ const codexApiKey = z
   .string()
   .trim()
   .min(20)
-  .max(4096)
-  .regex(/^sk-(?!ant)\S+$/, "A Codex API key starts with sk- and is a single line");
+  .max(20_000)
+  .refine(
+    (value) => parseCodexAuth(value) !== undefined,
+    "Paste the contents of ~/.codex/auth.json after running codex login with your ChatGPT account",
+  );
 
 export const createProviderBody = z.discriminatedUnion("kind", [
   z.object({ ...openai, apiKey }),
@@ -183,3 +187,10 @@ export function credentialFor(kind: Provider) {
 export type CreateProviderBody = z.infer<typeof createProviderBody>;
 export type KeylessProviderBody = z.infer<typeof keylessProviderBody> & { apiKey?: undefined };
 export type UpdateProviderBody = z.infer<typeof updateProviderBody>;
+
+export const codexDevicePollBody = z.object({
+  deviceAuthId: z.string().trim().min(1).max(200),
+  userCode: z.string().trim().min(1).max(100),
+  providerId: z.uuid().optional(),
+  modelId: providerModelId.optional(),
+});

@@ -1,6 +1,7 @@
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { CODEX_DEFAULT_EFFORT, codexEffortOf, codexResolvedOf } from "@aven/protocol/codex-models";
 import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 import type {
@@ -44,10 +45,11 @@ export function codexProcessEnv(
   for (const { name, value } of project) {
     if (!isBlockedEnv(name)) fromProject[name] = value;
   }
+  const key: Record<string, string> = parseCodexAuth(token) ? {} : { CODEX_API_KEY: token };
   return {
     ...withoutRunnerSecrets(inherited),
     ...fromProject,
-    CODEX_API_KEY: token,
+    ...key,
     CODEX_HOME: codexHome,
     [CODEX_MCP_TOKEN_ENV]: mcpToken,
   };
@@ -112,8 +114,24 @@ type CodexLike = {
   };
 };
 
+export function writeCodexAuth(codexHome: string, token: string) {
+  if (!parseCodexAuth(token)) return;
+
+  writeFileSync(join(codexHome, "auth.json"), token.trim(), { mode: 0o600 });
+}
+
+export function readCodexAuth(codexHome: string): string | undefined {
+  try {
+    const text = readFileSync(join(codexHome, "auth.json"), "utf8");
+
+    return parseCodexAuth(text) ? text.trim() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type CodexLoader = (options: {
-  apiKey: string;
+  apiKey?: string;
   env: Record<string, string>;
   config: ReturnType<typeof codexClientConfig>;
   codexPathOverride?: string;
@@ -143,8 +161,9 @@ export function createCodexQuery(load: CodexLoader = loadSdk): CodexQuery {
     const abort = input.abortController;
     const stream = (async function* () {
       mkdirSync(input.codexHome, { recursive: true });
+      writeCodexAuth(input.codexHome, input.token);
       const codex = await load({
-        apiKey: input.token,
+        apiKey: parseCodexAuth(input.token) ? undefined : input.token,
         env: codexProcessEnv(input.env, input.token, input.codexHome, input.mcpToken),
         config: codexClientConfig(input.mcpUrl),
         codexPathOverride: process.env.CODEX_PATH,
