@@ -12,7 +12,7 @@ import { verifyWith } from "./goal-assessment";
 import { boundedTools } from "./late-bound-tools";
 import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
-import { remoteBotMemory } from "./remote-bot-memory";
+import { rememberBotTurn, remoteBotMemory } from "./remote-bot-memory";
 import type { ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
   BotGoalView,
@@ -35,6 +35,7 @@ import type {
   BotReplyMessage,
   ConnectedMcp,
   CreateBotReplyAgent,
+  ThreadWorkspaces,
 } from "./types";
 
 export const defaultCreateBotAgent =
@@ -481,7 +482,7 @@ export class BotReplies {
     if (!message.backend || message.backend === "native")
       return createAgent({ ...hosts, model: nativeModel(message) });
 
-    return hostedAgent(this.#context, message, hosts, abort);
+    return hostedAgent(this.#context, message, hosts, abort, sandbox);
   }
 }
 
@@ -514,6 +515,7 @@ function hostedAgent(
   message: BotReplyMessage,
   hosts: BotHosts,
   abort: AbortController,
+  computer: ThreadWorkspaces,
 ): ReplyAgent {
   const backend = message.backend;
 
@@ -525,6 +527,7 @@ function hostedAgent(
     message;
   const parts = partsOf(bot, hosts);
   const runOf = (suffix: string) => `${message.replyId}-${bot.id}${suffix}`;
+  const remember = rememberBotTurn(message.replyId, (params) => context.call("bot.memory", params));
   let turns = 0;
 
   return {
@@ -534,8 +537,8 @@ function hostedAgent(
       const agent = await context.backends!.get(backend);
       signal.throwIfAborted();
       const cwd =
-        (await context.sandbox.workspace?.(bot.id).catch(() => undefined)) ??
-        context.sandbox.paths?.(bot.id)?.workspace ??
+        (await computer.workspace?.(bot.id).catch(() => undefined)) ??
+        computer.paths?.(bot.id)?.workspace ??
         process.cwd();
       const input: RunInput = {
         [backend]: {
@@ -546,8 +549,8 @@ function hostedAgent(
           instructions: parts.instructions,
           model: backend === "claude" ? claudeModel : codexModel,
           effort: backend === "claude" ? claudeEffort : codexEffort,
-          questions: true,
-          tools: { catalog: parts.tools, questions: true },
+          questions: false,
+          tools: { catalog: parts.tools, questions: false },
         },
       } as RunInput;
       const followed = await agent.start(
@@ -569,10 +572,18 @@ function hostedAgent(
       try {
         const end = await followed.done;
 
-        if (end.type === "error") throw new Error(end.error);
+        if (end.type === "error") {
+          await agent
+            .unfinishedMessages(followed.durableId)
+            .then((messages) => remember(followed.durableId, messages))
+            .catch(() => undefined);
+          throw new Error(end.error);
+        }
 
         if (end.type === "interaction")
           throw new Error("This bot cannot park on a question from its agent");
+
+        await remember(followed.durableId, end.messages);
       } finally {
         signal.removeEventListener("abort", stop);
       }

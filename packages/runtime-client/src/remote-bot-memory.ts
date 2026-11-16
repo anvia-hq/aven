@@ -6,6 +6,14 @@ import type {
 } from "@anvia/core";
 import type { BotMemoryCall } from "./types";
 
+export function rememberBotTurn(replyId: string, call: BotMemoryCall) {
+  return async (runId: string, messages: readonly Message[]) => {
+    if (messages.length === 0) return;
+
+    await call({ replyId, op: "append", runId, turn: 0, messages: [...messages] });
+  };
+}
+
 export function remoteBotMemory(replyId: string, call: BotMemoryCall): MemoryStore {
   return {
     load: async () => (await call({ replyId, op: "load" })) as Message[],

@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Agent, createTool, type AnyTool } from "@anvia/core";
+import { Agent, createTool, type AnyTool, type Message } from "@anvia/core";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 import { createCreateBotTool } from "@aven/agents/tools/create-bot";
 import { createAskQuestionTool } from "@aven/agents/tools/ask-question";
@@ -1361,7 +1361,11 @@ describe("a bot on another agent (decision 0310)", () => {
     claudeEffort: "max",
   };
 
-  function backendSet(inputs: RunInput[], events: RunEvent[][] = []) {
+  function backendSet(
+    inputs: RunInput[],
+    events: RunEvent[][] = [],
+    ending: { messages?: Message[]; error?: string; unfinished?: Message[] } = {},
+  ) {
     const started: { runId: string; threadId: string; prompt: unknown }[] = [];
     const set = {
       offered: ["native", "claude"],
@@ -1369,6 +1373,9 @@ describe("a bot on another agent (decision 0310)", () => {
         return {
           kind: "claude" as const,
           capabilities: {},
+          async unfinishedMessages() {
+            return ending.unfinished ?? [];
+          },
           async start(
             runId: string,
             threadId: string,
@@ -1382,8 +1389,12 @@ describe("a bot on another agent (decision 0310)", () => {
             for (const event of events.shift() ?? []) emit(event);
 
             return {
-              durableId: runId,
-              done: Promise.resolve({ type: "response" as const, messages: [] }),
+              durableId: `claude-${runId}`,
+              done: Promise.resolve(
+                ending.error
+                  ? { type: "error" as const, error: ending.error }
+                  : { type: "response" as const, messages: ending.messages ?? [] },
+              ),
               cancel: async () => undefined,
             };
           },
@@ -1394,21 +1405,26 @@ describe("a bot on another agent (decision 0310)", () => {
     return { set, started };
   }
 
-  function harnessWith(backends: unknown) {
+  function harnessWith(backends: unknown, options: { machines?: ThreadWorkspaces } = {}) {
     const sent: RuntimeToControlPlane[] = [];
+    const calls: { method: string; params: unknown }[] = [];
     const replies = new BotReplies({
       sandbox: sandboxWith(),
+      machines: options.machines,
       backends: backends as never,
       createAgent: () => {
         throw new Error("a hosted bot must not build a native agent");
       },
       send: (frame) => (sent.push(frame), true),
-      call: async (_method, params) => memoryAnswer(params),
+      call: async (method, params) => {
+        calls.push({ method, params });
+        return memoryAnswer(params);
+      },
       boxes: new Map(),
       starting: async () => undefined,
       finished: () => undefined,
     });
-    return { replies, sent };
+    return { replies, sent, calls };
   }
 
   const until = async (check: () => boolean) => {
@@ -1480,5 +1496,80 @@ describe("a bot on another agent (decision 0310)", () => {
       type: "bot.end",
       error: expect.stringContaining("cannot drive"),
     });
+  });
+
+  test("files the turn in the bot's conversation, so its chat outlives the reply", async () => {
+    const inputs: RunInput[] = [];
+    const said = [
+      { role: "user" as const, content: "hello" },
+      {
+        role: "assistant" as const,
+        content: [
+          { type: "tool-call" as const, toolCallId: "t1", toolName: "send_message", input: {} },
+        ],
+      },
+    ];
+    const { set } = backendSet(inputs, [], { messages: said });
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    const filed = run.calls.filter(
+      ({ method, params }) =>
+        method === "bot.memory" && (params as { op?: string }).op === "append",
+    );
+    expect(filed[0]?.params).toMatchObject({
+      replyId: "r1",
+      runId: "claude-r1-bot-1",
+      messages: said,
+    });
+  });
+
+  test("a reply that fails files what it did before it says why", async () => {
+    const inputs: RunInput[] = [];
+    const partial = [
+      { role: "user" as const, content: "hello" },
+      { role: "assistant" as const, content: "half away" },
+    ];
+    const { set } = backendSet(inputs, [], {
+      error: "The run used all of its turns",
+      unfinished: partial,
+    });
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(run.sent.at(-1)).toMatchObject({
+      type: "bot.end",
+      error: "The run used all of its turns",
+    });
+    expect(run.calls.map(({ params }) => params)).toContainEqual(
+      expect.objectContaining({ op: "append", messages: partial }),
+    );
+  });
+
+  test("the agent works in the reply's own computer, not the runner's", async () => {
+    const inputs: RunInput[] = [];
+    const { set } = backendSet(inputs);
+    const machine = { ...sandboxWith(), workspace: async () => "/machines/bot-1" };
+    const run = harnessWith(set, { machines: machine });
+
+    run.replies.start({ ...hosted, machine: "runtime-2" });
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(await inputs[0]?.claude?.workspace()).toBe("/machines/bot-1");
+  });
+
+  test("a bot asks with its own tool: the backend's ask_user cannot park a reply", async () => {
+    const inputs: RunInput[] = [];
+    const { set } = backendSet(inputs);
+    const run = harnessWith(set);
+
+    run.replies.start(hosted);
+    await until(() => run.sent.some((frame) => frame.type === "bot.end"));
+
+    expect(inputs[0]?.claude).toMatchObject({ questions: false, tools: { questions: false } });
   });
 });
