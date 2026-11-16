@@ -20,8 +20,17 @@ const NAMES = Object.keys(CLOUD_PROVIDERS) as CloudProviderName[];
 
 export const CLOUD_TEMPLATE_IDS: string[] = NAMES.map((name) => CLOUD_PROVIDERS[name].templateId);
 
-export const cloudProviders = (configured: string | undefined) =>
-  featureList("AVEN_CLOUD_PROVIDERS", configured, NAMES);
+let offered: CloudProviderName[] = [];
+
+export const offerCloudProviders = (names: CloudProviderName[]) => {
+  offered = names;
+};
+
+export const cloudProviders = (configured: string | undefined) => {
+  const named = featureList("AVEN_CLOUD_PROVIDERS", configured, NAMES);
+
+  return NAMES.filter((name) => named.includes(name) || offered.includes(name));
+};
 
 export const enabledCloudProviders = () =>
   cloudProviders(process.env.AVEN_CLOUD_PROVIDERS).filter((name) =>

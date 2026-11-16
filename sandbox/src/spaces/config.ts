@@ -1,10 +1,19 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
+import type { SpacesSettings } from "./types";
+
 const AUTO_STOP_SECONDS = 2 * 60 * 60;
 
-export const spacesApiKey = () => process.env.AVEN_SPACES_API_KEY?.trim() || null;
+let saved: SpacesSettings | null = null;
 
-export function spacesApiBase(configured = process.env.AVEN_SPACES_API_BASE) {
+export const setSpacesSettings = (settings: SpacesSettings | null) => {
+  saved = settings;
+};
+
+export const spacesApiKey = () =>
+  saved?.apiKey.trim() || process.env.AVEN_SPACES_API_KEY?.trim() || null;
+
+export function spacesApiBase(configured = saved?.base ?? process.env.AVEN_SPACES_API_BASE) {
   const raw = configured?.trim();
 
   if (!raw) return null;
@@ -39,7 +48,7 @@ export function spacesRunnerUrl(
     BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
   },
 ) {
-  const explicit = env.AVEN_SPACES_RUNNER_URL?.trim();
+  const explicit = saved?.runnerUrl.trim() || env.AVEN_SPACES_RUNNER_URL?.trim();
   const origin = (env.BETTER_AUTH_URL ?? "http://localhost:5173").replace(/\/$/, "");
   const raw = (explicit || `${origin}/api`).replace(/\/$/, "");
   const message =

@@ -6,6 +6,7 @@ import {
   cloudProviders,
   cloudTemplateName,
   enabledCloudProviders,
+  offerCloudProviders,
 } from "./cloud-config";
 
 const kept = {
@@ -64,6 +65,19 @@ describe("AVEN_CLOUD_PROVIDERS", () => {
 
     expect(enabledCloudProviders()).toEqual(["boat", "spaces"]);
     expect(cloudTemplateName("spaces")).toBe("Aven Cloud · spaces");
+  });
+
+  test("a provider saved on the platform is offered without naming it in the environment", () => {
+    process.env.AVEN_SPACES_API_KEY = "spk_test_key";
+    process.env.AVEN_SPACES_API_BASE = "https://spaces.test/api/v1";
+    offerCloudProviders(["spaces"]);
+
+    try {
+      expect(cloudProviders(undefined)).toEqual(["spaces"]);
+      expect(enabledCloudProviders()).toEqual(["boat", "spaces"]);
+    } finally {
+      offerCloudProviders([]);
+    }
   });
 
   test("the registry names one cloud provider per folder", () => {
