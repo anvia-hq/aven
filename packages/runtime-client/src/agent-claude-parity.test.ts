@@ -600,7 +600,7 @@ describe("Claude runs with the same preparation as native", () => {
     const running = driver.start({
       type: "run.start",
       runId: "run-rich",
-      thread: { id: "thread-rich", organizationId: "org-1" },
+      thread: { id: "thread-rich", organizationId: "org-1", provider: "spaces" },
       prompt: "look at the notes",
       backend: "claude",
       claudeToken: TOKEN,
@@ -666,6 +666,7 @@ describe("Claude runs with the same preparation as native", () => {
     expect(seen[0]?.instructions).toContain("review");
     expect(seen[0]?.instructions).toContain("API_URL");
     expect(seen[0]?.instructions).toContain("Docs");
+    expect(seen[0]?.instructions).toContain("on the spaces provider");
     expect(prompts[0]).toContain("/uploads/notes.txt");
     expect(prompts[1]).toContain("pwd");
     expect(prompts[2]).toContain("[process] Process p1");
