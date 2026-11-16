@@ -111,9 +111,7 @@ export function ProjectMenu({
           {sandbox ? (
             <Repositories
               query={query}
-              projects={projects.filter(
-                (project) => !recent.some((shown) => shown.id === project.id),
-              )}
+              projects={projects}
               value={value}
               adding={adding}
               onPick={choose}
