@@ -54,7 +54,7 @@ export function PreferencesSection() {
         >
           <TextSizePicker scope="bot" label="Bot chat text size" />
         </SettingsRow>
-        <SettingsRow title="Mode" description="Light, dark, or whichever this device is set to.">
+        <SettingsRow title="Mode" description="Light, dark, or System to follow this device.">
           <ModePicker />
         </SettingsRow>
       </SettingsSection>

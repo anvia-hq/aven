@@ -3,7 +3,9 @@ import {
   ChatDots,
   Cog,
   Github,
+  Flag,
   Key,
+  Lock,
   Api,
   Puzzle,
   Servers,
@@ -33,14 +35,24 @@ const groups = [
     items: [
       { to: "/settings/general", label: "General", icon: Cog },
       { to: "/settings/profile", label: "Profile", icon: UserCircle },
+      { to: "/settings/environment-variables", label: "Personal variables", icon: Lock },
+    ],
+  },
+  {
+    label: "AI",
+    items: [
       { to: "/settings/providers", label: "Providers", icon: Sparkles },
       { to: "/settings/bots", label: "Bots", icon: ChatDots },
+      { to: "/settings/memory", label: "Memory", icon: BookmarkUser },
+    ],
+  },
+  {
+    label: "Agents and integrations",
+    items: [
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
       { to: "/settings/mcp", label: "MCP servers", icon: Puzzle },
       { to: "/settings/mcp-access", label: "MCP access", icon: Api },
       { to: "/settings/webhooks", label: "Webhooks", icon: SignalWaves },
-      { to: "/settings/memory", label: "Memory", icon: BookmarkUser },
-      { to: "/settings/environment-variables", label: "Environment variables", icon: Key },
     ],
   },
   {
@@ -49,8 +61,8 @@ const groups = [
       { to: "/settings/members", label: "Members", icon: Users },
       { to: "/settings/github", label: "GitHub", icon: Github },
       { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
-      { to: "/settings/workspace-variables", label: "Variables", icon: Key },
-      { to: "/settings/decision-model", label: "Decision model", icon: Sparkles },
+      { to: "/settings/workspace-variables", label: "Workspace variables", icon: Key },
+      { to: "/settings/decision-model", label: "Decision model", icon: Flag },
     ],
   },
 ] as const;
@@ -58,7 +70,7 @@ const groups = [
 const platformGroup = {
   label: "Platform",
   items: [
-    { to: "/settings/platform", label: "Platform", icon: Servers },
+    { to: "/settings/platform", label: "Installation", icon: Servers },
     { to: "/settings/people", label: "People", icon: UsersGroup },
     { to: "/settings/announcements", label: "Announcements", icon: Bell },
   ],

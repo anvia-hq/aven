@@ -14,7 +14,7 @@ export function SettingsPage({ title, description, actions, children }: PageProp
         <div className="flex min-w-0 flex-col gap-2">
           <h1 className="text-xl font-semibold tracking-tight md:text-2xl">{title}</h1>
           {description && (
-            <p className="hidden max-w-2xl text-sm text-pretty text-muted-foreground md:block">
+            <p className="line-clamp-2 max-w-2xl text-sm text-pretty text-muted-foreground md:line-clamp-none">
               {description}
             </p>
           )}

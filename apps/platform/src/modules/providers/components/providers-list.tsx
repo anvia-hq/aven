@@ -1,7 +1,10 @@
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
+import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
+import { Input } from "@aven/ui/input";
 
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
@@ -15,6 +18,7 @@ import { ProviderLogo } from "./provider-logo";
 
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 const FEATURED: ProviderKind[] = ["claude-subscription", "codex-subscription"];
+const COLLAPSED_ROWS = 5;
 
 const connectedPresets = (providers: Provider[]) =>
   new Set(providers.map((provider) => presetOf(provider)?.id));
@@ -123,6 +127,8 @@ export function ProvidersList() {
   const { providers, loaded } = useProviders();
   const { byProvider } = useProvidersModels(providers.map((item) => item.id));
   const { config } = usePlatformConfig();
+  const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
 
   if (!loaded) return null;
 
@@ -160,6 +166,13 @@ export function ProvidersList() {
     })),
     ...availableRows.flatMap((kind) => (kind === "openai-compatible" ? [kindRow(kind)] : [])),
   ];
+
+  const needle = query.trim().toLowerCase();
+  const matching = needle
+    ? rows.filter((row) => `${row.title} ${row.description}`.toLowerCase().includes(needle))
+    : rows;
+  const collapsible = !needle && rows.length > COLLAPSED_ROWS;
+  const visible = collapsible && !expanded ? matching.slice(0, COLLAPSED_ROWS) : matching;
 
   return (
     <div className="flex flex-col">
@@ -233,7 +246,18 @@ export function ProvidersList() {
         </Group>
       )}
       <Group title={providers.length > 0 ? "Add a provider" : "Set up a provider"}>
-        {rows.map((row) => (
+        {rows.length > COLLAPSED_ROWS && (
+          <li className="py-3.5">
+            <Input
+              type="search"
+              aria-label="Search providers"
+              placeholder="Search providers"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </li>
+        )}
+        {visible.map((row) => (
           <li key={row.key} aria-label={row.title} className="flex items-center gap-3.5 py-3.5">
             <Tile kind={row.kind} preset={row.preset?.id} />
             <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
@@ -243,6 +267,18 @@ export function ProvidersList() {
             <ProviderDialog kind={row.kind} preset={row.preset} label={row.label} />
           </li>
         ))}
+        {needle && matching.length === 0 && (
+          <li className="py-6 text-sm text-muted-foreground">
+            No provider matches “{query.trim()}”.
+          </li>
+        )}
+        {collapsible && (
+          <li className="py-3.5">
+            <Button variant="ghost" size="sm" onClick={() => setExpanded((value) => !value)}>
+              {expanded ? "Show fewer" : `Show all ${rows.length} providers`}
+            </Button>
+          </li>
+        )}
       </Group>
     </div>
   );
