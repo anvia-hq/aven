@@ -39,7 +39,12 @@ const SINGLE_CREDENTIAL = new Set<Provider>([
 const hasBaseUrl = (kind: Provider): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
   kind === "openai-compatible" || kind === "azure" || kind === "bedrock" || kind === "vertex";
 
-function view({ apiKeyEncrypted, userId: _userId, ...row }: ProviderRow): ProviderView {
+function view({
+  apiKeyEncrypted,
+  keyDigest: _keyDigest,
+  userId: _userId,
+  ...row
+}: ProviderRow): ProviderView {
   return { ...row, hasKey: apiKeyEncrypted !== null, backend: providerBackend(row.kind) };
 }
 
@@ -112,21 +117,24 @@ function hint(apiKey: string) {
   return account ? (account.private_key_id ?? "json").slice(-4) : apiKey.slice(-4);
 }
 
-function readableKey(row: ProviderRow) {
-  try {
-    return readKey(row);
-  } catch {
-    return undefined;
-  }
+export const refreshDigest = (refreshToken: string) =>
+  new Bun.CryptoHasher("sha256").update(refreshToken).digest("hex");
+
+function digestOf(apiKey: string) {
+  const codex = parseCodexAuth(apiKey);
+
+  return codex ? refreshDigest(codex.tokens.refresh_token) : null;
 }
 
 const secretColumns = (apiKey: string | undefined) =>
-  apiKey ? { apiKeyEncrypted: encryptSecret(apiKey), keyHint: hint(apiKey) } : {};
+  apiKey
+    ? { apiKeyEncrypted: encryptSecret(apiKey), keyHint: hint(apiKey), keyDigest: digestOf(apiKey) }
+    : {};
 
 function keyColumns(apiKey: string | undefined, dropKey: boolean) {
   if (apiKey) return secretColumns(apiKey);
 
-  if (dropKey) return { apiKeyEncrypted: null, keyHint: null };
+  if (dropKey) return { apiKeyEncrypted: null, keyHint: null, keyDigest: null };
 
   return {};
 }
@@ -309,22 +317,23 @@ export const providersService = {
 
     if ((before.tokens.account_id ?? null) !== (after.tokens.account_id ?? null)) return false;
 
-    const rows = await db.select().from(providers).where(eq(providers.kind, "codex-subscription"));
-    const row = rows.find((candidate) => {
-      const saved = readableKey(candidate);
+    const [row] = await db
+      .select()
+      .from(providers)
+      .where(
+        and(
+          eq(providers.kind, "codex-subscription"),
+          eq(providers.keyDigest, refreshDigest(before.tokens.refresh_token)),
+        ),
+      )
+      .limit(1);
 
-      return (
-        saved !== undefined &&
-        parseCodexAuth(saved)?.tokens.refresh_token === before.tokens.refresh_token
-      );
-    });
-
-    if (!row) return false;
+    if (!row?.apiKeyEncrypted) return false;
 
     const updated = await db
       .update(providers)
       .set(secretColumns(token.trim()))
-      .where(and(eq(providers.id, row.id), eq(providers.apiKeyEncrypted, row.apiKeyEncrypted!)))
+      .where(and(eq(providers.id, row.id), eq(providers.apiKeyEncrypted, row.apiKeyEncrypted)))
       .returning({ id: providers.id });
 
     return updated.length > 0;
