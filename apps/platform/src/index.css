@@ -2087,6 +2087,31 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
   }
 }
 
+@keyframes bot-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(calc(var(--dx) * 0.45), calc(var(--dy) * 0.45))
+      scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0.2);
+  }
+}
+
+.bot-particle {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .bot-particle {
+    animation: bot-particle 0.7s ease-out forwards;
+  }
+}
+
 @media (prefers-reduced-motion: no-preference) {
   .bot-hop {
     animation: bot-bob 3.6s ease-in-out infinite;

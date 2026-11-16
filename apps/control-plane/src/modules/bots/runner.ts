@@ -19,7 +19,7 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
-import type { BotDelivery, BotReplier, BotReplyInput, BotSettled } from "./types";
+import type { BotDelivery, BotReplier, BotReplyInput, BotSaid, BotSettled } from "./types";
 import type { BotRunChoice } from "../providers/types";
 import type {
   Bot,
@@ -59,12 +59,19 @@ export class BotRunner {
   #store: MemoryStore;
   #replier: BotReplier;
   #settled?: BotSettled;
+  #said?: BotSaid;
   #shutdown = new AbortController();
 
-  constructor(deps: { store: MemoryStore; replier: BotReplier; settled?: BotSettled }) {
+  constructor(deps: {
+    store: MemoryStore;
+    replier: BotReplier;
+    settled?: BotSettled;
+    said?: BotSaid;
+  }) {
     this.#store = deps.store;
     this.#replier = deps.replier;
     this.#settled = deps.settled;
+    this.#said = deps.said;
   }
 
   async send(
@@ -345,6 +352,8 @@ export class BotRunner {
     if (artifacts?.length) message.artifacts = artifacts;
 
     if (quote) message.quote = quote;
+
+    if (role === "bot") this.#said?.(channel.botId, Boolean(questions?.length));
 
     this.#emit(channel, { type: "message", message });
   }

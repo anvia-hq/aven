@@ -9,6 +9,8 @@ run("botsService (postgres)", async () => {
   const { users } = await import("@aven/db/schema/users");
   const { eq, inArray } = await import("drizzle-orm");
   const { bots } = await import("@aven/db/schema/bots");
+  const { botGoals } = await import("@aven/db/schema/bot-goals");
+  const { botSchedules } = await import("@aven/db/schema/bot-schedules");
   const { providers } = await import("@aven/db/schema/providers");
   const { encryptSecret } = await import("@aven/server-kit/crypto");
   const { UnprocessableError } = await import("@aven/server-kit/errors");
@@ -310,5 +312,93 @@ run("botsService (postgres)", async () => {
     expect(await botsService.update(alice, main!.id, { compactAfterTokens: null })).toMatchObject({
       compactAfterTokens: null,
     });
+  });
+
+  test("a bot needs attention for the most pressing of its question, blocked goal, failed schedule and unread message", async () => {
+    const frank = `u-frank-${suffix}`;
+    await db.insert(users).values({ id: frank, name: "Frank", email: `${frank}@aven.test` });
+    try {
+      const [main] = await botsService.list(frank);
+      const id = main!.id;
+      const attentionOf = async () =>
+        (await botsService.list(frank)).find((bot) => bot.id === id)?.attention;
+
+      expect(await attentionOf()).toBeNull();
+
+      await botsService.markSaid(id, false);
+      expect(await attentionOf()).toMatchObject({ reason: "message" });
+      expect(await botsService.markRead(frank, id)).toBe(id);
+      expect(await attentionOf()).toBeNull();
+      expect(await botsService.markRead(bob, id)).toBeNull();
+
+      await botsService.markSaid(id, true);
+      const [goal] = await db
+        .insert(botGoals)
+        .values({
+          userId: frank,
+          botId: id,
+          objective: "Ship it",
+          checks: [],
+          phase: "blocked",
+          maxRounds: 20,
+        })
+        .returning();
+      const [schedule] = await db
+        .insert(botSchedules)
+        .values({
+          userId: frank,
+          botId: id,
+          name: "Daily",
+          cron: "0 9 * * *",
+          timezone: "Asia/Jakarta",
+          prompt: "x",
+          enabled: true,
+          lastStatus: "failed",
+        })
+        .returning();
+
+      expect(await attentionOf()).toEqual({ reason: "question", since: expect.any(String) });
+      await botsService.answerQuestion(id);
+      expect(await attentionOf()).toMatchObject({ reason: "goal" });
+
+      await db.update(botGoals).set({ phase: "running" }).where(eq(botGoals.id, goal!.id));
+      expect(await attentionOf()).toMatchObject({ reason: "schedule" });
+
+      await db
+        .update(botSchedules)
+        .set({ lastStatus: "busy" })
+        .where(eq(botSchedules.id, schedule!.id));
+      expect(await attentionOf()).toMatchObject({ reason: "message" });
+
+      await db
+        .update(botSchedules)
+        .set({ lastStatus: "missed" })
+        .where(eq(botSchedules.id, schedule!.id));
+      expect(await attentionOf()).toMatchObject({ reason: "schedule" });
+
+      await db
+        .update(botSchedules)
+        .set({ enabled: false })
+        .where(eq(botSchedules.id, schedule!.id));
+      expect(await attentionOf()).toMatchObject({ reason: "message" });
+
+      await botsService.markRead(frank, id);
+      expect(await attentionOf()).toBeNull();
+    } finally {
+      await db.delete(users).where(eq(users.id, frank));
+    }
+  });
+
+  test("a bot's attention is computed for the person asking, not stored", async () => {
+    const grace = `u-grace-${suffix}`;
+    await db.insert(users).values({ id: grace, name: "Grace", email: `${grace}@aven.test` });
+    try {
+      const [mine] = await botsService.list(grace);
+      await botsService.markSaid(mine!.id, true);
+      expect((await botsService.list(grace))[0]?.attention).toMatchObject({ reason: "question" });
+      expect((await botsService.get(grace, mine!.id))?.attention).toBeNull();
+    } finally {
+      await db.delete(users).where(eq(users.id, grace));
+    }
   });
 });
