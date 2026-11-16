@@ -10,7 +10,11 @@ const API_PORT = 8224;
 const WEB_PORT = 5288;
 const API = `http://127.0.0.1:${API_PORT}`;
 const WEB = `http://localhost:${WEB_PORT}`;
-const TOKEN = "sk-e2e-codex-key-9f3a";
+const TOKEN = "e2e-codex-access-9f3a";
+const AUTH_FILE = JSON.stringify({
+  auth_mode: "chatgpt",
+  tokens: { access_token: TOKEN, refresh_token: "e2e-codex-refresh-9f3a" },
+});
 const PROMPT = "Say which backend is answering";
 const REPLY = "The Codex backend is answering this thread.";
 
@@ -154,7 +158,7 @@ test.describe("a thread on the Codex backend", () => {
     for (const proc of procs) console.log(proc.output());
   });
 
-  test("a person saves an API key and a Codex thread runs on that backend", async ({ page }) => {
+  test("a person signs in to Codex and a Codex thread runs on that backend", async ({ page }) => {
     await register(page);
     const created = await page.request.post(`${WEB}/api/runtimes`, { data: { name: "machine" } });
     const createdText = await created.text();
@@ -205,11 +209,19 @@ test.describe("a thread on the Codex backend", () => {
       .getByRole("button", { name: "Set up" })
       .click();
     const dialog = page.getByRole("dialog", { name: /Set up Codex subscription/ });
-    await dialog.getByRole("textbox", { name: "API key" }).fill(TOKEN);
-    await dialog.getByRole("combobox", { name: "Model" }).click();
-    await page.getByRole("option", { name: "Default · Astra" }).click();
-    await dialog.getByRole("button", { name: "Add provider" }).click();
-    await expect(page.getByText("Provider added")).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Sign in with ChatGPT" })).toBeVisible();
+    await expect(dialog.getByRole("textbox", { name: "API key" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    const saved = await page.request.post(`${WEB}/api/providers`, {
+      data: {
+        kind: "codex-subscription",
+        name: "Codex subscription",
+        apiKey: AUTH_FILE,
+        modelId: "default",
+        isDefault: true,
+      },
+    });
+    expect(saved.ok(), await saved.text()).toBe(true);
     await expect(page.getByText(TOKEN)).toHaveCount(0);
 
     await page.goto(`${WEB}/threads?project=${project.id}`);

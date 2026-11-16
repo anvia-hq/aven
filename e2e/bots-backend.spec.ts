@@ -3,7 +3,11 @@ import { expect, test, type Page } from "@playwright/test";
 import { addSubscription, registerUser } from "./helpers";
 
 const CLAUDE_TOKEN = "sk-ant-oat01-e2e-bot-subscription-9f3a";
-const CODEX_KEY = "sk-codex-e2e-bot-subscription-9f3a";
+const CODEX_ACCESS = "e2e-bot-access-9f3a";
+const CODEX_KEY = JSON.stringify({
+  auth_mode: "chatgpt",
+  tokens: { access_token: CODEX_ACCESS, refresh_token: "e2e-bot-refresh-9f3a" },
+});
 
 const CLAUDE_REPLY = "The Claude backend is answering this thread.";
 const CODEX_REPLY = "The Codex backend is answering this thread.";
@@ -69,6 +73,6 @@ test.describe("a bot on a subscription", () => {
 
     await page.reload();
     await expect(answered).toHaveCount(2, { timeout: 60_000 });
-    await expect(page.getByText(CODEX_KEY)).toHaveCount(0);
+    await expect(page.getByText(CODEX_ACCESS)).toHaveCount(0);
   });
 });
