@@ -1,3 +1,4 @@
+import { useState } from "react";
 import type { FormEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -15,6 +16,8 @@ type Props = {
 
 export function ProfileForm({ name, email, image }: Props) {
   const updateProfile = useUpdateProfile();
+  const [draft, setDraft] = useState(name);
+  const changed = draft.trim() !== name && draft.trim() !== "";
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -26,9 +29,15 @@ export function ProfileForm({ name, email, image }: Props) {
   return (
     <Form onSubmit={save} className="flex flex-col gap-4">
       <AvatarField name={name} image={image} />
-      <TextField label="Name" name="name" defaultValue={name} required />
+      <TextField
+        label="Name"
+        name="name"
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        required
+      />
       <TextField label="Email" name="email" defaultValue={email} disabled />
-      <Button type="submit" className="w-fit">
+      <Button type="submit" className="w-fit" disabled={!changed}>
         Save changes
       </Button>
     </Form>

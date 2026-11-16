@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authed/settings/platform")({
 
 function Platform() {
   return (
-    <SettingsPage title="Platform" description="Settings for the whole installation.">
+    <SettingsPage title="Installation" description="Settings for the whole installation.">
       <RegistrationSection />
       <ServerModelsSection />
       <CloudSection />

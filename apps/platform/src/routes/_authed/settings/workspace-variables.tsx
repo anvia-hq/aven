@@ -10,7 +10,7 @@ export const Route = createFileRoute("/_authed/settings/workspace-variables")({
 function WorkspaceVariables() {
   return (
     <SettingsPage
-      title="Variables"
+      title="Workspace variables"
       description="For every project in the workspace: the agent's commands get them in every member's threads, unless a project or a person sets the same name. Only an owner or an admin can change them."
     >
       <VariablesSection
