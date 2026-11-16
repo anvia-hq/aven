@@ -78,7 +78,9 @@ export const createBotChats = (runner: BotRunner) => ({
       handle: target.handle,
       direction: "to",
     });
-    await botsService.answerQuestion(target.id);
+
+    if (relaysPersonsWord) await botsService.answerQuestion(target.id);
+
     return { handle: target.handle, name: target.name };
   },
 
