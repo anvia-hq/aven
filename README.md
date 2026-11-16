@@ -58,8 +58,6 @@ How installs and releases work: [docs/decision/0073](docs/decision/0073-install-
 
 Licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 
-A hosted version is available at [anvia.dev](https://anvia.dev), and commercial support and enterprise features are available: hello@anvia.dev.
-
 ## Trademarks
 
 "Aven" and the Anvia name and logos are trademarks of Anvia. The Apache License does not grant permission to use them; forks must use a different name and branding.

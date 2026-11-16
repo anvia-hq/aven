@@ -7,7 +7,7 @@ Status: accepted. Supersedes 0167 (the MIT license).
 ## Decision
 
 - The project is under the Apache License 2.0: `LICENSE` has the text from apache.org unchanged, `NOTICE` names Aven and Anvia, each `package.json` says `"license": "Apache-2.0"`, and the server and web images carry `org.opencontainers.image.licenses` and `LICENSE` and `NOTICE` at `/`. Each release archive holds `LICENSE` and `NOTICE` beside `aven`.
-- The README names the license, the hosted version and the commercial contact, and says that the Aven and Anvia names and logos are trademarks the license does not grant.
+- The README names the license and says that the Aven and Anvia names and logos are trademarks the license does not grant.
 - Contributions come in under Apache 2.0 with a Developer Certificate of Origin sign-off (`git commit -s`). `.github/workflows/dco.yml` fails a pull request with an unsigned commit, and `CONTRIBUTING.md` says so.
 - Everything so far was written by the Anvia team, so the relicense needs no one else's consent.
 
