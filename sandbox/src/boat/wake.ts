@@ -102,6 +102,7 @@ async function ensureSandbox(
     try {
       await input.client.command(input.record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
     } catch (error) {
+      await input.client.deleteSandbox(input.record.apiKey, ready.id).catch(() => undefined);
       throw asUnavailable(error);
     }
   }
