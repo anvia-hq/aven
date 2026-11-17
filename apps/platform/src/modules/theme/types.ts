@@ -129,7 +129,22 @@ export const PALETTES: PaletteOption[] = [
   },
 ];
 
-export type SansFont = "system" | "inter" | "ibm-plex-sans" | "source-sans-3" | "geist";
+export type SansFont =
+  | "system"
+  | "inter"
+  | "ibm-plex-sans"
+  | "source-sans-3"
+  | "geist"
+  | "dm-sans"
+  | "manrope"
+  | "plus-jakarta-sans"
+  | "nunito-sans"
+  | "lato"
+  | "open-sans"
+  | "roboto"
+  | "poppins"
+  | "work-sans"
+  | "outfit";
 
 export type SansFontOption = {
   id: SansFont;
@@ -170,6 +185,66 @@ export const SANS_FONTS: SansFontOption[] = [
     label: "Geist",
     family: '"Geist", system-ui, sans-serif',
     googleQuery: "family=Geist:wght@400;500;600;700",
+  },
+  {
+    id: "dm-sans",
+    label: "DM Sans",
+    family: '"DM Sans", system-ui, sans-serif',
+    googleQuery: "family=DM+Sans:wght@400;500;600;700",
+  },
+  {
+    id: "manrope",
+    label: "Manrope",
+    family: '"Manrope", system-ui, sans-serif',
+    googleQuery: "family=Manrope:wght@400;500;600;700",
+  },
+  {
+    id: "plus-jakarta-sans",
+    label: "Plus Jakarta Sans",
+    family: '"Plus Jakarta Sans", system-ui, sans-serif',
+    googleQuery: "family=Plus+Jakarta+Sans:wght@400;500;600;700",
+  },
+  {
+    id: "nunito-sans",
+    label: "Nunito Sans",
+    family: '"Nunito Sans", system-ui, sans-serif',
+    googleQuery: "family=Nunito+Sans:wght@400;500;600;700",
+  },
+  {
+    id: "lato",
+    label: "Lato",
+    family: '"Lato", system-ui, sans-serif',
+    googleQuery: "family=Lato:wght@400;700",
+  },
+  {
+    id: "open-sans",
+    label: "Open Sans",
+    family: '"Open Sans", system-ui, sans-serif',
+    googleQuery: "family=Open+Sans:wght@400;500;600;700",
+  },
+  {
+    id: "roboto",
+    label: "Roboto",
+    family: '"Roboto", system-ui, sans-serif',
+    googleQuery: "family=Roboto:wght@400;500;600;700",
+  },
+  {
+    id: "poppins",
+    label: "Poppins",
+    family: '"Poppins", system-ui, sans-serif',
+    googleQuery: "family=Poppins:wght@400;500;600;700",
+  },
+  {
+    id: "work-sans",
+    label: "Work Sans",
+    family: '"Work Sans", system-ui, sans-serif',
+    googleQuery: "family=Work+Sans:wght@400;500;600;700",
+  },
+  {
+    id: "outfit",
+    label: "Outfit",
+    family: '"Outfit", system-ui, sans-serif',
+    googleQuery: "family=Outfit:wght@400;500;600;700",
   },
 ];
 
