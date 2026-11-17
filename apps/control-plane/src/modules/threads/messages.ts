@@ -199,7 +199,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       ...scoped,
     });
     clock.mark("started");
-    await threadsService.rememberModel(thread, chosen);
+    await threadsService.rememberModel(thread, chosen, selection);
     await threadsService.reopen(thread);
     clock.mark("reopened");
   }
@@ -305,7 +305,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         compact: true,
         ...credential,
       });
-      await threadsService.rememberModel(thread, chosen);
+      await threadsService.rememberModel(thread, chosen, selection);
       await threadsService.reopen(thread);
     },
 
@@ -345,7 +345,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         ...scoped,
         ...credential,
       });
-      await threadsService.rememberModel(thread, chosen);
+      await threadsService.rememberModel(thread, chosen, selection);
       await threadsService.reopen(thread);
     },
   };
