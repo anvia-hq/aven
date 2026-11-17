@@ -238,6 +238,19 @@ describe("DurableRuns after a reload in the same process", () => {
     await opened(path);
   });
 
+  test("a lease a journal brought from another machine does not lock it", async () => {
+    const path = journalPath();
+    await (await DurableRuns.open(path)).close();
+    const database = new Database(path);
+    database
+      .query(
+        "UPDATE anvia_durable_owner SET token = 'stale', pid = 1, host = 'a-sandbox-this-was-saved-from'",
+      )
+      .run();
+    database.close();
+    await opened(path);
+  });
+
   test("a journal that is open in this process is not opened twice", async () => {
     const path = journalPath();
     await opened(path);

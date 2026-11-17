@@ -104,9 +104,9 @@ function releaseOwnLease(databasePath: string) {
   try {
     database
       .query(
-        "UPDATE anvia_durable_owner SET token = NULL, pid = NULL, host = NULL WHERE pid = ? AND host = ?",
+        "UPDATE anvia_durable_owner SET token = NULL, pid = NULL, host = NULL WHERE host <> ? OR (pid = ? AND host = ?)",
       )
-      .run(process.pid, hostname());
+      .run(hostname(), process.pid, hostname());
   } catch {
   } finally {
     database.close();
