@@ -25,6 +25,7 @@ import { requireSubscriptionToken } from "../providers/token";
 import { CLOUD_OFF, runtimesService } from "../runtimes/service";
 import type { UpdateThreadBody } from "./schema";
 import type { ProviderRow } from "@aven/db/schema/types";
+import type { ModelSelection, ThreadModel } from "../providers/types";
 import type { NewThread, ThreadPerson, ThreadPullRequest, Viewer } from "./types";
 
 export class ProjectNotFoundError extends UnprocessableError {}
@@ -348,6 +349,26 @@ export const threadsService = {
     if (thread.state === "open") return;
 
     await db.update(threads).set({ state: "open" }).where(eq(threads.id, thread.id));
+  },
+
+  async rememberModel(thread: ThreadModel & { id: string }, chosen: ModelSelection) {
+    if (!chosen.providerId) return;
+
+    const next = {
+      modelProviderId: chosen.providerId,
+      modelId: chosen.modelId ?? null,
+      reasoningEffort: chosen.reasoningEffort ?? null,
+    };
+
+    if (
+      thread.modelProviderId === next.modelProviderId &&
+      thread.modelId === next.modelId &&
+      thread.reasoningEffort === next.reasoningEffort
+    ) {
+      return;
+    }
+
+    await db.update(threads).set(next).where(eq(threads.id, thread.id));
   },
 
   async saveContinuation(id: string, continuation: unknown) {

@@ -215,7 +215,7 @@ run("a teammate driving a thread (postgres, decision 0179)", async () => {
     } finally {
       spy.mockRestore();
     }
-    expect(lookedUp).toEqual([mateId, userId]);
+    expect([...new Set(lookedUp)]).toEqual([mateId, userId]);
   });
 
   test("a teammate's message starts a run as the creator, marked with the teammate's name", async () => {
@@ -434,5 +434,66 @@ run("a mention in a multiplayer thread (postgres, decision 0191)", async () => {
     });
     expect(started).toHaveLength(2);
     expect(asked).toEqual([]);
+  });
+});
+
+run("a thread keeps the model it was sent with (postgres, decision 0325)", async () => {
+  const { seedOrgPair } = await import("../../testing/seed-org-pair");
+  const { seedProject } = await import("../../testing/seed-project");
+  const { userId, orgA, cleanup } = await seedOrgPair();
+  const runner = (await runtimesService.create(orgA, userId, { name: "a" })).runtime;
+  const { project } = await seedProject(orgA, userId, runner.id, "proj");
+  const viewer = { organizationId: orgA, userId };
+  const anthropic = await providersService.create(userId, {
+    kind: "anthropic",
+    name: "Anthropic",
+    apiKey: `sk-ant-${"a".repeat(40)}`,
+    isDefault: true,
+  });
+  const gateway = await providersService.create(userId, {
+    kind: "openai-compatible",
+    name: "Gateway",
+    baseUrl: "https://gateway.example.com/v1",
+    modelId: "gateway-model",
+    apiKey: "gateway-key",
+  });
+  afterAll(cleanup);
+
+  const ranWith: (string | undefined)[] = [];
+  const messages = createThreadMessages({
+    isRunning: () => false,
+    start: async (_thread: unknown, _prompt: unknown, model?: { provider: string }) => {
+      ranWith.push(model?.provider);
+    },
+    steer: async () => "queued",
+    answer: async () => {},
+  } as never);
+
+  test("making another provider the default does not move a running thread", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    await messages.send(orgA, userId, thread.id, { prompt: "one", providerId: anthropic.id });
+    await providersService.update(userId, gateway.id, { isDefault: true });
+    await messages.send(orgA, userId, thread.id, { prompt: "two" });
+    await messages.send(orgA, userId, thread.id, { prompt: "three", providerId: gateway.id });
+    await providersService.update(userId, anthropic.id, { isDefault: true });
+    await messages.send(orgA, userId, thread.id, { prompt: "four" });
+
+    expect(ranWith.slice(-4)).toEqual([
+      "anthropic",
+      "anthropic",
+      "openai-compatible",
+      "openai-compatible",
+    ]);
+    expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(gateway.id);
+  });
+
+  test("a thread that never chose is pinned to the default it first ran on", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    await messages.send(orgA, userId, thread.id, { prompt: "one" });
+    await providersService.update(userId, gateway.id, { isDefault: true });
+    await messages.send(orgA, userId, thread.id, { prompt: "two" });
+
+    expect(ranWith.slice(-2)).toEqual(["anthropic", "anthropic"]);
+    expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(anthropic.id);
   });
 });

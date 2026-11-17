@@ -63,3 +63,10 @@ export type BotRunChoice = {
   modelId?: string;
   effort?: string;
 };
+
+export type ThreadModel = {
+  agentBackend: AgentBackendKind;
+  modelProviderId: string | null;
+  modelId: string | null;
+  reasoningEffort: string | null;
+};
