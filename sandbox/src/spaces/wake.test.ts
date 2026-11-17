@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import { SPACES_BOOT_COMMAND, SPACES_BOOT_PATH } from "./boot";
-import { SpacesClient } from "./client";
+import { SpacesApiError, SpacesClient } from "./client";
 import { wakeSpacesSandbox } from "./wake";
 import type { SpacesWake } from "./types";
 import type { SandboxClock, SandboxRecord } from "../types";
@@ -171,6 +171,35 @@ describe("waking a spaces sandbox", () => {
     expect(calls.map((call) => `${call.method} ${call.url.replace(BASE, "")}`)).toContain(
       `DELETE /sandboxes/${ID}`,
     );
+  });
+
+  test("creates the sandbox from the image when the saved environment is gone", async () => {
+    let online = false;
+    const { calls, client } = scripted({ create: [ID], [ID]: ["ready"] }, () => {
+      online = true;
+    });
+    const create = client.createSandbox.bind(client);
+    const sources: (string | null | undefined)[] = [];
+    client.createSandbox = async (apiKey, input) => {
+      sources.push(input.from);
+
+      if (input.from) throw new SpacesApiError(404, "not_found", "snapshot_not_found");
+
+      return create(apiKey, input);
+    };
+    const { clock } = timed();
+
+    await wakeSpacesSandbox(
+      wake({
+        record: { ...record(null), environment: "aven-project" },
+        client,
+        connected: () => online,
+        clock,
+      }),
+    );
+
+    expect(sources).toEqual(["aven-project", null]);
+    expect(calls.map((call) => call.body)).not.toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
   test("starts the runner at once after a resume, which ends every process, and lets go of the old connection", async () => {
