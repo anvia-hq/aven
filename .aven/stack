@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts PostgreSQL 17 (postgres:17, as in ci.yml) in Docker on a per-thread port.
+# Starts PostgreSQL 17 (postgres:17, as in ci.yml) in Docker, or the local PostgreSQL 17 when Docker is missing, on a per-thread port.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.local/bin:$HOME/.bun/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"

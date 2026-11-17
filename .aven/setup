@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks the machine and installs what a thread needs. Versions: Bun 1.4.4 (apps/*/Dockerfile:
-# oven/bun:1.4.4), PostgreSQL 17 (ci.yml and deploy/docker-compose.yml). No sudo, nothing deleted.
+# oven/bun:1.4.4), PostgreSQL 17 (ci.yml and deploy/docker-compose.yml). Nothing deleted; sudo only on a sandbox without Docker, to install PostgreSQL 17.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -27,6 +27,7 @@ have=$(bun --version)
 
 if ! command -v docker > /dev/null && [ ! -x /usr/lib/postgresql/17/bin/postgres ] && sudo -n true 2> /dev/null; then
   echo "step     postgresql 17 (PGDG apt repository, sandbox only)"
+  sudo apt-get update -qq > /dev/null
   sudo apt-get install -y -qq postgresql-common ca-certificates > /dev/null
   sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null 2>&1
   sudo apt-get install -y -qq postgresql-17 > /dev/null
