@@ -17,3 +17,5 @@ Status: accepted. Adds to [0220](0220-runtime-providers-and-agent-backends.md).
 
 - A project's `AGENTS.md` applies to all three agents, as the setup skill says.
 - A cloud thread's native agent on a sandbox that is not up yet depends on the model following the pointer, until the first tool call has woken the sandbox.
+
+A thread placed on another computer has its workspace on that machine, not on the runner's disk (`PlacedWorkspaces.local`). The runner does not read a path of its own that happens to share the name: such a thread gets the pointer to the file, as a workspace that is not up yet does.

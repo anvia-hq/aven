@@ -49,6 +49,14 @@ describe("PlacedWorkspaces", () => {
     ]);
   });
 
+  test("says whether a thread's workspace is on this runner's own disk", () => {
+    const side = {} as unknown as ThreadWorkspaces;
+    const placed = new PlacedWorkspaces(side, side, (id) => id === "m1");
+
+    expect(placed.local("m1")).toBe(false);
+    expect(placed.local("h1")).toBe(true);
+  });
+
   test("releases a thread on both, so what the machine side kept goes once the run is over", async () => {
     const released: string[] = [];
     const placed = new PlacedWorkspaces(
