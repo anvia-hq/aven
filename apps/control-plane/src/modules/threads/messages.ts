@@ -7,7 +7,7 @@ import { codexEffortOf } from "@aven/protocol/codex-models";
 import { backendRefusal, backendSupports } from "@aven/protocol/runtime-wire";
 import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
-import { selectionForThread } from "../providers/selection";
+import { selectionForRun } from "../providers/selection";
 import { requireSubscriptionToken } from "../providers/token";
 import { githubUserTokenService } from "../github/user-tokens";
 import { runtimesService } from "../runtimes/service";
@@ -179,7 +179,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     const attachments = prepareAttachments(files);
     const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-    const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+    const chosen = await selectionForRun(driverId ?? ownerId, thread, selection);
     const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
 
     if (!hosted && model && attachments.some((file) => file.image)) await assertSeesImages(model);
@@ -199,6 +199,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       ...scoped,
     });
     clock.mark("started");
+    await threadsService.rememberModel(thread, chosen);
     await threadsService.reopen(thread);
     clock.mark("reopened");
   }
@@ -297,13 +298,14 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const chosen = await selectionForThread(userId, thread.agentBackend, selection);
+      const chosen = await selectionForRun(userId, thread, selection);
       const model = hosted ? undefined : await resolveModel(userId, chosen);
       const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       await runs.start(thread, COMPACT_PROMPT, model, {
         compact: true,
         ...credential,
       });
+      await threadsService.rememberModel(thread, chosen);
       await threadsService.reopen(thread);
     },
 
@@ -324,7 +326,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       }
 
       const hosted = thread.agentBackend === "claude" || thread.agentBackend === "codex";
-      const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
+      const chosen = await selectionForRun(driverId ?? ownerId, thread, selection);
       const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
       const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
       const sender = await senderExtras(ownerId, thread.runtimeId, driverId);
@@ -343,6 +345,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         ...scoped,
         ...credential,
       });
+      await threadsService.rememberModel(thread, chosen);
       await threadsService.reopen(thread);
     },
   };
