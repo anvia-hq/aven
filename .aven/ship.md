@@ -12,7 +12,7 @@ Ship this thread's work.
    conflicts in code you touched; if one is in a place you cannot judge, stop and tell me.
 
 3. **Bring the database up.** If `DATABASE_URL` already points at a running PostgreSQL 17 (a sandbox
-   without Docker), use it and skip `.aven/stack`. Otherwise `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
+   without Docker), use it and skip `.aven/stack`. Otherwise `bash .aven/stack` starts (in Docker, or the local install when Docker is missing) the PostgreSQL 17 this repository uses in
    Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
    it if connecting fails. Then apply the schema from the repository root, which is also safe to
    repeat: `set -a && { [ ! -f .env.local ] || . ./.env.local; } && set +a && bun packages/db/src/migrate.ts`
