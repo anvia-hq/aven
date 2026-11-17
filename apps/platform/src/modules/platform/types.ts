@@ -1,9 +1,14 @@
+import type { LensCaptureMode } from "@aven/protocol/lens";
+
+export type { LensCaptureMode };
+
 export type PlatformConfig = {
   registrationEnabled: boolean;
   githubLogin: boolean;
   emailLogin: boolean;
   claudeBackend: boolean;
   codexBackend: boolean;
+  lens: boolean;
   isOwner: boolean;
 };
 
@@ -62,4 +67,23 @@ export type CloudSettingsDraft = {
   base: string;
   runnerUrl: string;
   apiKey: string;
+};
+
+export type LensSettings = {
+  baseUrl: string;
+  publicKey: string;
+  keyHint: string;
+  captureMode: LensCaptureMode;
+};
+
+export type LensSettingsDraft = {
+  baseUrl: string;
+  publicKey: string;
+  secretKey: string;
+  captureMode: LensCaptureMode;
+};
+
+export const LENS_CAPTURE_MODE_LABELS: Record<LensCaptureMode, string> = {
+  safe: "Safe: no prompts or responses",
+  full: "Full: prompts and responses",
 };

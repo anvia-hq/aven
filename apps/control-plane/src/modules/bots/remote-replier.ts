@@ -12,6 +12,7 @@ import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
 import { TalkBotReplier } from "./talk-replier";
 import { runCockpitCommand } from "../cockpit/commands";
+import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
 import type {
   BotKeeper,
@@ -473,6 +474,7 @@ export class RemoteBotReplier implements BotReplier {
           memory: { folders, writable: keepsNotes },
           cockpit: "write",
           webSearch: webSearchForRun,
+          lens: choice.backend === "native" ? await lensSettingsService.forRun() : undefined,
           machine,
         },
         sink,

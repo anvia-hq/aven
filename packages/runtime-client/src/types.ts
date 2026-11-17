@@ -21,6 +21,7 @@ import type {
   RunSkill,
   RunThreadInfo,
   RunWebSearch,
+  RunLens,
   RuntimeCalls,
   RuntimeToControlPlane,
   SteerResult,
@@ -107,6 +108,7 @@ export type CreateBotReplyAgent = (input: {
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
   webSearch?: RunWebSearch;
+  lens?: RunLens;
 }) => Pick<Agent<unknown>, "generate">;
 
 export type BotRepliesContext = {
@@ -233,6 +235,7 @@ export type CreateRuntimeAgent = (input: {
   mcp?: McpNote;
   memory?: RunMemory;
   webSearch?: RunWebSearch;
+  lens?: RunLens;
   forks?: boolean;
   model?: RunModel;
   role?: SubagentType;

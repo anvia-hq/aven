@@ -1,4 +1,5 @@
 import type { COCKPIT_KINDS, TASK_PRIORITIES, TASK_STATUSES } from "./cockpit";
+import type { LensCaptureMode } from "./lens";
 import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
 import type {
@@ -618,6 +619,13 @@ export type RunIdentityCredential = { credential: string };
 
 export type RunWebSearch = { apiKey: string };
 
+export type RunLens = {
+  baseUrl: string;
+  publicKey: string;
+  secretKey: string;
+  captureMode?: LensCaptureMode;
+};
+
 export type RunSecrets = {
   env?: RunEnvVar[];
   github?: RunGithub;
@@ -625,6 +633,7 @@ export type RunSecrets = {
   mcp?: RunMcpServer[];
   claudeToken?: string;
   codexToken?: string;
+  lens?: RunLens;
 };
 
 export type BotReplyInfo = {
@@ -656,6 +665,7 @@ export type ControlPlaneToRuntime =
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
       webSearch?: RunWebSearch;
+      lens?: RunLens;
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
@@ -679,6 +689,7 @@ export type ControlPlaneToRuntime =
       env?: RunEnvVar[];
       identity?: RunIdentityCredential;
       webSearch?: RunWebSearch;
+      lens?: RunLens;
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       model?: RunModel;
@@ -710,6 +721,7 @@ export type ControlPlaneToRuntime =
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       webSearch?: RunWebSearch;
+      lens?: RunLens;
       machine?: string;
     }
   | { type: "bot.cancel"; replyId: string; reason: string }

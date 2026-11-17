@@ -65,6 +65,7 @@ export const defaultCreateBotAgent =
     api,
     notes,
     cockpit,
+    lens,
   }) =>
     createBotAgent({
       provider: model.provider,
@@ -101,6 +102,7 @@ export const defaultCreateBotAgent =
       api,
       notes,
       cockpit,
+      lens,
     });
 
 const sleep = (ms: number, signal?: AbortSignal) =>
@@ -471,6 +473,7 @@ export class BotReplies {
         host: (command) => call("bot.cockpit", { replyId, command }),
       },
       webSearch,
+      lens: message.lens,
       createBot: bot.canCreateBots
         ? async (input) => {
             const made = await call("bot.create", { ...input, replyId });

@@ -545,6 +545,7 @@ export function createRunDriver(context: DriverContext) {
             paths: context.sandbox.paths?.(thread.id),
             mcp: mcp?.note,
             webSearch: state.record.webSearch,
+            lens: secrets.lens,
             model,
             role: type,
           }).agent,
@@ -658,6 +659,7 @@ export function createRunDriver(context: DriverContext) {
           mcp: mcp?.note,
           memory: state.record.memory,
           webSearch: state.record.webSearch,
+          lens: secrets.lens,
           model,
         });
         return { agent, compaction, contextWindow: model?.contextWindow };

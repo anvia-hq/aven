@@ -176,6 +176,12 @@ The control plane holds runner connections, runs, watched channels and run token
 
 `server-models/service.ts` (`serverModelsService`) resolves the server's default decision model and small model: the environment first (`serverDecisionModel`, `serverSmallModel`), then a value saved in `platform_settings` under `server_decision_model` and `server_small_model`, key encrypted. `decisionModelService`, `followUpModel` and `preferencesService` call it, so a change applies without a restart. `server-models/router.ts` (`/platform/server-models`, owners only) reads the view (provider, model, key hint, `source` of `env` or `platform`) and saves or removes each default; changes are refused while the environment sets it. Settings > Platform shows it as "Server defaults" (`ServerModelsSection`). Decision 0243.
 
+### The native agent is traced to Anvia Lens (decision 0327)
+
+`AVEN_LENS=on` shows Settings > Installation's Anvia Lens section (owners only): the Lens address, its public and secret keys, and whether a trace keeps prompts and responses (`safe` is the default). `lensSettingsService` (`modules/lens`) keeps them in `platform_settings` under `lens_settings` with the secret key encrypted, and `GET/PUT/DELETE /platform/lens` edit them; `/platform/config` says `lens`. `forRun` enforces the flag, so with it off a saved row is kept but unused.
+
+A run carries the setting as `lens` (optional, on `run.start`, `run.resume`, `bot.reply` and `RunSecrets`, so `run.attach` restores it; never in the runner's record), and only when the thread's backend is `native`: a Claude or Codex run carries none. `packages/agents/src/lens.ts` keeps one `LensClient` per runner and reopens it when the setting changes, registering its observer as `lens` and as the run's `primaryTrace`; `createCodingAgent` and `createBotAgent` take it as `lens`, subagents included. The client is closed when the runner stops and when the control plane shuts down (a bot with no computer runs its native agent there, 0324). An address Lens refuses is logged and the run goes untraced.
+
 ### Claude models and effort
 
 `@aven/protocol/claude-models` holds the Claude aliases, the model each resolves to, the effort levels and the default effort; a runtime-client test checks it against the SDK. The model menu lists them as "Sonnet 5.5" and so on and shows the effort slider; the chosen effort travels as `claudeEffort` on `run.start` and `run.resume` and reaches the SDK's `effort`. The system prompt sets `excludeDynamicSections` for cross-thread prompt caching. Decision 0245.

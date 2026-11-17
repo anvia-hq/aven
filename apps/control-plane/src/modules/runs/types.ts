@@ -12,6 +12,7 @@ import type {
   RunEnvVar,
   RunEvent,
   RunGithub,
+  RunLens,
   RunMcpServer,
   RunMemory,
   RunOutcome,
@@ -46,6 +47,7 @@ export type RunExtras = Pick<
   | "env"
   | "identity"
   | "webSearch"
+  | "lens"
   | "compact"
   | "memory"
   | "cockpit"
@@ -71,6 +73,7 @@ export type StartRunInput = {
   env?: RunEnvVar[];
   identity?: RunIdentity;
   webSearch?: RunWebSearch;
+  lens?: RunLens;
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;
@@ -92,6 +95,7 @@ export type ResumeRunInput = {
   env?: RunEnvVar[];
   identity?: RunIdentity;
   webSearch?: RunWebSearch;
+  lens?: RunLens;
   memory?: RunMemoryInput;
   cockpit?: CockpitCaller;
   model?: ModelConfig;
