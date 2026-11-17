@@ -31,7 +31,7 @@ test.describe("Settings > GitHub", () => {
     await registerUser(page, "gh", "GitHub User");
     await page.goto("/settings/github");
 
-    await expect(page.getByRole("link", { name: "Install on GitHub" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Connect GitHub" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Install on GitHub" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeVisible();
   });
 });

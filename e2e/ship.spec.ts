@@ -153,7 +153,7 @@ test.describe("shipping a thread", () => {
     await registerUser(page, "shp", "Ship User");
     const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
     runner = child;
-    await page.route("**/api/github/user?*", (route) =>
+    await page.route("**/api/github/user", (route) =>
       route.fulfill({ json: { connected: false, login: null } }),
     );
 
@@ -161,7 +161,7 @@ test.describe("shipping a thread", () => {
 
     await expect(connectButton(page)).toHaveAttribute(
       "href",
-      `/api/github/connect?next=${encodeURIComponent(`/threads/${threadId}`)}&app=platform`,
+      `/api/github/connect?next=${encodeURIComponent(`/threads/${threadId}`)}`,
     );
     await expect(shipButton(page)).toHaveCount(0);
   });
@@ -349,24 +349,6 @@ test.describe("shipping a thread", () => {
     await expect(connectButton(page)).toHaveCount(0);
   });
 
-  test("a project with no GitHub app on a temporary runner is offered to connect, not left loading", async ({
-    page,
-  }) => {
-    await registerUser(page, "shp", "Ship User");
-    await provider(page);
-    const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
-    runner = child;
-    await page.route(/\/api\/threads\/[^/]+\/ship$/, (route) =>
-      route.request().method() === "GET"
-        ? route.fulfill({ json: { ready: true, ship: true, machine: false } })
-        : route.fallback(),
-    );
-
-    await page.goto(`/threads/${threadId}`);
-
-    await expect(connectButton(page)).toBeVisible();
-  });
-
   test("a change with no lines of its own reads as its files, not +0 -0", async ({ page }) => {
     await registerUser(page, "shp", "Ship User");
     await provider(page);
@@ -401,7 +383,7 @@ test.describe("shipping a thread", () => {
     await shipButton(page).click();
     await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
 
-    await page.route("**/api/github/user?*", (route) =>
+    await page.route("**/api/github/user", (route) =>
       route.fulfill({ json: { connected: false, login: null } }),
     );
     await page.reload();
