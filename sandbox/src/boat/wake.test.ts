@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import { BOAT_BOOT_COMMAND, BOAT_BOOT_PATH } from "./boot";
 import { BoatClient } from "./client";
 import { wakeBoatSandbox } from "./wake";
@@ -105,6 +106,26 @@ describe("waking a boat sandbox", () => {
     expect(file.content).toContain("https://aven.example.com/api");
     expect(calls[4]?.body).toEqual({ command: BOAT_BOOT_COMMAND, detached: true });
     expect(JSON.stringify(calls[4]?.body)).not.toContain(TOKEN);
+  });
+
+  test("clears the runner's journal before booting a sandbox started from a saved environment", async () => {
+    let online = false;
+    const { calls, fetchFn } = scripted({ create: [ID] }, () => {
+      online = true;
+    });
+
+    await wakeBoatSandbox({
+      record: { ...record(null), environment: "aven-project" },
+      client: new BoatClient(fetchFn, "https://boat.test/api/v1"),
+      runnerUrl: "https://aven.example.com/api",
+      saveSandboxId: async () => undefined,
+      connected: () => online,
+      clock: clock(),
+      settleMs: 0,
+    });
+
+    expect(calls[2]?.body).toEqual({ command: FRESH_JOURNAL_COMMAND });
+    expect(calls[3]?.body).toEqual({ command: "mkdir -p /home/user/.aven" });
   });
 
   test("resumes a stopped sandbox and lets go of the runner connection it had", async () => {

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import { SPACES_BOOT_COMMAND, SPACES_BOOT_PATH } from "./boot";
 import { SpacesClient } from "./client";
 import { wakeSpacesSandbox } from "./wake";
@@ -112,6 +113,26 @@ describe("waking a spaces sandbox", () => {
       timeoutSeconds: 600,
     });
     expect(JSON.stringify(calls[5]?.body)).not.toContain(TOKEN);
+  });
+
+  test("clears the runner's journal before booting a sandbox started from a saved environment", async () => {
+    let online = false;
+    const { calls, client } = scripted({ create: [ID], [ID]: ["ready"] }, () => {
+      online = true;
+    });
+    const { clock } = timed();
+
+    await wakeSpacesSandbox(
+      wake({
+        record: { ...record(null), environment: "aven-project" },
+        client,
+        connected: () => online,
+        clock,
+      }),
+    );
+
+    expect(calls[2]?.body).toEqual({ command: FRESH_JOURNAL_COMMAND });
+    expect(calls[3]?.body).toEqual({ command: "mkdir -p /home/user/.aven" });
   });
 
   test("starts the runner at once after a resume, which ends every process, and lets go of the old connection", async () => {

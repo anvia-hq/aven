@@ -1,5 +1,6 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
+import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import {
   SPACES_BOOT_COMMAND,
   SPACES_BOOT_PATH,
@@ -23,7 +24,11 @@ const gone = (error: unknown) => error instanceof SpacesApiError && error.status
 
 export async function wakeSpacesSandbox(input: SpacesWake) {
   const clock = input.clock ?? realClock;
-  const { sandboxId, started } = await ensureSandbox(input, clock, input.readyTimeoutMs ?? 75_000);
+  const { sandboxId, started, fromEnvironment } = await ensureSandbox(
+    input,
+    clock,
+    input.readyTimeoutMs ?? 75_000,
+  );
 
   if (started) input.forget?.();
 
@@ -34,6 +39,8 @@ export async function wakeSpacesSandbox(input: SpacesWake) {
   const { apiKey, runnerToken } = input.record;
 
   try {
+    if (fromEnvironment) await input.client.command(apiKey, sandboxId, FRESH_JOURNAL_COMMAND);
+
     await input.client.command(apiKey, sandboxId, "mkdir -p /home/user/.aven");
     await input.client.writeFile(
       apiKey,
@@ -63,7 +70,8 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
   if (record.sandboxId) {
     const existing = await prepare(client, record.apiKey, record.sandboxId, clock, readyTimeoutMs);
 
-    if (existing) return { sandboxId: existing.id, started: existing.resumed };
+    if (existing)
+      return { sandboxId: existing.id, started: existing.resumed, fromEnvironment: false };
   }
 
   let created: SpacesSandbox;
@@ -83,7 +91,7 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
 
   if (!ready) throw new UnavailableError("Spaces did not keep the sandbox it created");
 
-  return { sandboxId: ready.id, started: true };
+  return { sandboxId: ready.id, started: true, fromEnvironment: Boolean(record.environment) };
 }
 
 async function prepare(
