@@ -34,7 +34,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         <Row
           icon={
             sandbox ? (
-              <Cloud aria-label={starting ? "Starting" : "Aven Cloud"} />
+              <Cloud aria-label={starting ? "Starting" : "Cloud computer"} />
             ) : (
               <Monitor aria-label={runtime?.online ? "Online" : "Offline"} />
             )
