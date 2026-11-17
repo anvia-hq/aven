@@ -16,7 +16,7 @@ test.describe("the Anvia Lens flag", () => {
     await page.route("**/api/platform/lens", (route) => route.fulfill({ json: null }));
 
     await page.goto("/settings/platform");
-    await expect(page.getByRole("region", { name: "Server defaults" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Installation" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Anvia Lens" })).toHaveCount(0);
 
     lens = true;
