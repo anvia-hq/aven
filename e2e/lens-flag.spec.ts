@@ -17,6 +17,7 @@ test.describe("the Anvia Lens flag", () => {
 
     await page.goto("/settings/platform");
     await expect(page.getByRole("heading", { name: "Installation" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "People", exact: true })).toBeVisible();
     await expect(page.getByRole("region", { name: "Anvia Lens" })).toHaveCount(0);
 
     lens = true;

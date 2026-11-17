@@ -76,8 +76,8 @@ describe("the Anvia Lens settings", () => {
     ).rejects.toThrow("secret key");
   });
 
-  test("the address must be a plain http or https one", () => {
-    expect(
+  test("the address must be a plain http or https one", async () => {
+    await expect(
       lensSettingsService.save({
         baseUrl: "nope",
         publicKey: "pk",
@@ -85,7 +85,7 @@ describe("the Anvia Lens settings", () => {
         captureMode: "safe",
       }),
     ).rejects.toThrow("must be a plain http or https address");
-    expect(
+    await expect(
       lensSettingsService.save({
         baseUrl: "https://lens.example.com/v1?x=1",
         publicKey: "pk",
@@ -95,8 +95,10 @@ describe("the Anvia Lens settings", () => {
     ).rejects.toThrow("must be a plain http or https address");
   });
 
-  test("removing what is not saved says so", () => {
-    expect(lensSettingsService.remove()).rejects.toThrow("No Anvia Lens settings are saved here");
+  test("removing what is not saved says so", async () => {
+    await expect(lensSettingsService.remove()).rejects.toThrow(
+      "No Anvia Lens settings are saved here",
+    );
   });
 });
 
