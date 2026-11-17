@@ -1,7 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight } from "@mynaui/icons-react";
 import { cn } from "cn";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { UIEvent } from "react";
 
 import { Badge } from "@aven/ui/badge";
@@ -121,7 +121,30 @@ export function DiffVirtualList({ items, onToggle, footer }: Props) {
     return () => node.removeEventListener("wheel", pan);
   }, []);
 
-  const echoing = useRef(new WeakMap<HTMLElement, number>());
+  const offsets = useRef(new Map<string, number>());
+  const written = useRef(new WeakMap<HTMLElement, number>());
+  const placed = useRef(new WeakSet<HTMLElement>());
+
+  const write = (node: HTMLElement, left: number) => {
+    written.current.set(node, left);
+    node.scrollLeft = left;
+  };
+
+  useLayoutEffect(() => {
+    const canvas = scroller.current?.firstElementChild;
+
+    if (!canvas) return;
+
+    for (const node of canvas.querySelectorAll<HTMLElement>("[data-code]")) {
+      if (placed.current.has(node)) continue;
+
+      placed.current.add(node);
+
+      const want = offsets.current.get(node.dataset.code ?? "") ?? 0;
+
+      if (node.scrollLeft !== want) write(node, want);
+    }
+  });
 
   const mirrorCodeScroll = (event: UIEvent<HTMLDivElement>) => {
     const node = event.target as HTMLElement;
@@ -130,18 +153,18 @@ export function DiffVirtualList({ items, onToggle, footer }: Props) {
 
     if (!path || !canvas) return;
 
-    const echo = echoing.current.get(node) ?? 0;
+    const echoed = written.current.get(node);
 
-    if (echo > 0) {
-      echoing.current.set(node, echo - 1);
-      return;
-    }
+    written.current.delete(node);
+
+    if (echoed === node.scrollLeft) return;
+
+    offsets.current.set(path, node.scrollLeft);
 
     for (const peer of canvas.querySelectorAll<HTMLElement>(`[data-code="${CSS.escape(path)}"]`)) {
       if (peer === node || peer.scrollLeft === node.scrollLeft) continue;
 
-      echoing.current.set(peer, (echoing.current.get(peer) ?? 0) + 1);
-      peer.scrollLeft = node.scrollLeft;
+      write(peer, node.scrollLeft);
     }
   };
 
