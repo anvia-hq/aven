@@ -1721,6 +1721,13 @@
   --avatar-eye: oklch(0.99 0 0);
 }
 
+:root {
+  --ship-from: oklch(0.83 0.12 75);
+  --ship-via: oklch(0.67 0.17 30);
+  --ship-to: oklch(0.45 0.07 245);
+  --ship-foreground: oklch(0.99 0 0);
+}
+
 /* What a heading is set in: a color theme may lend the page a heading face of its own (decision
    0257), and the interface font choice stays the body's. */
 :root {
@@ -1760,6 +1767,10 @@
   --color-success: var(--success);
   --color-meter-low: var(--meter-low);
   --color-meter: var(--meter);
+  --color-ship-from: var(--ship-from);
+  --color-ship-via: var(--ship-via);
+  --color-ship-to: var(--ship-to);
+  --color-ship-foreground: var(--ship-foreground);
   --color-graph-1: var(--graph-1);
   --color-graph-2: var(--graph-2);
   --color-graph-3: var(--graph-3);
