@@ -9,7 +9,9 @@ import { MODEL_APIS } from "@aven/protocol/runtime-wire";
 
 describe("providerOptionsFor", () => {
   test("only anthropic gets automatic prompt caching", () => {
-    expect(providerOptionsFor("anthropic")).toEqual({ cache_control: { type: "ephemeral" } });
+    expect(providerOptionsFor("anthropic")).toEqual({
+      cache_control: { type: "ephemeral", ttl: "1h" },
+    });
     expect(providerOptionsFor("openai")).toBeUndefined();
     expect(providerOptionsFor("openai-compatible")).toBeUndefined();
     expect(providerOptionsFor("azure")).toBeUndefined();
@@ -242,7 +244,7 @@ describe("anthropic request", () => {
       providerOptions: providerOptionsFor("anthropic"),
     });
     await agent.generate({ prompt: "hello" }).catch(() => undefined);
-    expect(bodies[0]?.cache_control).toEqual({ type: "ephemeral" });
+    expect(bodies[0]?.cache_control).toEqual({ type: "ephemeral", ttl: "1h" });
   });
 
   test("an effort on a model the SDK does not know is sent as output_config.effort", async () => {

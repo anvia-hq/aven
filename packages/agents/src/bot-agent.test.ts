@@ -575,7 +575,7 @@ describe("createBotAgent", () => {
       const anthropic = await ask("anthropic", "");
       const openai = await ask("openai", "/v1");
 
-      expect(anthropic.cache_control).toEqual({ type: "ephemeral" });
+      expect(anthropic.cache_control).toEqual({ type: "ephemeral", ttl: "1h" });
       expect(anthropic.max_tokens).toBe(16_000);
       expect(openai).not.toHaveProperty("cache_control");
     } finally {

@@ -19,7 +19,7 @@ describe("resolveAgentModel", () => {
 
   test("a provider's config brings its options and the reasoning effort chosen", () => {
     const anthropic = resolveAgentModel({ provider: "anthropic", apiKey: "k" });
-    expect(anthropic.providerOptions).toEqual({ cache_control: { type: "ephemeral" } });
+    expect(anthropic.providerOptions).toEqual({ cache_control: { type: "ephemeral", ttl: "1h" } });
     expect(anthropic.controls).toBeUndefined();
 
     const openai = resolveAgentModel({ provider: "openai", apiKey: "k", reasoningEffort: "high" });
