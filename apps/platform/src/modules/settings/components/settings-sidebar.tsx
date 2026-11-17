@@ -7,7 +7,6 @@ import {
   Key,
   Lock,
   Api,
-  Puzzle,
   Servers,
   SignalWaves,
   Sparkles,
@@ -28,6 +27,7 @@ import {
   SidebarMenuItem,
 } from "@aven/ui/sidebar";
 import { CloudLine } from "@/components/cloud-line";
+import { McpLine } from "@/components/mcp-line";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
 const groups = [
@@ -51,7 +51,7 @@ const groups = [
     label: "Agents and integrations",
     items: [
       { to: "/settings/skills", label: "Skills", icon: BookOpen },
-      { to: "/settings/mcp", label: "MCP servers", icon: Puzzle },
+      { to: "/settings/mcp", label: "MCP Integrations", icon: McpLine },
       { to: "/settings/mcp-access", label: "MCP access", icon: Api },
       { to: "/settings/webhooks", label: "Webhooks", icon: SignalWaves },
     ],
