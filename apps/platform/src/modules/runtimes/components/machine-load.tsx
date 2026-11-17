@@ -12,7 +12,7 @@ const text: Record<MeterLevel, string> = {
   high: "text-destructive",
 };
 
-function missing(runtime: Runtime) {
+export function noLoadNote(runtime: Runtime) {
   if (!runtime.online) {
     return runtime.lastSeenAt ? `Offline, seen ${timeAgo(runtime.lastSeenAt, true)}` : "Offline";
   }
@@ -25,7 +25,8 @@ function missing(runtime: Runtime) {
 export function MachineLoad({ runtime }: { runtime: Runtime }) {
   const stats = runtime.stats && !isStale(runtime.stats) ? runtime.stats : null;
 
-  if (!stats) return <p className="truncate text-xs text-muted-foreground">{missing(runtime)}</p>;
+  if (!stats)
+    return <p className="truncate text-xs text-muted-foreground">{noLoadNote(runtime)}</p>;
 
   return (
     <div className="flex flex-col gap-1">

@@ -3,13 +3,17 @@ import { cn } from "cn";
 
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@aven/ui/hover-card";
 import { useRuntimes } from "../hooks/use-runtimes";
-import { MachineLoad } from "./machine-load";
+import { isSandbox } from "../sandbox";
+import { MachineGauges } from "./machine-gauges";
+
+const GAP = 12;
+const RAIL_TO_SIDEBAR = 6;
 
 export function MachinesRailIcon({ width }: { width: number }) {
   const { runtimes } = useRuntimes({ poll: true });
-  const ordered = [...runtimes].sort(
-    (a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name),
-  );
+  const ordered = runtimes
+    .filter((runtime) => !isSandbox(runtime))
+    .sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name));
   return (
     <HoverCard>
       <HoverCardTrigger
@@ -26,37 +30,62 @@ export function MachinesRailIcon({ width }: { width: number }) {
       >
         <Monitor className="size-[17px]" />
       </HoverCardTrigger>
-      <HoverCardContent side="right" align="end" sideOffset={6} style={{ width }} className="p-0">
-        <div className="border-b px-3 py-2 text-xs text-muted-foreground">
-          {ordered.length === 1 ? "1 machine" : `${ordered.length} machines`}
+      <HoverCardContent
+        side="right"
+        align="end"
+        alignOffset={0}
+        sideOffset={GAP + RAIL_TO_SIDEBAR}
+        style={{ width: width - 2 * GAP }}
+        className="overflow-hidden rounded-3xl p-0 shadow-xl"
+      >
+        <div className="flex items-center justify-between border-b px-4 py-3">
+          <span className="font-mono text-xs tracking-widest text-foreground uppercase">
+            Machines
+          </span>
+          <span className="font-mono text-xs text-muted-foreground tabular-nums">
+            {ordered.length}
+          </span>
         </div>
         {ordered.length === 0 ? (
-          <p className="px-3 py-3 text-sm text-muted-foreground">No machines registered.</p>
+          <p className="px-4 py-4 text-sm text-muted-foreground">No machines registered.</p>
         ) : (
-          <ul aria-label="Registered machines" className="flex max-h-80 flex-col overflow-y-auto">
+          <ul
+            aria-label="Registered machines"
+            className="flex max-h-[60vh] flex-col divide-y overflow-y-auto"
+          >
             {ordered.map((runtime) => (
-              <li
-                key={runtime.id}
-                aria-label={runtime.name}
-                className="flex items-start gap-2.5 px-3 py-2.5"
-              >
-                <span
-                  role="img"
-                  aria-label={runtime.online ? "Online" : "Offline"}
-                  className={cn(
-                    "mt-1.5 size-2 shrink-0 rounded-full",
-                    runtime.online ? "bg-success" : "bg-muted-foreground/40",
+              <li key={runtime.id} aria-label={runtime.name} className="px-4 py-3.5">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    role="img"
+                    aria-label={runtime.online ? "Online" : "Offline"}
+                    className={cn(
+                      "size-2 shrink-0 rounded-full",
+                      runtime.online
+                        ? "bg-success shadow-[0_0_8px_var(--success)]"
+                        : "bg-muted-foreground/40",
+                    )}
+                  />
+                  <p
+                    className={cn(
+                      "min-w-0 flex-1 truncate font-mono text-sm tracking-wide uppercase",
+                      !runtime.online && "text-muted-foreground",
+                    )}
+                  >
+                    {runtime.name}
+                  </p>
+                  {!runtime.online && (
+                    <span className="shrink-0 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
+                      Offline
+                    </span>
                   )}
-                />
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  <p className="truncate text-sm">{runtime.name}</p>
-                  <MachineLoad runtime={runtime} />
+                  {runtime.isControlPlane && (
+                    <span className="shrink-0 rounded-md bg-accent px-1.5 py-0.5 font-mono text-[10px] tracking-wide text-accent-foreground uppercase">
+                      Server
+                    </span>
+                  )}
                 </div>
-                {runtime.isControlPlane && (
-                  <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
-                    Server
-                  </span>
-                )}
+                <MachineGauges runtime={runtime} />
               </li>
             ))}
           </ul>

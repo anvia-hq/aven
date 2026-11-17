@@ -47,7 +47,7 @@ const stats = (overrides: Record<string, unknown>) =>
   });
 
 test.describe("machines", () => {
-  test("an icon above Settings lists every registered machine with its load when it is hovered, as wide as the sidebar, and does nothing when clicked", async ({
+  test("an icon above Settings lists every registered machine with its load when it is hovered, inset 12px from both sides of the sidebar, and does nothing when clicked", async ({
     page,
   }) => {
     await registerUser(page, "rail", "Rail User");
@@ -80,14 +80,12 @@ test.describe("machines", () => {
     await expect(disk).toHaveAttribute("aria-valuenow", "76");
     await expect(disk).toHaveAttribute("data-level", "busy");
     await expect(disk).toHaveAttribute("title", "Disk: 74.0 of 98.0 GB");
-    await expect(build).toContainText("2 sandboxes running");
 
     const hot = list.getByRole("listitem", { name: "hot-box" });
     await expect(hot.getByRole("meter", { name: "CPU of hot-box" })).toHaveAttribute(
       "data-level",
       "high",
     );
-    await expect(hot).toContainText("1 sandbox running");
 
     await expect(list.getByRole("listitem", { name: "old-box" })).toContainText("Waiting");
     const sleeping = list.getByRole("listitem", { name: "sleeping-box" });
@@ -96,9 +94,12 @@ test.describe("machines", () => {
 
     const card = page.locator('[data-slot="hover-card-content"]');
     const sidebar = page.locator('[data-slot="sidebar-container"]');
-    const cardWidth = (await card.boundingBox())!.width;
-    const sidebarWidth = (await sidebar.boundingBox())!.width;
-    expect(Math.abs(cardWidth - sidebarWidth)).toBeLessThanOrEqual(1);
+    const cardBox = (await card.boundingBox())!;
+    const sidebarBox = (await sidebar.boundingBox())!;
+    expect(Math.abs(cardBox.x - sidebarBox.x - 12)).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(sidebarBox.x + sidebarBox.width - (cardBox.x + cardBox.width) - 12),
+    ).toBeLessThanOrEqual(1);
 
     const url = page.url();
     await icon.click();
