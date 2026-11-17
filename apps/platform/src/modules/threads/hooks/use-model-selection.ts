@@ -4,6 +4,7 @@ import { useModelChoices } from "@/modules/providers/hooks/use-model-choices";
 import type { ModelChoice } from "@/modules/providers/types";
 
 import { modelSelectionAtom, threadModelSelectionsAtom } from "../atoms/model-selection-atom";
+import { threadsAtom } from "../atoms/threads-atom";
 import type { AgentBackendKind } from "@aven/protocol/types";
 import type { RunSelection, SavedSelection } from "../types";
 
@@ -52,7 +53,16 @@ export function useModelSelection(threadId?: string, backend?: AgentBackendKind)
   const choices = backend ? every.filter((choice) => choice.provider.backend === backend) : every;
   const last = useAtomValue(modelSelectionAtom);
   const threads = useAtomValue(threadModelSelectionsAtom);
-  const saved = (threadId ? threads[threadId] : undefined) ?? last;
+  const known = useAtomValue(threadsAtom);
+  const thread = threadId ? known?.find((candidate) => candidate.id === threadId) : undefined;
+  const kept: SavedSelection | undefined = thread?.modelProviderId
+    ? {
+        providerId: thread.modelProviderId,
+        modelId: thread.modelId ?? undefined,
+        effort: thread.reasoningEffort ?? undefined,
+      }
+    : undefined;
+  const saved = (threadId ? threads[threadId] : undefined) ?? kept ?? (threadId ? null : last);
   const setSaved = (selection: SavedSelection) => save(threadId, selection);
 
   const provider =
