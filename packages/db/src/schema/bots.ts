@@ -30,6 +30,7 @@ export const bots = pgTable(
     modelId: text("model_id"),
     reasoningEffort: text("reasoning_effort"),
     compactAfterTokens: integer("compact_after_tokens"),
+    hasComputer: boolean("has_computer").notNull().default(true),
     runtimeId: uuid("runtime_id").references(() => runtimes.id, { onDelete: "set null" }),
     isMain: boolean("is_main").notNull().default(false),
     lastSaidAt: timestamp("last_said_at", { withTimezone: true }),

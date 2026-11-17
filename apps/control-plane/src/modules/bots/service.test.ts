@@ -300,6 +300,23 @@ run("botsService (postgres)", async () => {
     });
   });
 
+  test("a bot is made with no machine, and can drop its computer", async () => {
+    const made = await botsService.create(alice, {
+      name: "Quiet",
+      instruction: "You only talk.",
+    });
+    expect(made).toMatchObject({ hasComputer: true, runtimeId: null });
+    expect(await botsService.update(alice, made.id, { hasComputer: false })).toMatchObject({
+      hasComputer: false,
+      runtimeId: null,
+    });
+    expect(await botsService.update(alice, made.id, { name: "Quiet" })).toMatchObject({
+      hasComputer: false,
+      runtimeId: null,
+    });
+    await botsService.remove(alice, made.id);
+  });
+
   test("the size at which the chat is summarized can be set and cleared", async () => {
     const [main] = await botsService.list(alice);
     expect(main?.compactAfterTokens).toBeNull();

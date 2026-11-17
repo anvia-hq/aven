@@ -88,7 +88,7 @@ export type BotReplyInput = {
 };
 
 export type BotReplier = {
-  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId">): void;
+  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId" | "hasComputer">): void;
   answer(input: BotReplyInput): Promise<void>;
 };
 

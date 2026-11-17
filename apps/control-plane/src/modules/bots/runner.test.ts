@@ -27,6 +27,7 @@ const bot: Bot = {
   modelId: null,
   reasoningEffort: null,
   compactAfterTokens: null,
+  hasComputer: true,
   runtimeId: null,
   isMain: true,
   attention: null,

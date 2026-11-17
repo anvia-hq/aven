@@ -14,6 +14,7 @@ const aven: Bot = {
   modelId: null,
   reasoningEffort: null,
   compactAfterTokens: null,
+  hasComputer: true,
   runtimeId: null,
   isMain: true,
   createdAt: "",

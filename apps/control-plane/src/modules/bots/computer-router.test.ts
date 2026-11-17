@@ -103,6 +103,21 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     }
   });
 
+  test("a bot with no computer is not asked of a runner", async () => {
+    await botsService.update(owner.userId, mine!.id, { hasComputer: false });
+    const before = calls().length;
+    const status = await api(`/bots/${mine!.id}/computer`, owner.token);
+    expect(status.status).toBe(200);
+    expect(await status.json()).toEqual({ available: false });
+
+    const woken = await api(`/bots/${mine!.id}/computer/wake`, owner.token, "POST");
+    expect(woken.status).toBe(503);
+    expect(await woken.text()).toContain("no computer");
+    expect(calls()).toHaveLength(before);
+
+    await botsService.update(owner.userId, mine!.id, { hasComputer: true });
+  });
+
   test("only the bot's own person: another person's bot is not found, and nothing is asked of the runner", async () => {
     const before = calls().length;
 

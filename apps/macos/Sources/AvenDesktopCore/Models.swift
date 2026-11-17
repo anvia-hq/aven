@@ -425,6 +425,7 @@ public struct Bot: Codable, Equatable, Sendable, Identifiable {
     public var modelId: String?
     public var reasoningEffort: String?
     public var compactAfterTokens: Int?
+    public var hasComputer: Bool?
     public var runtimeId: String?
     public var isMain: Bool
     public var createdAt: String

@@ -13,6 +13,12 @@ describe("updateBotBody", () => {
     expect(updateBotBody.safeParse({ compactAfterTokens: 1500.5 }).success).toBe(false);
   });
 
+  test("takes a computer, or none", () => {
+    expect(updateBotBody.safeParse({ hasComputer: false }).success).toBe(true);
+    expect(updateBotBody.safeParse({ hasComputer: true, runtimeId: null }).success).toBe(true);
+    expect(updateBotBody.safeParse({ hasComputer: "no" }).success).toBe(false);
+  });
+
   test("takes an effort or none", () => {
     expect(updateBotBody.safeParse({ reasoningEffort: "high" }).success).toBe(true);
     expect(updateBotBody.safeParse({ reasoningEffort: null }).success).toBe(true);

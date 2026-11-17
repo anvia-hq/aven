@@ -15,6 +15,7 @@ const bot = (id: string, attention: BotAttention | null, createdAt = "2026-01-01
     modelId: null,
     reasoningEffort: null,
     compactAfterTokens: null,
+    hasComputer: true,
     runtimeId: null,
     isMain: false,
     attention,
