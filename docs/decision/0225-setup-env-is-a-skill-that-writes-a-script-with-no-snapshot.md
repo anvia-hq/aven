@@ -1,6 +1,6 @@
 # `setup-env` is a skill that writes a script, with no snapshot
 
-Status: accepted. Brings back the `setup-env` skill that 0219 removed with the container sandbox, in a form that needs neither a sandbox nor a snapshot.
+Status: accepted. Partly superseded by 0326, which gives an Aven Cloud sandbox a snapshot again; everything here still holds on the person's own computer. Brings back the `setup-env` skill that 0219 removed with the container sandbox, in a form that needs neither a sandbox nor a snapshot.
 
 ## Context
 
