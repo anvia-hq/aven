@@ -59,6 +59,9 @@ export type Thread = {
   projectId: string;
   title: string;
   agentBackend: AgentBackendKind;
+  modelProviderId: string | null;
+  modelId: string | null;
+  reasoningEffort: string | null;
   createdBy: string;
   createdByName: string;
   createdByImage: string | null;
