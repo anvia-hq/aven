@@ -63,7 +63,7 @@ export const PALETTES: PaletteOption[] = [
     id: "aven",
     label: "Aven",
     light: "oklch(0.22 0.01 160)",
-    dark: "oklch(0.93 0.004 240)",
+    dark: "oklch(0.93 0 0)",
   },
   {
     id: "mint",
