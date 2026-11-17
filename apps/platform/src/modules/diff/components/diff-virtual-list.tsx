@@ -1,20 +1,20 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronRight } from "@mynaui/icons-react";
 import { cn } from "cn";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import type { UIEvent } from "react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 
 import { useFileColours } from "../hooks/use-file-colours";
 import { widestLine } from "../flatten";
-import type { DiffFile, DiffItem, DiffLayout } from "../types";
+import type { DiffFile, DiffItem } from "../types";
 import { HunkHeader, Side, UnifiedRow } from "./diff-lines";
 import { DiffStat } from "./diff-stat";
 
 const ROW = 20;
 const PADDING = 16;
-const GUTTERS_REM = 6.5;
 
 const statusLabel: Record<DiffFile["status"], string | null> = {
   added: "New",
@@ -25,9 +25,7 @@ const statusLabel: Record<DiffFile["status"], string | null> = {
 
 type Props = {
   items: DiffItem[];
-  files: DiffFile[];
   onToggle: (file: DiffFile, open: boolean) => void;
-  layout: DiffLayout;
   footer?: string;
 };
 
@@ -67,7 +65,7 @@ function FileHeader({
   );
 }
 
-export function DiffVirtualList({ items, files, layout, onToggle, footer }: Props) {
+export function DiffVirtualList({ items, onToggle, footer }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const virtual = useVirtualizer({
     count: items.length,
@@ -87,25 +85,78 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
     [rows, items],
   );
   const colours = useFileColours(visibleFiles);
-  const widest = useMemo(
-    () => files.reduce((most, file) => Math.max(most, widestLine(file)), 0),
-    [files],
-  );
+  const widths = useMemo(() => {
+    const widest = new Map<string, number>();
+
+    for (const item of items) {
+      if (!widest.has(item.file.path)) widest.set(item.file.path, widestLine(item.file));
+    }
+
+    return widest;
+  }, [items]);
+
+  useEffect(() => {
+    const node = scroller.current;
+
+    if (!node) return;
+
+    const pan = (event: WheelEvent) => {
+      const code = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-code]");
+      let step = event.deltaX;
+
+      if (step === 0 && event.shiftKey) step = event.deltaY;
+
+      if (!code || step === 0) return;
+
+      const room = code.scrollWidth - code.clientWidth;
+
+      if (room <= 0) return;
+
+      event.preventDefault();
+      code.scrollLeft = Math.max(0, Math.min(room, code.scrollLeft + step));
+    };
+
+    node.addEventListener("wheel", pan, { passive: false });
+
+    return () => node.removeEventListener("wheel", pan);
+  }, []);
+
+  const echoing = useRef(new WeakMap<HTMLElement, number>());
+
+  const mirrorCodeScroll = (event: UIEvent<HTMLDivElement>) => {
+    const node = event.target as HTMLElement;
+    const path = node.dataset.code;
+    const canvas = event.currentTarget.firstElementChild;
+
+    if (!path || !canvas) return;
+
+    const echo = echoing.current.get(node) ?? 0;
+
+    if (echo > 0) {
+      echoing.current.set(node, echo - 1);
+      return;
+    }
+
+    for (const peer of canvas.querySelectorAll<HTMLElement>(`[data-code="${CSS.escape(path)}"]`)) {
+      if (peer === node || peer.scrollLeft === node.scrollLeft) continue;
+
+      echoing.current.set(peer, (echoing.current.get(peer) ?? 0) + 1);
+      peer.scrollLeft = node.scrollLeft;
+    }
+  };
 
   return (
-    <div ref={scroller} className="@container min-h-0 flex-1 overflow-auto">
+    <div ref={scroller} className="min-h-0 flex-1 overflow-auto" onScrollCapture={mirrorCodeScroll}>
       <div
         className="relative font-mono text-xs leading-5"
-        style={{
-          height: virtual.getTotalSize(),
-          minWidth: layout === "unified" ? `calc(${widest}ch + ${GUTTERS_REM + 2}rem)` : undefined,
-        }}
+        style={{ height: virtual.getTotalSize() }}
       >
         {rows.map((row) => {
           const item = items[row.index]!;
           const at = { transform: `translateY(${Math.round(row.start)}px)` };
           const colour = (target: Parameters<typeof colours>[1]) => colours(item.file, target);
           const belowHeader = items[row.index - 1]?.kind === "file";
+          const width = widths.get(item.file.path) ?? 0;
           return (
             <div
               key={row.key}
@@ -115,14 +166,14 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
               className="absolute top-0 left-0 w-full px-4"
             >
               {item.kind === "file" && (
-                <div className={cn("w-[calc(100cqw-2rem)]", !item.first && "pt-3")}>
+                <div className={cn("w-full", !item.first && "pt-3")}>
                   <FileHeader item={item} onToggle={onToggle} />
                 </div>
               )}
               {item.kind === "note" && (
                 <p
                   className={cn(
-                    "w-[calc(100cqw-2rem)] border border-t-0 bg-card px-3 py-2 font-sans text-xs text-muted-foreground rounded-b-lg",
+                    "w-full border border-t-0 bg-card px-3 py-2 font-sans text-xs text-muted-foreground rounded-b-lg",
                     belowHeader && "-mt-px",
                   )}
                 >
@@ -137,19 +188,44 @@ export function DiffVirtualList({ items, files, layout, onToggle, footer }: Prop
                 </div>
               )}
               {item.kind === "unified" && (
-                <div className={cn("border-x bg-card", item.last && "rounded-b-lg border-b")}>
-                  <UnifiedRow row={item.row} colour={colour} />
+                <div
+                  className={cn(
+                    "border-x bg-card overflow-hidden",
+                    item.last && "rounded-b-lg border-b",
+                  )}
+                >
+                  <UnifiedRow
+                    row={item.row}
+                    colour={colour}
+                    path={item.file.path}
+                    width={width}
+                    indicator={item.last}
+                  />
                 </div>
               )}
               {item.kind === "split" && (
                 <div
                   className={cn(
-                    "grid w-[calc(100cqw-2rem)] grid-cols-2 divide-x border-x bg-card",
+                    "grid w-full grid-cols-2 divide-x border-x bg-card overflow-hidden",
                     item.last && "rounded-b-lg border-b",
                   )}
                 >
-                  <Side row={item.pair.old} number={item.pair.old?.oldNo} colour={colour} />
-                  <Side row={item.pair.new} number={item.pair.new?.newNo} colour={colour} />
+                  <Side
+                    row={item.pair.old}
+                    number={item.pair.old?.oldNo}
+                    colour={colour}
+                    path={item.file.path}
+                    width={width}
+                    indicator={item.last}
+                  />
+                  <Side
+                    row={item.pair.new}
+                    number={item.pair.new?.newNo}
+                    colour={colour}
+                    path={item.file.path}
+                    width={width}
+                    indicator={item.last}
+                  />
                 </div>
               )}
             </div>
