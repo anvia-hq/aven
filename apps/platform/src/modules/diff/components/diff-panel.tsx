@@ -75,8 +75,6 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
       {files.length > 0 ? (
         <DiffVirtualList
           items={items}
-          files={files}
-          layout={layout}
           onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
           footer={
             truncated
