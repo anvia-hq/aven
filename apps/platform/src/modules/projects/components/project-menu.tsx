@@ -68,11 +68,11 @@ export function ProjectMenu({
       <PopoverTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             aria-label="Project"
             aria-expanded={open}
-            className="max-w-48 min-w-0 bg-muted/50 px-2 text-muted-foreground"
+            className="max-w-48 min-w-0 rounded-full bg-muted/40 px-3 text-muted-foreground"
           />
         }
       >

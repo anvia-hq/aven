@@ -53,7 +53,7 @@ run("Aven Cloud runtime (postgres)", async () => {
     for (const org of [orgA, orgB]) {
       const listed = await runtimesService.list(org, userId);
       expect(listed.find(({ id }) => id === CLOUD_RUNTIME_ID)).toMatchObject({
-        name: "Aven Cloud",
+        name: "boat.dev",
         provider: "boat",
         lifetime: "ephemeral",
         githubMode: "person",
@@ -64,7 +64,7 @@ run("Aven Cloud runtime (postgres)", async () => {
   test("the Aven Cloud template cannot be renamed or told which GitHub to use", async () => {
     expect(await runtimesService.rename(orgA, CLOUD_RUNTIME_ID, "Mine")).toBeNull();
     expect(await runtimesService.setGithubMode(orgA, CLOUD_RUNTIME_ID, "machine")).toBeNull();
-    expect((await runtimesService.get(orgA, CLOUD_RUNTIME_ID))?.name).toBe("Aven Cloud");
+    expect((await runtimesService.get(orgA, CLOUD_RUNTIME_ID))?.name).toBe("boat.dev");
   });
 
   test("a thread on Aven Cloud gets a computer of its own that is listed only to its owner", async () => {
@@ -245,7 +245,7 @@ run("Aven Cloud runtime (postgres)", async () => {
       const listed = await runtimesService.list(orgA, userId);
       expect(listed.map(({ id }) => id)).not.toContain(CLOUD_RUNTIME_ID);
       expect(listed.find(({ id }) => id === SPACES_RUNTIME_ID)).toMatchObject({
-        name: "Aven Cloud",
+        name: "Spaces",
         provider: "spaces",
         lifetime: "ephemeral",
       });

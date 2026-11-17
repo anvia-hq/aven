@@ -27,7 +27,7 @@ import {
   cloudEnabled,
   cloudProviderApiKey,
   cloudTemplateId,
-  CLOUD_TEMPLATE_NAME,
+  cloudTemplateName,
   disabledTemplateIds,
   enabledCloudProviders,
   enabledTemplateIds,
@@ -128,7 +128,7 @@ const named = (row: RuntimeRow) => {
   const runtime = publicRuntime(row);
   const provider = templateProvider(row.id);
 
-  return provider ? { ...runtime, name: CLOUD_TEMPLATE_NAME } : runtime;
+  return provider ? { ...runtime, name: cloudTemplateName(provider) } : runtime;
 };
 
 async function readRunnerToken(stored: string | null, id: string) {
@@ -167,7 +167,7 @@ export const runtimesService = {
         .insert(runtimes)
         .values({
           id: cloudTemplateId(provider),
-          name: CLOUD_TEMPLATE_NAME,
+          name: cloudTemplateName(provider),
           provider,
           lifetime: "ephemeral",
           githubMode: "person",
@@ -212,7 +212,7 @@ export const runtimesService = {
         organizationId,
         ownerId,
         parentRuntimeId: templateId,
-        name: "Aven Cloud",
+        name: cloudTemplateName(provider),
         provider,
         lifetime: "ephemeral",
         githubMode: "person",

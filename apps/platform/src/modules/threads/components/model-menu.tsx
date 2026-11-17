@@ -35,11 +35,11 @@ export function ModelMenu({ model }: Props) {
       <PopoverTrigger
         render={
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             aria-label="Model and reasoning effort"
             title={subscription ? `Runs on your ${provider.name}` : provider.name}
-            className="max-w-full min-w-0 bg-muted/50 px-2 text-muted-foreground"
+            className="max-w-full min-w-0 rounded-full bg-muted/40 px-3 text-muted-foreground"
           />
         }
       >
