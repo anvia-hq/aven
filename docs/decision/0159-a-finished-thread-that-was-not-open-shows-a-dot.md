@@ -1,6 +1,6 @@
 # 0159: A thread that finished while it was not open shows a dot
 
-Status: accepted. Adds to the finished-thread chime (decision 0096's sidebar polling).
+Status: accepted. Adds to the finished-thread chime (decision 0096's sidebar polling). Superseded in part by 0331: the dot now sits at the row's end and is blue for finished, red when the thread wants the person.
 
 ## Context
 

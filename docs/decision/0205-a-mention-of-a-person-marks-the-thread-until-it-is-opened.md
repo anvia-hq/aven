@@ -1,6 +1,6 @@
 # A mention of a person marks the thread until it is opened
 
-Status: accepted.
+Status: accepted. Superseded in part by 0331: a mention now shows red at the row's end, beside the blue a finished run keeps.
 
 ## Context
 

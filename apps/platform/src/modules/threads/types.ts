@@ -73,12 +73,15 @@ export type Thread = {
   state: ThreadState;
   running: boolean;
   awaitingAnswer?: boolean;
+  lastError?: string | null;
   pullRequests: ThreadPullRequest[];
   createdAt: string;
   updatedAt: string;
 };
 
 export type Crowd = { shown: ThreadPerson[]; more: number; names: string[] };
+
+export type ThreadStatus = "attention" | "finished";
 
 export type Viewer = {
   id: string;
