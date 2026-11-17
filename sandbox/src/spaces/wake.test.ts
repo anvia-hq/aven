@@ -150,6 +150,29 @@ describe("waking a spaces sandbox", () => {
     expect(calls.map((call) => call.body)).toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
+  test("deletes the sandbox it created when the journal cannot be cleared, so the next wake starts again from the environment", async () => {
+    const { calls, client } = scripted({ create: [ID], [ID]: ["ready"] });
+    client.command = async () => {
+      throw new Error("unreachable");
+    };
+    const { clock } = timed();
+
+    await expect(
+      wakeSpacesSandbox(
+        wake({
+          record: { ...record(null), environment: "aven-project" },
+          client,
+          connected: () => false,
+          clock,
+        }),
+      ),
+    ).rejects.toThrow();
+
+    expect(calls.map((call) => `${call.method} ${call.url.replace(BASE, "")}`)).toContain(
+      `DELETE /sandboxes/${ID}`,
+    );
+  });
+
   test("starts the runner at once after a resume, which ends every process, and lets go of the old connection", async () => {
     const { clock, at } = timed();
     let online = false;

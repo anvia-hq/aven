@@ -88,6 +88,7 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
     try {
       await client.command(record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
     } catch (error) {
+      await client.deleteSandbox(record.apiKey, ready.id).catch(() => undefined);
       throw asUnavailable(error);
     }
   }

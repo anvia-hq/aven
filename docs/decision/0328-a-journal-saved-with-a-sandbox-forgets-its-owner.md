@@ -19,3 +19,5 @@ A Cloud sandbox runs its own runner, and the runner's journal (`~/.aven/runtime/
 ## And the journal itself does not come along
 
 Clearing the lease is not enough: the snapshot also holds the setup thread's runs, outbox and transcripts, which a runner in the new sandbox would report and resume. A sandbox created from a saved environment (`record.environment` set, in the boat and spaces wake) removes `~/.aven/runtime/runs.db*` (`sandbox/src/fresh-journal.ts`) as soon as it is created, before anything waits for a runner to connect, stopping a boot-time runner service first. A wake that fails after that finds the sandbox and does not clear again, which could wipe a live journal. A sandbox that is only resumed keeps its journal, since 0024 depends on it. What the environment is for (installed dependencies, tools, caches) lives outside those files.
+
+When the cleanup command fails, the wake deletes the sandbox it just created and fails, so the next wake finds it gone and creates it again from the environment instead of keeping a sandbox whose journal was never cleared.

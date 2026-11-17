@@ -142,6 +142,30 @@ describe("waking a boat sandbox", () => {
     expect(calls.map((call) => call.body)).toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
+  test("deletes the sandbox it created when the journal cannot be cleared, so the next wake starts again from the environment", async () => {
+    const { calls, fetchFn } = scripted({ create: [ID] });
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+    client.command = async () => {
+      throw new Error("unreachable");
+    };
+
+    await expect(
+      wakeBoatSandbox({
+        record: { ...record(null), environment: "aven-project" },
+        client,
+        runnerUrl: "https://aven.example.com/api",
+        saveSandboxId: async () => undefined,
+        connected: () => false,
+        clock: clock(),
+        settleMs: 0,
+      }),
+    ).rejects.toThrow();
+
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toContain(
+      `DELETE https://boat.test/api/v1/sandboxes/${ID}`,
+    );
+  });
+
   test("resumes a stopped sandbox and lets go of the runner connection it had", async () => {
     const { calls, fetchFn } = scripted({ [ID]: ["archived", "ready"] });
     const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
