@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { encryptSecret } from "@aven/server-kit/crypto";
 
 import { decisionModelService } from "../decision-model/service";
+import { modelCatalog } from "../providers/model-catalog";
 import { providersService } from "../providers/service";
 import { runtimesService } from "../runtimes/service";
 import { createThreadMessages } from "./messages";
@@ -451,13 +452,15 @@ run("a thread keeps the model it was sent with (postgres, decision 0325)", async
     isDefault: true,
   });
   const gateway = await providersService.create(userId, {
-    kind: "openai-compatible",
-    name: "Gateway",
-    baseUrl: "https://gateway.example.com/v1",
-    modelId: "gateway-model",
-    apiKey: "gateway-key",
+    kind: "openai",
+    name: "OpenAI",
+    apiKey: "sk-openai-abcd",
   });
-  afterAll(cleanup);
+  const windows = spyOn(modelCatalog, "contextWindow").mockResolvedValue(null);
+  afterAll(async () => {
+    windows.mockRestore();
+    await cleanup();
+  });
 
   const ranWith: (string | undefined)[] = [];
   const messages = createThreadMessages({
@@ -478,12 +481,7 @@ run("a thread keeps the model it was sent with (postgres, decision 0325)", async
     await providersService.update(userId, anthropic.id, { isDefault: true });
     await messages.send(orgA, userId, thread.id, { prompt: "four" });
 
-    expect(ranWith.slice(-4)).toEqual([
-      "anthropic",
-      "anthropic",
-      "openai-compatible",
-      "openai-compatible",
-    ]);
+    expect(ranWith.slice(-4)).toEqual(["anthropic", "anthropic", "openai", "openai"]);
     expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(gateway.id);
   });
 
