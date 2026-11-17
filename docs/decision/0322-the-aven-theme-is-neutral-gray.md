@@ -1,6 +1,6 @@
 # 0322. The Aven theme is neutral gray
 
-Status: accepted. Supersedes the hue of 0292 and 0305.
+Status: superseded by 0325 (the default theme keeps its cool gray). Was: accepted, superseding the hue of 0292 and 0305.
 
 ## Context
 
