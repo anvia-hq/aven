@@ -137,7 +137,7 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 }
 
 export function providerOptionsFor(provider: Provider) {
-  return provider === "anthropic" ? { cache_control: { type: "ephemeral" } } : undefined;
+  return provider === "anthropic" ? { cache_control: { type: "ephemeral", ttl: "1h" } } : undefined;
 }
 
 export function reasoningControlsFor(
