@@ -6,6 +6,7 @@ import {
   faces,
   families,
   formatAvatarSetting,
+  isLightTint,
   parseAvatarSetting,
   randomSeed,
 } from "./avatar";
@@ -46,6 +47,24 @@ describe("avatarFor", () => {
 
   test("a shape that does not exist falls back to the one the seed gives", () => {
     expect(avatarFor("bot", { family: "blob" }).family).toBe(avatarFor("bot").family);
+  });
+});
+
+describe("the ink a bubble takes on a tint", () => {
+  test("keeps the dark ink on the light half of the palette, and white on the deeper half", () => {
+    const light = ["#ff6eb4", "#00b2ff", "#00d46a", "#ff9500", "#ffc400"];
+    const deep = colors.filter((color) => !light.includes(color));
+
+    for (const color of light) expect(isLightTint(color)).toBe(true);
+    for (const color of deep) expect(isLightTint(color)).toBe(false);
+    expect(deep).toHaveLength(colors.length - light.length);
+  });
+
+  test("reads a colour set by hand by its luminance, not by the palette", () => {
+    expect(isLightTint("#ffffff")).toBe(true);
+    expect(isLightTint("#1bcf57")).toBe(true);
+    expect(isLightTint("#0a5cff")).toBe(false);
+    expect(isLightTint("#000000")).toBe(false);
   });
 });
 
