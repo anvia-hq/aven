@@ -3,10 +3,10 @@ import { Rocket } from "@mynaui/icons-react";
 export function ShipRequestCard() {
   return (
     <div
-      className="ml-auto flex w-full max-w-[85%] items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-sm sm:max-w-md"
+      className="ml-auto flex w-fit max-w-[85%] items-center gap-3 rounded-full border bg-card py-2 pr-5 pl-2 text-sm"
       data-role="user"
     >
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-accent">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-[#f6b86a] via-[#e8705c] to-[#2f5d82] text-white">
         <Rocket className="size-4" />
       </span>
       <span className="min-w-0">
