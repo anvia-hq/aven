@@ -575,6 +575,13 @@
       "when": 1794887304392,
       "tag": "0081_deep_payback",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1794896215129,
+      "tag": "0082_many_kid_colt",
+      "breakpoints": true
     }
   ]
 }

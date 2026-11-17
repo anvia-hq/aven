@@ -117,6 +117,7 @@ export type MachineRelay = {
 };
 
 export type RuntimeCallContext = {
+  runtimeId: string;
   forks: ThreadForks;
   machines: MachineRelay;
   findRun(runId: string): CallRun | undefined;

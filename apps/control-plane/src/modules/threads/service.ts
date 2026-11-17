@@ -261,7 +261,7 @@ export const threadsService = {
     await requireSubscriptionToken(userId, backend);
 
     const runtimeId = cloud
-      ? (await runtimesService.createCloudSandbox(organizationId, userId, requested)).id
+      ? (await runtimesService.createCloudSandbox(organizationId, userId, requested, project.id)).id
       : requested;
 
     const [thread] = await db

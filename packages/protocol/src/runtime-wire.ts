@@ -86,6 +86,10 @@ export const RUNTIME_LIFETIMES = ["persistent", "ephemeral"] as const;
 
 export const RUNTIME_GITHUB_MODES = ["machine", "person"] as const;
 
+export const ENVIRONMENT_STATUSES = ["saving", "ready", "failed"] as const;
+
+export const SAVED_SNAPSHOT_NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
+
 export const MACHINE_OPS = [
   "prepare",
   "workspace",

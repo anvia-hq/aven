@@ -29,6 +29,12 @@ const sandbox = (state: string) => ({
   sandbox: { id: ID, state, dataExpiredAt: null },
 });
 
+const savedSnapshot = (status: string) => ({
+  ok: true,
+  type: "snapshot.saved.info",
+  snapshot: { name: "aven-p1", status, sourceSandboxId: ID, createdAt: "2026-01-01T00:00:00Z" },
+});
+
 describe("boat client", () => {
   test("sends the key as a bearer token that stays out of the url", async () => {
     const { calls, fetchFn } = recorded(() => ({ json: sandbox("ready") }));
@@ -181,6 +187,77 @@ describe("boat client", () => {
     expect(calls[2]?.init.method).toBe("POST");
     expect(calls[2]?.url).toBe(`https://boat.test/api/v1/sandboxes/${ID}/stop`);
     expect(calls[2]?.init.body).toBeUndefined();
+  });
+
+  test("starts a sandbox from a saved snapshot when the runtime names one", async () => {
+    const bodies: unknown[] = [];
+    const { fetchFn } = recorded((_url, init) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return { status: 202, json: sandbox("provisioning") };
+    });
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+
+    await client.createSandbox(KEY, {
+      runtimeId: "r-1",
+      machineType: "small",
+      from: "aven-7f0c1b2e-0f1a-4c3d-9f00-8a1b2c3d4e5f",
+    });
+
+    expect(bodies[0]).toMatchObject({
+      from: "aven-7f0c1b2e-0f1a-4c3d-9f00-8a1b2c3d4e5f",
+      type: "small",
+    });
+  });
+
+  test("saves a saved snapshot, reads its status and deletes it by name", async () => {
+    const saved = (status: string, error?: string) => {
+      const snapshot: Record<string, unknown> = {
+        name: "aven-p1",
+        status,
+        sourceSandboxId: ID,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      };
+
+      if (error) snapshot.error = error;
+
+      return { ok: true, type: "snapshot.saved.info", snapshot };
+    };
+    const { calls, fetchFn } = recorded((_url, init) => {
+      if (init.method === "DELETE")
+        return { json: { ok: true, type: "snapshot.saved.deleted", name: "aven-p1" } };
+
+      if (init.method === "POST") return { status: 202, json: saved("saving") };
+
+      return { json: saved("failed", "disk full") };
+    });
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+
+    expect(await client.saveSnapshot(KEY, ID, "aven-p1")).toEqual({
+      name: "aven-p1",
+      status: "saving",
+      error: null,
+    });
+    expect(await client.getSavedSnapshot(KEY, "aven-p1")).toEqual({
+      name: "aven-p1",
+      status: "failed",
+      error: "disk full",
+    });
+    await client.deleteSavedSnapshot(KEY, "aven-p1");
+
+    expect(calls.map((call) => `${call.init.method} ${call.url}`)).toEqual([
+      `POST https://boat.test/api/v1/saved-snapshots`,
+      `GET https://boat.test/api/v1/saved-snapshots/aven-p1`,
+      `DELETE https://boat.test/api/v1/saved-snapshots/aven-p1`,
+    ]);
+    expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ sandboxId: ID, name: "aven-p1" });
+  });
+
+  test("refuses a saved snapshot name boat would not take", async () => {
+    const { calls, fetchFn } = recorded(() => ({ json: savedSnapshot("ready") }));
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+
+    await expect(client.getSavedSnapshot(KEY, "Aven Env")).rejects.toBeInstanceOf(BoatApiError);
+    expect(calls).toHaveLength(0);
   });
 
   test("reports a sandbox that cannot be reached", async () => {

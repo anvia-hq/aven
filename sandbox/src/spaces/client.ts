@@ -1,4 +1,6 @@
-import type { SpacesMachineType, SpacesSandbox } from "./types";
+import { SAVED_SNAPSHOT_NAME } from "@aven/protocol/runtime-wire";
+
+import type { SpacesMachineType, SpacesSavedSnapshot, SpacesSandbox } from "./types";
 import { spacesAutoStopSeconds } from "./config";
 
 const SANDBOX_ID = /^bx_[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
@@ -62,6 +64,26 @@ function sandboxOf(parsed: unknown): SpacesSandbox {
   return { id, state: asString(sandbox?.state) };
 }
 
+function savedSnapshotOf(parsed: unknown): SpacesSavedSnapshot {
+  const snapshot = asRecord(asRecord(parsed)?.snapshot);
+  const name = asString(snapshot?.name);
+  const status = asString(snapshot?.status);
+
+  if (!SAVED_SNAPSHOT_NAME.test(name) || !["saving", "ready", "failed"].includes(status))
+    throw new SpacesApiError(
+      0,
+      "invalid_saved_snapshot",
+      "Spaces returned an unexpected saved snapshot",
+    );
+
+  const error = asString(snapshot?.error);
+  return {
+    name,
+    status: status as SpacesSavedSnapshot["status"],
+    error: error || null,
+  };
+}
+
 export class SpacesClient {
   constructor(
     private base: string,
@@ -70,22 +92,43 @@ export class SpacesClient {
 
   async createSandbox(
     apiKey: string,
-    input: { runtimeId: string; machineType: SpacesMachineType },
+    input: { runtimeId: string; machineType: SpacesMachineType; from?: string | null },
   ) {
+    const body: Record<string, unknown> = {
+      name: `aven-${input.runtimeId}`.slice(0, 120),
+      type: input.machineType,
+      ttlSeconds: spacesAutoStopSeconds(),
+      labels: { avenRuntimeId: input.runtimeId },
+    };
+
+    if (input.from) body.from = input.from;
+
     return sandboxOf(
-      await this.#request(
-        "POST",
-        "/sandboxes",
-        apiKey,
-        {
-          name: `aven-${input.runtimeId}`.slice(0, 120),
-          type: input.machineType,
-          ttlSeconds: spacesAutoStopSeconds(),
-          labels: { avenRuntimeId: input.runtimeId },
-        },
-        { "Idempotency-Key": `aven-${input.runtimeId}` },
-      ),
+      await this.#request("POST", "/sandboxes", apiKey, body, {
+        "Idempotency-Key": `aven-${input.runtimeId}`,
+      }),
     );
+  }
+
+  async saveSnapshot(apiKey: string, sandboxId: string, name: string) {
+    return savedSnapshotOf(
+      await this.#request("POST", "/saved-snapshots", apiKey, { sandboxId, name }),
+    );
+  }
+
+  async getSavedSnapshot(apiKey: string, name: string) {
+    return savedSnapshotOf(await this.#request("GET", this.#savedPath(name), apiKey));
+  }
+
+  async deleteSavedSnapshot(apiKey: string, name: string) {
+    await this.#request("DELETE", this.#savedPath(name), apiKey);
+  }
+
+  #savedPath(name: string) {
+    if (!SAVED_SNAPSHOT_NAME.test(name))
+      throw new SpacesApiError(0, "invalid_snapshot_name", "The saved snapshot name is not usable");
+
+    return `/saved-snapshots/${name}`;
   }
 
   async getSandbox(apiKey: string, sandboxId: string) {

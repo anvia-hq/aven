@@ -34,6 +34,7 @@ import {
   templateProvider,
 } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID } from "./local-id";
+import { environmentsService } from "../environments/service";
 import type { CloudSandboxPage, SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
@@ -177,7 +178,12 @@ export const runtimesService = {
     }
   },
 
-  async createCloudSandbox(organizationId: string, ownerId: string, templateId: string) {
+  async createCloudSandbox(
+    organizationId: string,
+    ownerId: string,
+    templateId: string,
+    projectId: string,
+  ) {
     const provider = templateProvider(templateId);
 
     if (!provider || !cloudEnabled(provider)) throw new UnavailableError(CLOUD_OFF);
@@ -199,6 +205,7 @@ export const runtimesService = {
       );
 
     const { token, columns } = issueToken();
+    const environment = await environmentsService.ready(projectId, provider);
     const [row] = await db
       .insert(runtimes)
       .values({
@@ -210,6 +217,7 @@ export const runtimesService = {
         lifetime: "ephemeral",
         githubMode: "person",
         boatMachineType: "default",
+        environmentSnapshot: environment?.name ?? null,
         ...(await encryptedRunnerToken(token)),
         ...columns,
       })
@@ -351,6 +359,7 @@ export const runtimesService = {
       runnerToken,
       sandboxId: row.boatSandboxId,
       machineType: row.boatMachineType ?? "default",
+      environment: row.environmentSnapshot,
     };
   },
 

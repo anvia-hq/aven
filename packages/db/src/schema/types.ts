@@ -20,6 +20,7 @@ import type { memoryEvents } from "./memory-events";
 import type { memoryNotes } from "./memory-notes";
 import type { organizations } from "./organizations";
 import type { platformSettings } from "./platform-settings";
+import type { projectEnvironments } from "./project-environments";
 import type { projects } from "./projects";
 import type { providers } from "./providers";
 import type { runtimes } from "./runtimes";
@@ -85,6 +86,10 @@ export type NewPlatformSetting = typeof platformSettings.$inferInsert;
 export type Project = typeof projects.$inferSelect;
 
 export type NewProject = typeof projects.$inferInsert;
+
+export type ProjectEnvironmentRow = typeof projectEnvironments.$inferSelect;
+
+export type NewProjectEnvironment = typeof projectEnvironments.$inferInsert;
 
 export type ProviderRow = typeof providers.$inferSelect;
 

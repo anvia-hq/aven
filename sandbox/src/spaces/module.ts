@@ -1,6 +1,6 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
-import { SpacesClient } from "./client";
+import { SpacesApiError, SpacesClient } from "./client";
 import { spacesApiBase, spacesApiKey } from "./config";
 import { spacesLifetime } from "./lifetime";
 import { createSpacesProvider } from "./provider";
@@ -14,6 +14,16 @@ function client() {
 
   return new SpacesClient(base);
 }
+
+function key() {
+  const apiKey = spacesApiKey();
+
+  if (!apiKey) throw new UnavailableError("The spaces API key is not set");
+
+  return apiKey;
+}
+
+const gone = (error: unknown) => error instanceof SpacesApiError && error.status === 404;
 
 export const spacesModule: CloudProviderModule = {
   apiKey: spacesApiKey,
@@ -42,6 +52,30 @@ export const spacesModule: CloudProviderModule = {
     await destroySpacesSandbox(apiKey, sandboxId, client());
 
     return true;
+  },
+  saveEnvironment: async (sandboxId, name) => client().saveSnapshot(key(), sandboxId, name),
+  readEnvironment: async (name) => {
+    const apiKey = spacesApiKey();
+
+    if (!apiKey) return null;
+
+    return client()
+      .getSavedSnapshot(apiKey, name)
+      .catch((error: unknown) => (gone(error) ? null : Promise.reject(error)));
+  },
+  removeEnvironment: async (name) => {
+    const apiKey = spacesApiKey();
+
+    if (!apiKey || !spacesApiBase()) return true;
+
+    try {
+      await client().deleteSavedSnapshot(apiKey, name);
+      return true;
+    } catch (error) {
+      if (gone(error)) return true;
+
+      throw error;
+    }
   },
   lifetime: spacesLifetime,
 };

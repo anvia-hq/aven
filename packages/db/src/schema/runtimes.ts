@@ -38,6 +38,7 @@ export const runtimes = pgTable(
     githubMode: text("github_mode", { enum: RUNTIME_GITHUB_MODES }).notNull().default("machine"),
     boatMachineType: text("boat_machine_type", { enum: BOAT_MACHINE_TYPES }),
     boatSandboxId: text("boat_sandbox_id"),
+    environmentSnapshot: text("environment_snapshot"),
     boatRunnerTokenEncrypted: text("boat_runner_token_encrypted"),
     shared: boolean("shared").notNull().default(false),
     directories: text("directories")

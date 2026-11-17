@@ -19,6 +19,9 @@ import { CODING_MAX_TURNS, HAND_OFF_NOTICE, HAND_OFF_TURN } from "@aven/agents/t
 import { errorMessage } from "@aven/agents/values";
 
 import { keepAttachments, promptOf, promptWith } from "./attachments";
+import { runEnvironmentResume, runEnvironmentSetup } from "./environment-setup";
+import { envOf } from "./project-env";
+import { sandboxProvider } from "./machine-provider";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
@@ -30,7 +33,6 @@ import { connectMcpServers } from "./mcp-servers";
 import { connectMcpForMachine } from "./machine-mcp";
 import { timing } from "./timing";
 import { backendRefusal } from "@aven/protocol/runtime-wire";
-import type { MachineProvider } from "@aven/agents/types";
 import type { RunMcpServer, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
 import type {
   AgentBackend,
@@ -50,10 +52,6 @@ import type {
   ThreadWorkspaces,
   Timing,
 } from "./types";
-
-function sandboxProvider(thread: RunThreadInfo): MachineProvider | undefined {
-  return thread.provider === "boat" || thread.provider === "spaces" ? thread.provider : undefined;
-}
 
 type Live = {
   threadId: string;
@@ -128,6 +126,47 @@ async function inputFor(
   if (backend.kind === "codex") return scope.codexInput({ attended });
 
   return native;
+}
+
+async function saveEnvironment({
+  context,
+  thread,
+  runId,
+  signal,
+}: {
+  context: DriverContext;
+  thread: RunThreadInfo;
+  runId: string;
+  signal?: AbortSignal;
+}) {
+  const runtime = context.boxes.get(thread.id)?.runtime;
+
+  if (!runtime)
+    throw new Error("This thread's computer is not ready, so its environment cannot be saved");
+
+  const root = await context.sandbox.workspace(thread.id);
+
+  if (!root) throw new Error("This thread has no workspace yet");
+
+  const current = await context.call("environment.read", { runId });
+
+  if (current?.status === "saving")
+    return "This project's environment is already being saved. New threads start from it once it is ready.";
+
+  const { digest, output } = await runEnvironmentSetup({ runtime, root, signal });
+  const saved = await context.call("environment.save", { runId, setupDigest: digest });
+  const done = output.length > 0 ? `\n\nLast output of .aven/setup:\n${output}` : "";
+
+  if (saved.status === "saving")
+    return `The environment is being saved. New threads of this project start from it once it is ready.${done}`;
+
+  if (saved.status === "failed")
+    return `The environment could not be saved, so new threads still run .aven/setup themselves.${done}`;
+
+  const until = saved.expiresAt
+    ? new Date(saved.expiresAt).toISOString().slice(0, 16).replace("T", " ")
+    : "72 hours";
+  return `The environment is saved, and new threads of this project start from it until ${until} UTC. They still get a fresh clone and their own branch: only what .aven/setup installed carries over. Commit the .aven folder if you have not.${done}`;
 }
 
 export function createRunDriver(context: DriverContext) {
@@ -355,6 +394,21 @@ export function createRunDriver(context: DriverContext) {
       await context.sandbox.markTurn(thread.id).catch(() => false);
     };
     await markCurrentTurn();
+    const resumeEnvironment = async () => {
+      const runtime = box.runtime;
+
+      if (!runtime) return;
+
+      const root =
+        (await context.sandbox.workspace(thread.id)) ??
+        context.sandbox.paths?.(thread.id)?.workspace;
+
+      if (!root) return;
+
+      await runEnvironmentResume({ runtime, root, env: envOf(env) }).catch((error: unknown) =>
+        console.warn(`Thread ${thread.id} could not run .aven/resume:`, errorMessage(error)),
+      );
+    };
     let waking: Promise<void> | undefined;
     const wake = () => {
       waking ??= (async () => {
@@ -365,6 +419,9 @@ export function createRunDriver(context: DriverContext) {
 
         await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
         clock.mark("sign-in");
+
+        if (sandboxProvider(thread)) await resumeEnvironment();
+
         await markCurrentTurn();
         clock.mark("turn");
       })().catch((error: unknown) => {
@@ -433,6 +490,7 @@ export function createRunDriver(context: DriverContext) {
       const skills = state.record.skillListing;
       const envNames = env?.map(({ name }) => name);
       const forking = attended && !thread.forkOf;
+      const savingEnvironment = sandboxProvider(thread) !== undefined;
       const tools = toolsForRun({
         sandbox: context.sandbox,
         thread,
@@ -469,6 +527,9 @@ export function createRunDriver(context: DriverContext) {
               call: context.call,
               redact,
             })
+          : undefined,
+        saveEnvironment: savingEnvironment
+          ? (signal?: AbortSignal) => saveEnvironment({ context, thread, runId, signal })
           : undefined,
         emit: (event) => forward(event),
         createSubagent: ({ type, id: subagentId, tools }) =>

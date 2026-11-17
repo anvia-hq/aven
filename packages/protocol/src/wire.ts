@@ -90,6 +90,8 @@ const callMethods = [
   "cockpit.read",
   "fork.start",
   "fork.status",
+  "environment.save",
+  "environment.read",
   "machine.call",
 ] as const satisfies readonly CallMethod[];
 
@@ -439,6 +441,10 @@ const appendParams = memoryParams.extend({
 
 const skillsGetParams = memoryParams.extend({ digest: z.string().regex(SKILL_DIGEST) });
 
+const environmentSaveParams = memoryParams.extend({
+  setupDigest: z.string().regex(SKILL_DIGEST),
+});
+
 const codexAuthParams = z.object({
   previous: z.string().min(1).max(20_000),
   token: z.string().min(20).max(20_000),
@@ -659,6 +665,9 @@ export const parseBotApiParams = (params: unknown) =>
 export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
 export const parseAppendParams = (params: unknown) => parseParams(appendParams, params);
 export const parseSkillsGetParams = (params: unknown) => parseParams(skillsGetParams, params);
+export const parseEnvironmentSaveParams = (params: unknown) =>
+  parseParams(environmentSaveParams, params);
+export const parseEnvironmentReadParams = (params: unknown) => parseParams(memoryParams, params);
 export const parseMcpReportParams = (params: unknown) => parseParams(mcpReportParams, params);
 export const parseCodexAuthParams = (params: unknown) => parseParams(codexAuthParams, params);
 

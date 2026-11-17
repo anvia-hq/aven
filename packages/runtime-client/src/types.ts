@@ -178,6 +178,8 @@ export type ThreadRef = {
 
 export type Fetched = { branch: string; commit: string; previous: string | null };
 
+export type EnvironmentSetup = { digest: string; output: string };
+
 export type RepositoryAddress = { url: string; host: string; owner: string; name: string };
 
 export type Git = (
@@ -299,6 +301,7 @@ export type RunToolsInput = {
   mcp?: { tools: readonly AnyTool[]; current: () => readonly AnyTool[] | undefined };
   attended: boolean;
   repoAccess: () => Promise<RepoAccess>;
+  saveEnvironment?: (signal?: AbortSignal) => Promise<string>;
   defineGoal: (goal: GoalRequest) => void;
   createSubagent: CreateSubagent;
   emit: (event: RunEvent) => void;
