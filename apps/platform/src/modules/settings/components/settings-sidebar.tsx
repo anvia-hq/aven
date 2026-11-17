@@ -1,6 +1,7 @@
 import {
   BookOpen,
   ChatDots,
+  Cloud,
   Cog,
   Github,
   Flag,
@@ -71,6 +72,7 @@ const platformGroup = {
   label: "Platform",
   items: [
     { to: "/settings/platform", label: "Installation", icon: Servers },
+    { to: "/settings/sandbox", label: "Sandbox", icon: Cloud },
     { to: "/settings/people", label: "People", icon: UsersGroup },
     { to: "/settings/announcements", label: "Announcements", icon: Bell },
   ],

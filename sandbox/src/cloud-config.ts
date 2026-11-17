@@ -1,8 +1,7 @@
-import { featureList } from "@aven/server-kit/features";
-
 import { boatModule } from "./boat/module";
 import { spacesModule } from "./spaces/module";
 import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
+import { SANDBOX_PROVIDERS } from "./settings";
 import type { CloudProviderModule } from "./types";
 
 export { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID };
@@ -16,26 +15,12 @@ const CLOUD_PROVIDERS = {
 
 export type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
 
-const NAMES = Object.keys(CLOUD_PROVIDERS) as CloudProviderName[];
+const NAMES = SANDBOX_PROVIDERS;
 
 export const CLOUD_TEMPLATE_IDS: string[] = NAMES.map((name) => CLOUD_PROVIDERS[name].templateId);
 
-let offered: CloudProviderName[] = [];
-
-export const offerCloudProviders = (names: CloudProviderName[]) => {
-  offered = names;
-};
-
-export const cloudProviders = (configured: string | undefined) => {
-  const named = featureList("AVEN_CLOUD_PROVIDERS", configured, NAMES);
-
-  return NAMES.filter((name) => named.includes(name) || offered.includes(name));
-};
-
 export const enabledCloudProviders = () =>
-  cloudProviders(process.env.AVEN_CLOUD_PROVIDERS).filter((name) =>
-    CLOUD_PROVIDERS[name].module.ready(),
-  );
+  NAMES.filter((name) => CLOUD_PROVIDERS[name].module.ready());
 
 export const isCloudProvider = (name: string): name is CloudProviderName =>
   NAMES.some((known) => known === name);
@@ -54,8 +39,7 @@ export const enabledTemplateIds = (): string[] =>
 export const disabledTemplateIds = () =>
   CLOUD_TEMPLATE_IDS.filter((id) => !enabledTemplateIds().includes(id));
 
-export const cloudTemplateName = (name: string) =>
-  enabledCloudProviders().length > 1 ? `Aven Cloud · ${name}` : "Aven Cloud";
+export const CLOUD_TEMPLATE_NAME = "Aven Cloud";
 
 export const cloudTemplateId = (name: CloudProviderName) => CLOUD_PROVIDERS[name].templateId;
 

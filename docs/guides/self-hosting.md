@@ -75,19 +75,16 @@ threads that already use it stay readable but cannot run.
 
 ## Aven Cloud
 
-Aven Cloud runs a thread in a sandbox of its own. It is off until you name the providers to offer:
-boat.dev, or a spaces server of your own. Each provider is its own entry in the new thread composer,
-and you can name several, separated by commas:
+Aven Cloud runs a thread in a sandbox of its own. It is off until the platform owner opens
+**Settings > Sandbox** and chooses the one platform the installation uses: boat.dev, or a spaces
+server of your own. Only one can be set at a time; saving the other replaces it. Nothing here is read
+from `.env`: the key is kept encrypted in the database and a change needs no restart.
 
-```sh
-AVEN_CLOUD_PROVIDERS=boat
-AVEN_BOAT_API_KEY=boat_...
-```
+For boat, give its API key. For a spaces server, give its address and its key.
 
-A provider that is not named, or that lacks what it needs (boat needs its key, spaces its address and
-key), is hidden and refuses new threads. Threads that already
-have a computer stay readable, but cannot start it again, and expired computers are still deleted
-while the key of the provider that made them is set.
+Until a platform is set, Aven Cloud is hidden and refuses new threads. Threads that already have a
+computer stay readable, but cannot start it again, and expired computers are still deleted while the
+key of the platform that made them is the one saved.
 
 Create the key at [boat.dev](https://docs.boat.dev/api-keys) with permission to create and drive
 sandboxes. It belongs to the platform, so people using it bring no key of their own. A free trial
@@ -98,8 +95,8 @@ which needs the GitHub app installed on the repository). A project that is a fol
 computer that serves it.
 
 The sandbox runs `aven runner` and connects out to this server, so the server has to be reachable
-from the public internet. When `BETTER_AUTH_URL` is a localhost or private address, set
-`AVEN_BOAT_RUNNER_URL` to the public one: the address that reaches the control plane, for example
+from the public internet. When `BETTER_AUTH_URL` is a localhost or private address, give
+Settings > Sandbox the public one as the address a sandbox dials: the address that reaches the control plane, for example
 `https://aven.example.com/api` when the platform proxies `/api`. A sandbox stops itself after two
 hours (`AVEN_BOAT_AUTO_STOP_SECONDS`) and the next message resumes it. It is deleted after 48 hours
 without use, and work that was not pushed is lost with it. A workspace may hold 20 Aven Cloud
@@ -110,11 +107,8 @@ computers at once (`AVEN_CLOUD_MAX_SANDBOXES`).
 [spaces](https://github.com/anvia-hq/spaces) runs sandboxes as microVMs on hardware you control and
 speaks boat's API. Aven has a provider of its own for it, apart from boat's:
 
-```sh
-AVEN_CLOUD_PROVIDERS=spaces
-AVEN_SPACES_API_BASE=https://spaces.example.com/api/v1
-AVEN_SPACES_API_KEY=sk_...
-```
+In Settings > Sandbox choose **Spaces**, and give the server's address, up to `/api/v1`, for example
+`https://spaces.example.com/api/v1`, and its key.
 
 - **The guest image must be Debian or Ubuntu.** The runner is a glibc program, so run the spaces server
   with `SPACES_MSB_IMAGE=ubuntu`; spaces' default, Alpine, cannot run it. On the first start of a
@@ -123,7 +117,7 @@ AVEN_SPACES_API_KEY=sk_...
   has no service manager. Stopping a sandbox ends every process in it, so Aven starts the runner again
   on each resume, which takes about a second once it is installed.
 - **The sandbox must reach this server.** A spaces sandbox may sit on a private network, so
-  `AVEN_SPACES_RUNNER_URL` may be a private address, for example `http://192.168.1.10:8000`. Spaces'
+  the address a sandbox dials may be a private address, for example `http://192.168.1.10:8000`. Spaces'
   default network profile only lets a guest reach public addresses (`SPACES_NET=public`); set
   `SPACES_NET=all` on the spaces server if the control plane is on a private address.
 - A sandbox stops itself after `AVEN_SPACES_AUTO_STOP_SECONDS` (two hours), and is deleted after 48

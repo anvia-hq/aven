@@ -1,7 +1,7 @@
 import { RuntimeOfflineError } from "../offline";
 import { autoStopSeconds, BoatClient } from "./client";
 import { boatLifetime } from "./lifetime";
-import { runnerUrlFromEnv } from "./runner-url";
+import { boatRunnerUrl } from "./runner-url";
 import { stopBoatSandbox } from "./stop";
 import { wakeBoatSandbox } from "./wake";
 import type { CloudSandboxProvider, ProviderDeps, SandboxRunner, ThreadPlace } from "../types";
@@ -20,7 +20,7 @@ export function createBoatProvider<T extends SandboxRunner>(
   deps: BoatProviderDeps<T>,
 ): CloudSandboxProvider<T> {
   const client = deps.client ?? new BoatClient(deps.fetchFn);
-  const runnerUrl = deps.runnerUrl ?? (() => runnerUrlFromEnv());
+  const runnerUrl = deps.runnerUrl ?? boatRunnerUrl;
 
   return {
     kind: "boat",

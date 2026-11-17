@@ -11,7 +11,7 @@ pull request as you. The server, the machines the agents run on and the model ke
 - Runs on your laptop, a build machine or a VM, on the machine itself, in the folders you give it. Nothing is isolated, so use machines you own.
 - Bring your own OpenAI, Anthropic, Azure OpenAI or OpenAI-compatible key. It stays encrypted on your server.
 - One server, any number of machines: add a runner with one command.
-- Aven Cloud runs a thread in a [boat.dev](https://boat.dev) sandbox of its own, with no setup for the person using it. It is off until the platform sets `AVEN_CLOUD_PROVIDERS=boat` and a boat API key (`AVEN_BOAT_API_KEY`), and the sandbox has to reach the server at a public address.
+- Aven Cloud runs a thread in a [boat.dev](https://boat.dev) sandbox of its own, with no setup for the person using it. It is off until the platform owner chooses a sandbox platform (boat.dev or a spaces server) and gives its key in Settings > Sandbox, and the sandbox has to reach the server at a public address.
 
 ## Install
 

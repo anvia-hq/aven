@@ -3,60 +3,32 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { enabledCloudProviders } from "@aven/sandbox/cloud-config";
-import {
-  setSpacesSettings,
-  spacesApiBase,
-  spacesApiKey,
-  spacesRunnerUrl,
-} from "@aven/sandbox/spaces/config";
+import { setSandboxSettings } from "@aven/sandbox/settings";
+import { boatApiBase, boatApiKey } from "@aven/sandbox/boat/client";
+import { spacesApiBase, spacesApiKey, spacesRunnerUrl } from "@aven/sandbox/spaces/config";
 import { eq } from "drizzle-orm";
 
 import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { cloudSettingsService } from "./service";
 
-const env = {};
-
-const fromEnv = {
-  AVEN_SPACES_API_BASE: "https://spaces.from-env.com/api/v1",
-  AVEN_SPACES_API_KEY: "spk_env_key",
-  BETTER_AUTH_URL: "https://aven.example.com",
-};
-
-const kept = {
-  base: process.env.AVEN_SPACES_API_BASE,
-  key: process.env.AVEN_SPACES_API_KEY,
-};
-
-function restore(name: string, value: string | undefined) {
-  if (value === undefined) delete process.env[name];
-  else process.env[name] = value;
-}
-
 keepPlatformSettings(["spaces_settings"], { cleared: true });
 
-afterAll(() => {
-  restore("AVEN_SPACES_API_BASE", kept.base);
-  restore("AVEN_SPACES_API_KEY", kept.key);
-  setSpacesSettings(null);
-});
+afterAll(() => setSandboxSettings(null));
 
 describe("the Aven Cloud sandbox settings", () => {
   test("what is saved here is what a sandbox boot uses", async () => {
-    const saved = await cloudSettingsService.save(
-      {
-        base: "https://spaces.example.com/api/v1/",
-        runnerUrl: "https://aven.example.com/api/",
-        apiKey: "spk_saved_key",
-      },
-      env,
-    );
+    const saved = await cloudSettingsService.save({
+      provider: "spaces",
+      base: "https://spaces.example.com/api/v1/",
+      runnerUrl: "https://aven.example.com/api/",
+      apiKey: "spk_saved_key",
+    });
 
     expect(saved).toEqual({
       provider: "spaces",
       base: "https://spaces.example.com/api/v1",
       runnerUrl: "https://aven.example.com/api",
       keyHint: "_key",
-      source: "platform",
     });
     expect(spacesApiBase()).toBe("https://spaces.example.com/api/v1");
     expect(spacesApiKey()).toBe("spk_saved_key");
@@ -65,72 +37,84 @@ describe("the Aven Cloud sandbox settings", () => {
   });
 
   test("saving without a key keeps the one already saved", async () => {
-    await cloudSettingsService.save(
-      { base: "https://other.example.com/api/v1", runnerUrl: "https://aven.example.com/api" },
-      env,
-    );
+    await cloudSettingsService.save({
+      provider: "spaces",
+      base: "https://other.example.com/api/v1",
+      runnerUrl: "",
+    });
 
     expect(spacesApiKey()).toBe("spk_saved_key");
     expect(spacesApiBase()).toBe("https://other.example.com/api/v1");
   });
 
-  test("an address that is not http is refused", () => {
-    expect(
-      cloudSettingsService.save({ base: "nope", runnerUrl: "https://aven.example.com/api" }, env),
+  test("switching to another platform needs that platform's own key, and replaces the first", async () => {
+    await expect(
+      cloudSettingsService.save({ provider: "boat", base: "", runnerUrl: "" }),
+    ).rejects.toThrow("API key");
+
+    expect(spacesApiKey()).toBe("spk_saved_key");
+
+    const saved = await cloudSettingsService.save({
+      provider: "boat",
+      base: "",
+      runnerUrl: "",
+      apiKey: "boat_saved_key",
+    });
+
+    expect(saved).toMatchObject({ provider: "boat", base: "" });
+    expect(boatApiKey()).toBe("boat_saved_key");
+    expect(boatApiBase()).toBe("https://boat.dev/api/v1");
+    expect(spacesApiKey()).toBeNull();
+    expect(enabledCloudProviders()).toEqual(["boat"]);
+  });
+
+  test("spaces needs its server's address, and an address that is not http is refused", async () => {
+    await expect(
+      cloudSettingsService.save({
+        provider: "spaces",
+        base: "",
+        runnerUrl: "",
+        apiKey: "spk_key",
+      }),
+    ).rejects.toThrow("must be an http or https address");
+    await expect(
+      cloudSettingsService.save({
+        provider: "boat",
+        base: "nope",
+        runnerUrl: "",
+      }),
     ).rejects.toThrow("must be an http or https address");
   });
 
-  test("a row saved earlier gives way to the environment", async () => {
-    restore("AVEN_SPACES_API_BASE", fromEnv.AVEN_SPACES_API_BASE);
-    restore("AVEN_SPACES_API_KEY", fromEnv.AVEN_SPACES_API_KEY);
-
-    await cloudSettingsService.apply();
-
-    expect(spacesApiBase()).toBe("https://spaces.from-env.com/api/v1");
-    expect(spacesApiKey()).toBe("spk_env_key");
-
-    restore("AVEN_SPACES_API_BASE", undefined);
-    restore("AVEN_SPACES_API_KEY", undefined);
-
-    await cloudSettingsService.apply();
-
-    expect(spacesApiKey()).toBe("spk_saved_key");
-  });
-
-  test("a half-set environment uses neither it nor the row, and says so the same way either place", async () => {
-    const only = { AVEN_SPACES_RUNNER_URL: "https://aven.example.com/api" };
-
-    await cloudSettingsService.apply(only);
-
-    expect(spacesApiBase()).toBeNull();
-    expect(await cloudSettingsService.view(only)).toBeNull();
-  });
-
-  test("the environment wins, and what it sets cannot be edited here", async () => {
-    expect(await cloudSettingsService.view(fromEnv)).toEqual({
-      provider: "spaces",
-      base: "https://spaces.from-env.com/api/v1",
-      runnerUrl: "https://aven.example.com/api",
-      keyHint: "",
-      source: "env",
+  test("a row saved before there was a choice of platform is a spaces one", async () => {
+    const { encryptSecret } = await import("@aven/server-kit/crypto");
+    const value = JSON.stringify({
+      base: "https://old.example.com/api/v1",
+      runnerUrl: "",
+      apiKeyEncrypted: encryptSecret("spk_old_key"),
+      keyHint: "_key",
     });
-    expect(
-      cloudSettingsService.save(
-        { base: "https://spaces.example.com/api/v1", runnerUrl: "https://aven.example.com/api" },
-        fromEnv,
-      ),
-    ).rejects.toThrow("AVEN_SPACES_API_BASE");
+
+    await db
+      .insert(platformSettings)
+      .values({ key: "spaces_settings", value })
+      .onConflictDoUpdate({ target: platformSettings.key, set: { value } });
+    await cloudSettingsService.apply();
+
+    expect(await cloudSettingsService.view()).toMatchObject({ provider: "spaces" });
+    expect(spacesApiKey()).toBe("spk_old_key");
   });
 
   test("removing forgets the sandbox", async () => {
-    await cloudSettingsService.remove(env);
+    await cloudSettingsService.remove();
 
-    expect(await cloudSettingsService.view(env)).toBeNull();
+    expect(await cloudSettingsService.view()).toBeNull();
     expect(spacesApiBase()).toBeNull();
+    expect(enabledCloudProviders()).toEqual([]);
   });
 
   test("removing what is not saved says so", () => {
-    expect(cloudSettingsService.remove(env)).rejects.toThrow("No Aven Cloud sandbox is saved here");
+    expect(cloudSettingsService.remove()).rejects.toThrow("No Aven Cloud sandbox is saved here");
   });
 
   test("a row that cannot be read leaves the sandbox off rather than the server unstarted", async () => {
@@ -139,10 +123,10 @@ describe("the Aven Cloud sandbox settings", () => {
       .values({ key: "spaces_settings", value: "not a value" })
       .onConflictDoUpdate({ target: platformSettings.key, set: { value: "not a value" } });
 
-    await cloudSettingsService.apply(env);
+    await cloudSettingsService.apply();
 
     expect(spacesApiBase()).toBeNull();
-    expect(await cloudSettingsService.view(env)).toBeNull();
+    expect(await cloudSettingsService.view()).toBeNull();
 
     await db.delete(platformSettings).where(eq(platformSettings.key, "spaces_settings"));
   });

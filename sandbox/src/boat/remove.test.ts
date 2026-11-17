@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
+import { setSandboxSettings } from "../settings";
 import { BoatApiError, BoatClient } from "./client";
 import { removeBoatSandbox } from "./stop";
 
@@ -15,15 +16,11 @@ function client(reply: () => Response, calls: { authorization?: string } = {}) {
 }
 
 function withKey(key: string | undefined, run: () => Promise<void>) {
-  const kept = process.env.AVEN_BOAT_API_KEY;
+  setSandboxSettings(
+    key === undefined ? null : { provider: "boat", base: "", apiKey: key, runnerUrl: "" },
+  );
 
-  if (key === undefined) delete process.env.AVEN_BOAT_API_KEY;
-  else process.env.AVEN_BOAT_API_KEY = key;
-
-  return run().finally(() => {
-    if (kept === undefined) delete process.env.AVEN_BOAT_API_KEY;
-    else process.env.AVEN_BOAT_API_KEY = kept;
-  });
+  return run().finally(() => setSandboxSettings(null));
 }
 
 describe("deleting the sandbox of an expired Aven Cloud computer", () => {

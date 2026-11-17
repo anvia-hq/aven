@@ -11,23 +11,3 @@ export function featureChoice<T extends string>(
 
   throw new Error(`${name} must be ${allowed.join(" or ")}, got "${value}"`);
 }
-
-export function featureList<T extends string>(
-  name: string,
-  configured: string | undefined,
-  allowed: readonly T[],
-): T[] {
-  const names = (configured ?? "").split(",").flatMap((entry) => {
-    const trimmed = entry.trim();
-
-    return trimmed === "" ? [] : [trimmed];
-  });
-  const unknown = names.filter((entry) => !allowed.some((candidate) => candidate === entry));
-
-  if (unknown.length > 0)
-    throw new Error(
-      `${name} names ${unknown.join(", ")}, which is not one of ${allowed.join(", ")}`,
-    );
-
-  return allowed.filter((candidate) => names.includes(candidate));
-}
