@@ -149,6 +149,7 @@ export function useThread(threadId: string) {
           break;
         }
         case "snapshot":
+          setHandoffs({});
           hiddenRef.current = event.hidden ?? 0;
           setHidden(hiddenRef.current);
           setEarlier([]);

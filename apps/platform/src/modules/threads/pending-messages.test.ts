@@ -178,7 +178,7 @@ describe("handoffOf", () => {
 
   test("hands the pending message's key and local previews to the run that settles it", () => {
     const handoff = handoffOf([withImage], [], run("Look"));
-    expect(handoff?.key).toBe("a");
+    expect(handoff?.key).toBe(withImage.message.id);
     expect(handoff?.previews[0]?.image).toBe("data:image/png;base64,aGVsbG8=");
   });
 
