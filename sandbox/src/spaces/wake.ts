@@ -24,11 +24,7 @@ const gone = (error: unknown) => error instanceof SpacesApiError && error.status
 
 export async function wakeSpacesSandbox(input: SpacesWake) {
   const clock = input.clock ?? realClock;
-  const { sandboxId, started, fromEnvironment } = await ensureSandbox(
-    input,
-    clock,
-    input.readyTimeoutMs ?? 75_000,
-  );
+  const { sandboxId, started } = await ensureSandbox(input, clock, input.readyTimeoutMs ?? 75_000);
 
   if (started) input.forget?.();
 
@@ -39,8 +35,6 @@ export async function wakeSpacesSandbox(input: SpacesWake) {
   const { apiKey, runnerToken } = input.record;
 
   try {
-    if (fromEnvironment) await input.client.command(apiKey, sandboxId, FRESH_JOURNAL_COMMAND);
-
     await input.client.command(apiKey, sandboxId, "mkdir -p /home/user/.aven");
     await input.client.writeFile(
       apiKey,
@@ -70,8 +64,7 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
   if (record.sandboxId) {
     const existing = await prepare(client, record.apiKey, record.sandboxId, clock, readyTimeoutMs);
 
-    if (existing)
-      return { sandboxId: existing.id, started: existing.resumed, fromEnvironment: false };
+    if (existing) return { sandboxId: existing.id, started: existing.resumed };
   }
 
   let created: SpacesSandbox;
@@ -91,7 +84,15 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
 
   if (!ready) throw new UnavailableError("Spaces did not keep the sandbox it created");
 
-  return { sandboxId: ready.id, started: true, fromEnvironment: Boolean(record.environment) };
+  if (record.environment) {
+    try {
+      await client.command(record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
+    } catch (error) {
+      throw asUnavailable(error);
+    }
+  }
+
+  return { sandboxId: ready.id, started: true };
 }
 
 async function prepare(

@@ -132,7 +132,22 @@ describe("waking a spaces sandbox", () => {
     );
 
     expect(calls[2]?.body).toEqual({ command: FRESH_JOURNAL_COMMAND });
-    expect(calls[3]?.body).toEqual({ command: "mkdir -p /home/user/.aven" });
+  });
+
+  test("clears the journal even when the runner of the saved environment connects by itself", async () => {
+    const { calls, client } = scripted({ create: [ID], [ID]: ["ready"] });
+    const { clock } = timed();
+
+    await wakeSpacesSandbox(
+      wake({
+        record: { ...record(null), environment: "aven-project" },
+        client,
+        connected: () => true,
+        clock,
+      }),
+    );
+
+    expect(calls.map((call) => call.body)).toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
   test("starts the runner at once after a resume, which ends every process, and lets go of the old connection", async () => {

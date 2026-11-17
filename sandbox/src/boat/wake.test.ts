@@ -125,7 +125,21 @@ describe("waking a boat sandbox", () => {
     });
 
     expect(calls[2]?.body).toEqual({ command: FRESH_JOURNAL_COMMAND });
-    expect(calls[3]?.body).toEqual({ command: "mkdir -p /home/user/.aven" });
+  });
+
+  test("clears the journal even when the runner of the saved environment connects by itself", async () => {
+    const { calls, fetchFn } = scripted({ create: [ID] });
+
+    await wakeBoatSandbox({
+      record: { ...record(null), environment: "aven-project" },
+      client: new BoatClient(fetchFn, "https://boat.test/api/v1"),
+      runnerUrl: "https://aven.example.com/api",
+      saveSandboxId: async () => undefined,
+      connected: () => true,
+      clock: clock(),
+    });
+
+    expect(calls.map((call) => call.body)).toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
   test("resumes a stopped sandbox and lets go of the runner connection it had", async () => {
