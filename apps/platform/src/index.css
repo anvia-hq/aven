@@ -1700,6 +1700,13 @@
   --chart: var(--primary);
 }
 
+:root {
+  --usage-output: oklch(0.84 0.08 300);
+  --usage-cache-write: oklch(0.85 0.08 75);
+  --usage-cache-read: oklch(0.84 0.08 200);
+  --usage-uncached: oklch(0.8 0.1 25);
+}
+
 /* What the rail and the sidebar are painted with: the palette's frame in a light theme, and the frame
    a little deeper in a dark one (decision 0304). */
 :root {
@@ -1770,6 +1777,10 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-info: var(--info);
+  --color-usage-output: var(--usage-output);
+  --color-usage-cache-write: var(--usage-cache-write);
+  --color-usage-cache-read: var(--usage-cache-read);
+  --color-usage-uncached: var(--usage-uncached);
   --color-meter-low: var(--meter-low);
   --color-meter: var(--meter);
   --color-ship-from: var(--ship-from);

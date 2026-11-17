@@ -34,10 +34,10 @@ export function UsageCard({
   );
   const rows = [
     { label: "Input", value: totals.inputTokens, tone: null },
-    { label: "Output", value: totals.outputTokens, tone: "bg-foreground" },
-    { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-foreground/65" },
-    { label: "Cache read", value: totals.cacheReadTokens, tone: "bg-foreground/40" },
-    { label: "Uncached", value: uncached, tone: "bg-foreground/20" },
+    { label: "Output", value: totals.outputTokens, tone: "bg-usage-output" },
+    { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-usage-cache-write" },
+    { label: "Cache read", value: totals.cacheReadTokens, tone: "bg-usage-cache-read" },
+    { label: "Uncached", value: uncached, tone: "bg-usage-uncached" },
   ] as const;
   const total = totals.outputTokens + totals.cacheWriteTokens + totals.cacheReadTokens + uncached;
 
