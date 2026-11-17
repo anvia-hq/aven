@@ -6,7 +6,7 @@ Applies to `apps/platform`.
 
 ## Rule
 
-Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token structure, oklch palette: a light theme and a charcoal dark theme, both neutral gray at chroma 0, on their surfaces; the primary is near-white on dark and near-black on light). Do not use raw palette classes (`neutral-*`, `red-*`, `white`, `black`) or hex/rgb values in components.
+Colors come from semantic tokens defined in `src/index.css` (shadcn/ui token structure, oklch palette: a light theme and a charcoal dark theme, both a cool gray at hue 240 and very low chroma, on their surfaces; the primary is near-white on dark and near-black on light). Do not use raw palette classes (`neutral-*`, `red-*`, `white`, `black`) or hex/rgb values in components.
 
 | Token pair                              | Use for                                   |
 | --------------------------------------- | ----------------------------------------- |
