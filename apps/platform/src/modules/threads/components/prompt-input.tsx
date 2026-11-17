@@ -6,6 +6,7 @@ import {
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
 import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
+import { cn } from "cn";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -41,6 +42,9 @@ type Props = {
   tools?: ReactNode;
   backend?: AgentBackendKind;
 };
+
+const swap =
+  "absolute transition-[opacity,scale] duration-200 ease-out motion-reduce:transition-none";
 
 const renderEntity =
   (people: MentionPerson[]) =>
@@ -173,27 +177,16 @@ function Composer({
         {tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
-          {running && (
-            <Button
-              size="icon-sm"
-              className="size-9 rounded-full md:size-7"
-              aria-label="Stop"
-              onClick={onStop}
-            >
-              <StopSolid />
-            </Button>
-          )}
-          {!running && (
-            <Button
-              size="icon-sm"
-              className="size-9 rounded-full md:size-7"
-              aria-label="Send"
-              disabled={!canSend}
-              onClick={() => void submit()}
-            >
-              <ArrowUp />
-            </Button>
-          )}
+          <Button
+            size="icon-sm"
+            className="relative size-9 rounded-full md:size-7"
+            aria-label={running ? "Stop" : "Send"}
+            disabled={!running && !canSend}
+            onClick={running ? onStop : () => void submit()}
+          >
+            <ArrowUp className={cn(swap, running && "scale-50 opacity-0")} />
+            <StopSolid className={cn(swap, !running && "scale-50 opacity-0")} />
+          </Button>
         </div>
       </div>
     </div>

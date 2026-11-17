@@ -182,8 +182,12 @@ describe("handoffOf", () => {
     expect(handoff?.previews[0]?.image).toBe("data:image/png;base64,aGVsbG8=");
   });
 
-  test("hands nothing over for a message without files or for another message", () => {
-    expect(handoffOf([sent("a", "Look")], [], run("Look"))).toBeNull();
+  test("hands the key of a message without files, and nothing for another message", () => {
+    const plain = sent("a", "Look");
+    expect(handoffOf([plain], [], run("Look"))).toEqual({
+      key: plain.message.id,
+      previews: plain.message.attachments,
+    });
     expect(handoffOf([withImage], [], run("Something else"))).toBeNull();
   });
 

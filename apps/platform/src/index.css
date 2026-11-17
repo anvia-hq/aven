@@ -1886,6 +1886,26 @@
   }
 }
 
+/* A message that arrives while the thread is open rises into place (decision 0333). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility rise-in {
+  animation: rise-in 200ms var(--ease-out-strong) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 @layer base {
   /* Thin themed scrollbars; the native light track is jarring on the dark theme. */
   * {

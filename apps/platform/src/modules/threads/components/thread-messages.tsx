@@ -11,6 +11,7 @@ import { sameSpeaker, spaceBefore, speakerOf, steerSpeakerOf } from "../message-
 import type { ChatMessage, Handoff, QueuedSteer, Speaker, Viewer } from "../types";
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
+import { RiseIn } from "./rise-in";
 import { ThreadMessage } from "./thread-message";
 import { WorkingIndicator } from "./working-indicator";
 
@@ -54,7 +55,10 @@ export function ThreadMessages({
   aside,
 }: Props) {
   const textSize = useTextSize("thread");
-  const scrollRef = useScrollToBottom(messages.length + pending.length + steers.length);
+  const scrollRef = useScrollToBottom(
+    messages.length + pending.length + steers.length,
+    pending.length + steers.length,
+  );
   const earlierRuns = useMemo(
     () => mergedRuns(earlier, false, { after: messages[0] }),
     [earlier, messages],
@@ -115,7 +119,11 @@ export function ThreadMessages({
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
             {listed.map(({ message, streaming, sending, space, first }) => (
-              <div key={handoffs[message.id]?.key ?? message.id} className={space}>
+              <RiseIn
+                key={handoffs[message.id]?.key ?? message.id}
+                when={sending || streaming}
+                className={space}
+              >
                 <ThreadMessage
                   message={message}
                   threadId={threadId}
@@ -125,17 +133,17 @@ export function ThreadMessages({
                   previews={handoffs[message.id]?.previews}
                   showAuthor={first}
                 />
-              </div>
+              </RiseIn>
             ))}
             {queued.map(({ steer, space, first }) => (
-              <div key={steer.id} className={space}>
+              <RiseIn key={steer.id} when className={space}>
                 <QueuedMessage
                   message={steer}
                   viewer={viewer}
                   threadId={threadId}
                   showAuthor={first}
                 />
-              </div>
+              </RiseIn>
             ))}
             <div className={cn(working.space, "empty:hidden")}>
               <WorkingIndicator
