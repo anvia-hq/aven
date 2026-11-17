@@ -24,4 +24,4 @@ The row also carries a dot of its own on the project tile, green when the machin
 - A failed run marks its thread red until the next run starts, which is when the control plane clears `last_error`; opening the thread does not clear it, since the failure is a state of the thread and not a notification the opening acknowledged.
 - A row can show two dots with different meanings — one on the tile, one at the end. That is why they are not in the same place, and why the tile's dot keeps its ring against the orb.
 - Themes that do not define `--info` inherit the base palette's blue, as they already do for `--success` and `--destructive`.
-- The status is drawn from what the client knows (`utilities/thread-status.ts`), so a mention reaches the dot within the 15 s poll (0205) and a finished run at the next list refresh (0159).
+- The status is drawn from what the client knows (`apps/platform/src/modules/threads/thread-status.ts`), so a mention reaches the dot within the 15 s poll (0205) and a finished run at the next list refresh (0159).
