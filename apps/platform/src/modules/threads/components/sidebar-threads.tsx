@@ -23,7 +23,8 @@ import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { recencyGroups } from "../recency-groups";
 import { crowdOf } from "../thread-crowd";
-import type { Thread } from "../types";
+import { statusOfPair, threadStatus } from "../thread-status";
+import type { Thread, ThreadStatus } from "../types";
 import { ParticipantStack } from "./participant-stack";
 import { RecencyGroupSection } from "./recency-group-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
@@ -60,12 +61,17 @@ function SidebarProjectTile({
   );
 }
 
-function UnreadDot({ label = "Finished, not opened yet" }: { label?: string }) {
+function StatusDot({ status }: { status: ThreadStatus | null }) {
+  if (!status) return null;
+
   return (
     <span
       role="img"
-      aria-label={label}
-      className="pointer-events-none absolute top-1/2 left-0 z-10 size-1.5 -translate-y-1/2 rounded-full bg-primary group-data-[collapsible=icon]:hidden"
+      aria-label={status === "attention" ? "Needs your attention" : "Finished, not opened yet"}
+      className={cn(
+        "size-1.5 shrink-0 rounded-full",
+        status === "attention" ? "bg-destructive" : "bg-info",
+      )}
     />
   );
 }
@@ -217,11 +223,6 @@ export function SidebarThreads() {
     return (
       <SidebarMenuItem key={thread.id}>
         {nested && <ForkElbow first={first} last={last} />}
-        {mentioned.has(thread.id) ? (
-          <UnreadDot label="You were mentioned, not opened yet" />
-        ) : (
-          unread.has(thread.id) && <UnreadDot />
-        )}
         <SidebarMenuButton
           render={
             <Link
@@ -253,6 +254,7 @@ export function SidebarThreads() {
             }}
           />
           <CrowdMark thread={thread} />
+          <StatusDot status={threadStatus(thread, { mentioned, unread })} />
         </SidebarMenuButton>
         <ThreadActionsMenu title={thread.title} onArchive={() => void archive(thread)} />
       </SidebarMenuItem>
@@ -262,11 +264,6 @@ export function SidebarThreads() {
   function pairRow([left, right]: [Thread, Thread]) {
     return (
       <SidebarMenuItem key={`pair-${left.id}-${right.id}`} data-slot="split-pair">
-        {mentioned.has(left.id) || mentioned.has(right.id) ? (
-          <UnreadDot label="You were mentioned, not opened yet" />
-        ) : (
-          (unread.has(left.id) || unread.has(right.id)) && <UnreadDot />
-        )}
         <SidebarMenuButton
           render={
             <Link
@@ -291,6 +288,12 @@ export function SidebarThreads() {
           <span className="min-w-0 flex-1 truncate">
             {left.title} + {right.title}
           </span>
+          <StatusDot
+            status={statusOfPair(
+              threadStatus(left, { mentioned, unread }),
+              threadStatus(right, { mentioned, unread }),
+            )}
+          />
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
