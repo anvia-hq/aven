@@ -548,6 +548,14 @@ test.describe("a message sent to an idle agent", () => {
       "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
       "base64",
     );
+    let artifactRequests = 0;
+    await page.route("**/api/threads/*/artifacts/*", (route) => {
+      artifactRequests += 1;
+
+      if (artifactRequests <= 2) return route.fulfill({ status: 404, body: "not yet" });
+
+      return route.fulfill({ status: 200, contentType: "image/png", body: png });
+    });
     await page
       .locator('input[type="file"]')
       .setInputFiles({ name: "shot.png", mimeType: "image/png", buffer: png });
@@ -572,9 +580,16 @@ test.describe("a message sent to an idle agent", () => {
     await expect(dialog).toHaveCount(0);
 
     await expect(shown).not.toHaveAttribute("aria-busy", "true", { timeout: 8000 });
+    await expect(shown).toHaveCount(1);
+    await expect(shown.getByRole("img", { name: "shot.png" })).toHaveAttribute(
+      "src",
+      /^data:image\/png;base64,/,
+    );
+    await expect.poll(() => artifactRequests).toBeGreaterThanOrEqual(2);
     await expect(shown.getByRole("img", { name: "shot.png" })).toHaveAttribute(
       "src",
       /\/artifacts\//,
+      { timeout: 8000 },
     );
     await shown.getByRole("button", { name: "Open shot.png" }).click();
     await expect(dialog.getByRole("img", { name: "shot.png" })).toHaveAttribute(
