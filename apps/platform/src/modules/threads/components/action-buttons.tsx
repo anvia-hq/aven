@@ -52,20 +52,29 @@ export function ActionButtons({ thread }: { thread: Thread }) {
       ))}
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
-          render={<Button variant="outline" size="sm" className="rounded-full shadow-md" />}
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              className="rounded-full shadow-md"
+              aria-label="Actions"
+            />
+          }
         >
           <Play />
-          Actions
         </PopoverTrigger>
         <PopoverContent align="end" side="top" className="w-64 gap-0.5 p-1.5">
           {actions.map((action) => {
             const favorite = favorites.includes(action.name);
             return (
-              <div key={action.name} className="flex items-center gap-1">
+              <div
+                key={action.name}
+                className="flex items-center gap-1 rounded-md transition-colors hover:bg-foreground/15"
+              >
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="min-w-0 flex-1 justify-start"
+                  className="min-w-0 flex-1 justify-start hover:bg-transparent dark:hover:bg-transparent"
                   disabled={disabled(action)}
                   onClick={() => {
                     setOpen(false);
@@ -78,6 +87,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
+                  className="hover:bg-transparent dark:hover:bg-transparent"
                   aria-pressed={favorite}
                   aria-label={
                     favorite
