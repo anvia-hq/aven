@@ -1,4 +1,4 @@
-import { Folder, GitBranch, Search } from "@mynaui/icons-react";
+import { ArrowLeft, Folder, GitBranch, Search } from "@mynaui/icons-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -88,7 +88,7 @@ export function ProjectMenu({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={sandbox ? "Search repositories" : "Search folders"}
-              className="pl-8"
+              className="pl-8 focus-visible:ring-0!"
               autoFocus
             />
           </div>
@@ -319,12 +319,13 @@ function Folders({
       <div className="flex items-center gap-1 px-1 pb-1">
         <Button
           type="button"
-          size="sm"
+          size="icon-sm"
           variant="ghost"
+          aria-label="Up one folder"
           disabled={!browsing}
           onClick={() => setBrowsing(shown?.parent ?? "")}
         >
-          Up
+          <ArrowLeft />
         </Button>
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
           {browsing || "Folders this computer serves"}
@@ -366,12 +367,12 @@ function FolderRow({
   onAdd: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-md pr-1 hover:bg-accent">
+    <div className="flex items-center gap-1 rounded-md pr-1 has-[>button:first-child:hover]:bg-accent">
       <Button
         type="button"
         variant="ghost"
         aria-pressed={Boolean(project)}
-        className="h-8 min-w-0 flex-1 justify-start px-2 font-normal"
+        className="h-8 min-w-0 flex-1 justify-start px-2 font-normal hover:bg-transparent!"
         onClick={onOpen}
       >
         <Folder className="text-muted-foreground" />
@@ -379,7 +380,14 @@ function FolderRow({
         {folder.git && <GitBranch className="size-3.5 text-muted-foreground" />}
       </Button>
       {!project && (
-        <Button type="button" size="sm" variant="outline" disabled={disabled} onClick={onAdd}>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={disabled}
+          onClick={onAdd}
+          className="hover:border-ring! hover:bg-accent!"
+        >
           Add
         </Button>
       )}
@@ -421,7 +429,7 @@ function MenuRow({
       variant="ghost"
       aria-pressed={pressed}
       disabled={disabled}
-      className="h-8 w-full justify-start gap-2 px-2 font-normal aria-pressed:bg-accent"
+      className="h-8 w-full justify-start gap-2 px-2 font-normal hover:bg-accent! aria-pressed:bg-accent"
       onClick={onClick}
     >
       <span className="text-muted-foreground">{icon}</span>
