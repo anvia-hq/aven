@@ -39,6 +39,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     driven,
     loaded,
     messages,
+    handoffs,
     earlier,
     hidden,
     loadingEarlier,
@@ -120,6 +121,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   runtimeId={thread.runtimeId}
                   projectId={thread.projectId}
                   messages={messages}
+                  handoffs={handoffs}
                   earlier={earlier}
                   hidden={hidden}
                   loadingEarlier={loadingEarlier}

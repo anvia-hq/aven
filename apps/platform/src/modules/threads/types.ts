@@ -164,6 +164,8 @@ export type Mentionable = Pick<MessageMention, "type" | "name">;
 
 export type PendingMessage = { id: string; message: ChatMessage };
 
+export type Handoff = { key: string; previews: MessageAttachment[] };
+
 export type ViewerImage = { src: string; label: string };
 
 export type Block =

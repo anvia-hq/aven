@@ -8,7 +8,7 @@ import { useTextSize } from "@/modules/theme/hooks/use-text-size";
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import { mergedRuns } from "../merged-runs";
 import { sameSpeaker, spaceBefore, speakerOf, steerSpeakerOf } from "../message-spacing";
-import type { ChatMessage, QueuedSteer, Speaker, Viewer } from "../types";
+import type { ChatMessage, Handoff, QueuedSteer, Speaker, Viewer } from "../types";
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { ThreadMessage } from "./thread-message";
@@ -23,6 +23,7 @@ type Props = {
   hidden?: number;
   loadingEarlier?: boolean;
   onLoadEarlier?: () => void;
+  handoffs?: Record<string, Handoff>;
   pending?: ChatMessage[];
   steers?: QueuedSteer[];
   running?: boolean;
@@ -42,6 +43,7 @@ export function ThreadMessages({
   hidden = 0,
   loadingEarlier = false,
   onLoadEarlier,
+  handoffs = {},
   pending = [],
   steers = [],
   running = false,
@@ -113,13 +115,14 @@ export function ThreadMessages({
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
             {listed.map(({ message, streaming, sending, space, first }) => (
-              <div key={message.id} className={space}>
+              <div key={handoffs[message.id]?.key ?? message.id} className={space}>
                 <ThreadMessage
                   message={message}
                   threadId={threadId}
                   viewer={viewer}
                   streaming={streaming}
                   sending={sending}
+                  previews={handoffs[message.id]?.previews}
                   showAuthor={first}
                 />
               </div>

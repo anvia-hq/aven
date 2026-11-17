@@ -1,8 +1,8 @@
 import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { shipRequestOf, wrapShipRequest } from "@aven/protocol/ship-request";
 
-import type { AttachmentUpload, OutgoingMessage, PendingMessage } from "./types";
-import type { ChatMessage, MessageAttachment, RunEvent } from "@aven/protocol/types";
+import type { AttachmentUpload, Handoff, OutgoingMessage, PendingMessage } from "./types";
+import type { ChatMessage, MessageAttachment, QueuedSteer, RunEvent } from "@aven/protocol/types";
 
 function textOf(message: ChatMessage) {
   return message.parts.map((part) => (part.type === "text" ? part.text : "")).join("");
@@ -67,6 +67,28 @@ const sameRequest = (pending: ChatMessage, sent: string) =>
 
 export function withoutPending(pending: PendingMessage[], id: string): PendingMessage[] {
   return pending.filter((item) => item.id !== id);
+}
+
+export function handoffOf(
+  pending: PendingMessage[],
+  steers: QueuedSteer[],
+  event: RunEvent,
+): Handoff | null {
+  switch (event.type) {
+    case "run_start": {
+      const shown = pending.find(({ message }) => sameRequest(message, event.prompt));
+      const previews = shown?.message.attachments;
+      return shown && previews?.length ? { key: shown.id, previews } : null;
+    }
+    case "steer": {
+      const previews =
+        pending.find(({ id }) => id === event.id)?.message.attachments ??
+        steers.find(({ id }) => id === event.id)?.attachments;
+      return previews?.length ? { key: event.id, previews } : null;
+    }
+    default:
+      return null;
+  }
 }
 
 export function settlePending(pending: PendingMessage[], event: RunEvent): PendingMessage[] {

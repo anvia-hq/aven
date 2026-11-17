@@ -5,6 +5,7 @@ import {
   applyLimits,
   applyUsage,
   isRunning,
+  messageId,
 } from "@aven/protocol/events";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -13,9 +14,16 @@ import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
-import { pendingMessage, pendingShip, settlePending, withoutPending } from "../pending-messages";
+import {
+  handoffOf,
+  pendingMessage,
+  pendingShip,
+  settlePending,
+  withoutPending,
+} from "../pending-messages";
 import type {
   ChatMessage,
+  Handoff,
   OutgoingMessage,
   PendingMessage,
   QuestionAnswer,
@@ -60,6 +68,8 @@ export function useThread(threadId: string) {
   );
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const [handoffs, setHandoffs] = useState<Record<string, Handoff>>({});
   const [earlier, setEarlier] = useState<ChatMessage[]>([]);
   const [hidden, setHidden] = useState(0);
   const hiddenRef = useRef(0);
@@ -86,7 +96,9 @@ export function useThread(threadId: string) {
   useEffect(() => {
     changeSteers(() => []);
     changePending(() => []);
+    messagesRef.current = [];
     setMessages([]);
+    setHandoffs({});
     setEarlier([]);
     hiddenRef.current = 0;
     setHidden(0);
@@ -102,7 +114,13 @@ export function useThread(threadId: string) {
 
       if (!event) return;
 
-      setMessages((current) => applyEvent(current, event));
+      const handoff = handoffOf(pendingRef.current, steersRef.current, event);
+      const realId = messageId(messagesRef.current.length);
+      messagesRef.current = applyEvent(messagesRef.current, event);
+      setMessages(messagesRef.current);
+
+      if (handoff) setHandoffs((current) => ({ ...current, [realId]: handoff }));
+
       setRunning((current) => isRunning(current, event));
       changePending((current) => settlePending(current, event));
       switch (event.type) {
@@ -269,6 +287,7 @@ export function useThread(threadId: string) {
     driven,
     loaded: loaded && (session != null || !isPending),
     messages,
+    handoffs,
     earlier,
     hidden,
     loadingEarlier,
