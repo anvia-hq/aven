@@ -1,6 +1,6 @@
 import type { OrbColors, OrbShape, Rgb } from "./types";
 
-function random(seed: number) {
+export function random(seed: number) {
   let state = seed >>> 0;
   return () => {
     state = (Math.imul(state ^ (state >>> 15), 2246822507) + 1013904223) >>> 0;
@@ -39,16 +39,16 @@ export function orbShape(seed: number): OrbShape {
   return { light, rings, dots };
 }
 
-function hexRgb(hex: string): Rgb {
+export function hexRgb(hex: string): Rgb {
   const value = Number.parseInt(hex.slice(1), 16);
   return [value >> 16, (value >> 8) & 255, value & 255];
 }
 
-function rgba([r, g, b]: Rgb, alpha: number) {
+export function rgba([r, g, b]: Rgb, alpha: number) {
   return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)} / ${alpha})`;
 }
 
-function blend(from: Rgb, to: Rgb, amount: number): Rgb {
+export function blend(from: Rgb, to: Rgb, amount: number): Rgb {
   return [
     from[0] + (to[0] - from[0]) * amount,
     from[1] + (to[1] - from[1]) * amount,
@@ -127,7 +127,7 @@ export function paintOrb(
 const easeOut = (amount: number) => 1 - (1 - amount) ** 2.4;
 const smooth = (amount: number) => amount * amount * (3 - 2 * amount);
 
-function paintDust(
+export function paintDust(
   context: CanvasRenderingContext2D,
   size: number,
   radius: number,
