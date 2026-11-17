@@ -39,7 +39,12 @@ export const enabledTemplateIds = (): string[] =>
 export const disabledTemplateIds = () =>
   CLOUD_TEMPLATE_IDS.filter((id) => !enabledTemplateIds().includes(id));
 
-export const CLOUD_TEMPLATE_NAME = "Aven Cloud";
+const CLOUD_PROVIDER_LABELS: Record<CloudProviderName, string> = {
+  boat: "boat.dev",
+  spaces: "Spaces",
+};
+
+export const cloudTemplateName = (name: CloudProviderName) => CLOUD_PROVIDER_LABELS[name];
 
 export const cloudTemplateId = (name: CloudProviderName) => CLOUD_PROVIDERS[name].templateId;
 

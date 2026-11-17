@@ -50,7 +50,7 @@ test.describe("Aven Cloud", () => {
       route.request().method() === "GET"
         ? route.fulfill({
             json: [
-              runtime(CLOUD_ID, "Aven Cloud", { isCloud: true, provider: "boat" }),
+              runtime(CLOUD_ID, "boat.dev", { isCloud: true, provider: "boat" }),
               runtime(MAC_ID, "sleepy-mac", {}),
             ],
           })
@@ -62,7 +62,7 @@ test.describe("Aven Cloud", () => {
 
     await page.goto("/settings/runtimes");
     await expect(page.getByRole("listitem", { name: "sleepy-mac" })).toBeVisible();
-    await expect(page.getByRole("listitem", { name: "Aven Cloud" })).toHaveCount(0);
+    await expect(page.getByRole("listitem", { name: "boat.dev" })).toHaveCount(0);
 
     await page.goto("/threads");
     await page.getByRole("button", { name: "Project", exact: true }).click();
@@ -71,10 +71,10 @@ test.describe("Aven Cloud", () => {
       "widgets",
     );
     const computer = page.getByRole("combobox", { name: "Computer" });
-    await expect(computer).toContainText("Aven Cloud");
+    await expect(computer).toContainText("boat.dev");
 
     await computer.click();
-    await expect(page.getByRole("option", { name: "Aven Cloud" })).toBeEnabled();
+    await expect(page.getByRole("option", { name: "boat.dev" })).toBeEnabled();
     await expect(page.getByRole("option", { name: "sleepy-mac (offline)" })).toBeDisabled();
     await page.keyboard.press("Escape");
 
