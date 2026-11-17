@@ -1,15 +1,20 @@
 ---
 name: setup-env
-description: Set up this repository's environment so a thread can install, check and run it, by writing .aven/setup (a script that checks the machine and installs from the lockfile), optionally .aven/stack (starts the services the dev stack needs), and a Set up action to start it with one press. Use when the user asks to set up the environment, when a new thread keeps failing for missing dependencies or tools, or when the project needs a toolchain, a database or a service.
+description: Set up this repository's environment so a thread can install, check and run it, by writing .aven/setup (a script that checks the machine and installs from the lockfile), optionally .aven/stack (starts the services the dev stack needs), optionally .aven/resume (a quick repair for each new thread), and a Set up action to start it with one press. On an Aven Cloud sandbox it also saves the result with save_environment, so new threads of the project start from it instead of installing everything again. Use when the user asks to set up the environment, when a new thread keeps failing for missing dependencies or tools, or when the project needs a toolchain, a database or a service.
 ---
 
 # Setting up the environment
 
-A thread works in its own clone of the project, on the runner's own computer. The tracked files are there, but what git ignores (`node_modules`, virtualenvs, build output, `.env`) is not, and nothing keeps it from one thread to the next. This skill writes `.aven/setup`, a script that checks the machine and installs what the project needs, and an action that starts it. There is no snapshot: the script runs when a person asks for it, and again whenever a thread needs it.
+A thread works in its own clone of the project. The tracked files are there, but what git ignores (`node_modules`, virtualenvs, build output, `.env`) is not, and nothing keeps it from one thread to the next. This skill writes `.aven/setup`, a script that checks the machine and installs what the project needs, and an action that starts it.
+
+Where you are decides what else there is:
+
+- **On an Aven Cloud sandbox** (`boat` or `spaces`) you also have **`save_environment`**. It runs `.aven/setup` in a clean environment on this machine and keeps what it makes as the project's environment for 72 hours: a new thread of this project starts from that disk, with a fresh clone of the repository, so dependencies, tools and build output are already there and the script is not run again. This is the only way a new thread gets them without installing them itself, so use it once the script works.
+- **On the person's own computer** there is no snapshot and no `save_environment`: the script runs when a person presses Set up, or when you run it, and again in every new thread.
 
 ## What shapes the script
 
-- **It runs on the person's own computer.** Never `sudo`, `apt`, `brew install`, or a `curl | sh`. When a system package or a tool is missing, the script prints the exact command for the person to run (`brew install vips` on macOS, `sudo apt-get install libvips-dev` on Debian) and stops.
+- **It runs on the person's own computer.** Never `sudo`, `apt`, `brew install`, or a `curl | sh`. When a system package or a tool is missing, the script prints the exact command for the person to run (`brew install vips` on macOS, `sudo apt-get install libvips-dev` on Debian) and stops. **On an Aven Cloud sandbox** the machine is disposable, `sudo` works and the package is gone with the sandbox rather than left on someone's laptop, so installing it there is fine, with the version the repository names.
 - **A command gets a plain shell**: `bash -c`, with no login shell and no `~/.zshrc` or `~/.bashrc`, and the `PATH` the runner's service had when it was installed. A tool that a shell profile puts on `PATH` (mise shims, nix, nvm, Homebrew) may be missing. So the script sets `PATH` itself, as in the example below, and you test it under a bare environment (step 5).
 - **A project can be the person's real folder** (a folder that is not a git repository, which a thread works in directly). The script must never delete or reset anything: no `git clean`, no `rm -rf` outside folders it made.
 - **No secrets.** The script is committed. A command gets the project's variables in its environment; the script reads them and never writes a value.
@@ -108,9 +113,11 @@ env -i HOME="$HOME" PATH=/usr/bin:/bin bash -c '.aven/setup'
 
 Fix what fails. If a check fails because the computer lacks something, that is the answer to give the user, not something to hide.
 
-## 6. Add the action
+## 6. Save it on a sandbox, or add the action
 
-Add a `Set up` action to `.aven/actions.yml` so a person starts the script from the thread's **Actions** button (it then runs under **Background tasks** with its output and exit code). Use `bash` so that the file's executable bit does not matter. If the file exists, add to it and keep what is there; for the format and its limits, read `setup-actions`.
+**On an Aven Cloud sandbox**, once the script passes step 5, call **`save_environment`**. It runs `.aven/setup` once more in a clean environment and keeps the result as this project's environment for 72 hours. Read what it says: if the script failed, its output is in the error, and you fix the script and call it again. A new thread of this project then starts with those dependencies already installed, on its own fresh clone and branch. The snapshot holds what the disk has, so it also holds anything else installed on this sandbox: keep it to what the script makes, which is why the tool runs the script itself rather than photographing your session.
+
+In both places, add a `Set up` action to `.aven/actions.yml` so a person starts the script from the thread's **Actions** button (it then runs under **Background tasks** with its output and exit code). Use `bash` so that the file's executable bit does not matter. If the file exists, add to it and keep what is there; for the format and its limits, read `setup-actions`.
 
 ```yaml
 actions:
@@ -118,12 +125,17 @@ actions:
     run: bash .aven/setup
 ```
 
+### Optional: `.aven/resume`
+
+A sandbox runs `.aven/resume` in each new thread of the project, after the clone and the sign-in, for up to 10 seconds, and a failure only shows in the log. It is for a quick repair, not an install: a login, a cache path, a generated file the snapshot could not hold. Keep it thread-specific and do not put secrets in it, since a new thread starts it with the project's variables and nothing else.
+
 ## 7. Tell the user
 
 In a few lines:
 
 - what the script installs, with the **version of each runtime and service and where the repository names it**, and any difference you asked about first;
 - what it does **not** install, with the exact command for the person to run;
+- on a sandbox, whether `save_environment` succeeded and until when the environment lasts, and that it is made again from the script after that;
 - that **`.aven` must be committed** (with the Ship button, or you can commit it if they ask), or other threads will not have it;
 - that the next steps are `/setup-actions` for the checks they want as buttons and `/setup-ship` for how changes are shipped, and that a line such as "run `.aven/setup` before building" in `AGENTS.md` makes every agent that works there do it, if they want it.
 
