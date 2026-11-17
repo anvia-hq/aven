@@ -122,7 +122,7 @@ export const ThreadMessage = memo(function ThreadMessage({
           />
         ) : null}
         {text && (
-          <div className="w-fit max-w-full rounded-lg bg-accent px-3 py-2 [&_p]:whitespace-pre-line">
+          <div className="w-fit max-w-full rounded-2xl bg-accent px-4 py-2.5 [&_p]:whitespace-pre-line">
             {message.parts.map((part, index) =>
               part.type === "text" ? (
                 <Markdown key={index} components={{ code: mentionCode }}>

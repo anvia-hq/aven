@@ -1,7 +1,8 @@
-import { Cloud, Folder, GitBranch, Github, Monitor } from "@mynaui/icons-react";
+import { Folder, GitBranch, Github, Monitor } from "@mynaui/icons-react";
 import type { ReactNode } from "react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
+import { CloudLine } from "@/components/cloud-line";
 import { threadComputer } from "@/modules/computer/computer";
 import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status";
 import { useProject } from "@/modules/projects/hooks/use-project";
@@ -34,7 +35,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         <Row
           icon={
             sandbox ? (
-              <Cloud aria-label={starting ? "Starting" : "Cloud computer"} />
+              <CloudLine aria-label={starting ? "Starting" : "Cloud computer"} />
             ) : (
               <Monitor aria-label={runtime?.online ? "Online" : "Offline"} />
             )

@@ -1,4 +1,6 @@
-import { Cloud, Monitor } from "@mynaui/icons-react";
+import { Monitor } from "@mynaui/icons-react";
+
+import { CloudLine } from "@/components/cloud-line";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
@@ -41,7 +43,7 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
           >
             <span className="flex min-w-0 items-center gap-2">
               {choice.runtime.isCloud ? (
-                <Cloud className="text-muted-foreground" />
+                <CloudLine className="text-muted-foreground" />
               ) : (
                 <Monitor className="text-muted-foreground" />
               )}
