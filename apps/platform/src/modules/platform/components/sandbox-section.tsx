@@ -37,6 +37,21 @@ function SandboxForm({ current, onSave, onRemove }: FormProps) {
       ? `Saved, ending …${current.keyHint}. Leave empty to keep it`
       : PROVIDER_KEY_HINTS[provider];
 
+  function changeProvider(next: SandboxProvider) {
+    if (next === provider) return;
+
+    setProvider(next);
+    setApiKey("");
+
+    if (next !== current?.provider) {
+      setBase("");
+      setRunnerUrl("");
+    } else {
+      setBase(current.base ?? "");
+      setRunnerUrl(current.runnerUrl ?? "");
+    }
+  }
+
   async function run(action: () => Promise<boolean>) {
     setBusy(true);
     const done = await action();
@@ -57,7 +72,7 @@ function SandboxForm({ current, onSave, onRemove }: FormProps) {
         label="Sandbox platform"
         options={OPTIONS}
         value={provider}
-        onChange={(value) => setProvider(value as SandboxProvider)}
+        onChange={(value) => changeProvider(value as SandboxProvider)}
       />
       <TextField
         label={spaces ? "Spaces server" : "Boat API address (optional)"}
