@@ -1,5 +1,6 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
+import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import { BOAT_BOOT_COMMAND, BOAT_BOOT_PATH, runnerBootEnv } from "./boot";
 import { BoatApiError, type BoatClient } from "./client";
 import type { BoatSandbox } from "./types";
@@ -37,11 +38,14 @@ export async function wakeBoatSandbox(input: {
   const readyTimeoutMs = input.readyTimeoutMs ?? 75_000;
   const settleMs = input.settleMs ?? 10_000;
   const connectTimeoutMs = input.connectTimeoutMs ?? 120_000;
-  const { sandboxId, started } = await ensureSandbox(input, clock, readyTimeoutMs);
+  const { sandboxId, started, fromEnvironment } = await ensureSandbox(input, clock, readyTimeoutMs);
 
   if (started) input.forget?.();
 
   if (await waitFor(input.connected, clock, clock.now() + settleMs)) return { started };
+
+  if (fromEnvironment)
+    await input.client.command(input.record.apiKey, sandboxId, FRESH_JOURNAL_COMMAND);
 
   await input.client.command(input.record.apiKey, sandboxId, "mkdir -p /home/user/.aven");
   await input.client.writeFile(
@@ -77,7 +81,8 @@ async function ensureSandbox(
       readyTimeoutMs,
     );
 
-    if (existing) return { sandboxId: existing.id, started: existing.resumed };
+    if (existing)
+      return { sandboxId: existing.id, started: existing.resumed, fromEnvironment: false };
   }
 
   let created: BoatSandbox;
@@ -97,7 +102,11 @@ async function ensureSandbox(
 
   if (!ready) throw new UnavailableError("Boat did not keep the sandbox it created");
 
-  return { sandboxId: ready.id, started: true };
+  return {
+    sandboxId: ready.id,
+    started: true,
+    fromEnvironment: Boolean(input.record.environment),
+  };
 }
 
 async function prepare(
