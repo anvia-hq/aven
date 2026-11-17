@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 type Props = { id: string; title: string; link?: boolean };
 
 const CHIP =
-  "inline-flex h-fit max-w-64 items-center gap-1 rounded-full bg-muted py-0.5 pr-2 pl-1.5 align-middle leading-none font-medium text-[0.9em]";
+  "inline-flex h-fit max-w-64 items-center gap-1 rounded-full bg-muted py-0.5 pr-2 pl-1.5 align-middle leading-none font-medium text-[0.9em] text-foreground";
 
 export function ThreadMentionChip({ id, title, link = false }: Props) {
   const content = (

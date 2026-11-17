@@ -9,7 +9,7 @@ import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 import { cn } from "cn";
 
 import { titleOf } from "../artifacts";
-import { avatarFor, parseAvatarSetting } from "../avatar";
+import { avatarFor, isLightTint, parseAvatarSetting } from "../avatar";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
 import type { Bot, BotChatMessage, BotChatQuote } from "../types";
@@ -18,6 +18,12 @@ import { ArtifactCard } from "./artifact-card";
 import { MentionedText } from "./mentioned-text";
 
 export const isPersons = (message: BotChatMessage) => message.role === "user";
+
+function bubbleColor(tint: string | undefined) {
+  if (tint === undefined) return "bg-accent";
+
+  return isLightTint(tint) ? "text-avatar-face" : "text-avatar-eye";
+}
 
 export function BotChatBubble({
   botId,
@@ -73,10 +79,7 @@ export function BotChatBubble({
             <div
               data-role="user"
               style={tint ? { backgroundColor: tint } : undefined}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm whitespace-pre-wrap",
-                tint ? "text-avatar-face" : "bg-accent",
-              )}
+              className={cn("rounded-lg px-3 py-2 text-sm whitespace-pre-wrap", bubbleColor(tint))}
             >
               {reply}
               {message.text && <MentionedText text={message.text} bots={bots} />}
