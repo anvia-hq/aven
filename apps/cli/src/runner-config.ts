@@ -30,6 +30,6 @@ export async function loadRunnerEnv(
 
   if (text === undefined) return false;
 
-  for (const [key, value] of Object.entries(parseEnv(text))) env[key] ??= value;
+  for (const [key, value] of Object.entries(parseEnv(text))) env[key] ||= value;
   return true;
 }

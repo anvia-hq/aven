@@ -39,12 +39,15 @@ test("a second install replaces the three and keeps what a person added", async 
   expect(env.AVEN_RUNTIME_HOME).toBe("/x");
 });
 
-test("loading fills the environment without overriding it", async () => {
+test("loading fills the environment without overriding it, and an empty variable counts as unset", async () => {
   const file = join(dir, "runner.env");
   await writeRunnerEnv(file, settings);
   const env: Record<string, string | undefined> = { AVEN_URL: "http://elsewhere" };
   expect(await loadRunnerEnv(file, env)).toBe(true);
   expect(env.AVEN_URL).toBe("http://elsewhere");
   expect(env.AVEN_RUNTIME_TOKEN).toBe("avrt_x");
+  const blank: Record<string, string | undefined> = { AVEN_RUNTIME_TOKEN: "" };
+  expect(await loadRunnerEnv(file, blank)).toBe(true);
+  expect(blank.AVEN_RUNTIME_TOKEN).toBe("avrt_x");
   expect(await loadRunnerEnv(join(dir, "missing.env"), {})).toBe(false);
 });

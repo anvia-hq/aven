@@ -61,8 +61,8 @@ function folders(value: string | undefined) {
 
 export async function runnerInstall(args: Args) {
   const stored = await storedSettings();
-  const url = stringFlag(args, "url") ?? stored?.url;
-  const token = stringFlag(args, "token") ?? process.env.AVEN_RUNTIME_TOKEN ?? stored?.token;
+  const url = stringFlag(args, "url") || stored?.url;
+  const token = stringFlag(args, "token") || process.env.AVEN_RUNTIME_TOKEN || stored?.token;
 
   if (!url || !token)
     throw new Error(
