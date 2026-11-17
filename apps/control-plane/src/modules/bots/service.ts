@@ -32,6 +32,7 @@ const view = (row: BotRow, attention: BotAttention | null): Bot => ({
   modelId: row.providerId ? row.modelId : null,
   reasoningEffort: row.providerId ? row.reasoningEffort : null,
   compactAfterTokens: row.compactAfterTokens,
+  hasComputer: row.hasComputer,
   runtimeId: row.runtimeId,
   isMain: row.isMain,
   attention,
@@ -183,9 +184,18 @@ export const botsService = {
 
     if (!current) return null;
 
-    const { providerId, modelId, reasoningEffort, runtimeId, ...details } = body;
+    const { providerId, modelId, reasoningEffort, runtimeId, hasComputer, ...details } = body;
 
     if (runtimeId) await requireUsableRuntime(userId, runtimeId);
+
+    const computer: { hasComputer?: boolean; runtimeId?: string | null } = {};
+
+    if (hasComputer === true) computer.hasComputer = true;
+
+    if (hasComputer === false) {
+      computer.hasComputer = false;
+      computer.runtimeId = null;
+    }
 
     const touchesModel = [providerId, modelId, reasoningEffort].some(
       (value) => value !== undefined,
@@ -193,7 +203,9 @@ export const botsService = {
     const model = touchesModel
       ? await checkedModel(userId, current, { providerId, modelId, reasoningEffort })
       : {};
-    const changes = { ...details, ...model, runtimeId };
+    const changes = { ...details, ...model, ...computer };
+
+    if (runtimeId !== undefined && hasComputer !== false) changes.runtimeId = runtimeId;
 
     if (Object.values(changes).every((value) => value === undefined)) return view(current, null);
 

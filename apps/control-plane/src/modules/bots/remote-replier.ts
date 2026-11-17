@@ -10,6 +10,7 @@ import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
+import { TalkBotReplier } from "./talk-replier";
 import { runCockpitCommand } from "../cockpit/commands";
 import { webSearchForRun } from "../runs/web-search";
 import type {
@@ -101,9 +102,12 @@ export class RemoteBotReplier implements BotReplier {
     private threads: BotThreads,
     private notes: BotMemoryNotes,
     private agentOnControlPlane = true,
+    private talk = new TalkBotReplier(store, bots),
   ) {}
 
-  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId">) {
+  ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId" | "hasComputer">) {
+    if (!bot.hasComputer) return this.talk.ready(choice, bot);
+
     const { connection } = this.#place(this.#runtimeOf(bot));
 
     if (choice.backend !== "native" && !connection.offers(choice.backend))
@@ -114,22 +118,25 @@ export class RemoteBotReplier implements BotReplier {
     if (choice.model) this.gateway.check(choice.model);
   }
 
-  async answer({
-    bot,
-    userId,
-    choice,
-    prompt,
-    attachments,
-    hops,
-    onPersonsWord,
-    aboutThread,
-    say,
-    ask,
-    react,
-    activity,
-    signal,
-  }: BotReplyInput) {
+  async answer(input: BotReplyInput) {
+    const {
+      bot,
+      userId,
+      choice,
+      prompt,
+      attachments,
+      hops,
+      onPersonsWord,
+      aboutThread,
+      say,
+      ask,
+      react,
+      activity,
+      signal,
+    } = input;
     signal.throwIfAborted();
+
+    if (!bot.hasComputer) return this.talk.answer(input);
 
     if (isGoalRoundNote(prompt) && (await this.bots.goals.get(bot.id))?.phase !== "active") return;
 

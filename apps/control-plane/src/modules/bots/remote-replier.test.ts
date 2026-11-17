@@ -36,6 +36,7 @@ const bot: Bot = {
   modelId: null,
   reasoningEffort: null,
   compactAfterTokens: 30_000,
+  hasComputer: true,
   runtimeId: null,
   isMain: true,
   attention: null,
@@ -294,6 +295,17 @@ describe("a bot on another agent (decision 0310)", () => {
 });
 
 describe("RemoteBotReplier", () => {
+  test("a bot with no computer does not need a runner", () => {
+    const { replier, asked } = fakeRunner({ online: false });
+    const quiet = { ...bot, hasComputer: false };
+    replier.ready(native, quiet);
+    expect(asked).toEqual([]);
+    expect(() => replier.ready({ backend: "claude", token: "sk-ant-oat01-test" }, quiet)).toThrow(
+      "no computer",
+    );
+    expect(asked).toEqual([]);
+  });
+
   test("is refused when the bot's runner is offline", () => {
     const { replier, asked } = fakeRunner({ online: false });
     expect(() => replier.ready(native, bot)).toThrow(RuntimeOfflineError);

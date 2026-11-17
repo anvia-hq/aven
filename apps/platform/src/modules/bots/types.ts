@@ -21,6 +21,7 @@ export type BotPatch = {
   modelId?: string | null;
   reasoningEffort?: string | null;
   compactAfterTokens?: number | null;
+  hasComputer?: boolean;
   runtimeId?: string | null;
 };
 

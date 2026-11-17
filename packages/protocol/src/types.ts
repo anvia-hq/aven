@@ -28,6 +28,7 @@ export type Bot = {
   modelId: string | null;
   reasoningEffort: string | null;
   compactAfterTokens: number | null;
+  hasComputer: boolean;
   runtimeId: string | null;
   isMain: boolean;
   attention: BotAttention | null;
