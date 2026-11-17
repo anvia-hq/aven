@@ -105,7 +105,7 @@ computers at once (`AVEN_CLOUD_MAX_SANDBOXES`).
 ### A spaces server
 
 [spaces](https://github.com/anvia-hq/spaces) runs sandboxes as microVMs on hardware you control and
-speaks boat's API. Aven has a provider of its own for it, apart from boat's:
+speaks boat's API. Aven has a provider of its own for it, apart from boat's.
 
 In Settings > Sandbox choose **Spaces**, and give the server's address, up to `/api/v1`, for example
 `https://spaces.example.com/api/v1`, and its key.
