@@ -66,7 +66,25 @@ Ship this thread's work.
    not, link the file's URL instead. If a pull request already exists for this branch, the push
    updates it — do not open a second one.
 
-10. **Do not merge and do not turn on auto-merge:** merging is mine. If I leave review comments,
-    address them, rerun the checks and push.
+10. **Fix problems, do not stop at them.** If a step fails (a check, a conflict, a push, CI), find the
+    cause and fix it, then rerun the step. Stop and ask me only when the fix needs a decision that
+    is mine or something only I can give (a secret, access). When you stop, say what you tried.
 
-11. **Tell me** the pull request's URL, which checks passed, and anything you could not verify.
+11. **Monitor the pull request until it is mergeable.** Do not say you are done before that. Loop:
+    - `gh pr checks <n>`: when a check fails, read it with `gh run view <run> --log-failed`, fix the
+      cause, rerun the local checks, push. Wait for pending checks with `gh pr checks <n> --watch`.
+    - `gh pr view <n> --json mergeable,mergeStateStatus,reviewDecision`: when it conflicts or is
+      behind `main`, rebase (step 2) and push with `git push --force-with-lease` (this branch only).
+    - Read every review: `gh pr view <n> --json reviews,comments` and
+      `gh api repos/{owner}/{repo}/pulls/<n>/comments`. Hammer (`anvia-hammer[bot]`) reviews each push
+      and posts a `### Hammer Review` summary with inline findings; wait for its review of the
+      latest commit, which may take a few minutes after the push. Address each finding, and each
+      human comment: fix the code, rerun the checks, push, and reply on the thread with the commit
+      that fixed it. If a finding is wrong, reply with the reason instead of changing the code.
+    - Repeat after every push until checks are green, the branch merges cleanly, Hammer's latest
+      review on the head commit has no open findings, and no review comment is unanswered.
+
+12. **Do not merge and do not turn on auto-merge:** merging is mine.
+
+13. **Tell me** the pull request's URL, which checks passed, how the Hammer findings were resolved,
+    and anything you could not verify.

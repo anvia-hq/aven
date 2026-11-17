@@ -18,7 +18,7 @@ need() {
 
 need git "install git"
 need bun "curl -fsSL https://bun.sh/install | bash -s bun-v1.4.4"
-need docker "install Docker (needed for PostgreSQL 17, see .aven/stack)"
+command -v docker > /dev/null || echo "warn     docker missing; .aven/stack needs it for PostgreSQL 17 (install Docker, or run PostgreSQL 17 yourself and set DATABASE_URL)"
 [ "$missing" -eq 0 ] || { echo "Install what is missing above, then run this again."; exit 1; }
 
 want=1.4.4
