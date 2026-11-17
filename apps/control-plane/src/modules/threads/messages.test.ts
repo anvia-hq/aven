@@ -494,4 +494,20 @@ run("a thread keeps the model it was sent with (postgres, decision 0325)", async
     expect(ranWith.slice(-2)).toEqual(["anthropic", "anthropic"]);
     expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(anthropic.id);
   });
+
+  test("a run that could not use the thread's provider does not replace it", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    await messages.send(orgA, userId, thread.id, { prompt: "one", providerId: anthropic.id });
+    const kept = await threadsService.owned(viewer, thread.id);
+
+    await threadsService.rememberModel(kept, { providerId: gateway.id }, {});
+    expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(anthropic.id);
+
+    await threadsService.rememberModel(
+      kept,
+      { providerId: gateway.id },
+      { providerId: gateway.id },
+    );
+    expect((await threadsService.owned(viewer, thread.id)).modelProviderId).toBe(gateway.id);
+  });
 });

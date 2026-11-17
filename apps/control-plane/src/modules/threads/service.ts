@@ -351,8 +351,19 @@ export const threadsService = {
     await db.update(threads).set({ state: "open" }).where(eq(threads.id, thread.id));
   },
 
-  async rememberModel(thread: ThreadModel & { id: string }, chosen: ModelSelection) {
+  async rememberModel(
+    thread: ThreadModel & { id: string },
+    chosen: ModelSelection,
+    requested: ModelSelection,
+  ) {
     if (!chosen.providerId) return;
+
+    const replacedByDefault =
+      !requested.providerId &&
+      thread.modelProviderId !== null &&
+      chosen.providerId !== thread.modelProviderId;
+
+    if (replacedByDefault) return;
 
     const next = {
       modelProviderId: chosen.providerId,
