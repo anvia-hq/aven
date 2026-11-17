@@ -1,3 +1,4 @@
+import { Check, ChevronRight, CircleNotch, X } from "@mynaui/icons-react";
 import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
@@ -6,29 +7,17 @@ import { Markdown } from "@/components/markdown";
 import type { SubagentPart } from "../types";
 import { ToolCall } from "./tool-call";
 
-function Robot({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      className={className}
-    >
-      <path d="M12 3v3" />
-      <rect x="4" y="6" width="16" height="12" rx="4" />
-      <path d="M2 11v2M22 11v2" />
-      <path d="M9 11v1.5M15 11v1.5" />
-      <path d="M9.5 15.5h5" />
-      <path d="M8 21h8" />
-    </svg>
-  );
-}
-
 const toolCount = (count: number) => (count === 1 ? "1 tool call" : `${count} tool calls`);
+
+function StatusNode({ status }: { status: SubagentPart["status"] }) {
+  if (status === "error")
+    return <X role="img" aria-label="Failed" stroke="2.4" className="size-3.5 text-destructive" />;
+
+  if (status === "running")
+    return <CircleNotch aria-hidden stroke="2.4" className="size-3.5 animate-spin text-meter" />;
+
+  return <Check aria-hidden stroke="2.4" className="size-3.5 text-success" />;
+}
 
 export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
   const { description, type, status, tools, output } = subagent;
@@ -36,41 +25,40 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
   const expandable = tools.length > 0 || Boolean(output);
 
   return (
-    <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
+    <Collapsible
+      className="relative min-w-0 pb-3 pl-8.5 text-sm before:absolute before:top-6 before:bottom-0.5 before:left-2.25 before:w-px before:bg-border last:pb-0 last:before:hidden"
+      defaultOpen={false}
+    >
+      <span className="absolute top-0 left-0 grid size-5 place-items-center rounded-full bg-background">
+        <StatusNode status={status} />
+      </span>
       <CollapsibleTrigger
         disabled={!expandable}
-        className="group -mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
+        className="group flex w-full min-w-0 flex-col items-start text-left disabled:cursor-default"
       >
-        <span
-          role={status === "error" ? "img" : undefined}
-          aria-label={status === "error" ? "Failed" : undefined}
-          className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground",
-            status === "error" && "bg-destructive/10 text-destructive",
-          )}
-        >
-          <Robot className="size-4" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className={cn("truncate font-medium", status === "running" && "shimmer")}>
+        <span className="flex min-h-5 w-full min-w-0 items-center gap-2">
+          <span className={cn("truncate leading-5 font-medium", status === "running" && "shimmer")}>
             {description}
           </span>
-          <span
-            className={cn(
-              "truncate font-mono text-xs text-muted-foreground",
-              status === "running" && "shimmer",
-            )}
-          >
-            {type}
-            {status === "running" && latest
-              ? ` · ${latest.target}`
-              : tools.length > 0 && ` · ${toolCount(tools.length)}`}
-          </span>
+          {expandable && (
+            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "mt-0.5 w-full truncate font-mono text-xs text-muted-foreground",
+            status === "running" && "shimmer",
+          )}
+        >
+          {type}
+          {status === "running" && latest
+            ? ` · ${latest.target}`
+            : tools.length > 0 && ` · ${toolCount(tools.length)}`}
         </span>
       </CollapsibleTrigger>
       {expandable && (
         <CollapsibleContent>
-          <div className="ml-1 flex flex-col gap-2 border-l pb-2 pl-3">
+          <div className="mt-2 flex flex-col gap-2 rounded-xl bg-muted px-3 py-2.5">
             {tools.length > 0 && (
               <div className="flex flex-col">
                 {tools.map((tool) => (
