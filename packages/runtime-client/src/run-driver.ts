@@ -27,6 +27,7 @@ import { goalReport, goalSessionMessage } from "./goal-report";
 import { redactingTools, secretRedactor } from "./secret-redaction";
 import { wakingTools } from "./late-bound-tools";
 import { withPlacedUploads } from "./placed-uploads";
+import { projectInstructions, readProjectInstructions } from "@aven/agents/project-instructions";
 import { createForkHost } from "./fork-host";
 import { toolsForRun } from "./run-tools";
 import { connectMcpServers } from "./mcp-servers";
@@ -75,7 +76,7 @@ type RunScope = {
   readonly record: RunRecord;
   save(changes: Partial<RunRecord>): void;
   current(): readonly AnyTool[] | undefined;
-  build(id: string, attended: boolean): RunInput;
+  build(id: string, attended: boolean): Promise<RunInput>;
   claudeInput(options?: { attended?: boolean }): Promise<RunInput>;
   codexInput(options?: { attended?: boolean }): Promise<RunInput>;
   forward: Emit;
@@ -119,13 +120,13 @@ async function inputFor(
   backend: AgentBackend,
   scope: RunScope,
   attended: boolean,
-  native: RunInput,
+  native: () => Promise<RunInput>,
 ) {
   if (backend.kind === "claude") return scope.claudeInput({ attended });
 
   if (backend.kind === "codex") return scope.codexInput({ attended });
 
-  return native;
+  return native();
 }
 
 async function saveEnvironment({
@@ -353,7 +354,7 @@ export function createRunDriver(context: DriverContext) {
         return state.record;
       },
       save: run.save,
-      build: (id) => ({
+      build: async (id) => ({
         ...context.createAgent({ thread, id, attended: false, tools: [], model, compact: true }),
         contextWindow: model?.contextWindow,
         compacting: true,
@@ -443,6 +444,14 @@ export function createRunDriver(context: DriverContext) {
         await wake();
         return { before, state: box.state?.() ?? "awake" };
       },
+    };
+    let project: Promise<string | undefined> | undefined;
+    const projectOf = () => {
+      project ??= context.sandbox
+        .workspace(thread.id)
+        .then(readProjectInstructions)
+        .catch(() => undefined);
+      return project;
     };
     const mcp = await run.mcpGoing;
     clock.mark("mcp");
@@ -590,6 +599,7 @@ export function createRunDriver(context: DriverContext) {
         environmentInstructions(envNames ?? []),
         mcpInstructions(mcp?.note),
         memoryInstructions(state.record.memory),
+        kind === "claude" ? projectInstructions(await projectOf()) : "",
       ];
 
       if (forking) parts.push(forkInstructions());
@@ -643,7 +653,8 @@ export function createRunDriver(context: DriverContext) {
         return state.record;
       },
       save: run.save,
-      build(id, attended) {
+      async build(id, attended) {
+        const project = projectInstructions(await projectOf());
         const { skills, envNames, forking, tools } = assembled(attended, id);
         const { agent, compaction } = context.createAgent({
           thread,
@@ -658,6 +669,7 @@ export function createRunDriver(context: DriverContext) {
           envNames,
           mcp: mcp?.note,
           memory: state.record.memory,
+          project,
           webSearch: state.record.webSearch,
           lens: secrets.lens,
           model,
@@ -693,7 +705,7 @@ export function createRunDriver(context: DriverContext) {
 
       if (backend.kind === "codex") return scope.codexInput({ attended });
 
-      return Promise.resolve(build(id, attended));
+      return build(id, attended);
     };
     let followed: FollowedRun | undefined;
     let turns = 0;
@@ -742,7 +754,7 @@ export function createRunDriver(context: DriverContext) {
       save({ agentId: asked.agentId });
       const resume = message?.type === "run.resume" ? message : undefined;
       const { interaction } = parseAgentContinuation(resume?.continuation);
-      const restored = await inputFor(backend, scope, true, build(asked.agentId, true));
+      const restored = await inputFor(backend, scope, true, () => build(asked.agentId, true));
       followed = await backend.answer(
         asked,
         interaction,
@@ -789,7 +801,7 @@ export function createRunDriver(context: DriverContext) {
 
     scope.stopIfCancelled();
     const exec = scope.current()?.find((tool) => tool.name === "exec_command");
-    const input = await inputFor(backend, scope, false, build(`goal-${runId}`, false));
+    const input = await inputFor(backend, scope, false, () => build(`goal-${runId}`, false));
     const working = await backend.startGoal({
       runId,
       request: goal,
@@ -825,7 +837,9 @@ export function createRunDriver(context: DriverContext) {
   ): Promise<DurableEnd> {
     const { runId, thread, run, backend, save, build, forward } = scope;
     scope.stopIfCancelled();
-    const reportAgent = await inputFor(backend, scope, false, build(`run-${runId}-report`, false));
+    const reportAgent = await inputFor(backend, scope, false, () =>
+      build(`run-${runId}-report`, false),
+    );
     let closing: FollowedRun;
     const { reportId } = scope.record;
 

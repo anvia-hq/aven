@@ -30,6 +30,7 @@ type CodingAgentOptions = ModelSource & {
   mcp?: McpNote;
   forks?: boolean;
   memory?: RunMemory;
+  project?: string;
   lens?: RunLens;
   paths?: SandboxPaths;
   machine?: MachineProvider;
@@ -56,6 +57,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
         environmentInstructions(options.envNames ?? []),
         mcpInstructions(options.mcp),
         memoryInstructions(options.memory),
+        options.project ?? "",
         options.forks ? forkInstructions() : "",
       ]
         .filter(Boolean)
