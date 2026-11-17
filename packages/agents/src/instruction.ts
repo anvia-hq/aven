@@ -39,7 +39,7 @@ function place(provider?: MachineProvider) {
 function workspace(provider?: MachineProvider) {
   if (provider)
     return [
-      "- This sandbox starts with nothing installed beyond its image. Do not assume a tool is there: check, and when one is missing say so instead of working around it.",
+      "- This sandbox starts from its image, plus whatever the project's environment has installed, and nothing more. Do not assume a tool is there: check, and when one is missing say so instead of working around it.",
       "- Only /workspace is yours to change, on the branch aven/<thread id> that this thread works on: it is a fresh clone of the project's repository, and origin is that repository. Stay on that branch, and do not force-push or rewrite history unless the user asks. A message wrapped in <ship_request> asks you to push that branch and open a pull request.",
       "- Your GitHub identity is the token this run was given: GH_TOKEN is set, and git asks gh for it. Say which login gh auth status shows when you push or open a pull request. Never run gh auth login or change credentials, and when gh is missing or signed out say so and ask the person instead of working around it.",
       "- When asked to pull, update, sync or fetch from main, upstream or GitHub, fetch that branch from origin and merge FETCH_HEAD. Say which commit you merged up to, and say so plainly if the fetch failed.",

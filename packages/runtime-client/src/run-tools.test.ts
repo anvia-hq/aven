@@ -51,6 +51,30 @@ describe("toolsForRun", () => {
     expect(given[0]).not.toContain("cockpit");
   });
 
+  test("save_environment is only offered to an attended run the host gives it to, which is a sandbox (decision 0326)", () => {
+    const base = {
+      sandbox,
+      thread: { id: "t1", organizationId: "o1" },
+      tools: [],
+      current: () => [],
+      attended: true,
+      repoAccess: async () => ({ cloneUrl: "", defaultBranch: "main", token: "" }),
+      defineGoal: () => undefined,
+      createSubagent: () => {
+        throw new Error("unused");
+      },
+      emit: () => undefined,
+      saveEnvironment: async () => "saved",
+    };
+    expect(toolsForRun(base).map((tool) => tool.name)).toContain("save_environment");
+    expect(toolsForRun({ ...base, attended: false }).map((tool) => tool.name)).not.toContain(
+      "save_environment",
+    );
+    expect(
+      toolsForRun({ ...base, saveEnvironment: undefined }).map((tool) => tool.name),
+    ).not.toContain("save_environment");
+  });
+
   test("the fork tools are the run's agent's alone, and only when the host gives them (decision 0135)", async () => {
     const given: string[][] = [];
     const createSubagent: CreateSubagent = ({ tools }) => {

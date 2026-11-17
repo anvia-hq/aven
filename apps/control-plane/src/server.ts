@@ -5,6 +5,7 @@ import {
   botRunner,
   cloudExpiry,
   cloudIdle,
+  environmentExpiry,
   goalDriver,
   previews,
   runsService,
@@ -59,6 +60,7 @@ export async function startControlPlane(edition: Edition) {
     await threadRetention.close();
     await cloudExpiry.close();
     await cloudIdle.close();
+    await environmentExpiry.close();
     runsService.dispose();
     process.exit(0);
   };
@@ -71,6 +73,7 @@ export async function startControlPlane(edition: Edition) {
   threadRetention.start();
   cloudExpiry.start();
   cloudIdle.start();
+  environmentExpiry.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

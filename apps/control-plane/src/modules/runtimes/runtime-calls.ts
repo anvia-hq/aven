@@ -1,7 +1,9 @@
 import { providersService } from "../providers/service";
 import { runCockpitCommand } from "../cockpit/commands";
+import { environmentsService } from "../environments/service";
 import { runMemoryCommand } from "../memory/commands";
 import { explainMachineCallError } from "./machine-call-error";
+import { runtimesService } from "./service";
 import {
   parseAppendParams,
   parseBotNotesParams,
@@ -22,6 +24,8 @@ import {
   parseBotUpdateParams,
   parseMcpReportParams,
   parseCodexAuthParams,
+  parseEnvironmentReadParams,
+  parseEnvironmentSaveParams,
   parseMemoryParams,
   parseBotCockpitParams,
   parseCockpitReadParams,
@@ -30,7 +34,7 @@ import {
   parseMachineRelayParams,
   parseSkillsGetParams,
 } from "@aven/protocol/wire";
-import type { CallBotReply, RuntimeCallContext } from "./types";
+import type { CallBotReply, CallRun, RuntimeCallContext } from "./types";
 import type { CallMethod } from "@aven/protocol/types";
 
 const MACHINE_CALL_TIMEOUT_MS = 5 * 60_000;
@@ -89,6 +93,43 @@ function liveRun(params: unknown, findRun: RuntimeCallContext["findRun"]) {
   return { runId, run };
 }
 
+async function saveEnvironment(run: CallRun, runtimeId: string, setupDigest: string) {
+  const { provider, projectId, organizationId, machine } = run.thread;
+
+  if (!provider || !projectId) throw new Error("This run is not on an Aven Cloud computer");
+
+  const record = await runtimesService.cloudRecord(machine ?? runtimeId, provider);
+
+  if (!record) throw new Error("This run is not on an Aven Cloud computer");
+
+  const saved = await environmentsService.start({
+    organizationId,
+    projectId,
+    provider,
+    sandboxId: record.sandboxId,
+    setupDigest,
+  });
+  return { status: saved.status, expiresAt: saved.expiresAt?.toISOString() ?? null };
+}
+
+async function readEnvironment(run: CallRun) {
+  const { provider, projectId } = run.thread;
+
+  if (!provider || !projectId) return null;
+
+  const found = await environmentsService.view(projectId, provider);
+
+  if (!found) return null;
+
+  return {
+    status: found.status,
+    provider,
+    setupDigest: found.setupDigest,
+    savedAt: found.savedAt?.toISOString() ?? null,
+    expiresAt: found.expiresAt?.toISOString() ?? null,
+  };
+}
+
 function answerBotCall<Params extends { replyId: string }, Result>(
   params: unknown,
   parse: (params: unknown) => Params,
@@ -107,6 +148,7 @@ export async function answerRuntimeCall(
   method: CallMethod,
   params: unknown,
   {
+    runtimeId,
     findRun,
     findBotReply,
     store,
@@ -223,6 +265,17 @@ export async function answerRuntimeCall(
   if (method === "repo.access") return repoAccess(run.thread.id);
 
   if (method === "repo.folder") return { directory: await folderOf(run.thread.id) };
+
+  if (method === "environment.save") {
+    const { setupDigest } = parseEnvironmentSaveParams(params);
+
+    return saveEnvironment(run, runtimeId, setupDigest);
+  }
+
+  if (method === "environment.read") {
+    parseEnvironmentReadParams(params);
+    return readEnvironment(run);
+  }
 
   if (method === "skills.get") {
     const { digest } = parseSkillsGetParams(params);

@@ -6,6 +6,7 @@ import { createComputerTools } from "@aven/agents/tools/computer";
 import { createCockpitTool } from "@aven/agents/tools/cockpit";
 import { createMemoryTool } from "@aven/agents/tools/memory";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
+import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
 
 import { fetchBranch } from "./fetch-branch";
 import { lateBoundTools } from "./late-bound-tools";
@@ -27,6 +28,7 @@ export function toolsForRun({
   forks,
   cockpit,
   computer,
+  saveEnvironment,
 }: RunToolsInput): AnyTool[] {
   const gitFetch = createGitFetchTool(async (branch) => {
     if (sandbox.fetchBranch) return sandbox.fetchBranch(thread.id, await repoAccess(), branch);
@@ -54,6 +56,7 @@ export function toolsForRun({
   const notes = memory ? [createMemoryTool(memory)] : [];
   const reading = cockpit ? [createCockpitTool(cockpit, "read")] : [];
   const forking = forks ? createForkTools(forks) : [];
-  const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking];
+  const saving = attended && saveEnvironment ? [createSaveEnvironmentTool(saveEnvironment)] : [];
+  const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking, ...saving];
   return attended ? [...withSubagents, createDefineGoalTool(defineGoal)] : withSubagents;
 }

@@ -1,7 +1,9 @@
 import type { BoatMachineType } from "@aven/protocol/types";
 
+import { SAVED_SNAPSHOT_NAME } from "@aven/protocol/runtime-wire";
+
 import { sandboxSettingsOf } from "../settings";
-import type { BoatSandbox } from "./types";
+import type { BoatSavedSnapshot, BoatSandbox } from "./types";
 
 const SANDBOX_ID = /^bx_[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
 
@@ -108,29 +110,73 @@ function sandboxOf(parsed: unknown): BoatSandbox {
   };
 }
 
+function savedSnapshotOf(parsed: unknown): BoatSavedSnapshot {
+  const snapshot = asRecord(asRecord(parsed)?.snapshot);
+  const name = asString(snapshot?.name);
+  const status = asString(snapshot?.status);
+
+  if (!SAVED_SNAPSHOT_NAME.test(name) || !["saving", "ready", "failed"].includes(status))
+    throw new BoatApiError(
+      0,
+      "invalid_saved_snapshot",
+      "Boat returned an unexpected saved snapshot",
+    );
+
+  const error = asString(snapshot?.error);
+  return {
+    name,
+    status: status as BoatSavedSnapshot["status"],
+    error: error || null,
+  };
+}
+
 export class BoatClient {
   constructor(
     private fetchFn: typeof fetch = fetch,
     private base = boatApiBase(),
   ) {}
 
-  async createSandbox(apiKey: string, input: { runtimeId: string; machineType: BoatMachineType }) {
+  async createSandbox(
+    apiKey: string,
+    input: { runtimeId: string; machineType: BoatMachineType; from?: string | null },
+  ) {
+    const body: Record<string, unknown> = {
+      name: `aven-${input.runtimeId}`.slice(0, 120),
+      type: input.machineType,
+      ttlSeconds: autoStopSeconds(),
+      noEnv: true,
+      visibility: "private",
+      labels: { avenRuntimeId: input.runtimeId },
+    };
+
+    if (input.from) body.from = input.from;
+
     return sandboxOf(
-      await this.#request(
-        "POST",
-        "/sandboxes",
-        apiKey,
-        {
-          name: `aven-${input.runtimeId}`.slice(0, 120),
-          type: input.machineType,
-          ttlSeconds: autoStopSeconds(),
-          noEnv: true,
-          visibility: "private",
-          labels: { avenRuntimeId: input.runtimeId },
-        },
-        { "Idempotency-Key": `aven-${input.runtimeId}` },
-      ),
+      await this.#request("POST", "/sandboxes", apiKey, body, {
+        "Idempotency-Key": `aven-${input.runtimeId}`,
+      }),
     );
+  }
+
+  async saveSnapshot(apiKey: string, sandboxId: string, name: string) {
+    return savedSnapshotOf(
+      await this.#request("POST", "/saved-snapshots", apiKey, { sandboxId, name }),
+    );
+  }
+
+  async getSavedSnapshot(apiKey: string, name: string) {
+    return savedSnapshotOf(await this.#request("GET", this.#savedPath(name), apiKey));
+  }
+
+  async deleteSavedSnapshot(apiKey: string, name: string) {
+    await this.#request("DELETE", this.#savedPath(name), apiKey);
+  }
+
+  #savedPath(name: string) {
+    if (!SAVED_SNAPSHOT_NAME.test(name))
+      throw new BoatApiError(0, "invalid_snapshot_name", "The saved snapshot name is not usable");
+
+    return `/saved-snapshots/${name}`;
   }
 
   getSandbox(apiKey: string, sandboxId: string) {

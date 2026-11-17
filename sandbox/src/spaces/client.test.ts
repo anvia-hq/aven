@@ -65,6 +65,67 @@ describe("the spaces client", () => {
     expect(calls[0]?.body).toEqual({ ttlSeconds: 7200 });
   });
 
+  test("starts from a saved snapshot when the runtime names one", async () => {
+    const { calls, client } = recorded(() => ok({ id: ID, state: "provisioning" }));
+
+    await client.createSandbox(KEY, {
+      runtimeId: "r-2",
+      machineType: "small",
+      from: "aven-p1",
+    });
+
+    expect(calls[0]?.body).toMatchObject({ from: "aven-p1" });
+  });
+
+  test("saves, reads and deletes a saved snapshot by name", async () => {
+    const saved = (status: string, error?: string) => {
+      const snapshot: Record<string, unknown> = {
+        name: "aven-p1",
+        status,
+        sourceSandboxId: ID,
+        createdAt: "2026-01-01T00:00:00Z",
+      };
+
+      if (error) snapshot.error = error;
+
+      return Response.json({ ok: true, type: "snapshot.saved.info", snapshot });
+    };
+    const { calls, client } = recorded((_url, init) => {
+      if (init.method === "DELETE")
+        return Response.json({ ok: true, type: "snapshot.saved.deleted", name: "aven-p1" });
+
+      if (init.method === "POST") return saved("saving");
+
+      return saved("failed", "disk full");
+    });
+
+    expect(await client.saveSnapshot(KEY, ID, "aven-p1")).toEqual({
+      name: "aven-p1",
+      status: "saving",
+      error: null,
+    });
+    expect(await client.getSavedSnapshot(KEY, "aven-p1")).toEqual({
+      name: "aven-p1",
+      status: "failed",
+      error: "disk full",
+    });
+    await client.deleteSavedSnapshot(KEY, "aven-p1");
+
+    expect(calls.map((call) => `${call.method} ${call.url.replace(BASE, "")}`)).toEqual([
+      "POST /saved-snapshots",
+      "GET /saved-snapshots/aven-p1",
+      "DELETE /saved-snapshots/aven-p1",
+    ]);
+    expect(calls[0]?.body).toEqual({ sandboxId: ID, name: "aven-p1" });
+  });
+
+  test("refuses a saved snapshot name spaces would not take", async () => {
+    const { calls, client } = recorded(() => ok());
+
+    await expect(client.getSavedSnapshot(KEY, "Aven Env")).rejects.toBeInstanceOf(SpacesApiError);
+    expect(calls).toHaveLength(0);
+  });
+
   test("stops with an empty body, and deletes without a confirmation header", async () => {
     const { calls, client } = recorded(() => Response.json({ ok: true }));
 

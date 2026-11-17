@@ -357,6 +357,7 @@ export class RuntimeConnection {
   async #answer(id: string, method: CallMethod, params: unknown) {
     try {
       const result = await answerRuntimeCall(method, params, {
+        runtimeId: this.runtimeId,
         findRun: (runId) => this.#runs.get(runId),
         findBotReply: (replyId) => this.#botReplies.get(replyId),
         store: this.hub.store,

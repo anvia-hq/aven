@@ -72,6 +72,7 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
     created = await client.createSandbox(record.apiKey, {
       runtimeId: record.runtimeId,
       machineType: record.machineType,
+      from: record.environment,
     });
   } catch (error) {
     throw asUnavailable(error);

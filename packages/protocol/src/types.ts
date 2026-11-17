@@ -4,6 +4,7 @@ import type { MEMORY_SCOPES } from "./memory";
 import type {
   AGENT_BACKENDS,
   DIFF_SCOPES,
+  ENVIRONMENT_STATUSES,
   MACHINE_OPS,
   PROVIDERS,
   BOAT_MACHINE_TYPES,
@@ -816,6 +817,20 @@ export type BotCallMethod =
 
 export type McpReportCallMethod = "mcp.report";
 
+export type EnvironmentCallMethod = "environment.save" | "environment.read";
+
+export type EnvironmentStatus = (typeof ENVIRONMENT_STATUSES)[number];
+export type EnvironmentSaveParams = { runId: string; setupDigest: string };
+export type EnvironmentSaved = { status: EnvironmentStatus; expiresAt: string | null };
+export type EnvironmentReadParams = { runId: string };
+export type EnvironmentView = {
+  status: EnvironmentStatus;
+  provider: RuntimeProviderKind;
+  setupDigest: string;
+  savedAt: string | null;
+  expiresAt: string | null;
+} | null;
+
 export type CodexAuthCallMethod = "codex.auth";
 
 export type CodexAuthParams = { previous: string; token: string };
@@ -827,6 +842,7 @@ export type CallMethod =
   | RepoCallMethod
   | SkillsCallMethod
   | McpReportCallMethod
+  | EnvironmentCallMethod
   | CodexAuthCallMethod
   | MachineCallMethod
   | BotCallMethod;
@@ -1066,6 +1082,8 @@ export type RuntimeCalls = {
   "memory.append": { params: MemoryAppendParams; result: null };
   "skills.get": { params: SkillsGetParams; result: SkillArchive };
   "mcp.report": { params: McpReportParams; result: null };
+  "environment.save": { params: EnvironmentSaveParams; result: EnvironmentSaved };
+  "environment.read": { params: EnvironmentReadParams; result: EnvironmentView };
   "codex.auth": { params: CodexAuthParams; result: null };
   "machine.call": { params: MachineRelayParams; result: unknown };
 };

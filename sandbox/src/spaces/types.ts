@@ -14,6 +14,12 @@ export type SpacesSandbox = {
   state: string;
 };
 
+export type SpacesSavedSnapshot = {
+  name: string;
+  status: "saving" | "ready" | "failed";
+  error: string | null;
+};
+
 export type SpacesProvider<T extends SandboxRunner = SandboxRunner> = CloudSandboxProvider<T> & {
   destroy(sandboxId: string): Promise<void>;
 };

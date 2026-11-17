@@ -6,6 +6,13 @@ export type SandboxRecord = {
   runnerToken: string;
   sandboxId: string | null;
   machineType: BoatMachineType;
+  environment?: string | null;
+};
+
+export type SavedEnvironment = {
+  name: string;
+  status: "saving" | "ready" | "failed";
+  error: string | null;
 };
 
 export type SandboxRunner = {
@@ -71,6 +78,9 @@ export type CloudProviderModule = {
   stop(record: SandboxRecord): Promise<void>;
   extend(record: SandboxRecord): Promise<void>;
   removeSandbox(sandboxId: string): Promise<boolean>;
+  saveEnvironment(sandboxId: string, name: string): Promise<SavedEnvironment>;
+  readEnvironment(name: string): Promise<SavedEnvironment | null>;
+  removeEnvironment(name: string): Promise<boolean>;
   lifetime: SandboxLifetime;
 };
 

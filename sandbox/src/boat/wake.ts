@@ -86,6 +86,7 @@ async function ensureSandbox(
     created = await input.client.createSandbox(input.record.apiKey, {
       runtimeId: input.record.runtimeId,
       machineType: input.record.machineType,
+      from: input.record.environment,
     });
   } catch (error) {
     throw asUnavailable(error);
