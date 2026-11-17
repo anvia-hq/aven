@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { controlPlaneBase } from "./runner";
-import { runtimeConnectUrl } from "./run-runner";
+import { runtimeConnectUrl } from "./host-runtime";
 
 describe("runtimeConnectUrl", () => {
   test("turns the control plane's address into the runner's WebSocket", () => {

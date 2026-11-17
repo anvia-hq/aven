@@ -461,3 +461,16 @@ export type HostSandboxConfig = {
   dirs?: string[];
   git?: Git;
 };
+
+export type HostRuntimeOptions = HostSandboxConfig & {
+  base: string;
+  token: string;
+  build?: string;
+  update?: (release: string | undefined) => void;
+  onRefused?: (reason: string) => void;
+};
+
+export type StartedRuntime = {
+  ready: Promise<void>;
+  stop(): Promise<void>;
+};

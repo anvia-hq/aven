@@ -31,6 +31,7 @@ import type {
   CreateRuntimeAgent,
   DriverContext,
   RuntimeOptions,
+  StartedRuntime,
   ThreadSandbox,
   ViewerLink,
 } from "./types";
@@ -116,7 +117,7 @@ export function controlPlaneBase(connectUrl: string) {
   return `${url.origin}${prefix}`;
 }
 
-export function startRuntime(options: RuntimeOptions) {
+export function startRuntime(options: RuntimeOptions): StartedRuntime {
   const origin = controlPlaneBase(options.url);
   const createAgent = options.createAgent ?? defaultCreateAgent(origin);
   const callTimeoutMs = options.callTimeoutMs ?? DEFAULT_CALL_TIMEOUT_MS;
