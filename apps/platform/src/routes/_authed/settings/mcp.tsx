@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authed/settings/mcp")({
 function Mcp() {
   return (
     <SettingsPage
-      title="MCP servers"
+      title="MCP Integrations"
       description="Remote tool servers your agents can use. They are yours, in every workspace, and only your own bots and threads use them. Your bots can also add and change them when you ask."
       actions={<McpServerDialog />}
     >
