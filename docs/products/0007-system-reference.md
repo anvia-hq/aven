@@ -114,6 +114,10 @@ Settings > Webhooks (`/webhooks`, `modules/webhooks`) keeps a person's `bot_webh
 
 `runtimes.lifetime` (`persistent` by default, or `ephemeral`; `RUNTIME_LIFETIMES`) says whether a runner is a machine someone keeps. `GET /threads/:id/ship` returns `machine: true` when the project has no GitHub app and the thread's runner is persistent: `connectionOf` (`ship-state.ts`) then counts GitHub as connected and the bar shows Ship, which has the agent use the machine's own `gh`. With no app on an ephemeral runner the bar offers Connect GitHub and `ship` refuses.
 
+### A thread keeps the model it runs on (decision 0325)
+
+`threads.model_provider_id`, `model_id` and `reasoning_effort` hold the provider, model and effort of the thread's latest run, written by `threadsService.rememberModel` when `messages.ts` starts a run (send, compact, answer). `selectionForRun` (`providers/selection.ts`) resolves a run: the message's own choice, else the thread's stored one, else the default provider of that moment, which the thread then keeps. Changing the default provider in Settings therefore reaches new threads only. The thread JSON carries the three fields, and `useModelSelection` starts the composer from them (a pick made in this browser first, then the thread's, then the default).
+
 ### The plan limits are kept with the thread (decision 0274)
 
 `thread_plan_limits` holds the latest `PlanLimit` per window for a thread, written by `RunManager` when a `limits` event arrives (`LimitStore`, `threadsService.savePlanLimits`). The idle snapshot and the one of a starting run read it, leaving out a window whose `resets_at` has passed, so the Limits card survives a refresh.
