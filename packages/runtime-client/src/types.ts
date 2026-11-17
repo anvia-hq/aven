@@ -234,6 +234,7 @@ export type CreateRuntimeAgent = (input: {
   machine?: MachineProvider;
   mcp?: McpNote;
   memory?: RunMemory;
+  project?: string;
   webSearch?: RunWebSearch;
   lens?: RunLens;
   forks?: boolean;
