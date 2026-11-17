@@ -38,6 +38,7 @@ import { announcementsRouter } from "./modules/announcements/router";
 import { platformRouter } from "./modules/platform/router";
 import { serverModelsRouter } from "./modules/server-models/router";
 import { cloudSettingsRouter } from "./modules/cloud-settings/router";
+import { lensRouter } from "./modules/lens/router";
 import { preferencesRouter } from "./modules/preferences/router";
 import { previewRouter } from "./modules/preview/router";
 import { avatarsRouter } from "./modules/avatars/router";
@@ -82,6 +83,7 @@ export const app = new Elysia()
   .use(announcementsRouter)
   .use(serverModelsRouter)
   .use(cloudSettingsRouter)
+  .use(lensRouter)
   .use(preferencesRouter)
   .use(profileRouter)
   .use(avatarsRouter)

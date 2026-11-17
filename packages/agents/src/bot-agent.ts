@@ -3,6 +3,7 @@ import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
 import { compactionFor, resolveAgentModel } from "./agent-model";
 import { activityLabelOf, THINKING_LABEL } from "./bot-activity";
 import { botInstructions } from "./bot-instruction";
+import { lensObservability } from "./lens";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { createApiTools } from "./tools/api";
 import { createAskQuestionTool } from "./tools/ask-question";
@@ -37,7 +38,13 @@ import type {
   ThreadsHost,
   UpdateSelf,
 } from "./tools/types";
-import type { BotPeer, CockpitAccess, RunMemory, RunWebSearch } from "@aven/protocol/types";
+import type {
+  BotPeer,
+  CockpitAccess,
+  RunLens,
+  RunMemory,
+  RunWebSearch,
+} from "@aven/protocol/types";
 
 export const BOT_MAX_TURNS = 8;
 
@@ -72,6 +79,7 @@ type BotAgentOptions = ModelSource & {
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
   webSearch?: RunWebSearch;
+  lens?: RunLens;
   onActivity?: (label: string | null) => void;
 };
 
@@ -186,6 +194,7 @@ export function createBotAgent(options: BotAgentOptions) {
       onError: () => onActivity(null),
     },
     maxTurns: parts.maxTurns,
+    observability: lensObservability(options.lens),
     memory: compaction ? { ...memory, compaction } : memory,
     tools: parts.tools,
   });

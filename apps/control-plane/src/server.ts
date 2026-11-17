@@ -1,3 +1,5 @@
+import { closeLens } from "@aven/agents/lens";
+
 import { cloudSettingsService } from "./modules/cloud-settings/service";
 import { app } from "./app";
 import {
@@ -13,6 +15,7 @@ import {
   threadRetention,
   threadWatcher,
 } from "./composition";
+import { lensEnabled } from "./modules/lens/flag";
 import { claudeBackendEnabled, codexBackendEnabled } from "./modules/providers/backends";
 import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
@@ -25,6 +28,7 @@ export async function startControlPlane(edition: Edition) {
   editionInUse.current = edition;
   claudeBackendEnabled();
   codexBackendEnabled();
+  lensEnabled();
 
   for (const route of edition.routes) app.use(route);
 
@@ -61,6 +65,7 @@ export async function startControlPlane(edition: Edition) {
     await cloudExpiry.close();
     await cloudIdle.close();
     await environmentExpiry.close();
+    await closeLens();
     runsService.dispose();
     process.exit(0);
   };

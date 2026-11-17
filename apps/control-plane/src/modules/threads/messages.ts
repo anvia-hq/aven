@@ -13,6 +13,7 @@ import { githubUserTokenService } from "../github/user-tokens";
 import { runtimesService } from "../runtimes/service";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
 import type { RunManager } from "../runs/service";
+import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
 import { mcpService } from "../mcp/service";
 import { threadCockpit } from "../cockpit/commands";
@@ -86,7 +87,14 @@ async function threadExtras(
   const memory = await runMemory(thread, userId, onPersonsWord && driverId === undefined);
   await threadsService.markRunBy(thread.id, userId);
   const cockpit = threadCockpit(userId);
-  return { env, identity, memory, cockpit, webSearch: webSearchForRun };
+  return {
+    env,
+    identity,
+    memory,
+    cockpit,
+    webSearch: webSearchForRun,
+    lens: await lensSettingsService.forRun(),
+  };
 }
 
 async function runMemory(

@@ -13,6 +13,7 @@ const FALLBACK: PlatformConfig = {
   emailLogin: true,
   claudeBackend: true,
   codexBackend: true,
+  lens: false,
   isOwner: false,
 };
 

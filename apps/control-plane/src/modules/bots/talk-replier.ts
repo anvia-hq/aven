@@ -5,6 +5,7 @@ import { typingDelay } from "@aven/agents/bot-delay";
 import { USER_HANDLE } from "@aven/protocol/bots";
 import { UnavailableError } from "@aven/server-kit/errors";
 
+import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
 import type { BotKeeper, BotReplier, BotReplyInput } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
@@ -75,6 +76,7 @@ export class TalkBotReplier implements BotReplier {
       compactAfterTokens: bot.compactAfterTokens ?? undefined,
       peers,
       webSearch: webSearchForRun,
+      lens: await lensSettingsService.forRun(),
       memory: { store: this.store, savePolicy: "turn" },
       onActivity: activity && ((label) => activity(label)),
       send: async ({ to, text, quote, files }, { abortSignal }) => {

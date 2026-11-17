@@ -10,10 +10,11 @@ import { CODING_MAX_TURNS } from "./turn-limits";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
+import { lensObservability } from "./lens";
 import { skillsInstructions } from "./skills";
 import { createWebSearchTool } from "./tools/web-search";
 import type { MachineProvider, McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
-import type { RunMemory, RunWebSearch } from "@aven/protocol/types";
+import type { RunLens, RunMemory, RunWebSearch } from "@aven/protocol/types";
 
 type CodingAgentOptions = ModelSource & {
   tools: readonly AnyTool[];
@@ -29,6 +30,7 @@ type CodingAgentOptions = ModelSource & {
   mcp?: McpNote;
   forks?: boolean;
   memory?: RunMemory;
+  lens?: RunLens;
   paths?: SandboxPaths;
   machine?: MachineProvider;
 };
@@ -61,6 +63,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
       options.paths ?? SANDBOX_PATHS,
     ),
     maxTurns,
+    observability: lensObservability(options.lens),
     tools,
   });
 

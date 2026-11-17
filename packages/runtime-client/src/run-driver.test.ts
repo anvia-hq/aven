@@ -11,7 +11,7 @@ import { journalPath } from "@aven/agent-backend/testing/journal-path";
 import { noProcesses } from "./thread-processes";
 import type { RunEvent, RuntimeToControlPlane } from "@aven/protocol/types";
 import type { AgentBackend, DurableEnd, FollowedRun } from "@aven/agent-backend/types";
-import type { RunMessage, RunRecord, ThreadWorkspaces } from "./types";
+import type { CreateRuntimeAgent, RunMessage, RunRecord, ThreadWorkspaces } from "./types";
 
 const thread = { id: "thread-1", organizationId: "org-1" };
 
@@ -106,6 +106,7 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
   const outbox = new RunOutbox(db);
   const reported: RuntimeToControlPlane[] = [];
   const made: string[] = [];
+  const handed: Parameters<CreateRuntimeAgent>[0][] = [];
   const acquired: string[] = [];
   const installed = new Map<string, Promise<AgentBackend>>([["native", native]]);
 
@@ -125,8 +126,9 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
     records,
     outbox,
     sandbox,
-    createAgent: ({ id }) => {
-      made.push(id);
+    createAgent: (input) => {
+      made.push(input.id);
+      handed.push(input);
       return { agent: {} as never };
     },
     call: async () => {
@@ -143,7 +145,7 @@ function harness(native: Promise<AgentBackend>, other?: Promise<AgentBackend>) {
     controlPlane: "http://localhost",
     stopped: () => false,
   });
-  return { driver, records, outbox, reported, made, acquired };
+  return { driver, records, outbox, reported, made, handed, acquired };
 }
 
 const start = (runId: string, backend?: string): RunMessage =>
@@ -312,5 +314,39 @@ describe("a long Claude run counts its tool calls as turns", () => {
     await until(() => claude.steered.length === 1);
     claude.finish("run-1");
     await running;
+  });
+});
+
+describe("a native run is handed the Anvia Lens setting it carries", () => {
+  const lens = {
+    baseUrl: "https://lens.example.com",
+    publicKey: "pk_lens",
+    secretKey: "sk_lens",
+    captureMode: "safe" as const,
+  };
+
+  test("run.start hands the setting to the agent it builds", async () => {
+    const native = fakeBackend();
+    const { driver, handed } = harness(Promise.resolve(native.backend));
+
+    const running = driver.start({ ...start("run-1"), lens } as RunMessage);
+    await until(() => handed.length > 0);
+    native.finish("run-1");
+    await running;
+
+    expect(handed[0]?.lens).toEqual(lens);
+  });
+
+  test("a run with no setting hands the agent none, and keeps it out of the record", async () => {
+    const native = fakeBackend();
+    const { driver, handed, records } = harness(Promise.resolve(native.backend));
+
+    const running = driver.start(start("run-1"));
+    await until(() => handed.length > 0);
+    native.finish("run-1");
+    await running;
+
+    expect(handed[0]?.lens).toBeUndefined();
+    expect(JSON.stringify(records.get("run-1"))).not.toContain("sk_lens");
   });
 });

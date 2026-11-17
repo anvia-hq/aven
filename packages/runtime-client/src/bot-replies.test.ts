@@ -1573,3 +1573,38 @@ describe("a bot on another agent (decision 0310)", () => {
     expect(inputs[0]?.claude).toMatchObject({ questions: false, tools: { questions: false } });
   });
 });
+
+describe("a bot's reply is handed the Anvia Lens setting it carries", () => {
+  const lens = {
+    baseUrl: "https://lens.example.com",
+    publicKey: "pk_lens",
+    secretKey: "sk_lens",
+    captureMode: "safe" as const,
+  };
+
+  test("the native agent the reply builds gets the setting", async () => {
+    const handed: Parameters<CreateBotReplyAgent>[0][] = [];
+    const run = harness((hosts) => {
+      handed.push(hosts);
+      return agentThat([text("hi")])(hosts);
+    });
+
+    run.replies.start({ ...message, lens });
+    await run.until();
+
+    expect(handed[0]?.lens).toEqual(lens);
+  });
+
+  test("a reply that carries none leaves the agent untraced", async () => {
+    const handed: Parameters<CreateBotReplyAgent>[0][] = [];
+    const run = harness((hosts) => {
+      handed.push(hosts);
+      return agentThat([text("hi")])(hosts);
+    });
+
+    run.replies.start(message);
+    await run.until();
+
+    expect(handed[0]?.lens).toBeUndefined();
+  });
+});

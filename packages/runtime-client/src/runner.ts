@@ -2,6 +2,7 @@ import { dirname } from "node:path";
 
 import { createCodingAgent } from "@aven/agents/coding-agent";
 import { createCompactionAgent } from "@aven/agents/compaction-agent";
+import { closeLens } from "@aven/agents/lens";
 import { subagentInstructions } from "@aven/agents/subagent-instruction";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { errorMessage } from "@aven/agents/values";
@@ -48,6 +49,7 @@ export const defaultCreateAgent =
     mcp,
     memory,
     webSearch,
+    lens,
     forks,
     model,
     role,
@@ -90,6 +92,7 @@ export const defaultCreateAgent =
       mcp,
       memory,
       webSearch,
+      lens,
       forks,
     });
   };
@@ -443,6 +446,7 @@ export function startRuntime(options: RuntimeOptions) {
       await idle.settled();
       await options.sandbox.dispose();
       await backends.close();
+      await closeLens();
       state.close();
     },
   };

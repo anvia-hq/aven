@@ -23,6 +23,7 @@ import type {
   RepoAccess,
   ReportedStats,
   RunAttachment,
+  RunLens,
   RunMcpServer,
   RunMemory,
   RunModel,
@@ -165,6 +166,7 @@ export class RuntimeConnection {
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       webSearch?: RunWebSearch;
+      lens?: RunLens;
       machine?: string;
     },
     sink: BotReplySink,

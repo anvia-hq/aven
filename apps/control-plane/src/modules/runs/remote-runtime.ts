@@ -106,6 +106,7 @@ export class RemoteRuntime implements Runtime {
     env,
     identity,
     webSearch,
+    lens,
     memory,
     cockpit,
     model,
@@ -116,7 +117,7 @@ export class RemoteRuntime implements Runtime {
     codexModel,
     codexEffort,
   }: StartRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, claudeToken, codexToken };
+    const extras = { skills, mcp, identity, memory, cockpit, lens, claudeToken, codexToken };
     return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
       const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
         type: "run.start",
@@ -132,6 +133,7 @@ export class RemoteRuntime implements Runtime {
         env: env?.length ? env : undefined,
         identity: credential,
         webSearch,
+        lens: nativeLens(lens, thread),
         memory: memory?.index,
         cockpit: cockpit?.access,
         backend: threadBackend(thread),
@@ -165,6 +167,7 @@ export class RemoteRuntime implements Runtime {
     env,
     identity,
     webSearch,
+    lens,
     memory,
     cockpit,
     model,
@@ -175,7 +178,7 @@ export class RemoteRuntime implements Runtime {
     codexModel,
     codexEffort,
   }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, claudeToken, codexToken };
+    const extras = { skills, mcp, identity, memory, cockpit, lens, claudeToken, codexToken };
     return this.#launch(
       thread,
       model,
@@ -194,6 +197,7 @@ export class RemoteRuntime implements Runtime {
           env: env?.length ? env : undefined,
           identity: credential,
           webSearch,
+          lens: nativeLens(lens, thread),
           memory: memory?.index,
           cockpit: cockpit?.access,
           model: runModel,
@@ -228,6 +232,7 @@ export class RemoteRuntime implements Runtime {
       cockpit,
       github,
       env,
+      lens,
       claudeToken,
       codexToken,
     }: Pick<
@@ -239,6 +244,7 @@ export class RemoteRuntime implements Runtime {
       | "cockpit"
       | "github"
       | "env"
+      | "lens"
       | "claudeToken"
       | "codexToken"
     >,
@@ -271,7 +277,7 @@ export class RemoteRuntime implements Runtime {
       mcp?.map((server) => server.id),
       memory?.caller,
       cockpit,
-      keptSecrets(github, env, credential, mcp, claudeToken, codexToken),
+      keptSecrets(github, env, credential, mcp, claudeToken, codexToken, nativeLens(lens, thread)),
     );
     this.#post(connection, runId, message(runId, runModel, credential, placed));
 
@@ -354,6 +360,10 @@ export class RemoteRuntime implements Runtime {
 
 const ASKING_AGENT = /^run-(.+)$/;
 
+function nativeLens(lens: StartRunInput["lens"], thread: RunThread) {
+  return threadBackend(thread) === "native" ? lens : undefined;
+}
+
 function keptSecrets(
   github: StartRunInput["github"],
   env: StartRunInput["env"],
@@ -361,6 +371,7 @@ function keptSecrets(
   mcp: StartRunInput["mcp"],
   claudeToken: string | undefined,
   codexToken: string | undefined,
+  lens: StartRunInput["lens"],
 ): RunSecrets {
   const secrets: RunSecrets = {
     github,
@@ -372,6 +383,8 @@ function keptSecrets(
   if (claudeToken) secrets.claudeToken = claudeToken;
 
   if (codexToken) secrets.codexToken = codexToken;
+
+  if (lens) secrets.lens = lens;
 
   return secrets;
 }
