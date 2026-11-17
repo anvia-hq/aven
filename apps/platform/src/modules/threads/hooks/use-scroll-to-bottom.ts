@@ -12,6 +12,7 @@ export function useScrollToBottom(count: number, outgoing = 0) {
   const seenOutgoing = useRef(0);
   const lastEnd = useRef(0);
   const gliding = useRef(false);
+  const cancelGlide = useRef<(() => void) | null>(null);
 
   const stick = useCallback((element: HTMLDivElement, resume = false) => {
     const end = Math.min(lastEnd.current, element.scrollHeight - element.clientHeight);
@@ -62,18 +63,26 @@ export function useScrollToBottom(count: number, outgoing = 0) {
       return;
     }
 
+    cancelGlide.current?.();
     following.current = true;
     gliding.current = true;
-    const settle = () => {
+    const cancel = () => {
       element.removeEventListener("scrollend", settle);
       clearTimeout(fallback);
       gliding.current = false;
+      cancelGlide.current = null;
+    };
+    const settle = () => {
+      cancel();
       stick(element);
     };
     const fallback = setTimeout(settle, GLIDE_FALLBACK_MS);
+    cancelGlide.current = cancel;
     element.addEventListener("scrollend", settle);
     element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
   }, [count, outgoing, stick]);
+
+  useEffect(() => () => cancelGlide.current?.(), []);
 
   return ref;
 }
