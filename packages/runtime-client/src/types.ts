@@ -398,6 +398,7 @@ export interface ThreadWorkspaces {
     sessionId: string,
   ): { argv: string[]; env: Record<string, string>; hangup: string[] } | undefined;
   workspace(threadId: string): Promise<string | undefined>;
+  local?(threadId: string): boolean;
   paths?(threadId: string): SandboxPaths | undefined;
   markTurn?(threadId: string): Promise<boolean>;
   fetchBranch?(threadId: string, access: RepoAccess, branch?: string): Promise<Fetched>;

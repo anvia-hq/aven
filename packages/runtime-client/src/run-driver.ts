@@ -447,10 +447,13 @@ export function createRunDriver(context: DriverContext) {
     };
     let project: Promise<string | undefined> | undefined;
     const projectOf = () => {
-      project ??= context.sandbox
-        .workspace(thread.id)
-        .then(readProjectInstructions)
-        .catch(() => undefined);
+      project ??=
+        context.sandbox.local?.(thread.id) === false
+          ? Promise.resolve(undefined)
+          : context.sandbox
+              .workspace(thread.id)
+              .then(readProjectInstructions)
+              .catch(() => undefined);
       return project;
     };
     const mcp = await run.mcpGoing;

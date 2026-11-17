@@ -16,6 +16,10 @@ export class PlacedWorkspaces implements ThreadWorkspaces {
     return this.onMachine(threadId) ? this.machines : this.host;
   }
 
+  local(threadId: string) {
+    return !this.onMachine(threadId);
+  }
+
   get uploads() {
     const { host } = this;
 
