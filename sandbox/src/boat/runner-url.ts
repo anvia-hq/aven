@@ -1,7 +1,8 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
+import { sandboxSettingsOf } from "../settings";
+
 type Env = {
-  AVEN_BOAT_RUNNER_URL?: string;
   BETTER_AUTH_URL?: string;
 };
 
@@ -40,15 +41,11 @@ function unreachable(hostname: string) {
   return false;
 }
 
-function envFromProcess(): Env {
-  return {
-    AVEN_BOAT_RUNNER_URL: process.env.AVEN_BOAT_RUNNER_URL,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  };
-}
-
-export function runnerUrlFromEnv(env: Env = envFromProcess()) {
-  const explicit = env.AVEN_BOAT_RUNNER_URL?.trim();
+export function boatRunnerUrl(
+  env: Env = { BETTER_AUTH_URL: process.env.BETTER_AUTH_URL },
+  configured = sandboxSettingsOf("boat")?.runnerUrl,
+) {
+  const explicit = configured?.trim();
   const origin = (env.BETTER_AUTH_URL ?? "http://localhost:5173").replace(/\/$/, "");
   const raw = (explicit || `${origin}/api`).replace(/\/$/, "");
   let url: URL;
@@ -57,18 +54,18 @@ export function runnerUrlFromEnv(env: Env = envFromProcess()) {
     url = new URL(raw);
   } catch {
     throw new UnavailableError(
-      "AVEN_BOAT_RUNNER_URL must be the public address a boat sandbox uses to reach this server",
+      "The address a boat sandbox uses to reach this server must be a public http or https address",
     );
   }
 
   if (url.protocol !== "https:" && url.protocol !== "http:")
     throw new UnavailableError(
-      "AVEN_BOAT_RUNNER_URL must be the public address a boat sandbox uses to reach this server",
+      "The address a boat sandbox uses to reach this server must be a public http or https address",
     );
 
   if (unreachable(url.hostname))
     throw new UnavailableError(
-      "A boat sandbox cannot reach this server. Set AVEN_BOAT_RUNNER_URL to a public address",
+      "A boat sandbox cannot reach this server. Set a public address for it in Settings > Sandbox",
     );
 
   return raw;

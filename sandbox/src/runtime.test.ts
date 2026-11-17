@@ -3,17 +3,13 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { CLOUD_OFF } from "./cloud-config";
 import { RuntimeOfflineError } from "./offline";
 import { EXPIRED_COMPUTER, createSandboxRuntime } from "./runtime";
+import { setSandboxSettings } from "./settings";
 import type { SandboxRunner, SandboxStore } from "./types";
 import type { RuntimeProviderKind } from "@aven/protocol/types";
 
 const connection: SandboxRunner = { call: async () => ({}) };
 
-const keptProviders = process.env.AVEN_CLOUD_PROVIDERS;
-
-afterEach(() => {
-  if (keptProviders === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
-  else process.env.AVEN_CLOUD_PROVIDERS = keptProviders;
-});
+afterEach(() => setSandboxSettings(null));
 
 function store(overrides: Partial<SandboxStore> = {}): SandboxStore {
   return {
@@ -84,7 +80,7 @@ describe("reaching a runtime's sandbox", () => {
   });
 
   test("a cloud provider this server does not offer cannot wake its sandbox", async () => {
-    process.env.AVEN_CLOUD_PROVIDERS = "";
+    setSandboxSettings(null);
     const sandbox = createSandboxRuntime<SandboxRunner>(store({ providerOf: async () => "boat" }));
 
     await expect(

@@ -41,6 +41,7 @@ import { Route as AuthedSettingsPlatformRouteImport } from './routes/_authed/set
 import { Route as AuthedSettingsProfileRouteImport } from './routes/_authed/settings/profile'
 import { Route as AuthedSettingsProvidersRouteImport } from './routes/_authed/settings/providers'
 import { Route as AuthedSettingsRuntimesRouteImport } from './routes/_authed/settings/runtimes'
+import { Route as AuthedSettingsSandboxRouteImport } from './routes/_authed/settings/sandbox'
 import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
 import { Route as AuthedSettingsWebhooksRouteImport } from './routes/_authed/settings/webhooks'
 import { Route as AuthedSettingsWorkspaceVariablesRouteImport } from './routes/_authed/settings/workspace-variables'
@@ -211,6 +212,11 @@ const AuthedSettingsRuntimesRoute = AuthedSettingsRuntimesRouteImport.update({
   path: '/runtimes',
   getParentRoute: () => AuthedSettingsRoute,
 } as any)
+const AuthedSettingsSandboxRoute = AuthedSettingsSandboxRouteImport.update({
+  id: '/sandbox',
+  path: '/sandbox',
+  getParentRoute: () => AuthedSettingsRoute,
+} as any)
 const AuthedSettingsSkillsRoute = AuthedSettingsSkillsRouteImport.update({
   id: '/skills',
   path: '/skills',
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/settings/sandbox': typeof AuthedSettingsSandboxRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
@@ -315,6 +322,7 @@ export interface FileRoutesByTo {
   '/settings/profile': typeof AuthedSettingsProfileRoute
   '/settings/providers': typeof AuthedSettingsProvidersRoute
   '/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/settings/sandbox': typeof AuthedSettingsSandboxRoute
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
@@ -357,6 +365,7 @@ export interface FileRoutesById {
   '/_authed/settings/profile': typeof AuthedSettingsProfileRoute
   '/_authed/settings/providers': typeof AuthedSettingsProvidersRoute
   '/_authed/settings/runtimes': typeof AuthedSettingsRuntimesRoute
+  '/_authed/settings/sandbox': typeof AuthedSettingsSandboxRoute
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
@@ -398,6 +407,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
+    | '/settings/sandbox'
     | '/settings/skills'
     | '/settings/webhooks'
     | '/settings/workspace-variables'
@@ -434,6 +444,7 @@ export interface FileRouteTypes {
     | '/settings/profile'
     | '/settings/providers'
     | '/settings/runtimes'
+    | '/settings/sandbox'
     | '/settings/skills'
     | '/settings/webhooks'
     | '/settings/workspace-variables'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/profile'
     | '/_authed/settings/providers'
     | '/_authed/settings/runtimes'
+    | '/_authed/settings/sandbox'
     | '/_authed/settings/skills'
     | '/_authed/settings/webhooks'
     | '/_authed/settings/workspace-variables'
@@ -721,6 +733,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSettingsRuntimesRouteImport
       parentRoute: typeof AuthedSettingsRoute
     }
+    '/_authed/settings/sandbox': {
+      id: '/_authed/settings/sandbox'
+      path: '/sandbox'
+      fullPath: '/settings/sandbox'
+      preLoaderRoute: typeof AuthedSettingsSandboxRouteImport
+      parentRoute: typeof AuthedSettingsRoute
+    }
     '/_authed/settings/skills': {
       id: '/_authed/settings/skills'
       path: '/skills'
@@ -841,6 +860,7 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsProfileRoute: typeof AuthedSettingsProfileRoute
   AuthedSettingsProvidersRoute: typeof AuthedSettingsProvidersRoute
   AuthedSettingsRuntimesRoute: typeof AuthedSettingsRuntimesRoute
+  AuthedSettingsSandboxRoute: typeof AuthedSettingsSandboxRoute
   AuthedSettingsSkillsRoute: typeof AuthedSettingsSkillsRoute
   AuthedSettingsWebhooksRoute: typeof AuthedSettingsWebhooksRoute
   AuthedSettingsWorkspaceVariablesRoute: typeof AuthedSettingsWorkspaceVariablesRoute
@@ -864,6 +884,7 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsProfileRoute: AuthedSettingsProfileRoute,
   AuthedSettingsProvidersRoute: AuthedSettingsProvidersRoute,
   AuthedSettingsRuntimesRoute: AuthedSettingsRuntimesRoute,
+  AuthedSettingsSandboxRoute: AuthedSettingsSandboxRoute,
   AuthedSettingsSkillsRoute: AuthedSettingsSkillsRoute,
   AuthedSettingsWebhooksRoute: AuthedSettingsWebhooksRoute,
   AuthedSettingsWorkspaceVariablesRoute: AuthedSettingsWorkspaceVariablesRoute,

@@ -1,12 +1,13 @@
 import type { BoatMachineType } from "@aven/protocol/types";
 
+import { sandboxSettingsOf } from "../settings";
 import type { BoatSandbox } from "./types";
 
 const SANDBOX_ID = /^bx_[23456789abcdefghjkmnpqrstuvwxyz]{8}$/;
 
 const AUTO_STOP_SECONDS = 2 * 60 * 60;
 
-export const boatApiKey = () => process.env.AVEN_BOAT_API_KEY?.trim() || null;
+export const boatApiKey = () => sandboxSettingsOf("boat")?.apiKey.trim() || null;
 
 export function autoStopSeconds() {
   const configured = Number(process.env.AVEN_BOAT_AUTO_STOP_SECONDS);
@@ -28,12 +29,16 @@ export class BoatApiError extends Error {
   }
 }
 
-export function boatApiBase(configured = process.env.AVEN_BOAT_API_BASE) {
-  const base = (configured || BOAT_API_BASE).replace(/\/$/, "");
+export function boatApiBase(configured = sandboxSettingsOf("boat")?.base) {
+  const base = (configured?.trim() || BOAT_API_BASE).replace(/\/$/, "");
   const url = new URL(base);
 
   if (url.protocol !== "https:" && url.protocol !== "http:")
-    throw new BoatApiError(0, "invalid_base", "AVEN_BOAT_API_BASE must be an http(s) URL");
+    throw new BoatApiError(
+      0,
+      "invalid_base",
+      "The boat API address must be an http or https address",
+    );
 
   return base;
 }

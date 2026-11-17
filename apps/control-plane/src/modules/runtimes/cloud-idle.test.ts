@@ -9,6 +9,7 @@ import type { RuntimeConnection } from "./hub";
 import { threadsService } from "../threads/service";
 import { createCloudIdle } from "./cloud-idle";
 import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { clearSandboxPlatform, useSandboxPlatform } from "../../testing/sandbox-platform";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -22,24 +23,16 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, cleanup } = await seedOrgPair();
-  const keptKey = process.env.AVEN_BOAT_API_KEY;
-  const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
-  process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_idle";
-  process.env.AVEN_CLOUD_PROVIDERS = "boat";
-  await runtimesService.ensureCloud();
+  await useSandboxPlatform("boat", "boat_test_key_for_idle");
 
   afterAll(async () => {
     await cleanup();
 
     if (!kept) await db.delete(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
 
-    if (keptKey === undefined) delete process.env.AVEN_BOAT_API_KEY;
-    else process.env.AVEN_BOAT_API_KEY = keptKey;
-
-    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
-    else process.env.AVEN_CLOUD_PROVIDERS = keptProvider;
+    clearSandboxPlatform();
   });
 
   async function cloudThread(name: string, updatedAt: Date) {

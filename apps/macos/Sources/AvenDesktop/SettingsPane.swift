@@ -837,7 +837,7 @@ private struct RuntimesSettings: View {
                 Text("A trial account can start Small and Default, and stops the sandbox after two hours. Larger sizes need a paid plan. The key needs permission to create and drive sandboxes.")
                     .font(.caption).foregroundStyle(.secondary)
                 if serverIsLocal {
-                    Text("This server is on a private address. A sandbox cannot reach it. Set AVEN_BOAT_RUNNER_URL on the server to a public https address ending in /api before a thread uses this runtime.")
+                    Text("This server is on a private address. A sandbox cannot reach it. Set a public https address ending in /api for sandboxes in Settings > Sandbox on the server before a thread uses this runtime.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }

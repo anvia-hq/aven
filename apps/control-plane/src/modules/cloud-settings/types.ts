@@ -1,14 +1,14 @@
-export type CloudSettingsSource = "env" | "platform";
+import type { SandboxProviderName } from "@aven/sandbox/settings";
 
 export type CloudSettingsView = {
-  provider: "spaces";
+  provider: SandboxProviderName;
   base: string;
   runnerUrl: string;
   keyHint: string;
-  source: CloudSettingsSource;
 };
 
 export type StoredCloudSettings = {
+  provider: SandboxProviderName;
   base: string;
   runnerUrl: string;
   apiKeyEncrypted: string;

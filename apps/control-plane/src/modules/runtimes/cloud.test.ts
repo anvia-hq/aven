@@ -9,6 +9,7 @@ import { projectsService } from "../projects/service";
 import { threadsService } from "../threads/service";
 import { enabledCloudProviders } from "@aven/sandbox/cloud-config";
 import { reachRunner } from "./providers";
+import { clearSandboxPlatform, useSandboxPlatform } from "../../testing/sandbox-platform";
 import { CLOUD_OFF, CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID, runtimesService } from "./service";
 import { requireUsableRuntime } from "./usable";
 
@@ -18,16 +19,13 @@ run("Aven Cloud runtime (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
-  const keptKey = process.env.AVEN_BOAT_API_KEY;
   const keptLimit = process.env.AVEN_CLOUD_MAX_SANDBOXES;
-  const keptProvider = process.env.AVEN_CLOUD_PROVIDERS;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
   const [keptSpaces] = await db.select().from(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
-  beforeAll(() => {
-    process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
-    process.env.AVEN_CLOUD_PROVIDERS = "boat";
+  beforeAll(async () => {
     delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
+    await useSandboxPlatform("boat", "boat_test_key_for_cloud");
   });
 
   afterAll(async () => {
@@ -37,25 +35,20 @@ run("Aven Cloud runtime (postgres)", async () => {
 
     if (!keptSpaces) await db.delete(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
-    if (keptKey === undefined) delete process.env.AVEN_BOAT_API_KEY;
-    else process.env.AVEN_BOAT_API_KEY = keptKey;
+    clearSandboxPlatform();
 
     if (keptLimit === undefined) delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
     else process.env.AVEN_CLOUD_MAX_SANDBOXES = keptLimit;
-
-    if (keptProvider === undefined) delete process.env.AVEN_CLOUD_PROVIDERS;
-    else process.env.AVEN_CLOUD_PROVIDERS = keptProvider;
   });
 
-  test("Aven Cloud is listed for every workspace once the platform has a boat key, and only then", async () => {
-    delete process.env.AVEN_BOAT_API_KEY;
+  test("Aven Cloud is listed for every workspace once the platform has a sandbox, and only then", async () => {
+    clearSandboxPlatform();
     await runtimesService.ensureCloud();
     expect((await runtimesService.list(orgA, userId)).map(({ id }) => id)).not.toContain(
       CLOUD_RUNTIME_ID,
     );
 
-    process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
-    await runtimesService.ensureCloud();
+    await useSandboxPlatform("boat", "boat_test_key_for_cloud");
 
     for (const org of [orgA, orgB]) {
       const listed = await runtimesService.list(org, userId);
@@ -200,8 +193,8 @@ run("Aven Cloud runtime (postgres)", async () => {
     }
   });
 
-  test("without a boat key Aven Cloud cannot start a thread", async () => {
-    delete process.env.AVEN_BOAT_API_KEY;
+  test("without a sandbox platform Aven Cloud cannot start a thread", async () => {
+    clearSandboxPlatform();
     const { project } = await seedProject(orgA, userId, null, "no-key-repo");
 
     try {
@@ -209,17 +202,17 @@ run("Aven Cloud runtime (postgres)", async () => {
         threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
       ).rejects.toThrow(CLOUD_OFF);
     } finally {
-      process.env.AVEN_BOAT_API_KEY = "boat_test_key_for_cloud";
+      await useSandboxPlatform("boat", "boat_test_key_for_cloud");
     }
   });
 
-  test("with no provider named Aven Cloud is hidden, refuses new threads and cannot wake the ones it has", async () => {
+  test("with no sandbox platform Aven Cloud is hidden, refuses new threads and cannot wake the ones it has", async () => {
     const { project } = await seedProject(orgA, userId, null, "off-repo");
     const mine = await threadsService.create(orgA, userId, {
       projectId: project.id,
       runtimeId: CLOUD_RUNTIME_ID,
     });
-    process.env.AVEN_CLOUD_PROVIDERS = "";
+    clearSandboxPlatform();
 
     try {
       const listed = (await runtimesService.list(orgA, userId)).map(({ id }) => id);
@@ -233,41 +226,36 @@ run("Aven Cloud runtime (postgres)", async () => {
         reachRunner({ get: () => undefined }, { runtimeId: mine.runtimeId }),
       ).rejects.toThrow(CLOUD_OFF);
     } finally {
-      process.env.AVEN_CLOUD_PROVIDERS = "boat";
+      await useSandboxPlatform("boat", "boat_test_key_for_cloud");
     }
 
     expect(await runtimesService.cloudRecord(mine.runtimeId, "boat")).not.toBeNull();
   });
 
-  test("spaces is a provider of its own, with its own key and address, and boat's key never reaches it", async () => {
-    const kept = {
-      key: process.env.AVEN_SPACES_API_KEY,
-      base: process.env.AVEN_SPACES_API_BASE,
-      providers: process.env.AVEN_CLOUD_PROVIDERS,
-    };
-    process.env.AVEN_CLOUD_PROVIDERS = "boat,spaces";
-    process.env.AVEN_SPACES_API_KEY = "sk_spaces_test_key";
-    process.env.AVEN_SPACES_API_BASE = "http://spaces.test:8787/api/v1/";
+  test("switching the platform to spaces offers its template alone, and boat's key never reaches it", async () => {
+    const { project } = await seedProject(orgA, userId, null, "spaces-repo");
+    const onBoat = await threadsService.create(orgA, userId, {
+      projectId: project.id,
+      runtimeId: CLOUD_RUNTIME_ID,
+    });
 
     try {
-      expect(enabledCloudProviders()).toEqual(["boat", "spaces"]);
-      await runtimesService.ensureCloud();
+      await useSandboxPlatform("spaces", "sk_spaces_test_key");
+      expect(enabledCloudProviders()).toEqual(["spaces"]);
       const listed = await runtimesService.list(orgA, userId);
-      expect(listed.find(({ id }) => id === CLOUD_RUNTIME_ID)?.name).toBe("Aven Cloud · boat");
+      expect(listed.map(({ id }) => id)).not.toContain(CLOUD_RUNTIME_ID);
       expect(listed.find(({ id }) => id === SPACES_RUNTIME_ID)).toMatchObject({
-        name: "Aven Cloud · spaces",
+        name: "Aven Cloud",
         provider: "spaces",
         lifetime: "ephemeral",
       });
 
-      const { project } = await seedProject(orgA, userId, null, "spaces-repo");
+      await expect(
+        threadsService.create(orgA, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
+      ).rejects.toThrow(CLOUD_OFF);
       const onSpaces = await threadsService.create(orgA, userId, {
         projectId: project.id,
         runtimeId: SPACES_RUNTIME_ID,
-      });
-      const onBoat = await threadsService.create(orgA, userId, {
-        projectId: project.id,
-        runtimeId: CLOUD_RUNTIME_ID,
       });
       const [child] = await db.select().from(runtimes).where(eq(runtimes.id, onSpaces.runtimeId));
       expect(child).toMatchObject({ provider: "spaces", parentRuntimeId: SPACES_RUNTIME_ID });
@@ -277,37 +265,21 @@ run("Aven Cloud runtime (postgres)", async () => {
         sandboxId: null,
       });
       expect(await runtimesService.cloudRecord(onSpaces.runtimeId, "boat")).toBeNull();
-      expect(await runtimesService.cloudRecord(onBoat.runtimeId, "spaces")).toBeNull();
-      expect(await runtimesService.cloudRecord(onBoat.runtimeId, "boat")).toMatchObject({
-        apiKey: "boat_test_key_for_cloud",
-      });
+      expect(await runtimesService.cloudRecord(onBoat.runtimeId, "boat")).toBeNull();
+      await expect(
+        reachRunner({ get: () => undefined }, { runtimeId: onBoat.runtimeId }),
+      ).rejects.toThrow(CLOUD_OFF);
 
       const rotated = await runtimesService.rotate(orgA, userId, onSpaces.runtimeId);
       expect((await runtimesService.cloudRecord(onSpaces.runtimeId, "spaces"))?.runnerToken).toBe(
         rotated!.token,
       );
-
-      delete process.env.AVEN_SPACES_API_BASE;
-      expect(enabledCloudProviders()).toEqual(["boat"]);
-      expect(await runtimesService.cloudRecord(onSpaces.runtimeId, "spaces")).toBeNull();
-      await expect(
-        threadsService.create(orgA, userId, {
-          projectId: project.id,
-          runtimeId: SPACES_RUNTIME_ID,
-        }),
-      ).rejects.toThrow(CLOUD_OFF);
-      await expect(
-        reachRunner({ get: () => undefined }, { runtimeId: onSpaces.runtimeId }),
-      ).rejects.toThrow(CLOUD_OFF);
     } finally {
-      for (const [name, value] of [
-        ["AVEN_SPACES_API_KEY", kept.key],
-        ["AVEN_SPACES_API_BASE", kept.base],
-        ["AVEN_CLOUD_PROVIDERS", kept.providers],
-      ] as const) {
-        if (value === undefined) delete process.env[name];
-        else process.env[name] = value;
-      }
+      await useSandboxPlatform("boat", "boat_test_key_for_cloud");
     }
+
+    expect(await runtimesService.cloudRecord(onBoat.runtimeId, "boat")).toMatchObject({
+      apiKey: "boat_test_key_for_cloud",
+    });
   });
 });

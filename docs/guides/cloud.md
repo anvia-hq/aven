@@ -34,9 +34,9 @@ puts beside the server shares its machine: agents run commands there, as the ser
 many people use, prefer `aven install --no-runner` on the server and runners on other machines.
 
 Aven Cloud is a computer Aven provides: each thread started on it gets a [boat.dev](https://boat.dev)
-sandbox of its own, deleted after 48 hours without use. It is off until the platform sets
-`AVEN_CLOUD_PROVIDERS=boat` with its boat API key (`AVEN_BOAT_API_KEY`) and a public address for the sandbox to connect to (`AVEN_BOAT_RUNNER_URL` when
-this server is not already on one). See [Self-hosting](self-hosting.md#aven-cloud).
+sandbox of its own, deleted after 48 hours without use. It is off until the platform owner opens
+**Settings > Sandbox**, chooses boat.dev or a spaces server, and gives its key and, when this server
+is not already on a public address, the public address for the sandbox to connect to. See [Self-hosting](self-hosting.md#aven-cloud).
 
 ## Changing an install
 

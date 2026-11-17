@@ -2,21 +2,18 @@ import { describe, expect, test } from "bun:test";
 
 import { UnavailableError } from "@aven/server-kit/errors";
 
-import { runnerUrlFromEnv } from "./runner-url";
+import { boatRunnerUrl } from "./runner-url";
 
 describe("the address a boat sandbox dials", () => {
   test("uses the site origin when none is set", () => {
-    expect(runnerUrlFromEnv({ BETTER_AUTH_URL: "https://aven.example.com" })).toBe(
+    expect(boatRunnerUrl({ BETTER_AUTH_URL: "https://aven.example.com" }, "")).toBe(
       "https://aven.example.com/api",
     );
   });
 
   test("uses an explicit public address", () => {
     expect(
-      runnerUrlFromEnv({
-        AVEN_BOAT_RUNNER_URL: "https://api.example.com/",
-        BETTER_AUTH_URL: "http://localhost:5173",
-      }),
+      boatRunnerUrl({ BETTER_AUTH_URL: "http://localhost:5173" }, "https://api.example.com/"),
     ).toBe("https://api.example.com");
   });
 
@@ -28,7 +25,7 @@ describe("the address a boat sandbox dials", () => {
       "http://192.168.1.9/api",
       "http://172.16.0.4/api",
     ]) {
-      expect(() => runnerUrlFromEnv({ AVEN_BOAT_RUNNER_URL: url })).toThrow(UnavailableError);
+      expect(() => boatRunnerUrl({}, url)).toThrow(UnavailableError);
     }
   });
 });

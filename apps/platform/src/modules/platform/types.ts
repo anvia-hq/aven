@@ -41,14 +41,25 @@ export type ServerModelOption = {
   keyLabel: string;
 };
 
-export type CloudSettingsSource = "env" | "platform";
+export const SANDBOX_PROVIDERS = ["spaces", "boat"] as const;
+
+export type SandboxProvider = (typeof SANDBOX_PROVIDERS)[number];
+
+export const SANDBOX_PROVIDER_LABELS: Record<SandboxProvider, string> = {
+  spaces: "Spaces",
+  boat: "boat.dev",
+};
 
 export type CloudSettings = {
-  provider: string;
+  provider: SandboxProvider;
   base: string;
   runnerUrl: string;
   keyHint: string;
-  source: CloudSettingsSource;
 };
 
-export type CloudSettingsDraft = { base: string; runnerUrl: string; apiKey: string };
+export type CloudSettingsDraft = {
+  provider: SandboxProvider;
+  base: string;
+  runnerUrl: string;
+  apiKey: string;
+};

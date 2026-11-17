@@ -1,19 +1,12 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
-import type { SpacesSettings } from "./types";
+import { sandboxSettingsOf } from "../settings";
 
 const AUTO_STOP_SECONDS = 2 * 60 * 60;
 
-let saved: SpacesSettings | null = null;
+export const spacesApiKey = () => sandboxSettingsOf("spaces")?.apiKey.trim() || null;
 
-export const setSpacesSettings = (settings: SpacesSettings | null) => {
-  saved = settings;
-};
-
-export const spacesApiKey = () =>
-  saved?.apiKey.trim() || process.env.AVEN_SPACES_API_KEY?.trim() || null;
-
-export function spacesApiBase(configured = saved?.base ?? process.env.AVEN_SPACES_API_BASE) {
+export function spacesApiBase(configured = sandboxSettingsOf("spaces")?.base) {
   const raw = configured?.trim();
 
   if (!raw) return null;
@@ -38,21 +31,17 @@ export function spacesAutoStopSeconds() {
 }
 
 type RunnerUrlEnv = {
-  AVEN_SPACES_RUNNER_URL?: string;
   BETTER_AUTH_URL?: string;
 };
 
 export function spacesRunnerUrl(
-  env: RunnerUrlEnv = {
-    AVEN_SPACES_RUNNER_URL: process.env.AVEN_SPACES_RUNNER_URL,
-    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
-  },
+  env: RunnerUrlEnv = { BETTER_AUTH_URL: process.env.BETTER_AUTH_URL },
+  explicit = sandboxSettingsOf("spaces")?.runnerUrl,
 ) {
-  const explicit = saved?.runnerUrl.trim() || env.AVEN_SPACES_RUNNER_URL?.trim();
   const origin = (env.BETTER_AUTH_URL ?? "http://localhost:5173").replace(/\/$/, "");
-  const raw = (explicit || `${origin}/api`).replace(/\/$/, "");
+  const raw = (explicit?.trim() || `${origin}/api`).replace(/\/$/, "");
   const message =
-    "AVEN_SPACES_RUNNER_URL must be the address a spaces sandbox uses to reach this server";
+    "The address a spaces sandbox uses to reach this server must be an http or https address";
 
   try {
     const url = new URL(raw);
