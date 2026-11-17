@@ -38,14 +38,11 @@ export async function wakeBoatSandbox(input: {
   const readyTimeoutMs = input.readyTimeoutMs ?? 75_000;
   const settleMs = input.settleMs ?? 10_000;
   const connectTimeoutMs = input.connectTimeoutMs ?? 120_000;
-  const { sandboxId, started, fromEnvironment } = await ensureSandbox(input, clock, readyTimeoutMs);
+  const { sandboxId, started } = await ensureSandbox(input, clock, readyTimeoutMs);
 
   if (started) input.forget?.();
 
   if (await waitFor(input.connected, clock, clock.now() + settleMs)) return { started };
-
-  if (fromEnvironment)
-    await input.client.command(input.record.apiKey, sandboxId, FRESH_JOURNAL_COMMAND);
 
   await input.client.command(input.record.apiKey, sandboxId, "mkdir -p /home/user/.aven");
   await input.client.writeFile(
@@ -81,8 +78,7 @@ async function ensureSandbox(
       readyTimeoutMs,
     );
 
-    if (existing)
-      return { sandboxId: existing.id, started: existing.resumed, fromEnvironment: false };
+    if (existing) return { sandboxId: existing.id, started: existing.resumed };
   }
 
   let created: BoatSandbox;
@@ -102,11 +98,15 @@ async function ensureSandbox(
 
   if (!ready) throw new UnavailableError("Boat did not keep the sandbox it created");
 
-  return {
-    sandboxId: ready.id,
-    started: true,
-    fromEnvironment: Boolean(input.record.environment),
-  };
+  if (input.record.environment) {
+    try {
+      await input.client.command(input.record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
+    } catch (error) {
+      throw asUnavailable(error);
+    }
+  }
+
+  return { sandboxId: ready.id, started: true };
 }
 
 async function prepare(
