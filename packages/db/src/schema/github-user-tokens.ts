@@ -9,7 +9,6 @@ export const githubUserTokens = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    appKey: text("app_key").notNull().default("platform"),
     githubUserId: bigint("github_user_id", { mode: "number" }).notNull(),
     login: text("login").notNull(),
     name: text("name"),
@@ -23,5 +22,5 @@ export const githubUserTokens = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [unique("github_user_tokens_user_app_unique").on(table.userId, table.appKey)],
+  (table) => [unique("github_user_tokens_user_id_unique").on(table.userId)],
 );

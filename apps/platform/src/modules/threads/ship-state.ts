@@ -13,8 +13,7 @@ const shipLabel = (latest: ThreadPullRequest | undefined): ShipLabel => {
 };
 
 export function shipActionOf(facts: ShipFacts): ShipAct {
-  const { gate, appKey, changes, branch, branchPulls, pullRequests, running, shipping, connected } =
-    facts;
+  const { gate, changes, branch, branchPulls, pullRequests, running, shipping, connected } = facts;
   const [latest] = pullRequests;
   const busy = running || shipping;
 
@@ -38,7 +37,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
 
   if (connected === null) return { kind: "loading" };
 
-  if (!connected) return { kind: "connect", appKey };
+  if (!connected) return { kind: "connect" };
 
   if (changes.any) {
     return {
@@ -67,15 +66,8 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
   return { kind: "open", disabled: busy };
 }
 
-export function connectionOf({
-  machine,
-  appKey,
-  checked,
-  account,
-}: ShipConnectionFacts): boolean | null {
+export function connectionOf({ machine, account }: ShipConnectionFacts): boolean | null {
   if (machine) return true;
-
-  if (appKey === null) return checked ? false : null;
 
   if (account === null) return null;
 

@@ -1,10 +1,9 @@
 import { db } from "@aven/db/client";
 import { githubUserTokens } from "@aven/db/schema/github-user-tokens";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { decryptSecret, encryptSecret } from "@aven/server-kit/crypto";
-import { githubClients, PLATFORM_APP } from "./clients";
-import type { GithubClients } from "./types";
+import { github, type GithubClient } from "@aven/github/client";
 import type { GithubIdentity, GithubUserGrant, GithubUserToken } from "@aven/github/types";
 import type { GithubUserTokenRow } from "@aven/db/schema/types";
 import type { RunGithub } from "@aven/protocol/types";
@@ -19,22 +18,18 @@ const identityOf = (row: GithubUserTokenRow): GithubIdentity => ({
   name: row.name,
 });
 
-const ofPerson = (userId: string, appKey: string) =>
-  and(eq(githubUserTokens.userId, userId), eq(githubUserTokens.appKey, appKey));
+const ofPerson = (userId: string) => eq(githubUserTokens.userId, userId);
 
-export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = githubClients) {
+export function createGithubUserTokens(
+  client: Pick<GithubClient, "refreshGrant" | "userProfile"> = github,
+) {
   const renewing = new Map<string, Promise<GithubUserToken | null>>();
 
-  const remove = async (userId: string, appKey: string = PLATFORM_APP) => {
-    await db.delete(githubUserTokens).where(ofPerson(userId, appKey));
+  const remove = async (userId: string) => {
+    await db.delete(githubUserTokens).where(ofPerson(userId));
   };
 
-  const store = async (
-    userId: string,
-    appKey: string,
-    grant: GithubUserGrant,
-    identity: GithubIdentity,
-  ) => {
+  const store = async (userId: string, grant: GithubUserGrant, identity: GithubIdentity) => {
     const values = {
       githubUserId: identity.id,
       login: identity.login,
@@ -46,46 +41,44 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
     };
     await db
       .insert(githubUserTokens)
-      .values({ userId, appKey, ...values })
+      .values({ userId, ...values })
       .onConflictDoUpdate({
-        target: [githubUserTokens.userId, githubUserTokens.appKey],
+        target: githubUserTokens.userId,
         set: values,
       });
   };
 
-  const drop = async (userId: string, appKey: string, reason: unknown) => {
-    console.warn(`The GitHub connection of user ${userId} (app ${appKey}) was dropped:`, reason);
-    await remove(userId, appKey);
+  const drop = async (userId: string, reason: unknown) => {
+    console.warn(`The GitHub connection of user ${userId} was dropped:`, reason);
+    await remove(userId);
     return null;
   };
 
   async function renew(row: GithubUserTokenRow) {
-    const { userId, appKey } = row;
+    const { userId } = row;
     const expired = row.refreshExpiresAt !== null && row.refreshExpiresAt.getTime() <= Date.now();
 
-    if (!row.refreshTokenEncrypted || expired)
-      return drop(userId, appKey, "no usable refresh token");
+    if (!row.refreshTokenEncrypted || expired) return drop(userId, "no usable refresh token");
 
     let refreshToken: string;
     try {
       refreshToken = decryptSecret(row.refreshTokenEncrypted);
     } catch (error) {
-      return drop(userId, appKey, error);
+      return drop(userId, error);
     }
-    const grant = await (await clients.forKey(appKey)).refreshGrant(refreshToken);
+    const grant = await client.refreshGrant(refreshToken);
 
-    if (!grant) return drop(userId, appKey, "GitHub refused the refresh token");
+    if (!grant) return drop(userId, "GitHub refused the refresh token");
 
-    await store(userId, appKey, grant, identityOf(row));
+    await store(userId, grant, identityOf(row));
     return { token: grant.accessToken, identity: identityOf(row) };
   }
 
   async function use(
     userId: string,
-    appKey: string = PLATFORM_APP,
     minRemainingMs = REFRESH_MARGIN_MS,
   ): Promise<GithubUserToken | null> {
-    const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId, appKey));
+    const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId));
 
     if (!row) return null;
 
@@ -94,38 +87,40 @@ export function createGithubUserTokens(clients: Pick<GithubClients, "forKey"> = 
 
     if (fresh) {
       try {
-        return { token: decryptSecret(row.accessTokenEncrypted), identity: identityOf(row) };
+        return {
+          token: decryptSecret(row.accessTokenEncrypted),
+          identity: identityOf(row),
+        };
       } catch (error) {
-        return drop(userId, appKey, error);
+        return drop(userId, error);
       }
     }
 
-    const turn = `${userId}:${appKey}`;
-    const running = renewing.get(turn) ?? renew(row).finally(() => renewing.delete(turn));
-    renewing.set(turn, running);
+    const running = renewing.get(userId) ?? renew(row).finally(() => renewing.delete(userId));
+    renewing.set(userId, running);
     return running;
   }
 
   return {
-    async connect(userId: string, grant: GithubUserGrant, appKey: string = PLATFORM_APP) {
-      const profile = await (await clients.forKey(appKey)).userProfile(grant.accessToken);
-      await store(userId, appKey, grant, profile);
+    async connect(userId: string, grant: GithubUserGrant) {
+      const profile = await client.userProfile(grant.accessToken);
+      await store(userId, grant, profile);
       return profile;
     },
 
-    async status(userId: string, appKey: string = PLATFORM_APP): Promise<{ login: string } | null> {
+    async status(userId: string): Promise<{ login: string } | null> {
       const [row] = await db
         .select({ login: githubUserTokens.login })
         .from(githubUserTokens)
-        .where(ofPerson(userId, appKey));
+        .where(ofPerson(userId));
       return row ?? null;
     },
 
     use,
 
-    async forRun(userId: string, appKey: string = PLATFORM_APP): Promise<RunGithub | undefined> {
+    async forRun(userId: string): Promise<RunGithub | undefined> {
       try {
-        const connection = await use(userId, appKey, RUN_MIN_REMAINING_MS);
+        const connection = await use(userId, RUN_MIN_REMAINING_MS);
 
         if (!connection) return undefined;
 

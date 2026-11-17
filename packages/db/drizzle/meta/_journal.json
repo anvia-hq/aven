@@ -554,6 +554,13 @@
       "when": 1794856892118,
       "tag": "0078_provider_key_digest",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1794882376297,
+      "tag": "0079_drop_workspace_github_apps",
+      "breakpoints": true
     }
   ]
 }

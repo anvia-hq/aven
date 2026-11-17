@@ -154,7 +154,7 @@ test.describe("shipping a thread", () => {
     const { child, threadId } = await threadOnFakeRunner(page, { FAKE_AVEN_FILES: "setup,ship" });
     runner = child;
     await page.route("**/api/github/user?*", (route) =>
-      route.fulfill({ json: { connected: false, login: null, appKey: "platform" } }),
+      route.fulfill({ json: { connected: false, login: null } }),
     );
 
     await page.goto(`/threads/${threadId}`);
@@ -339,7 +339,7 @@ test.describe("shipping a thread", () => {
     runner = child;
     await page.route(/\/api\/threads\/[^/]+\/ship$/, (route) =>
       route.request().method() === "GET"
-        ? route.fulfill({ json: { ready: true, ship: true, appKey: null, machine: true } })
+        ? route.fulfill({ json: { ready: true, ship: true, machine: true } })
         : route.fallback(),
     );
 
@@ -358,7 +358,7 @@ test.describe("shipping a thread", () => {
     runner = child;
     await page.route(/\/api\/threads\/[^/]+\/ship$/, (route) =>
       route.request().method() === "GET"
-        ? route.fulfill({ json: { ready: true, ship: true, appKey: null, machine: false } })
+        ? route.fulfill({ json: { ready: true, ship: true, machine: false } })
         : route.fallback(),
     );
 
@@ -402,7 +402,7 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
 
     await page.route("**/api/github/user?*", (route) =>
-      route.fulfill({ json: { connected: false, login: null, appKey: "platform" } }),
+      route.fulfill({ json: { connected: false, login: null } }),
     );
     await page.reload();
 

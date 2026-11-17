@@ -20,12 +20,10 @@ export function useShipAction(
   selection: RunSelection,
 ) {
   const { shipping, ship } = useShipThread(thread, showShip, selection);
-  const { gate, appKey, machine } = useShipReadiness(thread.id, thread.running);
-  const account = useGithubAccount(appKey);
+  const { gate, machine } = useShipReadiness(thread.id, thread.running);
+  const account = useGithubAccount();
   const connected = connectionOf({
     machine,
-    appKey,
-    checked: gate.kind !== "checking",
     account,
   });
   const changes = {
@@ -62,7 +60,6 @@ export function useShipAction(
     running: thread.running,
     shipping,
     gate,
-    appKey,
     connected,
     changes,
     branch: {

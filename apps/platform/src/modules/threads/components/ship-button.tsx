@@ -54,13 +54,12 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
 
   if (action.kind === "connect") {
     const next = encodeURIComponent(`/threads/${threadId}`);
-    const app = action.appKey ? `&app=${encodeURIComponent(action.appKey)}` : "";
     return (
       <Button
         size="sm"
         className="rounded-full in-data-[slot=button-group]:rounded-full shadow-md"
         nativeButton={false}
-        render={<a href={`/api/github/connect?next=${next}${app}`} />}
+        render={<a href={`/api/github/connect?next=${next}`} />}
       >
         <Github />
         Connect GitHub to ship

@@ -38,28 +38,20 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     userCanUse: async (_token: string, installationId: number) => installationId !== 999,
     installation: async (installationId: number) => ({ installationId, accountLogin: "acme" }),
   } as unknown as GithubClient;
-  const service = createGithubService(
-    {
-      forKey: async () => client,
-      forOrganization: async () => ({ key: "platform", client }),
-      forget: () => undefined,
+  const service = createGithubService(client, {
+    connect: async (userId, given) => {
+      kept.push({ userId, grant: given });
+      return { id: 42, login: "ada", name: null };
     },
-    {
-      connect: async (userId, given) => {
-        kept.push({ userId, grant: given });
-        return { id: 42, login: "ada", name: null };
-      },
-    },
-  );
+  });
   const setupCalls: { call: string; arg: unknown }[] = [];
   let setupRefused: Error | null = null;
   const appSetup = {
     canSetUp: async (person: { email: string }) => person.email.startsWith("owner"),
-    canSetUpWorkspace: async (person: { email: string }) => person.email.startsWith("admin"),
-    manifest: (_person: unknown, options: unknown, organizationId?: string) => {
+    manifest: (_person: unknown, options: unknown) => {
       if (setupRefused) throw setupRefused;
 
-      setupCalls.push({ call: "manifest", arg: { ...(options as object), organizationId } });
+      setupCalls.push({ call: "manifest", arg: options });
       return {
         postUrl: "https://github.test/settings/apps/new?state=s",
         manifest: { name: "Aven" },
@@ -70,10 +62,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
 
       setupCalls.push({ call: "complete", arg: input });
     },
-  } as unknown as Pick<
-    typeof githubAppSetup,
-    "canSetUp" | "canSetUpWorkspace" | "manifest" | "complete"
-  >;
+  } as unknown as Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete">;
   const server = new Elysia()
     .use(errorsRouter)
     .use(
@@ -132,16 +121,13 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     connectedLogin = null;
   };
 
-  test("says whether the person can set up the platform's app and the workspace's", async () => {
+  test("says whether the person can set up the platform's app", async () => {
+    const may = async (token: string) => (await (await get("/github", token)).json()).canSetUp;
     const admin = await signUp("admin");
     organizationIds.push(admin.organizationId);
-    const may = async (token: string) => {
-      const { canSetUp, canSetUpWorkspace } = await (await get("/github", token)).json();
-      return { canSetUp, canSetUpWorkspace };
-    };
 
-    expect(await may(owner.token)).toEqual({ canSetUp: true, canSetUpWorkspace: false });
-    expect(await may(admin.token)).toEqual({ canSetUp: false, canSetUpWorkspace: true });
+    expect(await may(owner.token)).toBe(true);
+    expect(await may(admin.token)).toBe(false);
   });
 
   test("gives the manifest, passing the name and organization asked for", async () => {
@@ -196,13 +182,11 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect(await (await get("/github/user")).json()).toEqual({
       connected: false,
       login: null,
-      appKey: "platform",
     });
     connectedLogin = "ada";
     expect(await (await get("/github/user")).json()).toEqual({
       connected: true,
       login: "ada",
-      appKey: "platform",
     });
     expect((await get("/github/user", "")).status).toBe(401);
   });
@@ -216,7 +200,6 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect(readState(state, owner.organizationId, owner.userId)).toEqual({
       next: "/threads/abc",
       installationId: null,
-      appKey: "platform",
     });
   });
 
@@ -258,7 +241,6 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
     expect(readState(state, owner.organizationId, owner.userId)).toEqual({
       next: null,
       installationId: 123,
-      appKey: "platform",
     });
     expect(exchanged).toEqual([]);
     expect(kept).toEqual([]);

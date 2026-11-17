@@ -740,7 +740,7 @@ private struct GithubSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(status?.configured == true ? "A GitHub App is configured\(status?.own == true ? " for this workspace" : "")." : "GitHub is not configured.")
+            Text(status?.configured == true ? "A GitHub App is configured." : "GitHub is not configured.")
             if let login = account?.login { Text("Connected as \(login)") }
             else { Text("Your GitHub account is not connected.").foregroundStyle(.secondary) }
             if let url = status?.installUrl, let link = URL(string: url) {
