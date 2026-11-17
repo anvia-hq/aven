@@ -82,15 +82,26 @@ async function ensureSandbox(
   }
 
   let created: BoatSandbox;
-
-  try {
-    created = await input.client.createSandbox(input.record.apiKey, {
+  let environment = input.record.environment;
+  const create = (from: string | null | undefined) =>
+    input.client.createSandbox(input.record.apiKey, {
       runtimeId: input.record.runtimeId,
       machineType: input.record.machineType,
-      from: input.record.environment,
+      from,
     });
+
+  try {
+    created = await create(environment);
   } catch (error) {
-    throw asUnavailable(error);
+    if (!environment || !gone(error)) throw asUnavailable(error);
+
+    environment = null;
+
+    try {
+      created = await create(null);
+    } catch (fallback) {
+      throw asUnavailable(fallback);
+    }
   }
 
   await input.saveSandboxId(created.id);
@@ -98,7 +109,7 @@ async function ensureSandbox(
 
   if (!ready) throw new UnavailableError("Boat did not keep the sandbox it created");
 
-  if (input.record.environment) {
+  if (environment) {
     try {
       await input.client.command(input.record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
     } catch (error) {

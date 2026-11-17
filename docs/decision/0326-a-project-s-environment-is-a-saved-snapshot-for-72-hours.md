@@ -30,3 +30,7 @@ The person's own computer is not in this: it has their files, their tools and th
 - `projects` keeps one environment per provider: moving a project from boat to spaces does not restore boat's snapshot there.
 - The agent is told the sandbox starts from "its image, plus whatever the project's environment has installed", since it cannot tell which one it got.
 - Not decided here: a Take snapshot button in the Environment card (0197's), an environment for a folder project, and sharing one across projects.
+
+## Addendum: a saved environment the provider no longer has
+
+The provider can lose a saved snapshot while the project's row still says `ready` (it was deleted on the provider's side, 2026-11-17). Creating a sandbox from it then answered 404 and the thread could not start at all. The boat and spaces wakes now create the sandbox from the image when creating from the environment answers "not found" (or, on boat, "expired"), as this decision always said a missing environment would. The journal cleanup of 0330 is skipped for it, since nothing was restored. The row is left as it is: it expires by itself, or is replaced by the next `save_environment`.

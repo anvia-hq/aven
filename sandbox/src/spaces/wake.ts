@@ -68,15 +68,26 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
   }
 
   let created: SpacesSandbox;
-
-  try {
-    created = await client.createSandbox(record.apiKey, {
+  let environment = record.environment;
+  const create = (from: string | null | undefined) =>
+    client.createSandbox(record.apiKey, {
       runtimeId: record.runtimeId,
       machineType: record.machineType,
-      from: record.environment,
+      from,
     });
+
+  try {
+    created = await create(environment);
   } catch (error) {
-    throw asUnavailable(error);
+    if (!environment || !gone(error)) throw asUnavailable(error);
+
+    environment = null;
+
+    try {
+      created = await create(null);
+    } catch (fallback) {
+      throw asUnavailable(fallback);
+    }
   }
 
   await input.saveSandboxId(created.id);
@@ -84,7 +95,7 @@ async function ensureSandbox(input: SpacesWake, clock: SandboxClock, readyTimeou
 
   if (!ready) throw new UnavailableError("Spaces did not keep the sandbox it created");
 
-  if (record.environment) {
+  if (environment) {
     try {
       await client.command(record.apiKey, ready.id, FRESH_JOURNAL_COMMAND);
     } catch (error) {

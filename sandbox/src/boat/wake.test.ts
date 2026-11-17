@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { FRESH_JOURNAL_COMMAND } from "../fresh-journal";
 import { BOAT_BOOT_COMMAND, BOAT_BOOT_PATH } from "./boot";
-import { BoatClient } from "./client";
+import { BoatApiError, BoatClient } from "./client";
 import { wakeBoatSandbox } from "./wake";
 import type { SandboxClock, SandboxRecord } from "../types";
 
@@ -164,6 +164,36 @@ describe("waking a boat sandbox", () => {
     expect(calls.map((call) => `${call.method} ${call.url}`)).toContain(
       `DELETE https://boat.test/api/v1/sandboxes/${ID}`,
     );
+  });
+
+  test("creates the sandbox from the image when the saved environment is gone", async () => {
+    let online = false;
+    const { calls, fetchFn } = scripted({ create: [ID] }, () => {
+      online = true;
+    });
+    const client = new BoatClient(fetchFn, "https://boat.test/api/v1");
+    const create = client.createSandbox.bind(client);
+    const sources: (string | null | undefined)[] = [];
+    client.createSandbox = async (apiKey, input) => {
+      sources.push(input.from);
+
+      if (input.from) throw new BoatApiError(404, "not_found", "snapshot_not_found");
+
+      return create(apiKey, input);
+    };
+
+    await wakeBoatSandbox({
+      record: { ...record(null), environment: "aven-project" },
+      client,
+      runnerUrl: "https://aven.example.com/api",
+      saveSandboxId: async () => undefined,
+      connected: () => online,
+      clock: clock(),
+      settleMs: 0,
+    });
+
+    expect(sources).toEqual(["aven-project", null]);
+    expect(calls.map((call) => call.body)).not.toContainEqual({ command: FRESH_JOURNAL_COMMAND });
   });
 
   test("resumes a stopped sandbox and lets go of the runner connection it had", async () => {
