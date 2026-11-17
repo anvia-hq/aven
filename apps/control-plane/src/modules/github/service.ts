@@ -4,11 +4,14 @@ import { githubInstallations } from "@aven/db/schema/github-installations";
 import { and, desc, eq } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
-import { GithubNoPushAccessError, GithubWriteNotGrantedError } from "@aven/github/client";
-import { githubClients, PLATFORM_APP } from "./clients";
+import {
+  github,
+  GithubNoPushAccessError,
+  GithubWriteNotGrantedError,
+  type GithubClient,
+} from "@aven/github/client";
 import { isLocalPath } from "./schema";
 import { githubUserTokenService } from "./user-tokens";
-import type { GithubClients } from "./types";
 import type {
   GithubCommitFilters,
   GithubTrackedFilters,
@@ -39,16 +42,12 @@ export function createState(
   now = Date.now(),
   next?: string,
   installationId?: number,
-  appKey: string = PLATFORM_APP,
 ) {
   const claims: unknown[] = [organizationId, userId, now];
-  const forApp = appKey !== PLATFORM_APP;
 
-  if (next !== undefined || installationId !== undefined || forApp) claims.push(next ?? null);
+  if (next !== undefined || installationId !== undefined) claims.push(next ?? null);
 
-  if (installationId !== undefined || forApp) claims.push(installationId ?? null);
-
-  if (forApp) claims.push(appKey);
+  if (installationId !== undefined) claims.push(installationId ?? null);
 
   const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
   return `${payload}.${sign(payload)}`;
@@ -59,7 +58,7 @@ export function readState(
   organizationId: string,
   userId: string,
   now = Date.now(),
-): { next: string | null; installationId: number | null; appKey: string } | null {
+): { next: string | null; installationId: number | null } | null {
   const [payload, signature] = state.split(".");
 
   if (!payload || !signature) return null;
@@ -70,7 +69,7 @@ export function readState(
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
 
   try {
-    const [org, user, issuedAt, next, installationId, appKey] = JSON.parse(
+    const [org, user, issuedAt, next, installationId] = JSON.parse(
       Buffer.from(payload, "base64url").toString(),
     ) as unknown[];
     const fresh =
@@ -81,7 +80,6 @@ export function readState(
     return {
       next: typeof next === "string" && isLocalPath(next) ? next : null,
       installationId: typeof installationId === "number" ? installationId : null,
-      appKey: typeof appKey === "string" ? appKey : PLATFORM_APP,
     };
   } catch {
     return null;
@@ -89,7 +87,7 @@ export function readState(
 }
 
 export function createGithubService(
-  clients: GithubClients = githubClients,
+  client: GithubClient = github,
   userTokens: Pick<typeof githubUserTokenService, "connect"> = githubUserTokenService,
 ) {
   const get = async (organizationId: string, id: string) => {
@@ -110,27 +108,18 @@ export function createGithubService(
 
     if (!row) throw new InstallationNotFoundError();
 
-    const client = await clients.forKey(row.appId ?? PLATFORM_APP);
-    return { client, installationId: row.installationId, accountLogin: row.accountLogin };
+    return {
+      client,
+      installationId: row.installationId,
+      accountLogin: row.accountLogin,
+    };
   };
 
   return {
     get,
 
-    async status(organizationId: string) {
-      const { key, client } = await clients.forOrganization(organizationId);
-      return { configured: client.configured, appKey: key, own: key !== PLATFORM_APP };
-    },
-
-    async appKeyOf(installationRowId: string) {
-      const [row] = await db
-        .select({ appId: githubInstallations.appId })
-        .from(githubInstallations)
-        .where(eq(githubInstallations.id, installationRowId));
-
-      if (!row) throw new InstallationNotFoundError();
-
-      return row.appId ?? PLATFORM_APP;
+    status() {
+      return { configured: client.configured };
     },
 
     list: (organizationId: string) =>
@@ -140,31 +129,19 @@ export function createGithubService(
         .where(eq(githubInstallations.organizationId, organizationId))
         .orderBy(desc(githubInstallations.createdAt)),
 
-    async installUrl(organizationId: string, userId: string) {
-      const { key, client } = await clients.forOrganization(organizationId);
-      const state = encodeURIComponent(
-        createState(organizationId, userId, Date.now(), undefined, undefined, key),
-      );
+    installUrl(organizationId: string, userId: string) {
+      const state = encodeURIComponent(createState(organizationId, userId));
       return `https://github.com/apps/${client.slug}/installations/new?state=${state}`;
     },
 
-    async claimUrl(organizationId: string, userId: string, installationId: number) {
-      const { key, client } = await clients.forOrganization(organizationId);
+    claimUrl(organizationId: string, userId: string, installationId: number) {
       return client.authorizeUrl(
-        createState(organizationId, userId, Date.now(), undefined, installationId, key),
+        createState(organizationId, userId, Date.now(), undefined, installationId),
       );
     },
 
-    async connectUrl(organizationId: string, userId: string, next?: string, appKey?: string) {
-      const app = await clients.forOrganization(organizationId);
-      const key = appKey ?? app.key;
-
-      if (key !== app.key && key !== PLATFORM_APP) throw new InstallationNotFoundError();
-
-      const client = key === app.key ? app.client : await clients.forKey(key);
-      return client.authorizeUrl(
-        createState(organizationId, userId, Date.now(), next, undefined, key),
-      );
+    connectUrl(organizationId: string, userId: string, next?: string) {
+      return client.authorizeUrl(createState(organizationId, userId, Date.now(), next));
     },
 
     async connect(
@@ -178,13 +155,6 @@ export function createGithubService(
         throw new InstallationNotAllowedError("The GitHub connection link is invalid or expired");
       }
 
-      const app = await clients.forOrganization(organizationId);
-
-      if (state.appKey !== PLATFORM_APP && state.appKey !== app.key) {
-        throw new InstallationNotAllowedError("The GitHub connection link is invalid or expired");
-      }
-
-      const client = state.appKey === app.key ? app.client : await clients.forKey(state.appKey);
       const grant = input.code ? await client.exchangeCode(input.code) : null;
 
       if (!grant) throw new InstallationNotAllowedError("GitHub did not confirm your account");
@@ -204,7 +174,6 @@ export function createGithubService(
           .values({
             organizationId,
             connectedBy: userId,
-            appId: state.appKey === PLATFORM_APP ? null : state.appKey,
             installationId: found.installationId,
             accountLogin: found.accountLogin,
           })
@@ -214,7 +183,7 @@ export function createGithubService(
           });
       }
 
-      await userTokens.connect(userId, grant, state.appKey);
+      await userTokens.connect(userId, grant);
       return { next: state.next };
     },
 

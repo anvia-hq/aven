@@ -10,7 +10,6 @@ import type { cockpitTags } from "./cockpit-tags";
 import type { cockpitTasks } from "./cockpit-tasks";
 import type { decisionModels } from "./decision-models";
 import type { environmentVariables } from "./environment-variables";
-import type { githubApps } from "./github-apps";
 import type { githubInstallations } from "./github-installations";
 import type { githubUserTokens } from "./github-user-tokens";
 import type { announcements } from "./announcements";
@@ -54,8 +53,6 @@ export type CockpitTaskRow = typeof cockpitTasks.$inferSelect;
 export type EnvironmentVariableRow = typeof environmentVariables.$inferSelect;
 
 export type NewEnvironmentVariableRow = typeof environmentVariables.$inferInsert;
-
-export type GithubAppRow = typeof githubApps.$inferSelect;
 
 export type GithubInstallation = typeof githubInstallations.$inferSelect;
 

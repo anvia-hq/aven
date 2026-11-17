@@ -3,7 +3,6 @@ import { threadBranch } from "@aven/protocol/thread-branch";
 
 import { ConflictError } from "@aven/server-kit/errors";
 import { createFilesService } from "../files/service";
-import { PLATFORM_APP } from "../github/clients";
 import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { projectsService } from "../projects/service";
@@ -23,7 +22,7 @@ export class GithubNotConnectedError extends ConflictError {
 }
 
 type ShipDeps = {
-  github: Pick<typeof githubService, "requireWritable" | "requirePush" | "appKeyOf">;
+  github: Pick<typeof githubService, "requireWritable" | "requirePush">;
   userTokens: Pick<typeof githubUserTokenService, "use">;
   load: (
     organizationId: string,
@@ -97,15 +96,11 @@ export function createShipService(
   return {
     async readiness(organizationId: string, threadId: string) {
       const project = await load(organizationId, threadId);
-      const [ship, appKey] = await Promise.all([
-        hasFile(organizationId, threadId, SHIP_PROMPT_FILE),
-        project.githubInstallationId ? github.appKeyOf(project.githubInstallationId) : null,
-      ]);
+      const ship = await hasFile(organizationId, threadId, SHIP_PROMPT_FILE);
       const person = project.githubMode === "person";
       return {
         ready: ship,
         ship,
-        appKey: appKey ?? (person ? PLATFORM_APP : null),
         machine: project.githubInstallationId === null && !person,
         githubMode: project.githubMode,
         runnerGithub: hub.get(project.runtimeId)?.github ?? null,
@@ -121,16 +116,13 @@ export function createShipService(
       const project = await load(organizationId, threadId);
 
       if (!project.githubInstallationId && project.githubMode === "person") {
-        const connection = await userTokens.use(userId, PLATFORM_APP);
+        const connection = await userTokens.use(userId);
 
         if (!connection) throw new GithubNotConnectedError();
       }
 
       if (project.githubInstallationId && project.repoFullName) {
-        const connection = await userTokens.use(
-          userId,
-          await github.appKeyOf(project.githubInstallationId),
-        );
+        const connection = await userTokens.use(userId);
 
         if (!connection) throw new GithubNotConnectedError();
 

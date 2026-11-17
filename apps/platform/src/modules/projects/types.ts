@@ -53,12 +53,9 @@ export type GithubStatus = {
   configured: boolean;
   installUrl: string | null;
   canSetUp: boolean;
-  appKey: string;
-  own: boolean;
-  canSetUpWorkspace: boolean;
 };
 
-export type GithubAccount = { connected: boolean; login: string | null; appKey: string };
+export type GithubAccount = { connected: boolean; login: string | null };
 
 export type RepoEntry = { name: string; path: string; type: "file" | "directory" };
 

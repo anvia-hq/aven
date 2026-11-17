@@ -12,7 +12,6 @@ describe("install state", () => {
     expect(readState(state, "org-1", "user-1")).toEqual({
       next: null,
       installationId: null,
-      appKey: "platform",
     });
   });
 
@@ -37,7 +36,6 @@ describe("the installation a state names", () => {
     expect(readState(state, "org-1", "user-1")).toEqual({
       next: null,
       installationId: 42,
-      appKey: "platform",
     });
     expect(readState(state, "org-1", "user-2")).toBeNull();
   });
@@ -47,7 +45,6 @@ describe("the installation a state names", () => {
     expect(readState(state, "org-1", "user-1")).toEqual({
       next: "/x",
       installationId: null,
-      appKey: "platform",
     });
   });
 });
@@ -58,7 +55,6 @@ describe("where the state sends the browser back to", () => {
     expect(readState(state, "org-1", "user-1")).toEqual({
       next: "/threads/abc?panel=diff",
       installationId: null,
-      appKey: "platform",
     });
   });
 
@@ -68,24 +64,7 @@ describe("where the state sends the browser back to", () => {
       expect(readState(state, "org-1", "user-1")).toEqual({
         next: null,
         installationId: null,
-        appKey: "platform",
       });
     }
-  });
-});
-
-describe("install state for an app", () => {
-  test("names the app it was made for, and the platform's when none", () => {
-    const own = createState("org-1", "user-1", Date.now(), "/x", undefined, "app-1");
-    expect(readState(own, "org-1", "user-1")).toEqual({
-      next: "/x",
-      installationId: null,
-      appKey: "app-1",
-    });
-    const claim = createState("org-1", "user-1", Date.now(), undefined, 7, "app-1");
-    expect(readState(claim, "org-1", "user-1")).toMatchObject({
-      installationId: 7,
-      appKey: "app-1",
-    });
   });
 });

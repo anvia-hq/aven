@@ -48,41 +48,29 @@ function sign(payload: string) {
   return createHmac("sha256", secret).update(`github-app-setup:${payload}`).digest("base64url");
 }
 
-export function createSetupState(userId: string, now = Date.now(), organizationId?: string) {
-  const claims: unknown[] = [userId, now];
-
-  if (organizationId !== undefined) claims.push(organizationId);
-
-  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+export function createSetupState(userId: string, now = Date.now()) {
+  const payload = Buffer.from(JSON.stringify([userId, now])).toString("base64url");
   return `${payload}.${sign(payload)}`;
 }
 
-export function readSetupState(
-  state: string,
-  userId: string,
-  now = Date.now(),
-): { organizationId: string | null } | undefined {
+export function readSetupState(state: string, userId: string, now = Date.now()): boolean {
   const [payload, signature] = state.split(".");
 
-  if (!payload || !signature) return undefined;
+  if (!payload || !signature) return false;
 
   const expected = Buffer.from(sign(payload));
   const given = Buffer.from(signature);
 
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return undefined;
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return false;
 
   try {
-    const [user, issuedAt, organizationId] = JSON.parse(
-      Buffer.from(payload, "base64url").toString(),
-    ) as unknown[];
+    const [user, issuedAt] = JSON.parse(Buffer.from(payload, "base64url").toString()) as unknown[];
     const fresh =
       typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
 
-    if (user !== userId || !fresh) return undefined;
-
-    return { organizationId: typeof organizationId === "string" ? organizationId : null };
+    return user === userId && fresh;
   } catch {
-    return undefined;
+    return false;
   }
 }
 

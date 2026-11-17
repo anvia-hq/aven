@@ -28,7 +28,6 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
         connected ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } } : null,
     },
     github: {
-      appKeyOf: async () => "platform",
       requireWritable: async () => undefined,
       requirePush: async () => undefined,
     },
@@ -130,7 +129,6 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     expect(await (await readiness(owner.token)).json()).toEqual({
       ready: false,
       ship: false,
-      appKey: "platform",
       machine: false,
       githubMode: "machine",
       runnerGithub: null,
@@ -139,7 +137,6 @@ run("shipping a thread over HTTP (real postgres and auth, GitHub and the run fak
     expect(await (await readiness(owner.token)).json()).toEqual({
       ready: true,
       ship: true,
-      appKey: "platform",
       machine: false,
       githubMode: "machine",
       runnerGithub: null,

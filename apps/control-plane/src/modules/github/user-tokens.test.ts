@@ -4,9 +4,7 @@ import type * as CryptoModule from "@aven/server-kit/crypto";
 import type { GithubClient } from "@aven/github/client";
 import type { GithubUserGrant } from "@aven/github/types";
 
-const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => ({
-  forKey: async () => client as GithubClient,
-});
+const only = (client: Pick<GithubClient, "userProfile" | "refreshGrant">) => client;
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 

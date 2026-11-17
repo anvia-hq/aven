@@ -55,15 +55,14 @@ function setup(
       runtimeId: "runtime-1",
     }),
     userTokens: {
-      use: async (_userId, appKey) => {
-        checked.push(`connection for ${appKey}`);
+      use: async () => {
+        checked.push("connection");
         return connected
           ? { token: "ghu_a", identity: { id: 42, login: "ada", name: null } }
           : null;
       },
     },
     github: {
-      appKeyOf: async () => "app-1",
       requireWritable: async () => {
         checked.push("writable");
 
@@ -90,7 +89,6 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     expect(await shipping.service.readiness("org-1", threadId)).toEqual({
       ready: true,
       ship: true,
-      appKey: "app-1",
       machine: false,
       githubMode: "machine",
       runnerGithub: null,
@@ -100,7 +98,6 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     expect(await neither.service.readiness("org-1", threadId)).toEqual({
       ready: false,
       ship: false,
-      appKey: "app-1",
       machine: false,
       githubMode: "machine",
       runnerGithub: null,
@@ -117,7 +114,6 @@ describe("whether a thread's repository is set up to ship (decision 0083)", () =
     const person = setup({ installation: null, githubMode: "person" });
     expect(await person.service.readiness("org-1", threadId)).toMatchObject({
       machine: false,
-      appKey: "platform",
       githubMode: "person",
     });
   });
@@ -162,7 +158,7 @@ describe("shipping a thread", () => {
 
     await connected.service.ship("org-1", "user-1", threadId);
 
-    expect(connected.checked).toEqual(["connection for platform"]);
+    expect(connected.checked).toEqual(["connection"]);
     expect(connected.sent).toHaveLength(1);
 
     const missing = setup({ installation: null, githubMode: "person", connected: false });
@@ -178,7 +174,7 @@ describe("shipping a thread", () => {
 
     await service.ship("org-1", "user-1", threadId);
 
-    expect(checked).toEqual(["connection for app-1", "writable", "push ghu_a acme/app"]);
+    expect(checked).toEqual(["connection", "writable", "push ghu_a acme/app"]);
     expect(sent).toHaveLength(1);
     expect(sent[0]).toMatchObject({ organizationId: "org-1", userId: "user-1", threadId });
     expect(sent[0]!.prompt).toContain("git fetch origin develop");
@@ -218,7 +214,7 @@ describe("shipping a thread", () => {
     );
 
     expect(sent).toEqual([]);
-    expect(checked).toEqual(["connection for app-1"]);
+    expect(checked).toEqual(["connection"]);
   });
 
   test("an app that is not approved to write, or a person who cannot push, is a 409 and nothing is sent", async () => {

@@ -21,21 +21,6 @@ Things to know:
 - If you would rather make the app yourself, set the `GITHUB_APP_*` variables in
   `~/.aven/server/.env` (see [`.env.example`](../../.env.example)); an app set there is used instead.
 
-## A workspace's own app
-
-One server can have workspaces whose repositories belong to different GitHub accounts. An owner or
-an admin of a workspace can give it a GitHub App of its own, in **Settings > GitHub** (**Create
-GitHub App**, the same steps as above), so the app is owned by that workspace's GitHub organization, has
-its own key and is approved on its own. A workspace without one keeps using the platform's app, and
-nothing changes for it.
-
-- Each workspace makes its own app once. Folders already connected keep working through the app
-  they were connected with, and connecting after the change uses the new app.
-- A GitHub account is connected for one app, so a person in two workspaces with different apps
-  presses **Connect GitHub** for each, and Ship asks for the one of the thread's project.
-- Rolling back to a release before this one runs old code against the new tables, which it ignores;
-  a person's connection made in a workspace's own app is not seen by it.
-
 ## An app made before it had Workflows and Actions write
 
 An app asks for Workflows and Actions read and write (decision 0216) when it is created. One made earlier

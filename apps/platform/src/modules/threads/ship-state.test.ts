@@ -9,7 +9,6 @@ const facts = (over: Partial<ShipFacts> = {}): ShipFacts => ({
   running: false,
   shipping: false,
   gate: { kind: "ready" },
-  appKey: "app",
   connected: true,
   changes: { loaded: true, available: true, problem: null, any: false },
   branch: { loaded: true, available: true, problem: null, any: true },
@@ -49,28 +48,14 @@ describe("Open a PR", () => {
 describe("whether GitHub is connected", () => {
   const account = { data: { connected: false } };
 
-  test("a project with no app and no login of the runner's is not connected, rather than loading for ever", () => {
-    expect(connectionOf({ machine: false, appKey: null, checked: true, account: null })).toBe(
-      false,
-    );
-    expect(connectionOf({ machine: false, appKey: null, checked: false, account: null })).toBe(
-      null,
-    );
+  test("a project connected through the runner's login needs no account", () => {
+    expect(connectionOf({ machine: true, account: null })).toBe(true);
   });
 
-  test("a project with an app asks GitHub for the account", () => {
-    expect(connectionOf({ machine: false, appKey: "app", checked: true, account: null })).toBe(
-      null,
-    );
-    expect(connectionOf({ machine: false, appKey: "app", checked: true, account })).toBe(false);
-    expect(
-      connectionOf({
-        machine: false,
-        appKey: "app",
-        checked: true,
-        account: { data: { connected: true } },
-      }),
-    ).toBe(true);
+  test("otherwise asks GitHub for the account", () => {
+    expect(connectionOf({ machine: false, account: null })).toBe(null);
+    expect(connectionOf({ machine: false, account })).toBe(false);
+    expect(connectionOf({ machine: false, account: { data: { connected: true } } })).toBe(true);
   });
 });
 

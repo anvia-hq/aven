@@ -105,8 +105,6 @@ export type ShipGate =
 
 export type ShipConnectionFacts = {
   machine: boolean;
-  appKey: string | null;
-  checked: boolean;
   account: { data: { connected?: boolean } | null } | null;
 };
 
@@ -116,7 +114,7 @@ export type ShipAct =
   | { kind: "loading" }
   | { kind: "failed"; reason: string }
   | { kind: "set-up"; command: string; skill: string; disabled: boolean }
-  | { kind: "connect"; appKey: string | null }
+  | { kind: "connect" }
   | { kind: "blocked"; label: ShipLabel }
   | {
       kind: "ship";
@@ -147,7 +145,6 @@ export type ShipFacts = {
   running: boolean;
   shipping: boolean;
   gate: ShipGate;
-  appKey: string | null;
   connected: boolean | null;
   changes: ShipChanges;
   branch: ShipChanges;

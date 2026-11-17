@@ -10,7 +10,6 @@ export const callbackQuery = z.object({
 });
 
 export const manifestQuery = z.object({
-  scope: z.enum(["platform", "workspace"]).optional(),
   name: z.string().trim().min(1).max(34).optional(),
   organization: z
     .string()
@@ -31,11 +30,6 @@ export const appCallbackQuery = z.object({
 
 export const connectQuery = z.object({
   next: z.string().refine(isLocalPath, "next must be a path on this site").optional(),
-  app: z.string().min(1).max(64).optional(),
-});
-
-export const userQuery = z.object({
-  app: z.string().min(1).max(64).optional(),
 });
 
 export const installationParams = z.object({ id: z.uuid() });

@@ -688,15 +688,11 @@ public struct GithubStatus: Codable, Equatable, Sendable {
     public var configured: Bool
     public var installUrl: String?
     public var canSetUp: Bool
-    public var appKey: String
-    public var own: Bool
-    public var canSetUpWorkspace: Bool
 }
 
 public struct GithubAccount: Codable, Equatable, Sendable {
     public var connected: Bool
     public var login: String?
-    public var appKey: String
 }
 
 public struct Mention: Codable, Equatable, Sendable, Identifiable {
@@ -846,17 +842,15 @@ public struct ThreadDiff: Decodable, Equatable, Sendable {
 public struct ShipReadiness: Decodable, Equatable, Sendable {
     public var ready: Bool
     public var ship: Bool
-    public var appKey: String?
     public var machine: Bool
     public var githubMode: String
 
-    private enum CodingKeys: String, CodingKey { case ready, ship, appKey, machine, githubMode }
+    private enum CodingKeys: String, CodingKey { case ready, ship, machine, githubMode }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         ready = container.optional(.ready, default: false)
         ship = container.optional(.ship, default: false)
-        appKey = try container.decodeIfPresent(String.self, forKey: .appKey)
         machine = container.optional(.machine, default: false)
         githubMode = container.optional(.githubMode, default: "machine")
     }

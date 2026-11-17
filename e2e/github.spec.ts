@@ -11,7 +11,6 @@ test.describe("connecting GitHub", () => {
     expect(await before.json()).toEqual({
       connected: false,
       login: null,
-      appKey: "platform",
     });
 
     await page.goto("/api/github/connect?next=/projects?back=here");
@@ -21,23 +20,18 @@ test.describe("connecting GitHub", () => {
     expect(await after.json()).toEqual({
       connected: true,
       login: "ada",
-      appKey: "platform",
     });
   });
 });
 
-test.describe("a workspace's GitHub App (decision 0123)", () => {
-  test("shows the app the workspace uses, and lets its owner start one of its own", async ({
+test.describe("Settings > GitHub", () => {
+  test("shows the platform's app, and lets the person install it and connect their account", async ({
     page,
   }) => {
     await registerUser(page, "gh", "GitHub User");
     await page.goto("/settings/github");
 
-    await expect(page.getByText("This workspace uses the platform's GitHub App")).toBeVisible();
-    const manifest = await page.request.get("/api/github/app/manifest?scope=workspace");
-    expect(manifest.ok()).toBe(true);
-    const { postUrl } = (await manifest.json()) as { postUrl: string };
-    expect(postUrl).toContain("/settings/apps/new?state=");
-    await expect(page.getByRole("button", { name: "Create GitHub App" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Install on GitHub" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Connect GitHub" })).toBeVisible();
   });
 });

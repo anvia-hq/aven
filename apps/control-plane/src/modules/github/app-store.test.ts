@@ -1,22 +1,12 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
-import { githubApps } from "@aven/db/schema/github-apps";
-import { organizations } from "@aven/db/schema/organizations";
 import { platformSettings } from "@aven/db/schema/platform-settings";
-import { users } from "@aven/db/schema/users";
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 
-import {
-  loadAppById,
-  loadGithubApp,
-  loadOrganizationApp,
-  saveGithubApp,
-  saveOrganizationApp,
-  useStoredGithubApp,
-} from "./app-store";
+import { loadGithubApp, saveGithubApp, useStoredGithubApp } from "./app-store";
 import type { GithubConfig } from "@aven/github/types";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
@@ -92,44 +82,5 @@ run("starting with a kept app (real postgres)", () => {
     await useStoredGithubApp(client);
     expect(configs).toHaveLength(1);
     expect(configs[0]?.appId).toBe("7");
-  });
-});
-
-run("a workspace's own GitHub App (real postgres)", () => {
-  const suffix = crypto.randomUUID().slice(0, 8);
-  const userId = `u-app-${suffix}`;
-  const orgA = `org-a-${suffix}`;
-  const orgB = `org-b-${suffix}`;
-
-  beforeAll(async () => {
-    await db.insert(users).values({ id: userId, name: "Ada", email: `${userId}@aven.test` });
-    await db.insert(organizations).values([
-      { id: orgA, name: "A", slug: orgA },
-      { id: orgB, name: "B", slug: orgB },
-    ]);
-  });
-
-  afterAll(async () => {
-    await db.delete(githubApps).where(eq(githubApps.createdBy, userId));
-    await db.delete(organizations).where(inArray(organizations.id, [orgA, orgB]));
-    await db.delete(users).where(eq(users.id, userId));
-  });
-
-  test("is kept encrypted for its workspace alone and read back with the environment's URLs", async () => {
-    const id = await saveOrganizationApp(orgA, userId, app);
-    const [row] = await db.select().from(githubApps).where(eq(githubApps.id, id));
-    expect(row!.credentialsEncrypted).not.toContain("topsecret");
-    expect(row!.slug).toBe("aven-x");
-    expect(await loadOrganizationApp(orgA, urls)).toEqual({ id, config: app });
-    expect(await loadAppById(id, urls)).toEqual({ id, organizationId: orgA, config: app });
-    expect(await loadOrganizationApp(orgB, urls)).toBeNull();
-  });
-
-  test("a second app of the workspace is refused and the first is kept", async () => {
-    const first = (await loadOrganizationApp(orgA, urls))!;
-    await expect(saveOrganizationApp(orgA, userId, { ...app, slug: "aven-y" })).rejects.toThrow(
-      "already has its own",
-    );
-    expect(await loadOrganizationApp(orgA, urls)).toEqual(first);
   });
 });

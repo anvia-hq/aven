@@ -8,7 +8,7 @@ Sign-in was email and password only. A hosted install, and any install used by p
 
 ## Decision
 
-- **GitHub sign-in is on when `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` are both set**, and off otherwise, so an install without them is unchanged. It uses its own OAuth app, not the GitHub App of 0013 and 0074: that app is created from the platform after the first account exists, and can be a workspace's own (0123).
+- **GitHub sign-in is on when `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` are both set**, and off otherwise, so an install without them is unchanged. It uses its own OAuth app, not the GitHub App of 0013 and 0074: that app is created from the platform after the first account exists.
 - **The callback is `<BETTER_AUTH_URL>/api/auth/callback/github`**, through the platform's `/api` proxy like every other call.
 - **The sign-in and register pages show the button when `/platform/config` says `githubLogin`.** The server decides; the page never reads the variables.
 - **Registration rules still apply**: the new-user hook that closes registration (0002) runs for a GitHub account too, and an invitation link carries through to `/accept-invitation/<id>`.

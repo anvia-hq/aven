@@ -9,8 +9,6 @@ import { prepareAttachments, withoutBytes } from "@aven/server-kit/attachments";
 import { ConflictError, UnprocessableError } from "@aven/server-kit/errors";
 import { selectionForThread } from "../providers/selection";
 import { requireSubscriptionToken } from "../providers/token";
-import { PLATFORM_APP } from "../github/clients";
-import { githubService } from "../github/service";
 import { githubUserTokenService } from "../github/user-tokens";
 import { runtimesService } from "../runtimes/service";
 import { assertSeesImages, resolveModel } from "../providers/resolve-model";
@@ -61,20 +59,12 @@ async function runIdentity(
   return identity;
 }
 
-async function senderExtras(
-  userId: string,
-  installationRowId: string | null,
-  runtimeId: string,
-  driverId?: string,
-) {
+async function senderExtras(userId: string, runtimeId: string, driverId?: string) {
   const skills = await skillsService.forRun(userId);
   const mcp = driverId === undefined ? await mcpService.forRun(userId, "threads") : [];
   const github =
     (await runtimesService.githubModeOf(runtimeId)) === "person"
-      ? await githubUserTokenService.forRun(
-          driverId ?? userId,
-          installationRowId ? await githubService.appKeyOf(installationRowId) : PLATFORM_APP,
-        )
+      ? await githubUserTokenService.forRun(driverId ?? userId)
       : undefined;
   return { skills, mcp, github };
 }
@@ -183,7 +173,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       known ?? (await acting(organizationId, userId, threadId));
     const clock = timing(`message ${threadId}`);
     clock.mark("thread");
-    const project = await requireLiveProject(organizationId, thread.projectId);
+    await requireLiveProject(organizationId, thread.projectId);
 
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
@@ -196,12 +186,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
     clock.mark("model");
-    const sender = await senderExtras(
-      ownerId,
-      project.githubInstallationId,
-      thread.runtimeId,
-      driverId,
-    );
+    const sender = await senderExtras(ownerId, thread.runtimeId, driverId);
     clock.mark("sender");
     const scoped = await threadExtras(organizationId, thread, ownerId, onPersonsWord, driverId);
     clock.mark("thread extras");
@@ -329,7 +314,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
     ) {
       const { thread, ownerId, driverId } = await acting(organizationId, userId, threadId);
-      const project = await requireLiveProject(organizationId, thread.projectId);
+      await requireLiveProject(organizationId, thread.projectId);
       const continuation = await threadsService.continuation(thread.id);
 
       if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
@@ -342,12 +327,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       const chosen = await selectionForThread(driverId ?? ownerId, thread.agentBackend, selection);
       const model = hosted ? undefined : await resolveModel(driverId ?? ownerId, chosen);
       const credential = await hostedRun(thread.agentBackend, thread.createdBy, chosen);
-      const sender = await senderExtras(
-        ownerId,
-        project.githubInstallationId,
-        thread.runtimeId,
-        driverId,
-      );
+      const sender = await senderExtras(ownerId, thread.runtimeId, driverId);
       const kept = await keepSecretAnswers({
         organizationId,
         userId: ownerId,

@@ -8,7 +8,6 @@ import {
   connectQuery,
   installationParams,
   manifestQuery,
-  userQuery,
 } from "./schema";
 import { githubService, InstallationNotAllowedError } from "./service";
 import { githubUserTokenService } from "./user-tokens";
@@ -16,54 +15,49 @@ import { githubUserTokenService } from "./user-tokens";
 export const githubRouter = (
   service = githubService,
   userTokens: Pick<typeof githubUserTokenService, "status"> = githubUserTokenService,
-  appSetup: Pick<
-    typeof githubAppSetup,
-    "canSetUp" | "canSetUpWorkspace" | "manifest" | "complete"
-  > = githubAppSetup,
+  appSetup: Pick<typeof githubAppSetup, "canSetUp" | "manifest" | "complete"> = githubAppSetup,
 ) =>
   new Elysia({ prefix: "/github" })
     .use(authRouter)
     .get(
       "/",
       async ({ organizationId, user }) => {
-        const { configured, appKey, own } = await service.status(organizationId);
+        const { configured } = service.status();
         return {
           configured,
-          appKey,
-          own,
-          installUrl: configured ? await service.installUrl(organizationId, user.id) : null,
+          installUrl: configured ? service.installUrl(organizationId, user.id) : null,
           canSetUp: await appSetup.canSetUp(user),
-          canSetUpWorkspace: await appSetup.canSetUpWorkspace(user, organizationId),
         };
       },
       { auth: true, org: true },
     )
     .get(
       "/user",
-      async ({ query, user, organizationId }) => {
-        const appKey = query.app ?? (await service.status(organizationId)).appKey;
-        const connected = await userTokens.status(user.id, appKey);
-        return { connected: connected !== null, login: connected?.login ?? null, appKey };
+      async ({ user }) => {
+        const connected = await userTokens.status(user.id);
+        return {
+          connected: connected !== null,
+          login: connected?.login ?? null,
+        };
       },
-      { auth: true, org: true, query: userQuery },
+      { auth: true, org: true },
     )
     .get(
       "/connect",
       async ({ query, organizationId, user, redirect }) =>
-        redirect(await service.connectUrl(organizationId, user.id, query.next, query.app)),
+        redirect(service.connectUrl(organizationId, user.id, query.next)),
       { auth: true, org: true, query: connectQuery },
     )
-    .get(
-      "/app/manifest",
-      ({ query, user, organizationId }) =>
-        appSetup.manifest(user, query, query.scope === "workspace" ? organizationId : undefined),
-      { auth: true, org: true, query: manifestQuery },
-    )
+    .get("/app/manifest", ({ query, user }) => appSetup.manifest(user, query), {
+      auth: true,
+      org: true,
+      query: manifestQuery,
+    })
     .get(
       "/app/callback",
       async ({ query, user, organizationId, redirect }) => {
-        await appSetup.complete(user, query, organizationId);
-        return redirect(await service.installUrl(organizationId, user.id));
+        await appSetup.complete(user, query);
+        return redirect(service.installUrl(organizationId, user.id));
       },
       { auth: true, org: true, query: appCallbackQuery },
     )
@@ -84,7 +78,7 @@ export const githubRouter = (
             throw new InstallationNotAllowedError("The GitHub connection link is invalid");
           }
 
-          return redirect(await service.claimUrl(organizationId, user.id, query.installation_id));
+          return redirect(service.claimUrl(organizationId, user.id, query.installation_id));
         }
 
         const { next } = await service.connect(organizationId, user.id, {
