@@ -11,7 +11,8 @@ Ship this thread's work.
 2. **Update from the default branch.** `git fetch origin main && git rebase origin/main`. Resolve
    conflicts in code you touched; if one is in a place you cannot judge, stop and tell me.
 
-3. **Bring the database up.** `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
+3. **Bring the database up.** If `DATABASE_URL` already points at a running PostgreSQL 17 (a sandbox
+   without Docker), use it and skip `.aven/stack`. Otherwise `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
    Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
    it if connecting fails. Then apply the schema from the repository root, which is also safe to
    repeat: `set -a && . ./.env.local && set +a && bun packages/db/src/migrate.ts`. Do not run
@@ -38,7 +39,7 @@ Ship this thread's work.
    and Consequences, as `AGENTS.md` asks. Take the number after step 2's rebase: another change
    on `main` may have used the one you had in mind.
 
-8. **Push the branch:** `git push -u origin HEAD`. Never force-push, and never push to `main`.
+8. **Push the branch:** `git push -u origin HEAD`. Never force-push, and never push to `main`; the one exception is step 11's `--force-with-lease` after a rebase of this branch.
 
 9. **Open the pull request against `main`, ready for review — not a draft.** Write the body to
    `.aven/pr.md` in this shape, then run
