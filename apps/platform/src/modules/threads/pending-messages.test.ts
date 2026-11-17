@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  handoffOf,
   isLocalPreview,
   pendingMessage,
   pendingShip,
@@ -167,5 +168,29 @@ describe("a ship card shown before the server has the request", () => {
   test("leaves a message typed meanwhile in place", () => {
     const pending = [pendingShip("s1"), sent("a", "and also this")];
     expect(settlePending(pending, started(request)).map(({ id }) => id)).toEqual(["a"]);
+  });
+});
+
+describe("handoffOf", () => {
+  const png = { name: "shot.png", mediaType: "image/png", data: "aGVsbG8=" };
+  const withImage = sent("a", "Look", { attachments: [png] });
+  const run = (prompt: string) => ({ type: "run_start", prompt }) as RunEvent;
+
+  test("hands the pending message's key and local previews to the run that settles it", () => {
+    const handoff = handoffOf([withImage], [], run("Look"));
+    expect(handoff?.key).toBe("a");
+    expect(handoff?.previews[0]?.image).toBe("data:image/png;base64,aGVsbG8=");
+  });
+
+  test("hands nothing over for a message without files or for another message", () => {
+    expect(handoffOf([sent("a", "Look")], [], run("Look"))).toBeNull();
+    expect(handoffOf([withImage], [], run("Something else"))).toBeNull();
+  });
+
+  test("hands a queued steer's previews to the steer that delivers it", () => {
+    const queued = { id: "s1", prompt: "Look", attachments: withImage.message.attachments };
+    const event = { type: "steer", id: "s1", prompt: "Look" } as RunEvent;
+    expect(handoffOf([], [queued], event)?.key).toBe("s1");
+    expect(handoffOf([], [queued], { ...event, id: "other" } as RunEvent)).toBeNull();
   });
 });

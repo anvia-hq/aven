@@ -26,3 +26,7 @@ A message sent to an agent that is already working has been shown at once since 
 ## Note: the ship card shows at once too
 
 Pressing Ship used to show the card only once the server had sent the ship prompt (the button read "Shipping…" meanwhile). The card now goes into the same pending list as a typed message, as a ship request whose text is only a placeholder, since the real prompt is made by the control plane; the run that starts with any ship request settles it (`pendingShip`, `useThread`'s `showShip`). A ship the server refuses takes the card back.
+
+## Note: the image does not flash when the real message replaces the pending one
+
+The real message has another id than the pending one and its images are artifact URLs the runner may not have written yet, so the swap remounted the message and showed a broken image for a moment. `useThread` now records a handoff (`handoffOf`, `handoffs`) when `run_start` or `steer` settles a pending or queued message: the real message (by its index id) keeps the pending message's React key, and `SentImage` keeps drawing the local preview until the artifact has loaded in the background (retrying as before), then swaps. A queued steer that is delivered still remounts, since it moves from `QueuedMessage` to `ThreadMessage`, but its preview is kept the same way. A `snapshot` settling a pending message has no handoff.

@@ -12,7 +12,7 @@ import { authorOf } from "../message-author";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
 import { foldedSteps, messageBlocks } from "../message-blocks";
-import type { Block, ChatMessage, Viewer } from "../types";
+import type { Block, ChatMessage, MessageAttachment, Viewer } from "../types";
 import { ArtifactGrid } from "./artifact-grid";
 import { ForkCard } from "./fork-card";
 import { AuthorLabel } from "./author-label";
@@ -64,6 +64,7 @@ export const ThreadMessage = memo(function ThreadMessage({
   viewer,
   streaming = false,
   sending = false,
+  previews,
   showAuthor = true,
 }: {
   message: ChatMessage;
@@ -71,6 +72,7 @@ export const ThreadMessage = memo(function ThreadMessage({
   viewer: Viewer;
   streaming?: boolean;
   sending?: boolean;
+  previews?: MessageAttachment[];
   showAuthor?: boolean;
 }) {
   if (message.role === "user") {
@@ -119,6 +121,7 @@ export const ThreadMessage = memo(function ThreadMessage({
           <SentAttachments
             artifactsPath={`/api/threads/${threadId}/artifacts`}
             attachments={message.attachments}
+            previews={previews}
           />
         ) : null}
         {text && (
