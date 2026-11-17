@@ -15,7 +15,8 @@ Ship this thread's work.
    without Docker), use it and skip `.aven/stack`. Otherwise `bash .aven/stack` starts the PostgreSQL 17 this repository uses in
    Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
    it if connecting fails. Then apply the schema from the repository root, which is also safe to
-   repeat: `set -a && . ./.env.local && set +a && bun packages/db/src/migrate.ts`. Do not run
+   repeat: `set -a && { [ ! -f .env.local ] || . ./.env.local; } && set +a && bun packages/db/src/migrate.ts`
+   (with an existing database there is no `.env.local`; `DATABASE_URL` comes from the environment). Do not run
    `db:migrate` through `--cwd packages/db`: it reads `.env`, whose `DATABASE_URL` is not this thread's.
 
 4. **Run the checks, and fix what your change broke:**
