@@ -78,13 +78,13 @@ export function handoffOf(
     case "run_start": {
       const shown = pending.find(({ message }) => sameRequest(message, event.prompt));
       const previews = shown?.message.attachments;
-      return shown && previews?.length ? { key: shown.id, previews } : null;
+      return shown && previews?.length ? { key: shown.message.id, previews } : null;
     }
     case "steer": {
+      const shown = pending.find(({ id }) => id === event.id);
       const previews =
-        pending.find(({ id }) => id === event.id)?.message.attachments ??
-        steers.find(({ id }) => id === event.id)?.attachments;
-      return previews?.length ? { key: event.id, previews } : null;
+        shown?.message.attachments ?? steers.find(({ id }) => id === event.id)?.attachments;
+      return previews?.length ? { key: shown?.message.id ?? event.id, previews } : null;
     }
     default:
       return null;
