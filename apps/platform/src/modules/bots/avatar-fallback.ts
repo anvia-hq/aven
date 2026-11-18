@@ -1,4 +1,7 @@
 const MIN_PIXELS = 8;
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+export const isSoftwareRenderer = (name: string) => SOFTWARE.test(name);
 
 export function drawFallback(canvas: HTMLCanvasElement, color: string) {
   const ratio = Math.min(window.devicePixelRatio || 1, 2);

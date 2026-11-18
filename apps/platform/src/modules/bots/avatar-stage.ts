@@ -16,6 +16,7 @@ import {
   WebGLRenderer,
 } from "three";
 
+import { drawFallback, isSoftwareRenderer } from "./avatar-fallback";
 import { advanceMotion, createMotion } from "./avatar-motion";
 import { applyPose, createAvatarMaterials, createAvatarModel } from "./avatar-model";
 import { shapeOf } from "./avatar-shapes";
@@ -30,10 +31,12 @@ import type {
 } from "./types";
 
 const SIDE = 256;
+const FRAME_SECONDS = 1 / 30;
 const MIN_PIXELS = 8;
 
 type Entry = {
   canvas: HTMLCanvasElement;
+  color: string;
   context: CanvasRenderingContext2D;
   model: AvatarModel;
   motion: AvatarMotion;
@@ -51,6 +54,7 @@ type Stage = {
   observer: IntersectionObserver | null;
   frame: number | null;
   last: number;
+  pending: number;
   time: number;
   reduced: MediaQueryList;
 };
@@ -106,6 +110,14 @@ function environment(renderer: WebGLRenderer) {
 
 function createStage(): Stage {
   const renderer = new WebGLRenderer({ antialias: true, alpha: true });
+  const gl = renderer.getContext();
+  const info = gl.getExtension("WEBGL_debug_renderer_info");
+
+  if (info && isSoftwareRenderer(String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)))) {
+    renderer.dispose();
+    throw new Error("WebGL is drawn by software");
+  }
+
   renderer.outputColorSpace = SRGBColorSpace;
   renderer.autoClear = false;
   renderer.setClearColor(0x000000, 0);
@@ -131,6 +143,19 @@ function createStage(): Stage {
   });
 
   const entries = new Set<Entry>();
+
+  renderer.domElement.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    stage = null;
+
+    for (const entry of entries) {
+      entry.visible = false;
+      drawFallback(entry.canvas, entry.color);
+    }
+
+    entries.clear();
+  });
+
   const observer =
     typeof IntersectionObserver === "undefined"
       ? null
@@ -156,6 +181,7 @@ function createStage(): Stage {
     observer,
     frame: null,
     last: performance.now(),
+    pending: 0,
     time: 0,
     reduced: window.matchMedia("(prefers-reduced-motion: reduce)"),
   };
@@ -225,8 +251,16 @@ function draw(current: Stage, entry: Entry, dt: number) {
 function tick(current: Stage, now: number) {
   current.frame = null;
 
-  const dt = Math.min(0.05, (now - current.last) / 1000);
+  current.pending += Math.min(0.1, (now - current.last) / 1000);
   current.last = now;
+
+  if (current.pending < FRAME_SECONDS) {
+    schedule();
+    return;
+  }
+
+  const dt = Math.min(0.05, current.pending);
+  current.pending = 0;
   current.time += dt;
   current.materials.clock.value = current.time;
 
@@ -266,6 +300,7 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
 
   const entry: Entry = {
     canvas,
+    color: look.color,
     context,
     model,
     motion: createMotion(seed, random),
