@@ -61,15 +61,12 @@ function NewThread() {
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
         <div className="flex flex-col gap-1.5 text-center">
-          <Suspense fallback={<div className="h-28 md:h-36" />}>
+          <Suspense fallback={<div className="h-24 md:h-32" />}>
             <GlassMark />
           </Suspense>
-          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
+          <h1 className="text-lg font-medium tracking-tight text-muted-foreground md:text-xl">
             What should we build?
           </h1>
-          <p className="hidden text-sm text-muted-foreground md:block">
-            Start a thread inside a project. The agent reads, edits and runs code there.
-          </p>
         </div>
 
         {computer.loaded && (
