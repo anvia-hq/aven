@@ -89,10 +89,7 @@ export function AppShell({ user, sidebar }: Props) {
         </nav>
       </TooltipProvider>
       <div className="flex min-w-0 flex-1">
-        <Sidebar
-          collapsible="icon"
-          className="text-sidebar-foreground/80 data-[side=left]:left-12 md:border-l md:border-foreground/10"
-        >
+        <Sidebar collapsible="icon" className="text-sidebar-foreground/80 data-[side=left]:left-12">
           <SidebarHeader>
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
               <div className="min-w-0 flex-1">
