@@ -64,21 +64,21 @@
   --sidebar-ring: oklch(0.7 0.03 240);
 }
 
-/* Aven, the default dark theme: Mint lifted and turned to a cool gray. */
+/* Aven, the default dark theme: Mint lifted and turned to a blue-green gray. */
 .dark {
-  --background: oklch(0.18 0.006 240);
+  --background: oklch(0.18 0.024 205);
   --foreground: oklch(0.9 0.004 240);
-  --card: oklch(0.21 0.006 240);
+  --card: oklch(0.21 0.024 205);
   --card-foreground: oklch(0.9 0.004 240);
-  --popover: oklch(0.23 0.006 240);
+  --popover: oklch(0.23 0.024 205);
   --popover-foreground: oklch(0.9 0.004 240);
   --primary: oklch(0.93 0.004 240);
   --primary-foreground: oklch(0.18 0.004 240);
-  --secondary: oklch(0.25 0.006 240);
+  --secondary: oklch(0.25 0.024 205);
   --secondary-foreground: oklch(0.9 0.004 240);
-  --muted: oklch(0.23 0.006 240);
+  --muted: oklch(0.23 0.024 205);
   --muted-foreground: oklch(0.62 0.004 240);
-  --accent: oklch(0.265 0.006 240);
+  --accent: oklch(0.265 0.024 205);
   --accent-foreground: oklch(0.92 0.004 240);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
@@ -93,7 +93,7 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.82 0.004 240);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.225 0.006 240);
+  --frame: oklch(0.225 0.024 205);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.5 0.012 240);
@@ -101,7 +101,7 @@
   --sidebar-foreground: oklch(0.86 0.004 240);
   --sidebar-primary: oklch(0.93 0.004 240);
   --sidebar-primary-foreground: oklch(0.18 0.004 240);
-  --sidebar-accent: oklch(0.24 0.006 240);
+  --sidebar-accent: oklch(0.24 0.024 205);
   --sidebar-accent-foreground: oklch(0.92 0.004 240);
   --sidebar-border: oklch(1 0 0 / 3%);
   --sidebar-ring: oklch(0.5 0.012 240);
