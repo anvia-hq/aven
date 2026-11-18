@@ -16,7 +16,7 @@ test.describe("Cockpit", () => {
   }) => {
     await registerUser(page, "cockpit", "Cockpit Person");
     await page.goto("/threads");
-    await page.getByRole("link", { name: "Cockpit" }).click();
+    await page.getByRole("link", { name: "Inbox", exact: true }).click();
     await expect(page).toHaveURL(/\/cockpit\/inbox/);
     await expect(page.getByText("Nothing in your inbox.")).toBeVisible();
 
