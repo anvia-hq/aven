@@ -1,4 +1,9 @@
-import { SettingsIcon, MagnifierIcon } from "@solar-icons/react/linear";
+import {
+  FolderIcon,
+  MagnifierIcon,
+  PenNewSquareIcon,
+  SettingsIcon,
+} from "@solar-icons/react/linear";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -66,11 +71,14 @@ export function AppShell({ user, sidebar }: Props) {
             to="/threads"
             label="Aven"
             tooltip="Aven · threads"
-            active={pathname.startsWith("/threads") || pathname.startsWith("/projects")}
+            active={pathname.startsWith("/threads")}
           >
             <AvenMark className="w-[17px] text-brand" />
           </RailLink>
-          <div className="mt-5 flex flex-col items-center gap-1.5">
+          <div className="mt-1.5 flex flex-col items-center gap-1.5">
+            <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
+              <FolderIcon className="size-[17px]" />
+            </RailLink>
             <CockpitRailLink />
             <BotRailLink />
           </div>
@@ -108,6 +116,14 @@ export function AppShell({ user, sidebar }: Props) {
                   onClick={() => setCommandOpen(true)}
                 >
                   <MagnifierIcon />
+                </Button>
+                <Button
+                  size="icon-sm"
+                  aria-label="New thread"
+                  className="size-9 md:size-7"
+                  onClick={() => navigate({ to: "/threads" })}
+                >
+                  <PenNewSquareIcon />
                 </Button>
                 <MobileSidebarClose />
               </div>
