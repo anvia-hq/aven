@@ -1,5 +1,7 @@
 import { ReplyIcon } from "@solar-icons/react/linear";
 
+import type { CSSProperties } from "react";
+
 import { Bubble, BubbleContent } from "@aven/ui/bubble";
 import { Button } from "@aven/ui/button";
 import { ExternalLink, Markdown } from "@/components/markdown";
@@ -19,10 +21,19 @@ import { MentionedText } from "./mentioned-text";
 
 export const isPersons = (message: BotChatMessage) => message.role === "user";
 
-function bubbleColor(tint: string | undefined) {
-  if (tint === undefined) return "bg-accent";
+function bubbleInk(tint: string | undefined) {
+  if (tint === undefined) return "";
 
   return isLightTint(tint) ? "text-avatar-face" : "text-avatar-eye";
+}
+
+function bubbleStyle(tint: string | undefined): CSSProperties | undefined {
+  if (tint === undefined) return undefined;
+
+  return {
+    backgroundColor: tint,
+    backgroundImage: `linear-gradient(to bottom, color-mix(in oklch, ${tint}, white 10%), color-mix(in oklch, ${tint}, black 6%))`,
+  };
 }
 
 export function BotChatBubble({
@@ -81,8 +92,13 @@ export function BotChatBubble({
           <div className="relative w-fit max-w-[80%] self-end">
             <div
               data-role="user"
-              style={tint ? { backgroundColor: tint } : undefined}
-              className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap", bubbleColor(tint))}
+              style={bubbleStyle(tint)}
+              className={cn(
+                "rounded-2xl border border-foreground/10 bg-clip-padding px-3 py-2 text-sm whitespace-pre-wrap",
+                tint === undefined &&
+                  "bg-linear-to-b from-accent to-[color-mix(in_oklch,var(--accent),var(--foreground)_6%)]",
+                bubbleInk(tint),
+              )}
             >
               {reply}
               {message.text && <MentionedText text={message.text} bots={bots} />}
