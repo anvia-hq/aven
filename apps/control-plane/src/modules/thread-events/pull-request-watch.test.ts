@@ -77,6 +77,12 @@ describe("the pull request watch", () => {
     expect(saved).toEqual([]);
   });
 
+  test("a merge whose note failed to send is found again on the next tick", async () => {
+    const { watch, saved } = setup({ 1: detail({ status: "merged" }) }, "failed");
+    await watch.tick();
+    expect(saved).toEqual([]);
+  });
+
   test("a closed pull request is remembered without a note, and one that fails to load does not stop the rest", async () => {
     const { watch, offered, saved } = setup({
       1: new Error("GitHub is down"),
