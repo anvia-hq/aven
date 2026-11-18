@@ -94,6 +94,31 @@ describe("admitting an Aven Cloud computer to start", () => {
     await admission.admit(start);
   });
 
+  test("starts made at the same moment are spaced out, not all let through after one wait", async () => {
+    const slept: number[] = [];
+    const admission = createAdmission({
+      settings: async () => ({ ...OPEN, startBurst: 1, startEveryMinutes: 1 }),
+      running: async () => 0,
+      now: () => 0,
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+    });
+
+    const outcomes = await Promise.allSettled([
+      admission.admit(start),
+      admission.admit(start),
+      admission.admit(start),
+    ]);
+
+    expect(outcomes.map((outcome) => outcome.status)).toEqual([
+      "fulfilled",
+      "fulfilled",
+      "rejected",
+    ]);
+    expect(slept).toEqual([MINUTE]);
+  });
+
   test("what the edition refuses is refused", async () => {
     const admission = createAdmission({
       settings: async () => OPEN,
