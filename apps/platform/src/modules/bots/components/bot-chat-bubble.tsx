@@ -12,7 +12,7 @@ import { titleOf } from "../artifacts";
 import { avatarFor, isLightTint, parseAvatarSetting } from "../avatar";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
-import type { Bot, BotChatMessage, BotChatQuote } from "../types";
+import type { Bot, BotChatMessage, BotChatQuote, MessageAttachment } from "../types";
 import { BotMentionChip } from "./bot-mention-chip";
 import { ArtifactCard } from "./artifact-card";
 import { MentionedText } from "./mentioned-text";
@@ -30,6 +30,7 @@ export function BotChatBubble({
   bot,
   message,
   bots,
+  previews,
   onQuote,
   onOpenArtifact,
   openArtifact,
@@ -39,6 +40,7 @@ export function BotChatBubble({
   bot: Bot;
   message: BotChatMessage;
   bots: readonly Bot[];
+  previews?: MessageAttachment[];
   onQuote: (message: BotChatMessage) => void;
   onOpenArtifact: (name: string) => void;
   openArtifact: string | undefined;
@@ -71,6 +73,7 @@ export function BotChatBubble({
         <SentAttachments
           artifactsPath={`/api/bots/${botId}/artifacts`}
           attachments={message.attachments}
+          previews={previews}
         />
       ) : null}
       {(message.text || reply) &&

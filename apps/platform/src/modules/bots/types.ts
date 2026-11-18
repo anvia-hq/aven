@@ -1,4 +1,4 @@
-import type { AttachmentUpload } from "@/modules/threads/types";
+import type { AttachmentUpload, Handoff } from "@/modules/threads/types";
 import type { Bot, BotChatMessage, BotChatQuote, ToolArtifact } from "@aven/protocol/types";
 import type {
   BufferGeometry,
@@ -17,6 +17,7 @@ export type {
   BotChatQuote,
   BotEvent,
   BotQuestion,
+  MessageAttachment,
 } from "@aven/protocol/types";
 
 export type BotPatch = {
@@ -73,6 +74,7 @@ export type MentionPart =
 export type BotChatState = {
   messages: BotChatMessage[];
   pending: BotChatMessage[];
+  handoffs: Record<string, Handoff>;
   typing: boolean;
   activity: string | null;
   error: string | null;

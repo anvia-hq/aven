@@ -1,5 +1,5 @@
 import { attachmentPreview } from "@/modules/threads/pending-messages";
-import type { AttachmentUpload } from "@/modules/threads/types";
+import type { AttachmentUpload, Handoff } from "@/modules/threads/types";
 import type {
   BotChatMessage,
   BotChatQuote,
@@ -36,6 +36,14 @@ const namesOf = (attachments: readonly MessageAttachment[] = []) =>
 
 const sameSent = (pending: BotChatMessage, sent: BotChatMessage) =>
   pending.text === sent.text && namesOf(pending.attachments) === namesOf(sent.attachments);
+
+export function handoffOf(pending: readonly PendingBotMessage[], event: BotEvent): Handoff | null {
+  if (event.type !== "message" || event.message.role !== "user") return null;
+
+  const shown = pending.find(({ message }) => sameSent(message, event.message));
+
+  return shown ? { key: shown.message.id, previews: shown.message.attachments } : null;
+}
 
 export function settlePending(pending: PendingBotMessage[], event: BotEvent): PendingBotMessage[] {
   if (pending.length === 0) return pending;

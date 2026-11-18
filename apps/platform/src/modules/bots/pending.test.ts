@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { pendingMessage, settlePending } from "./pending";
+import { handoffOf, pendingMessage, settlePending } from "./pending";
 import type { BotChatMessage } from "./types";
 
 const said = (id: string, text: string, names: string[] = []): BotChatMessage => {
@@ -113,5 +113,40 @@ describe("settlePending", () => {
 
     expect(settlePending(pending, { type: "typing", typing: true })).toBe(pending);
     expect(settlePending(pending, { type: "activity", label: "Reading" })).toBe(pending);
+  });
+});
+
+describe("handoffOf", () => {
+  test("the server's own copy keeps the pending key and the files' previews", () => {
+    const pending = [
+      pendingMessage("1", "here", [{ name: "chart.png", mediaType: "image/png", data: "aGk=" }]),
+    ];
+
+    const handoff = handoffOf(pending, {
+      type: "message",
+      message: said("m-0", "here", ["chart.png"]),
+    });
+
+    expect(handoff?.key).toBe("pending-1");
+    expect(handoff?.previews).toEqual([
+      {
+        name: "chart.png",
+        mediaType: "image/png",
+        size: 2,
+        image: "data:image/png;base64,aGk=",
+      },
+    ]);
+  });
+
+  test("another message, or the bot's own, hands nothing over", () => {
+    const pending = [pendingMessage("1", "hello")];
+
+    expect(handoffOf(pending, { type: "message", message: said("m-0", "other") })).toBeNull();
+    expect(
+      handoffOf(pending, {
+        type: "message",
+        message: { id: "b-0", role: "bot", text: "hello" },
+      }),
+    ).toBeNull();
   });
 });
