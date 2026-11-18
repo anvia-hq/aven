@@ -26,6 +26,17 @@ export async function registerUser(page: Page, prefix: string, name = "E2E User"
   return email;
 }
 
+export async function registerBotPerson(page: Page, prefix: string, name = "E2E User") {
+  await registerUser(page, prefix, name);
+  const listed = await page.request.get("/api/bots");
+  expect(listed.ok()).toBe(true);
+  const [main] = (await listed.json()) as { id: string }[];
+  const given = await page.request.patch(`/api/bots/${main!.id}`, {
+    data: { hasComputer: true },
+  });
+  expect(given.ok()).toBe(true);
+}
+
 export async function addRunner(page: Page) {
   const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
   expect(response.ok()).toBe(true);

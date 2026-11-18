@@ -90,6 +90,8 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
     });
 
   test("a person sees and wakes their bot's computer", async () => {
+    await botsService.update(owner.userId, mine!.id, { hasComputer: true });
+
     const status = await api(`/bots/${mine!.id}/computer`, owner.token);
     expect(await status.json()).toMatchObject({ available: true, state: "awake" });
 

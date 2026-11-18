@@ -97,7 +97,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 
 ### A bot does not need a computer (decision 0324)
 
-`bots.has_computer` (default true, so a bot from before this keeps its runner) is the same Computer setting. Off clears `runtime_id` and the reply runs in the control plane (`TalkBotReplier`): the native agent, no sandbox. A subscription agent is refused until a computer is chosen. `GET /bots/:id/computer` is `{ available: false }`; wake, artifacts and sending a file throw `UnavailableError` ("This bot has no computer") and do not call a runner.
+`bots.has_computer` is the same Computer setting, and a new bot is made with it off (the column keeps its `true` default, so a bot from before this keeps its runner). Off clears `runtime_id` and the reply runs in the control plane (`TalkBotReplier`): the native agent, no sandbox. A subscription agent is refused until a computer is chosen. `GET /bots/:id/computer` is `{ available: false }`; wake, artifacts and sending a file throw `UnavailableError` ("This bot has no computer") and do not call a runner.
 
 ### A bot uses Aven's API as the person (decision 0228)
 

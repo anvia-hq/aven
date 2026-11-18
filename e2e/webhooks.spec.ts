@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { registerBotPerson } from "./helpers";
 
 const bubble = (page: Page, text: string) =>
   page
@@ -11,7 +11,7 @@ test("a webhook is made in settings, and a delivery wakes the main bot and start
   page,
   request,
 }) => {
-  await registerUser(page, "webhooks", "Webhook User");
+  await registerBotPerson(page, "webhooks", "Webhook User");
   const provider = await page.request.post("/api/providers", {
     data: {
       kind: "openai-compatible",

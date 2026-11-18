@@ -300,12 +300,16 @@ run("botsService (postgres)", async () => {
     });
   });
 
-  test("a bot is made with no machine, and can drop its computer", async () => {
+  test("a bot is made with no computer, and can be given one and drop it again", async () => {
     const made = await botsService.create(alice, {
       name: "Quiet",
       instruction: "You only talk.",
     });
-    expect(made).toMatchObject({ hasComputer: true, runtimeId: null });
+    expect(made).toMatchObject({ hasComputer: false, runtimeId: null });
+    expect(await botsService.update(alice, made.id, { hasComputer: true })).toMatchObject({
+      hasComputer: true,
+      runtimeId: null,
+    });
     expect(await botsService.update(alice, made.id, { hasComputer: false })).toMatchObject({
       hasComputer: false,
       runtimeId: null,
