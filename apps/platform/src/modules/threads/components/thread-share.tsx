@@ -12,7 +12,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@aven/ui/dialog";
 import { Label } from "@aven/ui/label";
 import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
@@ -41,7 +40,31 @@ const CHOICES = [
   },
 ] as const;
 
-export function ThreadShare({ thread }: { thread: Thread }) {
+export function ThreadShareButton({ thread, onClick }: { thread: Thread; onClick: () => void }) {
+  const shared = thread.visibility === "workspace";
+
+  return (
+    <Button
+      size="sm"
+      className="h-8 rounded-full px-3 md:h-7"
+      aria-label={shared ? "Shared to workspace" : "Share"}
+      onClick={onClick}
+    >
+      {shared ? <GlobeIcon /> : <ShareIcon />}
+      <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
+    </Button>
+  );
+}
+
+export function ThreadShare({
+  thread,
+  open,
+  onOpenChange,
+}: {
+  thread: Thread;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const share = useShareThread();
   const drive = useDriveThread();
   const driving = isDriving(thread.drivingUntil);
@@ -62,19 +85,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
   }
 
   return (
-    <Dialog>
-      <DialogTrigger
-        render={
-          <Button
-            size="sm"
-            className="h-8 rounded-full px-3 md:h-7"
-            aria-label={shared ? "Shared to workspace" : "Share"}
-          />
-        }
-      >
-        {shared ? <GlobeIcon /> : <ShareIcon />}
-        <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl">
         <div className="flex flex-col gap-4">
           <DialogHeader>

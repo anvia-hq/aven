@@ -54,6 +54,16 @@ export function useThreads() {
     [setThreads],
   );
 
+  const setMarkColor = useCallback(
+    (threadId: string, markColor: string | null) =>
+      setThreads(
+        (current) =>
+          current?.map((thread) => (thread.id === threadId ? { ...thread, markColor } : thread)) ??
+          current,
+      ),
+    [setThreads],
+  );
+
   const all = threads ?? [];
   return {
     threads: all.filter((thread) => thread.createdBy === me),
@@ -63,6 +73,7 @@ export function useThreads() {
     refresh: threadsStore.refresh,
     setRunning,
     setTitle,
+    setMarkColor,
     add,
   };
 }

@@ -36,6 +36,7 @@ export function ThreadList({ threads, empty }: Props) {
                     projectId={project.id}
                     runtimeId={thread.runtimeId}
                     palette={palettes.get(project.id)}
+                    color={thread.markColor}
                     working={thread.running}
                   />
                   <span className="sr-only">{project.name}</span>

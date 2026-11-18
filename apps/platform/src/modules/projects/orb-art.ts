@@ -44,6 +44,21 @@ export function hexRgb(hex: string): Rgb {
   return [value >> 16, (value >> 8) & 255, value & 255];
 }
 
+export function rgbHex([red, green, blue]: Rgb) {
+  return `#${[red, green, blue]
+    .map((value) =>
+      Math.max(0, Math.min(255, Math.round(value)))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
+export function markColors(hex: string): OrbColors {
+  const base = hexRgb(hex);
+  return [hex, rgbHex(blend(base, [255, 255, 255], 0.45)), rgbHex(blend(base, [0, 0, 0], 0.3))];
+}
+
 export function rgba([r, g, b]: Rgb, alpha: number) {
   return `rgb(${Math.round(r)} ${Math.round(g)} ${Math.round(b)} / ${alpha})`;
 }

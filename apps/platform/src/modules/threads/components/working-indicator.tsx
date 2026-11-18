@@ -51,6 +51,7 @@ type Props = {
   threadId: string;
   runtimeId: string;
   projectId: string;
+  color?: string | null;
   startedAt?: number | null;
 };
 
@@ -59,6 +60,7 @@ export function WorkingIndicator({
   threadId,
   runtimeId,
   projectId,
+  color,
   startedAt = null,
 }: Props & { running: boolean }) {
   const palettes = useProjectPalettes();
@@ -87,6 +89,7 @@ export function WorkingIndicator({
             projectId={projectId}
             runtimeId={runtimeId}
             palette={palettes.get(projectId)}
+            color={color}
             speed={2}
             working
             decorative

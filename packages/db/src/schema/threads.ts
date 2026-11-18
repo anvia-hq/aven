@@ -34,6 +34,7 @@ export const threads = pgTable(
       .notNull()
       .references(() => runtimes.id, { onDelete: "restrict" }),
     title: text("title").notNull(),
+    markColor: text("mark_color"),
     agentBackend: text("agent_backend", { enum: AGENT_BACKENDS }).notNull().default("native"),
     parentThreadId: uuid("parent_thread_id").references((): AnyPgColumn => threads.id, {
       onDelete: "set null",

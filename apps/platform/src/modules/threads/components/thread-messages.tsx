@@ -19,6 +19,7 @@ type Props = {
   threadId: string;
   runtimeId: string;
   projectId: string;
+  markColor?: string | null;
   messages: ChatMessage[];
   earlier?: ChatMessage[];
   hidden?: number;
@@ -39,6 +40,7 @@ export function ThreadMessages({
   threadId,
   runtimeId,
   projectId,
+  markColor,
   messages,
   earlier = [],
   hidden = 0,
@@ -151,6 +153,7 @@ export function ThreadMessages({
                 threadId={threadId}
                 runtimeId={runtimeId}
                 projectId={projectId}
+                color={markColor}
                 startedAt={startedAt}
               />
             </div>

@@ -27,7 +27,7 @@ export async function attempt<T>(
   }
 }
 
-async function send(path: string, init?: RequestInit) {
+export async function request(path: string, init?: RequestInit) {
   try {
     return await fetch(`/api${path}`, { credentials: "include", ...init });
   } catch {
@@ -36,7 +36,7 @@ async function send(path: string, init?: RequestInit) {
 }
 
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await send(path, init);
+  const res = await request(path, init);
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

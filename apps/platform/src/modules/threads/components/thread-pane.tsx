@@ -114,12 +114,19 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                 "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border md:border-sidebar-border",
               )}
             >
-              <ThreadHeader thread={thread} panels={panels} owned={owned} onClose={onClose} />
+              <ThreadHeader
+                thread={thread}
+                panels={panels}
+                owned={owned}
+                driven={driven}
+                onClose={onClose}
+              />
               <div ref={conversation} className="relative min-h-0 flex-1">
                 <ThreadMessages
                   threadId={thread.id}
                   runtimeId={thread.runtimeId}
                   projectId={thread.projectId}
+                  markColor={thread.markColor}
                   messages={messages}
                   handoffs={handoffs}
                   earlier={earlier}

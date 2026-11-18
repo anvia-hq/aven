@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { answerQuestionBody, sendMessageBody } from "./schema";
+import { answerQuestionBody, sendMessageBody, updateThreadBody } from "./schema";
 
 const prompt = "fix @src/app.ts with /writing-skills";
 const file = { type: "file", name: "src/app.ts", from: 4, to: 15 };
@@ -55,5 +55,24 @@ describe("answerQuestionBody (decision 0047)", () => {
 
   test("a person can decline", () => {
     expect(answerQuestionBody.parse({ answers, skipSecrets: true }).skipSecrets).toBe(true);
+  });
+});
+
+describe("updateThreadBody's mark color", () => {
+  const mark = (markColor: unknown) => updateThreadBody.safeParse({ markColor }).success;
+
+  test("takes a six-digit hex color, or a null that puts the default back", () => {
+    expect(mark("#3b82f6")).toBe(true);
+    expect(mark(null)).toBe(true);
+  });
+
+  test("refuses a name, a short hex, eight digits or nothing at all", () => {
+    for (const color of ["blue", "#3b82f", "#3b82f6ff", "3b82f6", "", 42]) {
+      expect(mark(color)).toBe(false);
+    }
+  });
+
+  test("a body that names no field updates nothing", () => {
+    expect(updateThreadBody.safeParse({}).success).toBe(false);
   });
 });
