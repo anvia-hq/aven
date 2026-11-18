@@ -61,7 +61,7 @@ describe("Claude stream events become thread events", () => {
       { type: "tool_end", id: "call-1", status: "done", output: "saw [redacted]" },
       {
         type: "usage",
-        turn: { inputTokens: 3, outputTokens: 2, cacheWriteTokens: 0, cacheReadTokens: 1 },
+        turn: { inputTokens: 4, outputTokens: 2, cacheWriteTokens: 0, cacheReadTokens: 1 },
       },
     ]);
     expect(turn.sessionId).toBe("sess-1");
@@ -117,7 +117,7 @@ describe("Claude stream events become thread events", () => {
       modelUsage: { "claude-opus-4-8": { contextWindow: 200000 } },
     });
     expect(usageFromHistory(turn.messages("go"))).toEqual({
-      totals: { inputTokens: 30, outputTokens: 9, cacheWriteTokens: 0, cacheReadTokens: 7 },
+      totals: { inputTokens: 37, outputTokens: 9, cacheWriteTokens: 0, cacheReadTokens: 7 },
       context: { usedTokens: 1015, contextWindow: 200000 },
     });
   });

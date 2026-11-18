@@ -135,11 +135,14 @@ function jsonValue(value: unknown) {
 function usageOf(usage: ClaudeUsage | undefined): TokenUsage | undefined {
   if (!usage || typeof usage.input_tokens !== "number") return undefined;
 
+  const cacheWriteTokens = usage.cache_creation_input_tokens ?? 0;
+  const cacheReadTokens = usage.cache_read_input_tokens ?? 0;
+
   return {
-    inputTokens: usage.input_tokens,
+    inputTokens: usage.input_tokens + cacheWriteTokens + cacheReadTokens,
     outputTokens: usage.output_tokens ?? 0,
-    cacheWriteTokens: usage.cache_creation_input_tokens ?? 0,
-    cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+    cacheWriteTokens,
+    cacheReadTokens,
   };
 }
 
