@@ -1,7 +1,7 @@
 import { NavigationMenu as NavigationMenuPrimitive } from "@base-ui/react/navigation-menu";
 import { cva } from "class-variance-authority";
 import { cn } from "cn";
-import { AltArrowDownIcon as ChevronDownIcon } from "@solar-icons/react/linear";
+import { ChevronDown as ChevronDownIcon } from "@mynaui/icons-react";
 
 function NavigationMenu({
   align = "start",

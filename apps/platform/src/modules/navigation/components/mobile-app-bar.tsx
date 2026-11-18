@@ -1,4 +1,4 @@
-import { MagnifierIcon, CloseIcon } from "@solar-icons/react/linear";
+import { Search, X } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { SidebarTrigger, useSidebar } from "@aven/ui/sidebar";
@@ -18,7 +18,7 @@ export function MobileAppBar() {
         aria-label="Search"
         onClick={() => setCommandOpen(true)}
       >
-        <MagnifierIcon className="size-5" />
+        <Search className="size-5" />
       </Button>
     </div>
   );
@@ -34,7 +34,7 @@ export function MobileSidebarClose() {
       aria-label="Close navigation"
       onClick={() => setOpenMobile(false)}
     >
-      <CloseIcon className="size-5" />
+      <X className="size-5" />
     </Button>
   );
 }

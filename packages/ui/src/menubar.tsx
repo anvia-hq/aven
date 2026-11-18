@@ -20,7 +20,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "./dropdown-menu";
-import { CheckIcon } from "@solar-icons/react/linear";
+import { Check as CheckIcon } from "@mynaui/icons-react";
 
 function Menubar({ className, ...props }: MenubarPrimitive.Props) {
   return (

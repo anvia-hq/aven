@@ -1,6 +1,6 @@
 import "@xterm/xterm/css/xterm.css";
 
-import { RefreshIcon } from "@solar-icons/react/linear";
+import { Refresh } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { Spinner } from "@aven/ui/spinner";
@@ -30,7 +30,7 @@ export function TerminalViewer({ computer, onExit }: Props) {
             <>
               {reason}
               <Button variant="outline" size="sm" onClick={reconnect}>
-                <RefreshIcon /> New shell
+                <Refresh /> New shell
               </Button>
             </>
           )}

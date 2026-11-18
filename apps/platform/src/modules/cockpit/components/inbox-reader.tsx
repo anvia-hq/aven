@@ -1,11 +1,4 @@
-import {
-  CalendarIcon,
-  CheckCircleIcon,
-  CircleDashedIcon,
-  InboxOutIcon,
-  TagIcon,
-  TrashBinMinimalisticIcon,
-} from "@solar-icons/react/linear";
+import { Calendar, CheckCircle, CircleDashed, InboxUp, Tag, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -60,11 +53,11 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
           >
             {item.done ? (
               <>
-                <InboxOutIcon /> Move to inbox
+                <InboxUp /> Move to inbox
               </>
             ) : (
               <>
-                <CheckCircleIcon /> Done
+                <CheckCircle /> Done
               </>
             )}
           </Button>
@@ -78,7 +71,7 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
                 if (await remove(item)) onClose();
               }}
             >
-              <TrashBinMinimalisticIcon /> Delete
+              <Trash /> Delete
             </DropdownMenuItem>
           </MoreMenu>
         </>
@@ -97,13 +90,13 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
         }}
       />
       <Properties>
-        <Property icon={item.done ? CheckCircleIcon : CircleDashedIcon} label="Status">
+        <Property icon={item.done ? CheckCircle : CircleDashed} label="Status">
           <span className="px-1">{item.done ? "Done" : "Open"}</span>
         </Property>
-        <Property icon={CalendarIcon} label="Captured">
+        <Property icon={Calendar} label="Captured">
           <span className="px-1">{timeAgo(item.createdAt, true)}</span>
         </Property>
-        <Property icon={TagIcon} label="Tags">
+        <Property icon={Tag} label="Tags">
           <TagInput bare value={item.tags} onChange={(tags) => void update(item, { tags })} />
         </Property>
       </Properties>

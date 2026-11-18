@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { Trash } from "@mynaui/icons-react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
@@ -46,7 +46,7 @@ function WebhookRow({ webhook }: { webhook: Webhook }) {
         aria-label={`Remove ${webhook.name}`}
         onClick={() => void remove(webhook)}
       >
-        <TrashBinMinimalisticIcon />
+        <Trash />
       </Button>
     </li>
   );

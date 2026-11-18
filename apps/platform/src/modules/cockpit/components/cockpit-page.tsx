@@ -1,4 +1,4 @@
-import { CloseIcon } from "@solar-icons/react/linear";
+import { X } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -38,7 +38,7 @@ export function CockpitPage({ title, tag, to, actions, wide = false, children }:
               aria-label={`Clear the tag ${tag}`}
             >
               {tag}
-              <CloseIcon />
+              <X />
             </TagBadge>
           )}
         </div>

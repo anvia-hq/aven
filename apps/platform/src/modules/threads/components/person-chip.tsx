@@ -1,4 +1,4 @@
-import { SparklesIcon } from "@solar-icons/react/linear";
+import { Sparkles } from "@mynaui/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials } from "@/lib/format";
@@ -46,7 +46,7 @@ export function AgentChip() {
       title="Asks the agent"
       data-mention="agent"
     >
-      <SparklesIcon className="size-3.5" />
+      <Sparkles className="size-3.5" />
       agent
     </span>
   );

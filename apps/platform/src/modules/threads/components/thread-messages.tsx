@@ -101,8 +101,8 @@ export function ThreadMessages({
       style={textSize.style}
     >
       <div className="flex">
-        <div className="@container min-w-0 flex-1">
-          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)] [--table-wide:calc(100cqw_-_2rem)]">
+        <div className="min-w-0 flex-1">
+          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)]">
             {hidden > 0 && (
               <div className="flex justify-center pb-4">
                 <Button

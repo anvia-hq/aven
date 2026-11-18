@@ -1,4 +1,4 @@
-import { ArchiveIcon, MenuDotsIcon } from "@solar-icons/react/linear";
+import { Archive, Dots } from "@mynaui/icons-react";
 
 import {
   DropdownMenu,
@@ -22,11 +22,11 @@ export function ThreadActionsMenu({ title, onArchive }: Props) {
           />
         }
       >
-        <MenuDotsIcon />
+        <Dots />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuItem onClick={onArchive}>
-          <ArchiveIcon />
+          <Archive />
           Archive
         </DropdownMenuItem>
       </DropdownMenuContent>

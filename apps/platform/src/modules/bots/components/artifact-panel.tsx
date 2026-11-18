@@ -1,4 +1,4 @@
-import { DownloadIcon, FileIcon, CloseIcon } from "@solar-icons/react/linear";
+import { Download, File as FileIcon, X } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { NativeSelect } from "@aven/ui/native-select";
@@ -54,10 +54,10 @@ export function ArtifactPanel({
           nativeButton={false}
           render={<a href={artifactSource(botId, version.name)} download={downloadName(version)} />}
         >
-          <DownloadIcon />
+          <Download />
         </Button>
         <Button variant="ghost" size="icon-sm" aria-label="Close file" onClick={onClose}>
-          <CloseIcon />
+          <X />
         </Button>
       </header>
       <div className="min-h-0 flex-1">

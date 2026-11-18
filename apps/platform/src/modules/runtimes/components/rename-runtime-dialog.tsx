@@ -1,4 +1,4 @@
-import { PenNewSquareIcon } from "@solar-icons/react/linear";
+import { Edit } from "@mynaui/icons-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -48,7 +48,7 @@ export function RenameRuntimeDialog({ runtime }: { runtime: Runtime }) {
       <DialogTrigger
         render={<Button variant="ghost" size="icon-sm" aria-label={`Rename ${runtime.name}`} />}
       >
-        <PenNewSquareIcon />
+        <Edit />
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <Form onSubmit={submit} className="flex flex-col gap-4">

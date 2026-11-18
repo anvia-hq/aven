@@ -1,10 +1,4 @@
-import {
-  GitPullRequestIcon,
-  RefreshIcon,
-  RocketIcon,
-  SparklesIcon,
-} from "@solar-icons/react/linear";
-import { GithubMark } from "@/components/brand-icons";
+import { GitPullRequest, Github, Refresh, Rocket, Sparkles } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { ButtonGroup } from "@aven/ui/button-group";
@@ -37,7 +31,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         title={action.reason}
         onClick={onRetry}
       >
-        <RefreshIcon />
+        <Refresh />
         Try again
       </Button>
     );
@@ -52,7 +46,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         disabled={action.disabled}
         onClick={onSetUp}
       >
-        <SparklesIcon />
+        <Sparkles />
         Set up shipping
       </Button>
     );
@@ -67,7 +61,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         nativeButton={false}
         render={<a href={`/api/github/connect?next=${next}`} />}
       >
-        <GithubMark />
+        <Github />
         Connect GitHub to ship
       </Button>
     );
@@ -78,7 +72,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
       <Tooltip>
         <TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
           <Button variant="outline" size="sm" className={FLOATING_BUTTON} disabled>
-            <RocketIcon />
+            <Rocket />
             {action.label}
           </Button>
         </TooltipTrigger>
@@ -96,7 +90,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         disabled={action.disabled}
         onClick={() => onShip()}
       >
-        <GitPullRequestIcon />
+        <GitPullRequest />
         Open a PR
       </Button>
     );
@@ -117,7 +111,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         disabled={action.disabled}
         onClick={() => onShip()}
       >
-        <RocketIcon />
+        <Rocket />
         {action.shipping ? "Shipping…" : action.label}
       </Button>
       {action.canOpenNew && <ShipMenu disabled={action.disabled} onNew={() => onShip("new")} />}

@@ -1,4 +1,4 @@
-import { ArrowUpIcon, LockIcon } from "@solar-icons/react/linear";
+import { ArrowUp, Lock } from "@mynaui/icons-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -55,7 +55,7 @@ export function ProviderKeyForm({
       className="flex w-full max-w-md flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
     >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <LockIcon className="size-3.5" />
+        <Lock className="size-3.5" />
         <span>{botName} needs an API key. It will not see it.</span>
       </div>
 
@@ -75,7 +75,7 @@ export function ProviderKeyForm({
 
       <div className="flex justify-end">
         <Button type="submit" size="sm" disabled={!provider || (!saved && !key.trim()) || sending}>
-          <ArrowUpIcon />
+          <ArrowUp />
           {saved ? `Tell ${botName}` : "Save key"}
         </Button>
       </div>

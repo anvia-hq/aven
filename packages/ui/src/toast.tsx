@@ -6,13 +6,13 @@ import { cn } from "cn";
 
 import { Button } from "./button";
 import {
-  CloseIcon as XIcon,
-  CheckCircleIcon as CircleCheckIcon,
-  InfoCircleIcon as InfoIcon,
-  DangerTriangleIcon as TriangleAlertIcon,
-  DangerIcon as OctagonXIcon,
-  LoaderIcon as Loader2Icon,
-} from "@solar-icons/react/linear";
+  X as XIcon,
+  CheckCircle as CircleCheckIcon,
+  InfoCircle as InfoIcon,
+  DangerTriangle as TriangleAlertIcon,
+  DangerOctagon as OctagonXIcon,
+  Spinner as Loader2Icon,
+} from "@mynaui/icons-react";
 
 const toast = ToastPrimitive.createToastManager();
 

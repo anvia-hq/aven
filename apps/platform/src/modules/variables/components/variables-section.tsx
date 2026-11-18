@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { Trash } from "@mynaui/icons-react";
 
 import { Badge } from "@aven/ui/badge";
 import { cn } from "cn";
@@ -43,7 +43,7 @@ function VariableRow({
             aria-label={`Remove ${variable.name}`}
             onClick={() => remove(variable)}
           >
-            <TrashBinMinimalisticIcon />
+            <Trash />
           </Button>
         </>
       )}

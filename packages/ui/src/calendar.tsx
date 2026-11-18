@@ -6,10 +6,10 @@ import { DayPicker, getDefaultClassNames, type DayButton, type Locale } from "re
 
 import { Button, buttonVariants } from "./button";
 import {
-  AltArrowLeftIcon as ChevronLeftIcon,
-  AltArrowRightIcon as ChevronRightIcon,
-  AltArrowDownIcon as ChevronDownIcon,
-} from "@solar-icons/react/linear";
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  ChevronDown as ChevronDownIcon,
+} from "@mynaui/icons-react";
 
 function Calendar({
   className,

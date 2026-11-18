@@ -1,18 +1,15 @@
-import { GitForkIcon } from "@solar-icons/react/linear";
+import { GitBranch } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials, shortTimeAgo, timeAgo } from "@/lib/format";
-import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 
 import { useThreads } from "../hooks/use-threads";
-import { ThreadMark } from "./thread-mark";
 import type { ToolPart } from "../types";
 
 export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   const { all } = useThreads();
-  const palettes = useProjectPalettes();
   const fork = all.find((thread) => thread.id === forkId);
   const archived = fork?.state === "archived";
   let status = "Fork";
@@ -23,19 +20,8 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
 
   const body = (
     <>
-      <span className="flex size-9 shrink-0 items-center justify-center">
-        {fork ? (
-          <ThreadMark
-            projectId={fork.projectId}
-            runtimeId={fork.runtimeId}
-            palette={palettes.get(fork.projectId)}
-            working={fork.running}
-            decorative
-            className="size-8"
-          />
-        ) : (
-          <GitForkIcon className="size-5 text-primary" />
-        )}
+      <span className="flex size-6 shrink-0 items-center justify-center text-primary">
+        <GitBranch className={cn("size-5", fork?.running && "animate-pulse")} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{fork?.title ?? "Fork"}</span>
@@ -63,7 +49,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   );
 
   const frame =
-    "flex w-full max-w-md min-w-0 items-center gap-3 rounded-2xl border bg-card px-3 py-2.5 text-left";
+    "flex w-full min-w-0 items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left";
 
   if (!fork)
     return (

@@ -1,4 +1,4 @@
-import { AddIcon } from "@solar-icons/react/linear";
+import { Plus } from "@mynaui/icons-react";
 import { ACCESS_MAX_NAME } from "@aven/protocol/mcp-access";
 import { useState, type FormEvent } from "react";
 
@@ -134,7 +134,7 @@ export function AccessTokenDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button size="sm" />}>
-        <AddIcon /> New token
+        <Plus /> New token
       </DialogTrigger>
       <DialogContent>
         {created ? (

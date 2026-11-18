@@ -1,4 +1,4 @@
-import { CheckIcon, AltArrowRightIcon, LoaderIcon, CloseIcon } from "@solar-icons/react/linear";
+import { Check, ChevronRight, CircleNotch, X } from "@mynaui/icons-react";
 import { cn } from "cn";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
@@ -11,21 +11,12 @@ const toolCount = (count: number) => (count === 1 ? "1 tool call" : `${count} to
 
 function StatusNode({ status }: { status: SubagentPart["status"] }) {
   if (status === "error")
-    return (
-      <CloseIcon
-        role="img"
-        aria-label="Failed"
-        strokeWidth={2.4}
-        className="size-3.5 text-destructive"
-      />
-    );
+    return <X role="img" aria-label="Failed" stroke="2.4" className="size-3.5 text-destructive" />;
 
   if (status === "running")
-    return (
-      <LoaderIcon aria-hidden strokeWidth={2.4} className="size-3.5 animate-spin text-meter" />
-    );
+    return <CircleNotch aria-hidden stroke="2.4" className="size-3.5 animate-spin text-meter" />;
 
-  return <CheckIcon aria-hidden strokeWidth={2.4} className="size-3.5 text-success" />;
+  return <Check aria-hidden stroke="2.4" className="size-3.5 text-success" />;
 }
 
 export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
@@ -50,7 +41,7 @@ export function SubagentCard({ subagent }: { subagent: SubagentPart }) {
             {description}
           </span>
           {expandable && (
-            <AltArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none" />
+            <ChevronRight className="size-3.5 shrink-0 text-muted-foreground transition-transform duration-200 group-data-panel-open:rotate-90 motion-reduce:transition-none" />
           )}
         </span>
         <span

@@ -90,7 +90,7 @@ test.describe("threads", () => {
     }
   });
 
-  test("a new thread starts in the project of the latest one", async ({ page }) => {
+  test("a prompt without choosing a project is refused and kept", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     await addRunner(page);
     await createProject(page, "project");
@@ -98,13 +98,14 @@ test.describe("threads", () => {
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page.getByRole("heading", { name: "hello" })).toBeVisible();
 
-    await page.getByRole("button", { name: "New thread" }).click();
-    await expect(page.getByRole("button", { name: "Project" })).toContainText("project");
+    await page.getByRole("link", { name: "New thread" }).click();
+    await expect(page.getByRole("button", { name: "Project" })).toBeVisible();
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello again");
     await page.getByRole("button", { name: "Send" }).click();
 
-    await expect(page.getByRole("heading", { name: "hello again" })).toBeVisible();
-    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await expect(page.getByText("Choose a project first")).toBeVisible();
+    await expect(page).toHaveURL(/\/threads$/);
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toHaveText("hello again");
   });
 
   test("creating a project opens the thread once prompted; with its runner offline the agent reports why", async ({
@@ -121,7 +122,7 @@ test.describe("threads", () => {
     ).toBeVisible();
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
 
-    await page.getByRole("button", { name: "New thread" }).click();
+    await page.getByRole("link", { name: "New thread" }).click();
     await page.getByRole("button", { name: "Project", exact: true }).click();
     await expect(page.getByRole("button", { name: "project acme/project" })).toBeVisible();
   });
@@ -154,7 +155,7 @@ test.describe("threads", () => {
     await addRunner(page);
     await createProject(page, "project");
     const prompt = page.getByRole("textbox", { name: "Prompt" });
-    const box = page.locator("div.rounded-3xl", { has: prompt });
+    const box = page.locator("div.bg-card", { has: prompt });
     const area = await prompt.boundingBox();
     const outer = await box.boundingBox();
     expect(area && outer).toBeTruthy();

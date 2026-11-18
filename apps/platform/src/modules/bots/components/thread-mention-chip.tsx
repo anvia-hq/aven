@@ -1,4 +1,4 @@
-import { ChatRoundDotsIcon } from "@solar-icons/react/linear";
+import { ChatDots } from "@mynaui/icons-react";
 import { Link } from "@tanstack/react-router";
 
 type Props = { id: string; title: string; link?: boolean };
@@ -9,7 +9,7 @@ const CHIP =
 export function ThreadMentionChip({ id, title, link = false }: Props) {
   const content = (
     <>
-      <ChatRoundDotsIcon className="size-3.5 shrink-0" aria-hidden />
+      <ChatDots className="size-3.5 shrink-0" aria-hidden />
       <span className="truncate">{title}</span>
     </>
   );
