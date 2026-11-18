@@ -56,6 +56,7 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
         <Button
           variant="ghost"
           size="icon-sm"
+          className="rounded-full"
           aria-label={`Close ${thread.title}`}
           title="Close"
           onClick={onClose}
@@ -63,7 +64,14 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
           <CloseIcon />
         </Button>
       )}
-      <div className={cn("hidden items-center gap-2 sm:flex", onClose && "sm:hidden")}>
+      <div
+        role="group"
+        aria-label="Panels"
+        className={cn(
+          "hidden items-center gap-0.5 rounded-full bg-muted/50 p-0.5 sm:flex",
+          onClose && "sm:hidden",
+        )}
+      >
         {shown.map(({ label, icon, panel }) => (
           <PanelToggle
             key={label}
@@ -88,7 +96,7 @@ function PanelsMenu({ toggles, className }: { toggles: Toggle[]; className?: str
           <Button
             variant="ghost"
             size="icon-sm"
-            className={cn("size-9 aria-expanded:bg-accent md:size-7", className)}
+            className={cn("size-9 rounded-full aria-expanded:bg-accent md:size-7", className)}
             aria-label={open > 0 ? `Panels, ${open} open` : "Panels"}
           />
         }

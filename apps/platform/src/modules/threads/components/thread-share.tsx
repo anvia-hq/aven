@@ -67,7 +67,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
         render={
           <Button
             size="sm"
-            className="h-8 md:h-7"
+            className="h-8 rounded-full px-3 md:h-7"
             aria-label={shared ? "Shared to workspace" : "Share"}
           />
         }
