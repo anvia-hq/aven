@@ -30,7 +30,7 @@ export function AttachButton({
       <Button
         variant="outline"
         size="icon-sm"
-        className="border-transparent bg-muted/40 dark:bg-muted/40 size-9 rounded-full text-muted-foreground md:size-7"
+        className="border-transparent bg-muted/40 dark:border-transparent dark:bg-muted/40 size-9 rounded-full text-muted-foreground md:size-7"
         aria-label="Attach files"
         title={title}
         disabled={disabled}
