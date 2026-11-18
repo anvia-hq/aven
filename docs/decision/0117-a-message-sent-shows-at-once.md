@@ -21,7 +21,7 @@ A message sent to an agent that is already working has been shown at once since 
 - A send that fails leaves a toast and puts the draft back; the conversation is where it was.
 - Two tabs of the same person both drive a thread; each shows its own message at once and settles it on the events, matching by words (and by id for steers). A message sent from the other tab arrives as the server's own, with nothing pending here.
 - The conversation scrolls to its end on the optimistic message, the same as on a real one, because `useScrollToBottom` counts messages.
-- Bots' chats are not covered: their replies are not runs, and a bot's chat is written by the server.
+- Bots' chats were not covered: their replies are not runs, and a bot's chat is written by the server. They show the person's message at once since 0356.
 
 ## Note: the ship card shows at once too
 
