@@ -72,7 +72,7 @@ export function ProjectMenu({
             size="sm"
             aria-label="Project"
             aria-expanded={open}
-            className="max-w-48 min-w-0 rounded-full bg-muted/40 px-3 text-muted-foreground"
+            className="glass max-w-48 min-w-0 rounded-full px-3 text-muted-foreground"
           />
         }
       >

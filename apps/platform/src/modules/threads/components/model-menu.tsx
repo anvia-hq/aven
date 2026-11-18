@@ -39,7 +39,7 @@ export function ModelMenu({ model }: Props) {
             size="sm"
             aria-label="Model and reasoning effort"
             title={subscription ? `Runs on your ${provider.name}` : provider.name}
-            className="max-w-full min-w-0 rounded-full bg-muted/40 px-3 text-muted-foreground"
+            className="glass max-w-full min-w-0 rounded-full px-3 text-muted-foreground"
           />
         }
       >
