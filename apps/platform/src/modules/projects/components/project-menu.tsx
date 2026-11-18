@@ -30,7 +30,7 @@ type Props = {
 const matches = (query: string, ...parts: string[]) =>
   parts.join(" ").toLowerCase().includes(query.trim().toLowerCase());
 
-const placeholder = (sandbox: boolean) => (sandbox ? "Choose a repository" : "Choose a folder");
+const placeholder = "Add a project";
 
 export function ProjectMenu({
   runtime,
@@ -77,7 +77,7 @@ export function ProjectMenu({
         }
       >
         {sandbox ? <GitBranchIcon /> : <FolderIcon />}
-        <span className="truncate">{chosen?.name ?? placeholder(sandbox)}</span>
+        <span className="truncate">{chosen?.name ?? placeholder}</span>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 gap-0 p-0">
         <div className="border-b p-2">
