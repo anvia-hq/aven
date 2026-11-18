@@ -4,12 +4,15 @@ import { cn } from "cn";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { initials, shortTimeAgo, timeAgo } from "@/lib/format";
+import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 
 import { useThreads } from "../hooks/use-threads";
+import { ThreadMark } from "./thread-mark";
 import type { ToolPart } from "../types";
 
 export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   const { all } = useThreads();
+  const palettes = useProjectPalettes();
   const fork = all.find((thread) => thread.id === forkId);
   const archived = fork?.state === "archived";
   let status = "Fork";
@@ -20,8 +23,19 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
 
   const body = (
     <>
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary">
-        <GitForkIcon className={cn("size-5", fork?.running && "animate-pulse")} />
+      <span className="flex size-9 shrink-0 items-center justify-center">
+        {fork ? (
+          <ThreadMark
+            projectId={fork.projectId}
+            runtimeId={fork.runtimeId}
+            palette={palettes.get(fork.projectId)}
+            working={fork.running}
+            decorative
+            className="size-8"
+          />
+        ) : (
+          <GitForkIcon className="size-5 text-primary" />
+        )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{fork?.title ?? "Fork"}</span>
