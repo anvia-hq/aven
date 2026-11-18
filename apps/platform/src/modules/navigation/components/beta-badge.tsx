@@ -19,7 +19,7 @@ export function BetaBadge() {
   return (
     <div
       role="note"
-      className="pointer-events-none fixed right-3 bottom-6 z-40 hidden overflow-hidden rounded-2xl px-5 py-3.5 shadow-xl ring-1 ring-foreground/10 md:block"
+      className="pointer-events-none fixed right-6 bottom-6 z-40 hidden overflow-hidden rounded-2xl px-5 py-3.5 shadow-xl ring-1 ring-foreground/10 md:block"
     >
       <div
         aria-hidden
