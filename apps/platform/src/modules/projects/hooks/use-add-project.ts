@@ -6,29 +6,46 @@ import type { Project } from "../types";
 import { useGithubRepositories } from "./use-github-repositories";
 import { useProjects } from "./use-projects";
 
-export function useAddProject(onAdded?: (project: Project) => void) {
-  const [open, setOpen] = useState(false);
+const REPOSITORY_NAME = /^[A-Za-z0-9._-]+$/;
+const MAX_REPOSITORY_NAME = 100;
+
+export function useAddProject(
+  onAdded?: (project: Project) => void,
+  control?: { open: boolean; onOpenChange: (open: boolean) => void },
+) {
+  const [innerOpen, setInnerOpen] = useState(false);
+  const open = control?.open ?? innerOpen;
   const [submitting, setSubmitting] = useState(false);
   const [runtimeId, setRuntimeId] = useState("");
   const [path, setPath] = useState("");
   const [kind, setKind] = useState<"github" | "folder" | "repository">("github");
+  const [githubMode, setGithubMode] = useState<"existing" | "new">("existing");
   const [githubRepository, setGithubRepository] = useState("");
+  const [newName, setNewName] = useState("");
+  const [privateRepository, setPrivateRepository] = useState(true);
   const [repository, setRepository] = useState("");
-  const { addFolder, addRepository, addGithubRepository } = useProjects();
-  const github = useGithubRepositories(open && kind === "github");
+  const { addFolder, addRepository, addGithubRepository, addNewGithubRepository } = useProjects();
+  const github = useGithubRepositories(open && kind === "github", githubMode === "new");
   const { runtimes, defaultRunner, refresh: refreshRuntimes } = useRuntimes();
 
   const hosts = runtimes.filter((runtime) => runtime.directories.length > 0);
   const chosenRunner = runtimeId || (hosts.find((runtime) => runtime.online) ?? hosts[0])?.id || "";
+  const repositoryName = newName.trim();
+  const nameReady =
+    repositoryName.length <= MAX_REPOSITORY_NAME &&
+    REPOSITORY_NAME.test(repositoryName) &&
+    /[A-Za-z0-9]/.test(repositoryName);
   const canSubmit =
     kind === "github"
-      ? Boolean(github.installation && githubRepository)
+      ? Boolean(github.installation) &&
+        (githubMode === "existing" ? Boolean(githubRepository) : nameReady)
       : Boolean(
           chosenRunner && (kind === "folder" ? path.startsWith("/") : repository.trim().length > 0),
         );
 
   function handleOpenChange(next: boolean) {
-    setOpen(next);
+    setInnerOpen(next);
+    control?.onOpenChange(next);
 
     if (next) void refreshRuntimes();
 
@@ -37,6 +54,9 @@ export function useAddProject(onAdded?: (project: Project) => void) {
       setPath("");
       setRepository("");
       setGithubRepository("");
+      setGithubMode("existing");
+      setNewName("");
+      setPrivateRepository(true);
       setKind("github");
     }
   }
@@ -47,6 +67,13 @@ export function useAddProject(onAdded?: (project: Project) => void) {
   }
 
   function add() {
+    if (kind === "github" && githubMode === "new")
+      return addNewGithubRepository({
+        installationId: github.installation,
+        name: repositoryName,
+        private: privateRepository,
+      });
+
     if (kind === "github")
       return addGithubRepository({
         installationId: github.installation,
@@ -94,8 +121,14 @@ export function useAddProject(onAdded?: (project: Project) => void) {
     repository,
     setRepository,
     github,
+    githubMode,
+    setGithubMode,
     githubRepository,
     setGithubRepository,
+    newName,
+    setNewName,
+    privateRepository,
+    setPrivateRepository,
     githubRepositories: github.repositories.map((repo) => ({
       value: repo.fullName,
       label: repo.private ? `${repo.fullName} (private)` : repo.fullName,
