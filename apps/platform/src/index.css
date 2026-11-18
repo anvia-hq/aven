@@ -1920,7 +1920,7 @@
     color-scheme: dark;
   }
   html {
-    font-size: 87.5%;
+    font-size: calc(87.5% * var(--interface-scale, 1));
   }
   * {
     @apply border-border outline-ring/50;
