@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDefaultLayout } from "react-resizable-panels";
 
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
@@ -8,6 +8,8 @@ import { GAP_HANDLE } from "@/lib/panel-layout";
 
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { ThreadPane } from "./thread-pane";
+
+const PANE = "h-full min-w-0 data-[active=false]:[--background:var(--pane-dim)]";
 
 type Props = { threadId: string; split: string };
 
@@ -22,23 +24,38 @@ export function SplitThreads({ threadId, split }: Props) {
     panelIds: ["main", "split"],
     storage: safeStorage,
   });
+  const [active, setActive] = useState<"main" | "split">("main");
   const only = (id: string) => {
     unpair(id);
     return navigate({ to: "/threads/$threadId", params: { threadId: id } });
   };
   return (
-    <div className="h-[calc(100svh-var(--mobile-chrome))] min-w-0 md:h-svh">
+    <div className="h-[calc(100svh-var(--mobile-chrome))] min-w-0 [--pane-dim:color-mix(in_oklab,var(--background),black_4%)] dark:[--pane-dim:color-mix(in_oklab,var(--background),black_35%)] md:h-svh">
       <ResizablePanelGroup
         orientation="horizontal"
         defaultLayout={layout.defaultLayout}
         onLayoutChanged={layout.onLayoutChanged}
       >
         <ResizablePanel id="main" defaultSize="50" minSize="30">
-          <ThreadPane key={threadId} threadId={threadId} split onClose={() => void only(split)} />
+          <div
+            className={PANE}
+            data-active={active === "main"}
+            onPointerDownCapture={() => setActive("main")}
+            onFocusCapture={() => setActive("main")}
+          >
+            <ThreadPane key={threadId} threadId={threadId} split onClose={() => void only(split)} />
+          </div>
         </ResizablePanel>
         <ResizableHandle className={GAP_HANDLE} />
         <ResizablePanel id="split" defaultSize="50" minSize="30">
-          <ThreadPane key={split} threadId={split} split onClose={() => void only(threadId)} />
+          <div
+            className={PANE}
+            data-active={active === "split"}
+            onPointerDownCapture={() => setActive("split")}
+            onFocusCapture={() => setActive("split")}
+          >
+            <ThreadPane key={split} threadId={split} split onClose={() => void only(threadId)} />
+          </div>
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>
