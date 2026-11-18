@@ -1,4 +1,4 @@
-import { Check, Copy } from "@mynaui/icons-react";
+import { CheckIcon, CopyIcon } from "@solar-icons/react/linear";
 import { Button } from "@aven/ui/button";
 import { useClipboard } from "@/hooks/use-clipboard";
 
@@ -22,7 +22,7 @@ export function RuntimeCommand({ token }: Props) {
       </pre>
       <div>
         <Button type="button" variant="outline" onClick={() => void copy(command)}>
-          {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy command"}
+          {copied ? <CheckIcon /> : <CopyIcon />} {copied ? "Copied" : "Copy command"}
         </Button>
       </div>
     </div>

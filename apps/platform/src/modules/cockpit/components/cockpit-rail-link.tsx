@@ -1,4 +1,4 @@
-import { Grid } from "@mynaui/icons-react";
+import { WidgetIcon } from "@solar-icons/react/linear";
 import { useRouterState } from "@tanstack/react-router";
 
 import { RailLink } from "@/components/rail-link";
@@ -9,7 +9,7 @@ export function CockpitRailLink() {
   });
   return (
     <RailLink to="/cockpit/inbox" label="Cockpit" active={active}>
-      <Grid className="size-[17px]" strokeWidth={1.7} />
+      <WidgetIcon className="size-[17px]" strokeWidth={1.7} />
     </RailLink>
   );
 }

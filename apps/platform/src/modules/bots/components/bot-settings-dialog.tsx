@@ -1,5 +1,5 @@
 import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_NAME_MAX } from "@aven/protocol/bots";
-import { Cog, Trash } from "@mynaui/icons-react";
+import { SettingsIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
 import { useState, type ReactNode } from "react";
 
 import {
@@ -56,7 +56,7 @@ export function BotSettingsDialog({
           />
         }
       >
-        {children ?? <Cog />}
+        {children ?? <SettingsIcon />}
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <BotSettingsForm bot={bot} onDone={() => setOpen(false)} />
@@ -123,7 +123,7 @@ function DeleteBot({ bot }: { bot: Bot }) {
       <AlertDialogTrigger
         render={<Button type="button" variant="ghost" className="text-destructive" />}
       >
-        <Trash />
+        <TrashBinMinimalisticIcon />
         Delete bot
       </AlertDialogTrigger>
       <AlertDialogContent>

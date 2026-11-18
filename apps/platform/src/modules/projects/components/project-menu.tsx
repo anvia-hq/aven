@@ -1,4 +1,4 @@
-import { ArrowLeft, Folder, GitBranch, Search } from "@mynaui/icons-react";
+import { ArrowLeftIcon, FolderIcon, GitBranchIcon, MagnifierIcon } from "@solar-icons/react/linear";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -76,13 +76,13 @@ export function ProjectMenu({
           />
         }
       >
-        {sandbox ? <GitBranch /> : <Folder />}
+        {sandbox ? <GitBranchIcon /> : <FolderIcon />}
         <span className="truncate">{chosen?.name ?? placeholder(sandbox)}</span>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 gap-0 p-0">
         <div className="border-b p-2">
           <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <MagnifierIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               aria-label={sandbox ? "Search repositories" : "Search folders"}
               value={query}
@@ -100,7 +100,7 @@ export function ProjectMenu({
                 <MenuRow
                   key={project.id}
                   pressed={project.id === value}
-                  icon={project.repoFullName ? <GithubMark className="size-4" /> : <Folder />}
+                  icon={project.repoFullName ? <GithubMark className="size-4" /> : <FolderIcon />}
                   label={project.name}
                   detail={projectPlace(project)}
                   onClick={() => choose(project.id)}
@@ -171,7 +171,7 @@ function Projects({
         <MenuRow
           key={project.id}
           pressed={project.id === value}
-          icon={project.repoFullName ? <GithubMark className="size-4" /> : <Folder />}
+          icon={project.repoFullName ? <GithubMark className="size-4" /> : <FolderIcon />}
           label={project.name}
           detail={projectPlace(project)}
           onClick={() => onPick(project.id)}
@@ -325,7 +325,7 @@ function Folders({
           disabled={!browsing}
           onClick={() => setBrowsing(shown?.parent ?? "")}
         >
-          <ArrowLeft />
+          <ArrowLeftIcon />
         </Button>
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
           {browsing || "Folders this computer serves"}
@@ -375,9 +375,9 @@ function FolderRow({
         className="h-8 min-w-0 flex-1 justify-start px-2 font-normal hover:bg-transparent!"
         onClick={onOpen}
       >
-        <Folder className="text-muted-foreground" />
+        <FolderIcon className="text-muted-foreground" />
         <span className="truncate">{folder.name}</span>
-        {folder.git && <GitBranch className="size-3.5 text-muted-foreground" />}
+        {folder.git && <GitBranchIcon className="size-3.5 text-muted-foreground" />}
       </Button>
       {!project && (
         <Button

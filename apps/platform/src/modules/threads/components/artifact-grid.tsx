@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image as ImageIcon, Refresh } from "@mynaui/icons-react";
+import { GalleryIcon as ImageIcon, RefreshIcon } from "@solar-icons/react/linear";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -28,7 +28,7 @@ function Unavailable({ video, onRetry }: { video: boolean; onRetry: () => void }
         {video ? "Video" : "Image"} unavailable. The runner that keeps it may be offline.
       </span>
       <Button variant="ghost" size="sm" onClick={onRetry}>
-        <Refresh className="size-4" />
+        <RefreshIcon className="size-4" />
         Retry
       </Button>
     </div>

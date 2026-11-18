@@ -1,4 +1,5 @@
-import { Folder, FolderSolid } from "@mynaui/icons-react";
+import { FolderIcon } from "@solar-icons/react/linear";
+import { FolderIcon as FolderBoldIcon } from "@solar-icons/react/bold";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
@@ -23,7 +24,7 @@ export function ProjectPicker({ value, onChange }: Props) {
         aria-label="Project"
         className="max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-muted-foreground dark:bg-muted/50"
       >
-        <FolderSolid />
+        <FolderBoldIcon />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
       <SelectContent
@@ -34,7 +35,7 @@ export function ProjectPicker({ value, onChange }: Props) {
         {projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>
             <span className="flex min-w-0 items-center gap-2">
-              <Folder className="text-muted-foreground" />
+              <FolderIcon className="text-muted-foreground" />
               {project.name}
             </span>
           </SelectItem>

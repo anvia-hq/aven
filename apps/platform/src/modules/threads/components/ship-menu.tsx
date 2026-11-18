@@ -1,4 +1,4 @@
-import { ChevronDown, Plus } from "@mynaui/icons-react";
+import { AltArrowDownIcon, AddIcon } from "@solar-icons/react/linear";
 
 import { Button } from "@aven/ui/button";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
@@ -24,11 +24,11 @@ export function ShipMenu({ disabled, onNew }: Props) {
           />
         }
       >
-        <ChevronDown />
+        <AltArrowDownIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem disabled={disabled} onClick={onNew}>
-          <Plus /> Ship as a new PR
+          <AddIcon /> Ship as a new PR
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -1,4 +1,4 @@
-import { File as FileIcon, FileText, Image as ImageIcon } from "@mynaui/icons-react";
+import { FileIcon, FileTextIcon, GalleryIcon as ImageIcon } from "@solar-icons/react/linear";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -22,9 +22,9 @@ const ICONS = {
   page: FileIcon,
   image: ImageIcon,
   video: FileIcon,
-  markdown: FileText,
-  csv: FileText,
-  text: FileText,
+  markdown: FileTextIcon,
+  csv: FileTextIcon,
+  text: FileTextIcon,
 } as const;
 
 export function ArtifactCard({

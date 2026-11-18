@@ -5,7 +5,8 @@ import {
   type ComposerInputEntity,
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
-import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
+import { ArrowUpIcon, SparklesIcon } from "@solar-icons/react/linear";
+import { StopIcon } from "@solar-icons/react/bold";
 import { cn } from "cn";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
@@ -66,7 +67,7 @@ const renderEntity =
   };
 
 function personIcon(people: MentionPerson[], item: ComposerTriggerItem) {
-  if (item.id === AGENT_ENTITY) return <Sparkles className="size-5 p-0.5" />;
+  if (item.id === AGENT_ENTITY) return <SparklesIcon className="size-5 p-0.5" />;
 
   const id = personIdOf(item.id);
 
@@ -184,8 +185,8 @@ function Composer({
             disabled={!running && !canSend}
             onClick={running ? onStop : () => void submit()}
           >
-            <ArrowUp className={cn(swap, running && "scale-50 opacity-0")} />
-            <StopSolid className={cn(swap, !running && "scale-50 opacity-0")} />
+            <ArrowUpIcon className={cn(swap, running && "scale-50 opacity-0")} />
+            <StopIcon className={cn(swap, !running && "scale-50 opacity-0")} />
           </Button>
         </div>
       </div>

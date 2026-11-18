@@ -1,5 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { ChevronRight } from "@mynaui/icons-react";
+import { AltArrowRightIcon } from "@solar-icons/react/linear";
 import { cn } from "cn";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import type { UIEvent } from "react";
@@ -50,7 +50,7 @@ function FileHeader({
           : "rounded-lg",
       )}
     >
-      <ChevronRight
+      <AltArrowRightIcon
         className={cn(
           "size-3.5 shrink-0 text-muted-foreground transition-transform",
           open && "rotate-90",

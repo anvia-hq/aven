@@ -1,6 +1,6 @@
 import * as React from "react";
 import { cn } from "cn";
-import { ChevronDown as ChevronDownIcon } from "@mynaui/icons-react";
+import { AltArrowDownIcon as ChevronDownIcon } from "@solar-icons/react/linear";
 
 type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
   size?: "sm" | "default";

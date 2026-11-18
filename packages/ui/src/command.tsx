@@ -4,7 +4,7 @@ import { cn } from "cn";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./dialog";
 import { InputGroup, InputGroupAddon } from "./input-group";
-import { Search as SearchIcon, Check as CheckIcon } from "@mynaui/icons-react";
+import { MagnifierIcon as SearchIcon, CheckIcon } from "@solar-icons/react/linear";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (

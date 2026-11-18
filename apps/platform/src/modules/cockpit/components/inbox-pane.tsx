@@ -1,4 +1,4 @@
-import { Plus } from "@mynaui/icons-react";
+import { AddIcon } from "@solar-icons/react/linear";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -86,7 +86,7 @@ export function InboxPane({
           className="size-9 text-muted-foreground md:size-7"
           onClick={onNew}
         >
-          <Plus />
+          <AddIcon />
         </Button>
         <Tabs value={shown} onValueChange={(value) => onShow(value === "done" ? "done" : "open")}>
           <TabsList variant="line" aria-label="Show" className="h-9 md:h-7">

@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, ArrowUp } from "@mynaui/icons-react";
+import { ArrowLeftIcon, ArrowRightIcon, ArrowUpIcon } from "@solar-icons/react/linear";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -75,7 +75,7 @@ export function BotQuestionForm({
       <div className="flex items-center justify-between">
         {step > 0 ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
-            <ArrowLeft />
+            <ArrowLeftIcon />
             Back
           </Button>
         ) : (
@@ -83,13 +83,13 @@ export function BotQuestionForm({
         )}
         {last ? (
           <Button type="submit" size="sm" disabled={!answered || sending}>
-            <ArrowUp />
+            <ArrowUpIcon />
             Send answer
           </Button>
         ) : (
           <Button type="submit" size="sm" disabled={!answered}>
             Next
-            <ArrowRight />
+            <ArrowRightIcon />
           </Button>
         )}
       </div>
