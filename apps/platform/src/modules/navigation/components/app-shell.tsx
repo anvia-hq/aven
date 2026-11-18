@@ -155,7 +155,7 @@ export function AppShell({ user, sidebar }: Props) {
             "pb-(--mobile-tab-bar) md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
-              : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:border md:border-sidebar-border",
+              : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:border md:border-foreground/12",
           )}
         >
           <MobileAppBar />
