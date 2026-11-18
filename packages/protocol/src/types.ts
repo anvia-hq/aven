@@ -404,6 +404,10 @@ export type Provider = (typeof PROVIDERS)[number];
 
 export type ModelApi = (typeof MODEL_APIS)[number];
 
+export type CompatibleVendorId = "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
+
+export type CompatibleVendor = { baseUrl: string; catalog: string | null };
+
 export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
