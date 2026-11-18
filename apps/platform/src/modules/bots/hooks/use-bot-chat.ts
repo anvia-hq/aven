@@ -54,6 +54,7 @@ export function useBotChat(botId: string) {
   const [pending, setPending] = useState<PendingBotMessage[]>([]);
   const pendingRef = useRef<PendingBotMessage[]>([]);
   const [handoffs, setHandoffs] = useState<Record<string, Handoff>>({});
+  const [arrived, setArrived] = useState<ReadonlySet<string>>(new Set());
   const [typing, setTyping] = useState(false);
   const [activity, setActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +72,7 @@ export function useBotChat(botId: string) {
     setMessages([]);
     changePending(() => []);
     setHandoffs({});
+    setArrived(new Set());
     setTyping(false);
     setActivity(null);
     setError(null);
@@ -87,6 +89,8 @@ export function useBotChat(botId: string) {
         const handoff = handoffOf(pendingRef.current, event);
 
         if (handoff) setHandoffs((current) => ({ ...current, [event.message.id]: handoff }));
+
+        setArrived((current) => new Set(current).add(event.message.id));
       }
 
       changePending((current) => settlePending(current, event));
@@ -149,5 +153,5 @@ export function useBotChat(botId: string) {
 
   const shown = useMemo(() => pending.map((item) => item.message), [pending]);
 
-  return { messages, pending: shown, handoffs, typing, activity, error, send };
+  return { messages, pending: shown, handoffs, arrived, typing, activity, error, send };
 }

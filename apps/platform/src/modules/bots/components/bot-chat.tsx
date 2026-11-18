@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { Message } from "@aven/ui/message";
 import { useTextSize } from "@/modules/theme/hooks/use-text-size";
+import { RiseIn } from "@/modules/threads/components/rise-in";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { chatItems } from "../activity";
@@ -29,12 +30,15 @@ export function BotChat({
   openArtifact: string | undefined;
   onOpenArtifact: (name: string) => void;
 }) {
-  const { messages, pending, handoffs, typing, activity, error, send } = chat;
+  const { messages, pending, handoffs, arrived, typing, activity, error, send } = chat;
   const { bots } = useBots();
   const textSize = useTextSize("bot");
   const items = useMemo(() => chatItems([...messages, ...pending]), [messages, pending]);
   const sending = useMemo(() => new Set(pending.map(({ id }) => id)), [pending]);
-  const scroll = useScrollToBottom(messages.length + pending.length + (typing ? 1 : 0));
+  const scroll = useScrollToBottom(
+    messages.length + pending.length + (typing ? 1 : 0),
+    pending.length,
+  );
   const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
 
   useEffect(() => setQuoting(null), [bot.id]);
@@ -52,7 +56,7 @@ export function BotChat({
       <div className="relative min-h-0 flex-1">
         <div ref={scroll} className="h-full overflow-y-auto" style={textSize.style}>
           <div className="mx-auto flex max-w-4xl flex-col px-4 pt-24 pb-48">
-            {messages.length === 0 && !typing && (
+            {messages.length === 0 && pending.length === 0 && !typing && (
               <p className="py-16 text-center text-sm text-muted-foreground">
                 Say hello to {bot.name}.
               </p>
@@ -74,28 +78,32 @@ export function BotChat({
                 below: after?.type === "message" && after.message.role === message.role,
               };
               return (
-                <Message
+                <RiseIn
                   key={handoff?.key ?? item.key}
-                  align={isPersons(message) ? "end" : "start"}
-                  aria-busy={sending.has(message.id) || undefined}
+                  when={sending.has(message.id) || arrived.has(message.id)}
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
-                  {isOpen(messages, message) && message.questions ? (
-                    <BotAsks botName={bot.name} questions={message.questions} send={onSend} />
-                  ) : (
-                    <BotChatBubble
-                      botId={bot.id}
-                      bot={bot}
-                      message={message}
-                      bots={bots}
-                      previews={handoff?.previews}
-                      onQuote={(quoted) => setQuoting(quoteOf(quoted))}
-                      onOpenArtifact={onOpenArtifact}
-                      openArtifact={openArtifact}
-                      joined={joined}
-                    />
-                  )}
-                </Message>
+                  <Message
+                    align={isPersons(message) ? "end" : "start"}
+                    aria-busy={sending.has(message.id) || undefined}
+                  >
+                    {isOpen(messages, message) && message.questions ? (
+                      <BotAsks botName={bot.name} questions={message.questions} send={onSend} />
+                    ) : (
+                      <BotChatBubble
+                        botId={bot.id}
+                        bot={bot}
+                        message={message}
+                        bots={bots}
+                        previews={handoff?.previews}
+                        onQuote={(quoted) => setQuoting(quoteOf(quoted))}
+                        onOpenArtifact={onOpenArtifact}
+                        openArtifact={openArtifact}
+                        joined={joined}
+                      />
+                    )}
+                  </Message>
+                </RiseIn>
               );
             })}
             {typing && <TypingIndicator bot={bot} activity={activity} />}
