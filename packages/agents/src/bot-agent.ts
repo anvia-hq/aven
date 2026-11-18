@@ -46,9 +46,7 @@ import type {
   RunWebSearch,
 } from "@aven/protocol/types";
 
-export const BOT_MAX_TURNS = 8;
-
-export const BOT_COMPUTER_MAX_TURNS = 30;
+export const BOT_MAX_TURNS = 200;
 
 type BotAgentOptions = ModelSource & {
   paths?: SandboxPaths;
@@ -152,7 +150,7 @@ export function botAgentParts(options: BotPartsOptions) {
       }),
       paths ?? SANDBOX_PATHS,
     ),
-    maxTurns: computer.length > 0 ? BOT_COMPUTER_MAX_TURNS : BOT_MAX_TURNS,
+    maxTurns: BOT_MAX_TURNS,
     tools: [
       createSendMessageTool(send),
       createListBotsTool(() => peers),

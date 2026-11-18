@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createTool, type Message, type MemoryStore } from "@anvia/core";
 import { z } from "zod";
 
-import { BOT_COMPUTER_MAX_TURNS, BOT_MAX_TURNS, createBotAgent } from "./bot-agent";
+import { BOT_MAX_TURNS, createBotAgent } from "./bot-agent";
 import { TYPING_MAX_MS, TYPING_MIN_MS, typingDelay } from "./bot-delay";
 import { botInstructions } from "./bot-instruction";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
@@ -207,10 +207,11 @@ describe("createBotAgent", () => {
 
     await agent.generate({ prompt: "what is it?", session: { sessionId: "b1" } });
     expect(delivered).toEqual(["it came to 42"]);
-    expect(agent.defaultMaxTurns).toBe(BOT_COMPUTER_MAX_TURNS);
+    expect(agent.defaultMaxTurns).toBe(BOT_MAX_TURNS);
+    expect(BOT_MAX_TURNS).toBe(200);
   });
 
-  test("a bot with no computer keeps the short limit on turns", () => {
+  test("a bot with no computer has the same limit on turns", () => {
     const agent = createBotAgent({
       ...base,
       model: scriptedModel([]),
