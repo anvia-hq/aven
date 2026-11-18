@@ -231,13 +231,15 @@ test.describe("the project page", () => {
     );
   });
 
-  test("a project in the new-thread address that is not the person's is not chosen", async ({
+  test("a project in the new-thread address that is not the person's is not chosen, the latest one is", async ({
     page,
   }) => {
     await registerUser(page, "repo", "Repo Person");
     await projectOf(page, "shiny-app");
     await page.goto(`/threads?project=${crypto.randomUUID()}`);
-    await expect(page.getByRole("button", { name: "Project" })).toContainText("Choose a");
+    await expect(page.getByRole("button", { name: "Project", exact: true })).toContainText(
+      "shiny-app",
+    );
   });
 
   test("a repository with no README has no README section, and a path that is not a folder says so", async ({
