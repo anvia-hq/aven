@@ -7,7 +7,7 @@ import { UnavailableError } from "@aven/server-kit/errors";
 
 import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
-import type { BotKeeper, BotReplier, BotReplyInput } from "./types";
+import type { BotKeeper, BotReplier, BotWorldKeeper, BotReplyInput } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
 import type { BotRunChoice } from "../providers/types";
 import type { Bot, RunAttachment } from "@aven/protocol/types";
@@ -20,6 +20,7 @@ export class TalkBotReplier implements BotReplier {
   constructor(
     private store: MemoryStore,
     private bots: Pick<BotKeeper, "list" | "deliver">,
+    private world: BotWorldKeeper,
     private wait: Wait = pause,
     private agent: typeof createBotAgent = createBotAgent,
   ) {}
@@ -62,6 +63,7 @@ export class TalkBotReplier implements BotReplier {
     } = input;
     signal.throwIfAborted();
     const peers = await this.#peers(userId, bot.id);
+    const world = await this.world.forReply(userId);
     const asked = sentPrompt(prompt, {
       attachments: (attachments ?? []).map(held),
       images: imagesOf(attachments),
@@ -75,6 +77,12 @@ export class TalkBotReplier implements BotReplier {
       description: bot.description,
       compactAfterTokens: bot.compactAfterTokens ?? undefined,
       peers,
+      context: world.context,
+      projects: world.projects,
+      projectFiles: {
+        folder: (projectId, path) => this.world.folder(userId, projectId, path),
+        file: (projectId, path) => this.world.file(userId, projectId, path),
+      },
       webSearch: webSearchForRun,
       lens: await lensSettingsService.forRun(),
       memory: { store: this.store, savePolicy: "turn" },

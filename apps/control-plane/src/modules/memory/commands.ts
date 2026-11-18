@@ -1,11 +1,20 @@
-import { MEMORY_ROOT, MEMORY_SCOPES, MEMORY_WRITES, noteDescription } from "@aven/protocol/memory";
+import {
+  ACTIVITY_DIGEST_NOTE,
+  MEMORY_ROOT,
+  MEMORY_SCOPES,
+  MEMORY_WRITES,
+  noteDescription,
+} from "@aven/protocol/memory";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { checkName, memoryService, placesOf } from "./service";
 import type { MemoryCaller, MemoryOwner, MemoryPlace } from "./types";
 import type { MemoryCommand, MemoryScope } from "@aven/protocol/types";
 
-type Path = { root: true } | { place: MemoryPlace; name?: string };
+type Path =
+  | { root: true }
+  | { projects: true }
+  | { place: MemoryPlace; folder: string; name?: string; readOnly?: true };
 
 const SCOPE_NAMES = new Set<string>(MEMORY_SCOPES);
 
@@ -19,6 +28,11 @@ function parsePath(owner: MemoryOwner, path: string): Path {
   if (parts.length === 2) return { root: true };
 
   const scope = parts[2]!;
+
+  if (scope === "project" && !owner.projectId && owner.readProjects?.length) {
+    return readableProject(owner, parts);
+  }
+
   const place = SCOPE_NAMES.has(scope)
     ? placesOf(owner).find((candidate) => candidate.scope === (scope as MemoryScope))
     : undefined;
@@ -28,18 +42,52 @@ function parsePath(owner: MemoryOwner, path: string): Path {
     throw new UnprocessableError(`There is no such folder. Yours are ${folders.join(", ")}.`);
   }
 
-  if (parts.length === 3) return { place };
+  const folder = `${MEMORY_ROOT}/${place.scope}`;
+
+  if (parts.length === 3) return { place, folder };
 
   if (parts.length > 4) throw new UnprocessableError("A folder holds notes, not other folders.");
 
-  return { place, name: checkName(parts[3]!) };
+  return { place, folder, name: checkName(parts[3]!) };
+}
+
+function readableProject(owner: MemoryOwner, parts: string[]): Path {
+  if (parts.length === 3) return { projects: true };
+
+  const project = owner.readProjects?.find(({ slug }) => slug === parts[3]);
+
+  if (!project) {
+    const slugs = (owner.readProjects ?? []).map(({ slug }) => `${MEMORY_ROOT}/project/${slug}`);
+    throw new UnprocessableError(`There is no such project folder. Yours are ${slugs.join(", ")}.`);
+  }
+
+  const place: MemoryPlace = { userId: owner.userId, scope: "project", projectId: project.id };
+  const folder = `${MEMORY_ROOT}/project/${project.slug}`;
+
+  if (parts.length === 4) return { place, folder, readOnly: true };
+
+  if (parts.length > 5) throw new UnprocessableError("A folder holds notes, not other folders.");
+
+  return { place, folder, name: checkName(parts[4]!), readOnly: true };
 }
 
 function notePath(owner: MemoryOwner, path: string) {
   const parsed = parsePath(owner, path);
 
-  if ("root" in parsed || !parsed.name) {
+  if ("root" in parsed || "projects" in parsed || !parsed.name) {
     throw new UnprocessableError(`${path} is a folder; name a note in it, as ${path}/name.md`);
+  }
+
+  if (parsed.readOnly) {
+    throw new UnprocessableError(
+      "The notes in a project folder are the person's own and read-only for you: only the person writes them.",
+    );
+  }
+
+  if (parsed.place.scope === "bot" && parsed.name === ACTIVITY_DIGEST_NOTE) {
+    throw new UnprocessableError(
+      "The activity digest is written by the app from the person's threads and tasks: read it, and do not change it.",
+    );
   }
 
   return { place: parsed.place, name: parsed.name };
@@ -66,13 +114,27 @@ async function view(owner: MemoryOwner, path: string, range?: [number, number]) 
     const folders = await memoryService.folders(owner);
     return [
       `${MEMORY_ROOT}:`,
-      ...folders.map(({ scope, notes }) => `- ${MEMORY_ROOT}/${scope}/ (${notes.length} notes)`),
+      ...folders.map(
+        ({ scope, projectSlug, notes }) =>
+          `- ${MEMORY_ROOT}/${scope}${projectSlug ? `/${projectSlug}` : ""}/ (${notes.length} notes${projectSlug ? ", read-only" : ""})`,
+      ),
     ].join("\n");
+  }
+
+  if ("projects" in parsed) {
+    const folders = (await memoryService.folders(owner)).flatMap(({ projectSlug, notes }) =>
+      projectSlug
+        ? [`- ${MEMORY_ROOT}/project/${projectSlug}/ (${notes.length} notes, read-only)`]
+        : [],
+    );
+    return folders.length > 0
+      ? [`${MEMORY_ROOT}/project:`, ...folders].join("\n")
+      : `${MEMORY_ROOT}/project: no notes yet.`;
   }
 
   if (!parsed.name) {
     const notes = await memoryService.notes(parsed.place);
-    const folder = `${MEMORY_ROOT}/${parsed.place.scope}`;
+    const { folder } = parsed;
 
     if (notes.length === 0) return `${folder}: no notes yet.`;
 

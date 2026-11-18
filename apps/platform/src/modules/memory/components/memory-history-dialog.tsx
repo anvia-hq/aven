@@ -25,6 +25,7 @@ const WHO: Record<MemoryEvent["source"], string> = {
   person: "You",
   thread: "A thread's agent",
   bot: "A bot",
+  app: "Aven",
 };
 
 function EventRow({

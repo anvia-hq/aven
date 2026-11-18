@@ -453,6 +453,7 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
             asked.push(params),
             { name: params.name ?? "Pip", description: params.description ?? "" }
           ),
+          project: async () => ({ entries: [] }),
           notes: async (params) => (asked.push(params), "noted"),
           cockpit: async () => "cockpit",
           api: async (params) => (asked.push(params), { routes: [], organizations: [] }),

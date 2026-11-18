@@ -1,5 +1,7 @@
 export const MEMORY_ROOT = "/memories";
 
+export const ACTIVITY_DIGEST_NOTE = "activity-digest.md";
+
 export const MEMORY_SCOPES = ["personal", "project", "bot"] as const;
 export const MEMORY_NOTE_NAME = /^[a-z0-9][a-z0-9._-]{0,78}\.md$/;
 export const MEMORY_NOTE_NAME_RULE =
@@ -10,6 +12,8 @@ export const MEMORY_NOTE_MAX = 8000;
 export const MEMORY_NOTES_PER_SCOPE = 200;
 
 export const MEMORY_INDEXED_PER_SCOPE = 40;
+
+export const MEMORY_INDEXED_PER_READ_PROJECT = 10;
 
 export const MEMORY_TYPES = ["user", "feedback", "project", "reference"] as const;
 

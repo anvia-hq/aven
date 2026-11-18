@@ -96,7 +96,14 @@ function asPullRequest(pull: PullPayload): GithubPullRequest {
 type Fetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 import { BRANCH_CALLS_AT_ONCE, BRANCHES_SUMMARIZED, mapLimit, pullsByBranch } from "./branches";
-import { checksOf, latestReviews, shapeFiles, TEXT_MAX_CHARS } from "./detail";
+import {
+  checksOf,
+  latestReviews,
+  REVIEW_THREADS_QUERY,
+  shapeFiles,
+  TEXT_MAX_CHARS,
+  unresolvedComments,
+} from "./detail";
 import type {
   CheckRunPayload,
   FilePayload,
@@ -107,7 +114,9 @@ import type {
   GithubConfig,
   GithubPullDetail,
   GithubPullRequest,
+  GithubFile,
   GithubReadme,
+  GithubReviewComment,
   GithubRepository,
   GithubTrackedFilters,
   GithubTrackedItem,
@@ -119,6 +128,7 @@ import type {
   GithubUserProfile,
   OpenPullPayload,
   ReviewPayload,
+  ReviewThreadsPayload,
 } from "./types";
 
 export const README_MAX_CHARS = 200_000;
@@ -470,6 +480,33 @@ export class GithubClient {
     };
   }
 
+  async file(
+    installationId: number,
+    fullName: string,
+    path: string,
+    maxChars: number,
+  ): Promise<GithubFile | null> {
+    const { token } = await this.installationToken(installationId);
+    const found = await this.#api<{
+      type?: string;
+      path?: string;
+      content?: string;
+      encoding?: string;
+    }>(`${repoPath(fullName)}/contents${contentsPath(path)}`, token).catch(nullWhenNotFound);
+
+    if (!found || found.type !== "file" || found.encoding !== "base64") return null;
+
+    const text = Buffer.from(found.content ?? "", "base64").toString("utf8");
+
+    if (text.includes("\u0000")) return null;
+
+    return {
+      path: found.path ?? path,
+      text: text.slice(0, maxChars),
+      truncated: text.length > maxChars,
+    };
+  }
+
   async commits(
     installationId: number,
     fullName: string,
@@ -638,6 +675,45 @@ export class GithubClient {
     } catch (error) {
       return nullWhenNotFound(error);
     }
+  }
+
+  async unresolvedReviewComments(
+    installationId: number,
+    fullName: string,
+    number: number,
+  ): Promise<GithubReviewComment[]> {
+    const { token } = await this.installationToken(installationId);
+    const [owner = "", name = ""] = fullName.split("/");
+    const base = this.#config().apiUrl;
+    const url = base.endsWith("/api/v3")
+      ? `${base.slice(0, -"/v3".length)}/graphql`
+      : `${base}/graphql`;
+    const response = await this.fetchImpl(url, {
+      method: "POST",
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+        "user-agent": "aven",
+      },
+      body: JSON.stringify({
+        query: REVIEW_THREADS_QUERY,
+        variables: { owner, name, number },
+      }),
+    });
+
+    if (!response.ok) {
+      throw new GithubApiError(
+        `GitHub answered ${response.status} for POST /graphql`,
+        response.status,
+      );
+    }
+
+    const payload = (await response.json()) as ReviewThreadsPayload;
+
+    if (payload.errors?.length) throw new GithubApiError("GitHub could not list the reviews", 502);
+
+    return unresolvedComments(payload);
   }
 
   async commit(

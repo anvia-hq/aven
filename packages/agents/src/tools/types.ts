@@ -11,6 +11,7 @@ import type { SelfChanges } from "./update-self";
 import type {
   BotGoalView,
   BotMcpView,
+  BotProjectEntry,
   BotProjectView,
   BotProviderView,
   BotQuestion,
@@ -153,6 +154,14 @@ export type SubagentResult = {
   description: string;
   type: SubagentType;
 } & ({ status: "done"; output: string } | { status: "error"; error: string });
+
+export type ProjectFilesHost = {
+  folder(projectId: string, path?: string): Promise<BotProjectEntry[]>;
+  file(
+    projectId: string,
+    path: string,
+  ): Promise<{ path: string; text: string; truncated: boolean }>;
+};
 
 export type ThreadsHost = {
   projects(): Promise<BotProjectView[]>;

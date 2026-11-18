@@ -14,6 +14,7 @@ import {
   scheduler,
   threadRetention,
   threadWatcher,
+  pullRequestWatch,
 } from "./composition";
 import { lensEnabled } from "./modules/lens/flag";
 import { claudeBackendEnabled, codexBackendEnabled } from "./modules/providers/backends";
@@ -61,6 +62,7 @@ export async function startControlPlane(edition: Edition) {
     await scheduler.close();
     await goalDriver.close();
     await threadWatcher.close();
+    await pullRequestWatch.close();
     await threadRetention.close();
     await cloudExpiry.close();
     await cloudIdle.close();
@@ -75,6 +77,7 @@ export async function startControlPlane(edition: Edition) {
   scheduler.start();
   goalDriver.start();
   threadWatcher.start();
+  pullRequestWatch.start();
   threadRetention.start();
   cloudExpiry.start();
   cloudIdle.start();

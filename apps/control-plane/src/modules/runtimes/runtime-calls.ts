@@ -7,6 +7,7 @@ import { runtimesService } from "./service";
 import {
   parseAppendParams,
   parseBotNotesParams,
+  parseBotProjectParams,
   parseMemoryNotesParams,
   parseBotCreateParams,
   parseBotDeleteParams,
@@ -238,6 +239,12 @@ export async function answerRuntimeCall(
 
   if (method === "bot.api") {
     return answerBotCall(params, parseBotApiParams, findBotReply, (reply, call) => reply.api(call));
+  }
+
+  if (method === "bot.project") {
+    return answerBotCall(params, parseBotProjectParams, findBotReply, (reply, call) =>
+      reply.project(call),
+    );
   }
 
   if (method === "bot.notes") {

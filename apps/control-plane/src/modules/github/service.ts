@@ -204,6 +204,11 @@ export function createGithubService(
       return client.folder(installationId, fullName, path);
     },
 
+    async file(installationRowId: string, fullName: string, path: string, maxChars: number) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.file(installationId, fullName, path, maxChars);
+    },
+
     async readme(installationRowId: string, fullName: string) {
       const { client, installationId } = await acting(installationRowId);
       return client.readme(installationId, fullName);
@@ -240,6 +245,11 @@ export function createGithubService(
     async pull(installationRowId: string, fullName: string, number: number) {
       const { client, installationId } = await acting(installationRowId);
       return client.pull(installationId, fullName, number);
+    },
+
+    async unresolvedReviewComments(installationRowId: string, fullName: string, number: number) {
+      const { client, installationId } = await acting(installationRowId);
+      return client.unresolvedReviewComments(installationId, fullName, number);
     },
 
     async commit(installationRowId: string, fullName: string, sha: string) {

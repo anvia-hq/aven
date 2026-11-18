@@ -46,6 +46,7 @@ import type {
   BotSendParams,
   BotSkillParams,
   BotApiParams,
+  BotProjectParams,
   BotThreadParams,
   BotUpdateParams,
   CallMethod,
@@ -83,6 +84,7 @@ const callMethods = [
   "bot.mcp",
   "bot.provider",
   "bot.thread",
+  "bot.project",
   "bot.notes",
   "memory.notes",
   "bot.cockpit",
@@ -581,6 +583,21 @@ const botApiParams = z.discriminatedUnion("op", [
   }),
 ]);
 
+const botProjectParams = z.discriminatedUnion("op", [
+  z.object({
+    replyId,
+    op: z.literal("folder"),
+    projectId: z.uuid(),
+    path: z.string().max(500).optional(),
+  }),
+  z.object({
+    replyId,
+    op: z.literal("file"),
+    projectId: z.uuid(),
+    path: z.string().min(1).max(500),
+  }),
+]);
+
 const botThreadParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("projects") }),
   z.object({
@@ -651,6 +668,8 @@ export const parseBotProviderParams = (params: unknown) =>
   parseParams(botProviderParams, params) as BotProviderParams;
 export const parseBotThreadParams = (params: unknown) =>
   parseParams(botThreadParams, params) as BotThreadParams;
+export const parseBotProjectParams = (params: unknown) =>
+  parseParams(botProjectParams, params) as BotProjectParams;
 export const parseBotSkillParams = (params: unknown) =>
   parseParams(botSkillParams, params) as BotSkillParams;
 export const parseMemoryParams = (params: unknown) => parseParams(memoryParams, params);

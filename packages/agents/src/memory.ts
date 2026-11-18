@@ -1,4 +1,4 @@
-import { MEMORY_ROOT } from "@aven/protocol/memory";
+import { ACTIVITY_DIGEST_NOTE, MEMORY_ROOT } from "@aven/protocol/memory";
 import type { MemoryScope, RunMemory } from "@aven/protocol/types";
 
 const FOLDER_FOR: Record<MemoryScope, string> = {
@@ -30,8 +30,31 @@ export function memoryInstructions(memory: RunMemory | undefined) {
     );
   }
 
+  if (memory.folders.some((folder) => folder.projectSlug)) {
+    lines.push(
+      "The folders under /memories/project/ hold the person's own notes about their projects. They are read-only for you: only the person writes them, so never create, change, rename or delete a note there.",
+    );
+  }
+
+  if (
+    memory.folders.some(
+      (folder) =>
+        folder.scope === "bot" && folder.notes.some((note) => note.name === ACTIVITY_DIGEST_NOTE),
+    )
+  ) {
+    lines.push(
+      `${MEMORY_ROOT}/bot/${ACTIVITY_DIGEST_NOTE} is a digest of what the person worked on lately, written by the app from their threads and tasks and renewed every few hours. Read it when it helps you answer; it is read-only for you, so never create, change, rename or delete it, and it can be out of date: look at the threads and tasks themselves for how things stand now.`,
+    );
+  }
+
   for (const folder of memory.folders) {
-    lines.push("", `${MEMORY_ROOT}/${folder.scope}/ (${FOLDER_FOR[folder.scope]}):`);
+    const where = folder.projectSlug
+      ? `${MEMORY_ROOT}/${folder.scope}/${plain(folder.projectSlug)}`
+      : `${MEMORY_ROOT}/${folder.scope}`;
+    lines.push(
+      "",
+      `${where}/ (${folder.projectSlug ? `the person's notes on the project ${plain(folder.projectSlug)}, read-only for you` : FOLDER_FOR[folder.scope]}):`,
+    );
 
     if (folder.notes.length === 0) lines.push("(no notes yet)");
 
@@ -40,7 +63,7 @@ export function memoryInstructions(memory: RunMemory | undefined) {
     }
 
     if (folder.more) {
-      lines.push(`(${folder.more} more, not listed: view ${MEMORY_ROOT}/${folder.scope} for them)`);
+      lines.push(`(${folder.more} more, not listed: view ${where} for them)`);
     }
   }
   lines.push("</memory>");

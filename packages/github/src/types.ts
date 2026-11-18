@@ -50,6 +50,8 @@ export type GithubRepository = {
   private: boolean;
 };
 
+export type GithubFile = { path: string; text: string; truncated: boolean };
+
 export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };
 
 export type GithubCommit = {
@@ -179,3 +181,28 @@ export type CheckRunPayload = {
 export type GithubIdentity = { id: number; login: string; name: string | null };
 
 export type GithubUserToken = { token: string; identity: GithubIdentity };
+
+export type GithubReviewComment = {
+  author: string | null;
+  path: string;
+  text: string;
+  outdated: boolean;
+};
+
+export type ReviewThreadsPayload = {
+  data?: {
+    repository: {
+      pullRequest: {
+        reviewThreads: {
+          nodes: {
+            isResolved: boolean;
+            isOutdated: boolean;
+            path: string;
+            comments: { nodes: { body: string; author: { login: string } | null }[] };
+          }[];
+        };
+      } | null;
+    } | null;
+  };
+  errors?: { message: string }[];
+};

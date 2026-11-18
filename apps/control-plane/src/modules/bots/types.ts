@@ -3,7 +3,7 @@ import type { UpdateBotBody } from "./schema";
 import type { AgentMemoryOptions } from "@anvia/core";
 import type { createBotAgent } from "@aven/agents/bot-agent";
 import type { GoalInput } from "../goals/types";
-import type { MemoryCaller, MemoryOwner } from "../memory/types";
+import type { MemoryCaller, MemoryOwner, MemoryPlace } from "../memory/types";
 import type { ScheduleInput, SchedulePatch } from "../schedules/types";
 import type { ModelConfig } from "@aven/agents/types";
 import type { BotRunChoice } from "../providers/types";
@@ -13,6 +13,11 @@ import type {
   Bot,
   BotApiResult,
   BotCreateParams,
+  BotProjectEntry,
+  BotReplyProject,
+  BotThreadView,
+  CockpitTask,
+  InboxItem,
   BotGoalView,
   BotQuestion,
   BotReacted,
@@ -62,6 +67,7 @@ export type BotKeeper = {
 };
 
 export type BotMemoryNotes = {
+  keepDigest(userId: string, botId: string): Promise<void>;
   folders(owner: MemoryOwner): Promise<MemoryFolder[]>;
   run(caller: MemoryCaller, command: MemoryCommand): Promise<string>;
 };
@@ -123,3 +129,65 @@ export type CreateBotAgent = (input: {
   askQuestion: AskQuestion;
   memory: AgentMemoryOptions;
 }) => BotAgent;
+
+export type CurrentWorkInput = {
+  now: Date;
+  timezone: string;
+  threads: readonly BotThreadView[];
+  tasks: readonly CockpitTask[];
+  inbox: readonly InboxItem[];
+};
+
+export type WorldProject = {
+  id: string;
+  repository: string;
+  updatedAt: Date;
+  github?: { installationId: string; repo: string };
+};
+
+export type BriefSource = Pick<WorldProject, "id" | "github">;
+
+export type WorldGithub = {
+  file(
+    installationId: string,
+    repo: string,
+    path: string,
+    maxChars: number,
+  ): Promise<ProjectFile | null>;
+  folder(installationId: string, repo: string, path: string): Promise<BotProjectEntry[] | null>;
+  readme(installationId: string, repo: string): Promise<{ text: string } | null>;
+};
+
+export type WorldSource = {
+  timezone(userId: string): Promise<string>;
+  projects(userId: string): Promise<WorldProject[]>;
+  tasks(userId: string): Promise<CockpitTask[]>;
+  inbox(userId: string): Promise<InboxItem[]>;
+  github: WorldGithub;
+};
+
+export type ProjectFile = { path: string; text: string; truncated: boolean };
+
+export type BotWorldView = { context: string; projects: BotReplyProject[] };
+
+export type BotWorldKeeper = {
+  forReply(userId: string): Promise<BotWorldView>;
+  folder(userId: string, projectId: string, path?: string): Promise<BotProjectEntry[]>;
+  file(userId: string, projectId: string, path: string): Promise<ProjectFile>;
+};
+
+export type ActivityDigestInput = {
+  now: Date;
+  threads: readonly BotThreadView[];
+  tasks: readonly CockpitTask[];
+};
+
+export type ActivityDigestStore = {
+  writtenAt(place: MemoryPlace, name: string): Promise<Date | undefined>;
+  refresh(
+    place: MemoryPlace,
+    name: string,
+    body: string,
+    unlessWrittenSince: Date,
+  ): Promise<boolean>;
+};

@@ -96,6 +96,7 @@ run("a bot's threads (postgres)", async () => {
       },
     },
     putAway: (thread) => void putAway.push(thread.id),
+    pullRequests: async () => null,
   });
 
   test("lists the projects of the workspaces the person belongs to, and not another's", async () => {

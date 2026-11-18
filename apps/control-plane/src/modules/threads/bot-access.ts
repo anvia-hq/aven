@@ -4,9 +4,16 @@ import { BOT_THREADS_LISTED, threadTitleFrom, threadTurns } from "@aven/protocol
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
+import { PULL_REQUESTS_NOTE, pullRequestViews } from "./pull-request-view";
 import { threadsService } from "./service";
 import type { WatchedRun, Watcher } from "../thread-watch/types";
-import type { BotActor, BotThreads, PutAwayThread, ThreadMessages } from "./types";
+import type {
+  BotActor,
+  BotThreads,
+  PullRequestSources,
+  PutAwayThread,
+  ThreadMessages,
+} from "./types";
 import type { BotThreadView } from "@aven/protocol/types";
 
 type ThreadRow = Awaited<ReturnType<typeof threadsService.readableForPerson>>;
@@ -22,6 +29,7 @@ export function createBotThreads({
   messages,
   watch,
   putAway,
+  pullRequests,
 }: {
   runs: Pick<RunManager, "isRunning" | "history" | "cancel" | "activity">;
   messages: Pick<ThreadMessages, "send">;
@@ -36,7 +44,8 @@ export function createBotThreads({
     giveBack(threadId: string, botId: string): Promise<void>;
   };
   putAway: PutAwayThread;
-}): BotThreads {
+  pullRequests: PullRequestSources;
+}): BotThreads & { look: BotThreads["get"] } {
   const repositories = async (userId: string) =>
     new Map(
       (await projectsService.listForPerson(userId)).map((project) => [
@@ -103,6 +112,22 @@ export function createBotThreads({
     }
   };
 
+  const look = async (userId: string, id: string) => {
+    const thread = await threadsService.readableForPerson(userId, id);
+    const history = await runs.history(thread);
+    const { turns, earlier } = threadTurns(history);
+    const asking = thread.awaitingAnswer ? pendingQuestion(history)?.questions : undefined;
+    return {
+      ...(await view(userId, thread)),
+      turns,
+      earlier,
+      question: asking
+        ?.map((question) => question.text)
+        .join("\n")
+        .slice(0, QUESTION_MAX),
+    };
+  };
+
   const owned = async (actor: BotActor, id: string) => {
     const thread = await threadsService.ownedForPerson(actor.userId, id);
 
@@ -132,19 +157,17 @@ export function createBotThreads({
       return found.map((thread) => viewOf(userId, thread, repository.get(thread.projectId) ?? ""));
     },
 
+    look,
+
     async get(userId, id) {
-      const thread = await threadsService.readableForPerson(userId, id);
-      const history = await runs.history(thread);
-      const { turns, earlier } = threadTurns(history);
-      const asking = thread.awaitingAnswer ? pendingQuestion(history)?.questions : undefined;
+      const seen = await look(userId, id);
+      const source =
+        seen.pullRequests.length > 0 ? await pullRequests(userId, seen.projectId) : null;
+      const details = source ? await pullRequestViews(source, seen.pullRequests) : undefined;
       return {
-        ...(await view(userId, thread)),
-        turns,
-        earlier,
-        question: asking
-          ?.map((question) => question.text)
-          .join("\n")
-          .slice(0, QUESTION_MAX),
+        ...seen,
+        pullRequestDetails: details,
+        pullRequestsNote: details ? PULL_REQUESTS_NOTE : undefined,
       };
     },
 

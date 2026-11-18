@@ -12,6 +12,8 @@ import { preferencesService } from "./modules/preferences/service";
 import { createScheduler } from "./modules/schedules/scheduler";
 import { createWebhooks } from "./modules/webhooks/service";
 import { schedulesService } from "./modules/schedules/service";
+import { cockpitService } from "./modules/cockpit/service";
+import { githubService } from "./modules/github/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { runIdentities } from "./modules/workload-identity/grants";
@@ -27,11 +29,18 @@ import { previewSettings } from "./modules/preview/config";
 import { createActionsService } from "./modules/actions/service";
 import { createShipService } from "./modules/ship/service";
 import { threadWatchService } from "./modules/thread-watch/service";
+import { ThreadEventNotes } from "./modules/thread-events/event-notes";
+import { createPullRequestWatch } from "./modules/thread-events/pull-request-watch";
+import { createWaitingEvents } from "./modules/thread-events/waiting";
 import { createThreadWatcher } from "./modules/thread-watch/watcher";
 import { botMcp } from "./modules/mcp/bot-access";
 import { mcpService } from "./modules/mcp/service";
 import { botProviders } from "./modules/providers/bot-access";
 import { skillsService } from "./modules/skills/service";
+import { ActivityDigests } from "./modules/bots/activity-digest";
+import { BotWorld } from "./modules/bots/bot-world";
+import { botWorldSource } from "./modules/bots/bot-world-source";
+import { fetchBrief, ProjectBriefs } from "./modules/bots/project-briefs";
 import { createBotThreads } from "./modules/threads/bot-access";
 import { createDiffService } from "./modules/diff/service";
 import { createThreadContinuation } from "./modules/threads/continuation";
@@ -91,8 +100,18 @@ export const runsService = new RunManager({
         );
       });
     })();
-    await threadWatcher.ended(thread.id, run.startedAt, ending, updated);
+    const told = await threadWatcher.ended(thread.id, run.startedAt, ending, updated);
     await updated;
+
+    if (ending.outcome === "question" && !told) {
+      await waitingEvents.waiting(thread.id, run.startedAt).catch((error: unknown) => {
+        console.warn(
+          `Could not tell the main bot that thread ${thread.id} waits for an answer:`,
+          describeError(error),
+        );
+      });
+    }
+
     await runtimeHub.forks.ended(thread, ending);
   },
   continuations: {
@@ -159,7 +178,34 @@ const botThreads = createBotThreads({
   messages: threadMessages,
   watch: threadWatchService,
   putAway: putAwayThread,
+  pullRequests: async (userId, projectId) => {
+    const project = (await projectsService.listForPerson(userId)).find(
+      (found) => found.id === projectId,
+    );
+
+    if (!project?.githubInstallationId || !project.repoFullName || project.directory) return null;
+
+    const { githubInstallationId: installationId, repoFullName: repo } = project;
+    return {
+      pull: (number) => githubService.pull(installationId, repo, number),
+      comments: (number) => githubService.unresolvedReviewComments(installationId, repo, number),
+    };
+  },
 });
+
+const activityDigests = new ActivityDigests(memoryService, {
+  threads: async (userId) => [
+    ...(await botThreads.list(userId, {})),
+    ...(await botThreads.list(userId, { archived: true })),
+  ],
+  tasks: (userId) => cockpitService.tasks.list(userId),
+});
+
+const botWorld = new BotWorld(
+  botThreads,
+  botWorldSource,
+  new ProjectBriefs((source) => fetchBrief(botWorldSource.github, source)),
+);
 
 export const actionsService = createActionsService(runtimeHub, { send: threadMessages.start });
 export const shipService = createShipService(runtimeHub, { send: threadMessages.start });
@@ -214,9 +260,11 @@ export const botRunner = new BotRunner({
     botProviders,
     botThreads,
     {
+      keepDigest: (userId, botId) => activityDigests.keep(userId, botId),
       folders: (owner) => memoryService.folders(owner),
       run: (caller, command) => runMemoryCommand(caller, command),
     },
+    botWorld,
     localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
   ),
   settled: (reply) => goalDriver.settled(reply),
@@ -270,9 +318,33 @@ export const cloudIdle = createCloudIdle({
 });
 
 export const threadWatcher = createThreadWatcher({
-  get: (userId, threadId) => botThreads.get(userId, threadId),
+  get: (userId, threadId) => botThreads.look(userId, threadId),
   lastError: (threadId) => threadsService.lastError(threadId),
   activity: (threadId) => runsService.activity(threadId),
   wake: (userId, botId, note, threadId) => botChats.fire(userId, botId, note, threadId),
   intervalMs: 60_000,
+});
+
+const threadEventNotes = new ThreadEventNotes(async (userId, note) => {
+  const main = (await botsService.list(userId)).find((bot) => bot.isMain);
+
+  if (main) await botChats.fire(userId, main.id, note);
+});
+
+const waitingEvents = createWaitingEvents({
+  thread: (id) => threadsService.byId(id),
+  look: (userId, id) => botThreads.look(userId, id),
+  notes: threadEventNotes,
+});
+
+export const pullRequestWatch = createPullRequestWatch({
+  notes: threadEventNotes,
+  source: {
+    openPulls: (limit) => threadsService.openPullRequests(limit),
+    inspect: (pull) => githubService.pull(pull.installationId, pull.repository, pull.number),
+    saveEnded: (pull, state) =>
+      threadsService.savePullRequests(pull.threadId, [
+        { number: pull.number, url: pull.url, branch: pull.branch, title: pull.title, state },
+      ]),
+  },
 });

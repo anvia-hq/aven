@@ -35,6 +35,32 @@ describe("memoryInstructions", () => {
     expect(text).not.toContain("Keep a note when");
   });
 
+  test("lists a project's notes under its slug and tells the bot they are read-only", () => {
+    const text = memoryInstructions({
+      writable: true,
+      folders: [
+        { scope: "bot" as const, notes: [] },
+        {
+          scope: "project" as const,
+          projectSlug: "web-app",
+          notes: [{ name: "deploy.md", description: "Deploys go on Fridays" }],
+          more: 3,
+        },
+      ],
+    });
+
+    expect(text).toContain(
+      "/memories/project/web-app/ (the person's notes on the project web-app, read-only for you)",
+    );
+    expect(text).toContain("- deploy.md: Deploys go on Fridays");
+    expect(text).toContain("(3 more, not listed: view /memories/project/web-app for them)");
+    expect(text).toContain("read-only for you: only the person writes them");
+  });
+
+  test("says nothing of project folders when a run has none", () => {
+    expect(memoryInstructions(memory)).not.toContain("read-only for you");
+  });
+
   test("is empty without memory", () => {
     expect(memoryInstructions(undefined)).toBe("");
   });

@@ -343,6 +343,7 @@ export type MemoryListing = { name: string; description: string };
 
 export type MemoryFolder = {
   scope: MemoryScope;
+  projectSlug?: string;
   notes: MemoryListing[];
   more?: number;
 };
@@ -360,7 +361,7 @@ export type MemoryNoteView = {
   updatedAt: string;
 };
 
-export type MemorySource = "person" | "thread" | "bot";
+export type MemorySource = "person" | "thread" | "bot" | "app";
 
 export type MemoryEventView = {
   id: string;
@@ -648,6 +649,8 @@ export type BotReplyInfo = {
   timezone: string;
 };
 
+export type BotReplyProject = { id: string; slug: string; repository: string; brief?: string };
+
 export type BotPeer = { handle: string; name: string; description: string };
 
 export type ControlPlaneToRuntime =
@@ -720,6 +723,8 @@ export type ControlPlaneToRuntime =
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      context?: string;
+      projects?: BotReplyProject[];
       webSearch?: RunWebSearch;
       lens?: RunLens;
       machine?: string;
@@ -823,6 +828,7 @@ export type BotCallMethod =
   | "bot.mcp"
   | "bot.provider"
   | "bot.thread"
+  | "bot.project"
   | "bot.notes"
   | "bot.cockpit"
   | "bot.api";
@@ -938,6 +944,17 @@ export type BotThreadParams = { replyId: string } & (
   | { op: "archive"; id: string; archived?: boolean }
   | { op: "stop"; id: string }
 );
+
+export type BotProjectParams = { replyId: string } & (
+  | { op: "folder"; projectId: string; path?: string }
+  | { op: "file"; projectId: string; path: string }
+);
+
+export type BotProjectEntry = { name: string; path: string; type: "file" | "directory" };
+
+export type BotProjected =
+  | { entries: BotProjectEntry[] }
+  | { path: string; text: string; truncated: boolean };
 
 export type BotThreaded = BotProjectView[] | BotThreadView[] | BotThreadDetail | BotThreadView;
 
@@ -1082,6 +1099,7 @@ export type RuntimeCalls = {
   "bot.mcp": { params: BotMcpParams; result: BotMcped };
   "bot.provider": { params: BotProviderParams; result: BotProvided };
   "bot.thread": { params: BotThreadParams; result: BotThreaded };
+  "bot.project": { params: BotProjectParams; result: BotProjected };
   "bot.notes": { params: BotNotesParams; result: string };
   "memory.notes": { params: MemoryNotesParams; result: string };
   "bot.cockpit": { params: BotCockpitParams; result: string };
@@ -1150,10 +1168,50 @@ export type BotThreadTurn = {
   tools?: string[];
 };
 
+export type BotPullRequestCheck = {
+  state: "passing" | "failing" | "pending" | "none";
+  failing: string[];
+  failingMore: number;
+};
+
+export type BotPullRequestReview = {
+  state: "approved" | "changes_requested" | "commented" | "none";
+  by: { login: string; state: "approved" | "changes_requested" | "commented" | "dismissed" }[];
+  requested: string[];
+};
+
+export type BotReviewComment = { author: string | null; path: string; text: string };
+
+export type BotPullRequestFile = {
+  path: string;
+  status: string;
+  additions: number;
+  deletions: number;
+};
+
+export type BotPullRequestDetail = {
+  number: number;
+  url: string;
+  title: string;
+  state: "open" | "draft" | "merged" | "closed";
+  mergeable?: boolean | null;
+  checks?: BotPullRequestCheck;
+  review?: BotPullRequestReview;
+  unresolvedComments?: BotReviewComment[];
+  unresolvedCommentsMore?: number;
+  files?: BotPullRequestFile[];
+  filesMore?: number;
+  additions?: number;
+  deletions?: number;
+  omitted?: string[];
+};
+
 export type BotThreadDetail = BotThreadView & {
   turns: BotThreadTurn[];
   earlier: number;
   question?: string;
+  pullRequestDetails?: BotPullRequestDetail[];
+  pullRequestsNote?: string;
 };
 
 export type ContinuationPatch = "attached" | "none" | "unavailable";

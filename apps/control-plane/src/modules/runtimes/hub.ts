@@ -16,6 +16,7 @@ import type { ProcessEnds, ThreadForks } from "../threads/types";
 import type {
   AgentBackendKind,
   BotReplyInfo,
+  BotReplyProject,
   CallMethod,
   CockpitAccess,
   ControlPlaneToRuntime,
@@ -165,6 +166,8 @@ export class RuntimeConnection {
       mcp?: RunMcpServer[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
+      context?: string;
+      projects?: BotReplyProject[];
       webSearch?: RunWebSearch;
       lens?: RunLens;
       machine?: string;

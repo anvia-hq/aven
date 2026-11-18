@@ -2,7 +2,14 @@ import type { MemoryScope } from "@aven/protocol/types";
 
 export type MemoryCaller = { owner: MemoryOwner; actor: MemoryActor; writable: boolean };
 
-export type MemoryOwner = { userId: string; projectId?: string; botId?: string };
+export type ReadableProject = { id: string; slug: string };
+
+export type MemoryOwner = {
+  userId: string;
+  projectId?: string;
+  botId?: string;
+  readProjects?: ReadableProject[];
+};
 
 export type MemoryPlace = {
   userId: string;
@@ -14,4 +21,5 @@ export type MemoryPlace = {
 export type MemoryActor =
   | { source: "person" }
   | { source: "thread"; threadId: string }
-  | { source: "bot"; botId: string };
+  | { source: "bot"; botId: string }
+  | { source: "app" };

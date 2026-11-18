@@ -2,6 +2,7 @@ import { db } from "@aven/db/client";
 import { memoryEvents } from "@aven/db/schema/memory-events";
 import { memoryNotes } from "@aven/db/schema/memory-notes";
 import {
+  MEMORY_INDEXED_PER_READ_PROJECT,
   MEMORY_INDEXED_PER_SCOPE,
   MEMORY_NOTE_MAX,
   MEMORY_NOTE_NAME,
@@ -161,6 +162,7 @@ function writeOnce(
   body: string,
   actor: MemoryActor,
   onlyNew: boolean,
+  unlessWrittenSince?: Date,
 ) {
   return db.transaction(async (tx) => {
     await lockFolder(tx, place);
@@ -168,10 +170,14 @@ function writeOnce(
 
     if (existing && onlyNew) throw nameTaken(name);
 
+    if (existing && unlessWrittenSince && existing.updatedAt >= unlessWrittenSince) {
+      return { created: false, skipped: true };
+    }
+
     if (existing) {
       await tx.update(memoryNotes).set({ body }).where(eq(memoryNotes.id, existing.id));
       await record(tx, place, actor, { name, action: "updated" });
-      return { created: false };
+      return { created: false, skipped: false };
     }
 
     await requireLiveProject(tx, place);
@@ -185,7 +191,7 @@ function writeOnce(
       body,
     });
     await record(tx, place, actor, { name, action: "created" });
-    return { created: true };
+    return { created: true, skipped: false };
   });
 }
 
@@ -195,33 +201,62 @@ export const memoryService = {
   },
 
   async folders(owner: MemoryOwner): Promise<MemoryFolder[]> {
-    const places = placesOf(owner);
-    return Promise.all(
-      places.map(async (place) => {
-        const rows = await db
-          .select()
-          .from(memoryNotes)
-          .where(inPlace(place))
-          .orderBy(desc(memoryNotes.updatedAt))
-          .limit(MEMORY_INDEXED_PER_SCOPE + 1);
-        const [counted] =
-          rows.length > MEMORY_INDEXED_PER_SCOPE
-            ? await db.select({ n: count() }).from(memoryNotes).where(inPlace(place))
-            : [{ n: rows.length }];
-        const listed = rows.slice(0, MEMORY_INDEXED_PER_SCOPE);
-        return {
-          scope: place.scope,
-          notes: listed
-            .map((row) => ({ name: row.name, description: noteDescription(row.body) }))
-            .sort((a, b) => a.name.localeCompare(b.name)),
-          more: (counted?.n ?? 0) - listed.length,
-        };
-      }),
+    const listed = async (place: MemoryPlace, limit: number, projectSlug?: string) => {
+      const rows = await db
+        .select()
+        .from(memoryNotes)
+        .where(inPlace(place))
+        .orderBy(desc(memoryNotes.updatedAt))
+        .limit(limit + 1);
+      const [counted] =
+        rows.length > limit
+          ? await db.select({ n: count() }).from(memoryNotes).where(inPlace(place))
+          : [{ n: rows.length }];
+      const kept = rows.slice(0, limit);
+      return {
+        scope: place.scope,
+        projectSlug,
+        notes: kept
+          .map((row) => ({ name: row.name, description: noteDescription(row.body) }))
+          .sort((a, b) => a.name.localeCompare(b.name)),
+        more: (counted?.n ?? 0) - kept.length,
+      };
+    };
+    const own = await Promise.all(
+      placesOf(owner).map((place) => listed(place, MEMORY_INDEXED_PER_SCOPE)),
     );
+    const read = await Promise.all(
+      (owner.readProjects ?? []).map(({ id, slug }) =>
+        listed(
+          { userId: owner.userId, scope: "project", projectId: id },
+          MEMORY_INDEXED_PER_READ_PROJECT,
+          slug,
+        ),
+      ),
+    );
+    return [...own, ...read.filter((folder) => folder.notes.length > 0)];
   },
 
   async read(place: MemoryPlace, name: string) {
     return find(db, place, name);
+  },
+
+  async writtenAt(place: MemoryPlace, name: string) {
+    return (await find(db, place, name))?.updatedAt;
+  },
+
+  async refresh(place: MemoryPlace, name: string, body: string, unlessWrittenSince: Date) {
+    checkName(name);
+    checkBody(body);
+    const { skipped } = await writeOnce(
+      place,
+      name,
+      body,
+      { source: "app" },
+      false,
+      unlessWrittenSince,
+    );
+    return !skipped;
   },
 
   async write(
@@ -232,7 +267,8 @@ export const memoryService = {
   ): Promise<{ created: boolean }> {
     checkName(name);
     checkBody(body);
-    return writeOnce(place, name, body, actor, false);
+    const { created } = await writeOnce(place, name, body, actor, false);
+    return { created };
   },
 
   async edit(place: MemoryPlace, name: string, edit: (body: string) => string, actor: MemoryActor) {

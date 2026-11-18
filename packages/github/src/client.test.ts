@@ -173,6 +173,41 @@ describe("GithubClient", () => {
       expect(await client.folder(7, "acme/web", "my docs/a?b")).toEqual([]);
     });
 
+    test("a file is read as text, cut at the limit, and a folder or binary file is not one", async () => {
+      const encode = (text: string) => Buffer.from(text).toString("base64");
+      const github = fakeGithub({
+        ...token,
+        "GET /repos/acme/web/contents/app.ts": {
+          type: "file",
+          path: "app.ts",
+          encoding: "base64",
+          content: encode("abcdefghij"),
+        },
+        "GET /repos/acme/web/contents/logo.png": {
+          type: "file",
+          path: "logo.png",
+          encoding: "base64",
+          content: encode("PNG\u0000data"),
+        },
+        "GET /repos/acme/web/contents/src": [{ name: "a.ts", path: "src/a.ts", type: "file" }],
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.file(7, "acme/web", "app.ts", 4)).toEqual({
+        path: "app.ts",
+        text: "abcd",
+        truncated: true,
+      });
+      expect(await client.file(7, "acme/web", "app.ts", 100)).toEqual({
+        path: "app.ts",
+        text: "abcdefghij",
+        truncated: false,
+      });
+      expect(await client.file(7, "acme/web", "logo.png", 100)).toBeNull();
+      expect(await client.file(7, "acme/web", "src", 100)).toBeNull();
+      expect(await client.file(7, "acme/web", "missing.ts", 100)).toBeNull();
+    });
+
     test("a file, or a path or repository that is not there, is not a folder", async () => {
       const github = fakeGithub({
         ...token,
@@ -866,5 +901,72 @@ describe("writing to a repository", () => {
       },
     ]);
     expect(auth(github.calls[1]!)).toBe("Bearer ghs_read");
+  });
+
+  describe("unresolved review comments", () => {
+    const answer = (status: number, body: unknown) => {
+      const calls: Call[] = [];
+      const fetch = async (url: string, init?: RequestInit) => {
+        calls.push({ url, init });
+
+        if (url.endsWith("/access_tokens")) {
+          return Response.json({ token: "ghs_read", expires_at: "2099-01-01T00:00:00Z" });
+        }
+
+        return new Response(JSON.stringify(body), { status });
+      };
+      return { calls, client: new GithubClient(config, fetch) };
+    };
+
+    test("asks GraphQL for the threads of one pull request and keeps the unresolved ones", async () => {
+      const { calls, client } = answer(200, {
+        data: {
+          repository: {
+            pullRequest: {
+              reviewThreads: {
+                nodes: [
+                  {
+                    isResolved: false,
+                    isOutdated: false,
+                    path: "a.ts",
+                    comments: { nodes: [{ body: "why?", author: { login: "bob" } }] },
+                  },
+                  {
+                    isResolved: true,
+                    isOutdated: false,
+                    path: "b.ts",
+                    comments: { nodes: [{ body: "ok", author: null }] },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      });
+
+      expect(await client.unresolvedReviewComments(7, "acme/web", 12)).toEqual([
+        { author: "bob", path: "a.ts", text: "why?", outdated: false },
+      ]);
+      const call = calls.at(-1)!;
+      expect(call.url).toBe("https://api.github.com/graphql");
+      expect(JSON.parse(String(call.init?.body)).variables).toEqual({
+        owner: "acme",
+        name: "web",
+        number: 12,
+      });
+    });
+
+    test("fails when GitHub answers an error, so the caller can say it could not read them", async () => {
+      await expect(
+        answer(502, {}).client.unresolvedReviewComments(7, "acme/web", 12),
+      ).rejects.toThrow("502");
+      await expect(
+        answer(200, { errors: [{ message: "x" }] }).client.unresolvedReviewComments(
+          7,
+          "acme/web",
+          12,
+        ),
+      ).rejects.toThrow();
+    });
   });
 });
