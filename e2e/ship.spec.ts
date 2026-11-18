@@ -1,6 +1,6 @@
 import type { ChildProcess } from "node:child_process";
 
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { registerUser, threadOnFakeRunner } from "./helpers";
 
@@ -242,7 +242,7 @@ test.describe("shipping a thread", () => {
     await expect(shipButton(page)).toHaveCount(0);
   });
 
-  test("a changes request that failed says so, and Try again reads them again", async ({
+  test("a changes request that failed shows nothing, and comes back when it succeeds", async ({
     page,
   }) => {
     await registerUser(page, "shp", "Ship User");
@@ -258,31 +258,16 @@ test.describe("shipping a thread", () => {
 
     await page.goto(`/threads/${threadId}`);
 
-    await expect(page.getByText("Changes unknown")).toBeVisible();
+    await expect(page.getByText("Changes unknown")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Try again" })).toHaveCount(0);
     await expect(shipButton(page)).toHaveCount(0);
-    const again = page.getByRole("button", { name: "Try again" });
-    await expect(again).toBeVisible();
-    await expect(again).toHaveAttribute("title", "The runner could not read the changes");
-    const styleOf = (locator: Locator) =>
-      locator.evaluate((node) => {
-        const style = getComputedStyle(node);
-        return [
-          style.fontFamily,
-          style.fontSize,
-          style.fontWeight,
-          style.height,
-          style.borderRadius,
-          style.paddingInline,
-        ];
-      });
-    expect(await styleOf(page.getByText("Changes unknown"))).toEqual(await styleOf(again));
+    await expect(changesBadge(page)).toHaveCount(0);
 
     failing = false;
-    await again.click();
+    await page.reload();
 
-    await expect(shipButton(page)).toBeEnabled();
-    await expect(page.getByText("Changes unknown")).toHaveCount(0);
     await expect(changesBadge(page)).toHaveText("+2 -1");
+    await expect(shipButton(page)).toBeEnabled();
   });
 
   test("offers to open a pull request when nothing is unshipped but the branch has work", async ({

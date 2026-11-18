@@ -85,10 +85,5 @@ export function useShipAction(
     );
   }, [action, send, selection]);
 
-  const retry = useCallback(() => {
-    unshipped.reload();
-    branch.reload();
-  }, [unshipped, branch]);
-
-  return { action, ship, setUp, retry };
+  return { action, ship, setUp };
 }

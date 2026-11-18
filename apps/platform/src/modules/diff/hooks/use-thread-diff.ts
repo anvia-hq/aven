@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { api, errorMessage } from "@/lib/api";
 
@@ -20,7 +20,6 @@ export function useThreadDiff(
   running: boolean,
   enabled = true,
 ) {
-  const [reads, setReads] = useState(0);
   const [answer, setAnswer] = useState<KeptAnswer | null>(null);
   const kept = useRef(new Map<string, ThreadDiffResponse>());
 
@@ -54,7 +53,7 @@ export function useThreadDiff(
       current = false;
       clearInterval(timer);
     };
-  }, [threadId, scope, reads, running, enabled]);
+  }, [threadId, scope, running, enabled]);
 
   const live =
     enabled && answer !== null && answer.threadId === threadId && answer.scope === scope
@@ -82,8 +81,6 @@ export function useThreadDiff(
   const additions = useMemo(() => files.reduce((sum, file) => sum + file.additions, 0), [files]);
   const deletions = useMemo(() => files.reduce((sum, file) => sum + file.deletions, 0), [files]);
 
-  const reload = useCallback(() => setReads((count) => count + 1), []);
-
   return {
     loaded: shown !== null,
     problem,
@@ -93,6 +90,5 @@ export function useThreadDiff(
     files,
     additions,
     deletions,
-    reload,
   };
 }

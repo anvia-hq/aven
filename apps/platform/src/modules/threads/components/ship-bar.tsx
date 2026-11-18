@@ -31,13 +31,7 @@ export function ShipBar({
   split = false,
   suggestions,
 }: Props) {
-  const { action, ship, setUp, retry } = useShipAction(
-    thread,
-    unshipped,
-    showShip,
-    send,
-    selection,
-  );
+  const { action, ship, setUp } = useShipAction(thread, unshipped, showShip, send, selection);
   const { setScope } = useDiffPreferences();
 
   const showChanges = () => {
@@ -48,13 +42,7 @@ export function ShipBar({
   return (
     <div className="flex items-center gap-2 pb-2">
       <div className="flex shrink-0 items-center gap-2">
-        <ShipButton
-          action={action}
-          threadId={thread.id}
-          onShip={ship}
-          onSetUp={setUp}
-          onRetry={retry}
-        />
+        <ShipButton action={action} threadId={thread.id} onShip={ship} onSetUp={setUp} />
         <PullRequestChip pullRequests={thread.pullRequests} />
         {!split && <ChangesBadge diff={unshipped} onOpen={showChanges} />}
       </div>

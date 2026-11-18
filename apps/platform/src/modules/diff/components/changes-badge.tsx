@@ -7,21 +7,7 @@ import { DiffStat } from "./diff-stat";
 type Props = { diff: ThreadDiff; onOpen: () => void };
 
 export function ChangesBadge({ diff, onOpen }: Props) {
-  if (!diff.loaded) return null;
-
-  if (diff.problem) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className={FLOATING_BUTTON}
-        title={diff.problem}
-        onClick={onOpen}
-      >
-        Changes unknown
-      </Button>
-    );
-  }
+  if (!diff.loaded || diff.problem) return null;
 
   if (diff.available === false) return null;
 
