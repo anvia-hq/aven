@@ -47,7 +47,7 @@ export function BetaBadge() {
           Beta version
         </span>
         <span className="text-xs leading-5 text-foreground/70">
-          Aven is still in beta, so expect a few rough edges. If something breaks, let us know.
+          Expect rough edges while we are in beta. Tell us what breaks.
         </span>
       </div>
     </div>
