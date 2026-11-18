@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { draftKey, readDraft, writeDraft } from "./drafts";
+import { draftKey, mergeDraftFiles, readDraft, writeDraft } from "./drafts";
 import type { DraftFileMeta } from "./types";
 
 class MemoryStorage implements Storage {
@@ -116,5 +116,20 @@ describe("writeDraft", () => {
 
     expect(readDraft("t1")?.input).toBe("one");
     expect(readDraft("t2")?.input).toBe("two");
+  });
+});
+
+describe("mergeDraftFiles", () => {
+  test("keeps a file attached while the draft was still loading", () => {
+    expect(mergeDraftFiles([{ id: "stored" }], [{ id: "attached" }])).toEqual([
+      { id: "stored" },
+      { id: "attached" },
+    ]);
+  });
+
+  test("keeps the stored order and lists a file once", () => {
+    expect(
+      mergeDraftFiles([{ id: "one" }, { id: "two" }], [{ id: "two" }, { id: "three" }]),
+    ).toEqual([{ id: "one" }, { id: "two" }, { id: "three" }]);
   });
 });

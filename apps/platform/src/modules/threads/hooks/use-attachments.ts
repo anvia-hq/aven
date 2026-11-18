@@ -8,6 +8,7 @@ import { fileSize } from "@/lib/format";
 import {
   forgetDraftFile,
   forgetDraftFiles,
+  mergeDraftFiles,
   readDraftFiles,
   storeDraftFile,
   sweepDraftFiles,
@@ -54,6 +55,7 @@ export function useAttachments(threadId?: string) {
   const [files, setFiles] = useState<PendingFile[]>([]);
   const [restored, setRestored] = useState(threadId === undefined);
   const previews = useRef(new Set<string>());
+  const removed = useRef(new Set<string>());
   const warned = useRef(false);
 
   useEffect(() => {
@@ -71,6 +73,11 @@ export function useAttachments(threadId?: string) {
 
     let live = true;
     setRestored(false);
+    removed.current.clear();
+    setFiles((current) => (current.length === 0 ? current : []));
+
+    for (const url of previews.current) URL.revokeObjectURL(url);
+    previews.current.clear();
 
     void (async () => {
       await sweepDraftFiles();
@@ -79,18 +86,17 @@ export function useAttachments(threadId?: string) {
 
       if (!live) return;
 
-      for (const url of previews.current) URL.revokeObjectURL(url);
-      previews.current.clear();
+      const restored = stored.flatMap(({ id, file }) => {
+        if (removed.current.has(id)) return [];
 
-      setFiles(
-        stored.map(({ id, file }) => {
-          const preview = previewOf(file);
+        const preview = previewOf(file);
 
-          if (preview) previews.current.add(preview);
+        if (preview) previews.current.add(preview);
 
-          return { id, file, preview };
-        }),
-      );
+        return [{ id, file, preview }];
+      });
+
+      setFiles((current) => mergeDraftFiles(restored, current));
       setRestored(true);
     })();
 
@@ -152,6 +158,7 @@ export function useAttachments(threadId?: string) {
     if (gone) free(gone);
 
     setFiles(files.filter((file) => file.id !== id));
+    removed.current.add(id);
 
     if (threadId !== undefined) void forgetDraftFile(threadId, id);
   }
