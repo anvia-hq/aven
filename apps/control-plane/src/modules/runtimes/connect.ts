@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 
 import { bytesOf } from "@aven/server-kit/bytes";
 import { bearerToken } from "./bearer";
+import { computerUsageService } from "./computer-usage";
 import type { RuntimeConnection, RuntimeHub } from "./hub";
 import { runtimesService } from "./service";
 
@@ -26,6 +27,11 @@ export const connectRouter = (hub: RuntimeHub) => {
           (code, reason) => ws.close(code, reason),
         );
         connections.set(ws.raw, connection);
+        void computerUsageService
+          .opened(runtime)
+          .catch((error: unknown) =>
+            console.warn(`Could not record computer ${runtime.id} running:`, error),
+          );
         runtimesService.stillCurrent(runtime).then(
           (current) => {
             if (!current) connection.close(CloseCode.Revoked, "Revoked or token rotated");
@@ -55,6 +61,14 @@ export const connectRouter = (hub: RuntimeHub) => {
 
         connection.close();
         void runtimesService.touch(connection.runtimeId);
+
+        if (!hub.get(connection.runtimeId)) {
+          void computerUsageService
+            .closed(connection.runtimeId)
+            .catch((error: unknown) =>
+              console.warn(`Could not record computer ${connection.runtimeId} stopped:`, error),
+            );
+        }
       },
     });
 };

@@ -150,3 +150,11 @@ export type CloudSandboxCursor = {
   limit?: number;
   after?: string;
 };
+
+export type ComputerRuntime = {
+  id: string;
+  organizationId: string | null;
+  ownerId: string | null;
+  parentRuntimeId: string | null;
+  provider: string;
+};
