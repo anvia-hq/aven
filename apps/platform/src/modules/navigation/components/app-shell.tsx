@@ -95,7 +95,7 @@ export function AppShell({ user, sidebar }: Props) {
       </TooltipProvider>
       <div className="flex min-w-0 flex-1">
         <Sidebar collapsible="icon" className="text-sidebar-foreground/80 data-[side=left]:left-12">
-          <SidebarHeader>
+          <SidebarHeader className="pt-3.5">
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
               <div className="min-w-0 flex-1">
                 <UserCard
