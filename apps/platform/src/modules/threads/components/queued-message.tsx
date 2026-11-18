@@ -42,7 +42,7 @@ export function QueuedMessage({
         />
       ) : null}
       {text && (
-        <div className="w-fit max-w-full rounded-2xl border border-foreground/10 bg-clip-padding bg-linear-to-r from-[color-mix(in_oklch,var(--accent),var(--background)_35%)] to-[color-mix(in_oklch,var(--accent),oklch(0.55_0.11_50)_55%)] px-4 py-2.5 [&_p]:whitespace-pre-line">
+        <div className="w-fit max-w-full rounded-2xl border border-foreground/10 bg-clip-padding bg-linear-to-r from-[color-mix(in_oklch,var(--accent),var(--background)_15%)] to-[color-mix(in_oklch,var(--accent),oklch(0.45_0.06_55)_28%)] px-4 py-2.5 [&_p]:whitespace-pre-line">
           <Markdown components={{ code: mentionCode }}>
             {markMentions(text, message.mentions)}
           </Markdown>
