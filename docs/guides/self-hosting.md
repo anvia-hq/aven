@@ -99,8 +99,8 @@ from the public internet. When `BETTER_AUTH_URL` is a localhost or private addre
 Settings > Sandbox the public one as the address a sandbox dials: the address that reaches the control plane, for example
 `https://aven.example.com/api` when the platform proxies `/api`. A sandbox stops itself after two
 hours (`AVEN_BOAT_AUTO_STOP_SECONDS`) and the next message resumes it. It is deleted after 48 hours
-without use, and work that was not pushed is lost with it. A workspace may hold 20 Aven Cloud
-computers at once (`AVEN_CLOUD_MAX_SANDBOXES`).
+without use, and work that was not pushed is lost with it. A workspace has no limit on its
+Aven Cloud computers.
 
 ### A spaces server
 
