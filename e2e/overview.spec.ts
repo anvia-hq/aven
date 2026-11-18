@@ -57,13 +57,14 @@ test.describe("a thread's overview", () => {
     const tokens = page.getByRole("region", { name: "Usage" });
     await expect(tokens.getByText("Input", { exact: true }).locator("..")).toContainText("80K");
     await expect(tokens.getByText("Output", { exact: true }).locator("..")).toContainText("3.4K");
-    await expect(tokens.getByText("Cache write", { exact: true }).locator("..")).toContainText(
-      "5.6K",
-    );
     await expect(tokens.getByText("Cache read", { exact: true }).locator("..")).toContainText(
       "70K",
     );
-    await expect(tokens.getByText("Uncached", { exact: true }).locator("..")).toContainText("4.4K");
+    await expect(tokens.getByText("Cache hit rate", { exact: true }).locator("..")).toContainText(
+      "87.5%",
+    );
+    await expect(tokens.getByText("Cache write")).toHaveCount(0);
+    await expect(tokens.getByText("Uncached")).toHaveCount(0);
   });
 
   test("says when the context size is not known", async ({ page }) => {
