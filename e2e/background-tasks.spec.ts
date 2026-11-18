@@ -54,7 +54,10 @@ test.describe("a thread's background tasks", () => {
     await page.goto(`/threads/${threadId}`);
 
     const chip = page.locator('[data-role="background-chip"]');
-    await expect(chip).toContainText("Running in the background: npm run dev");
+    await expect(chip).toContainText("1 background task");
+    await chip.hover();
+    await expect(page.locator('[data-slot="tooltip-content"]')).toContainText("npm run dev");
+    await page.mouse.move(0, 0);
 
     await page
       .getByRole("region", { name: "Background tasks" })
