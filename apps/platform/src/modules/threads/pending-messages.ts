@@ -20,7 +20,7 @@ const PREVIEW_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/we
 
 export const isLocalPreview = (image: string) => image.startsWith("data:");
 
-function attachmentOf({ name, mediaType, data }: AttachmentUpload) {
+export function attachmentPreview({ name, mediaType, data }: AttachmentUpload) {
   const attachment: MessageAttachment = {
     name,
     mediaType: mediaType ?? "application/octet-stream",
@@ -41,7 +41,7 @@ export function pendingMessage(id: string, message: OutgoingMessage): PendingMes
     parts: [{ type: "text", text: message.prompt }],
   };
 
-  if (message.attachments.length > 0) user.attachments = message.attachments.map(attachmentOf);
+  if (message.attachments.length > 0) user.attachments = message.attachments.map(attachmentPreview);
 
   if (message.mentions.length > 0) user.mentions = message.mentions;
 

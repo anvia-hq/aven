@@ -1,5 +1,5 @@
 import type { AttachmentUpload } from "@/modules/threads/types";
-import type { Bot, BotChatMessage, ToolArtifact } from "@aven/protocol/types";
+import type { Bot, BotChatMessage, BotChatQuote, ToolArtifact } from "@aven/protocol/types";
 import type {
   BufferGeometry,
   Group,
@@ -72,11 +72,14 @@ export type MentionPart =
 
 export type BotChatState = {
   messages: BotChatMessage[];
+  pending: BotChatMessage[];
   typing: boolean;
   activity: string | null;
   error: string | null;
-  send: (text: string, files?: AttachmentUpload[], quote?: string) => Promise<boolean>;
+  send: (text: string, files?: AttachmentUpload[], quote?: BotChatQuote) => Promise<boolean>;
 };
+
+export type PendingBotMessage = { id: string; message: BotChatMessage };
 
 export type ArtifactKind = "pdf" | "markdown" | "csv" | "text" | "page" | "image" | "video";
 
