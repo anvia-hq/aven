@@ -16,7 +16,7 @@ import {
   BellIcon,
   UserCircleIcon,
 } from "@solar-icons/react/linear";
-import { GithubIcon } from "@/components/github-icon";
+import { GithubMark } from "@/components/brand-icons";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -60,7 +60,7 @@ const groups = [
     label: "Workspace",
     items: [
       { to: "/settings/members", label: "Members", icon: UsersGroupRoundedIcon },
-      { to: "/settings/github", label: "GitHub", icon: GithubIcon },
+      { to: "/settings/github", label: "GitHub", icon: GithubMark },
       { to: "/settings/runtimes", label: "Runtimes", icon: CodeSquareIcon },
       { to: "/settings/workspace-variables", label: "Workspace variables", icon: KeyIcon },
       { to: "/settings/decision-model", label: "Decision model", icon: FlagIcon },
