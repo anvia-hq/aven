@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { setSandboxSettings } from "../settings";
-import { spacesApiBase, spacesApiKey, spacesRunnerUrl } from "./config";
+import { spacesApiBase, spacesApiKey, spacesRelease, spacesRunnerUrl } from "./config";
 
 afterEach(() => setSandboxSettings(null));
 
@@ -56,5 +56,15 @@ describe("the spaces settings", () => {
   test("an address that is not http is refused", () => {
     expect(() => spacesRunnerUrl({}, "ftp://x")).toThrow("http or https");
     expect(() => spacesRunnerUrl({}, "nope")).toThrow("http or https");
+  });
+});
+
+describe("the release a spaces sandbox is brought to", () => {
+  test("is the server's own version when it is a plain one, and none otherwise", () => {
+    expect(spacesRelease("0.10.5")).toBe("0.10.5");
+    expect(spacesRelease("dev")).toBeUndefined();
+    expect(spacesRelease("0.10")).toBeUndefined();
+    expect(spacesRelease("0.10.5-rc1")).toBeUndefined();
+    expect(spacesRelease(undefined)).toBeUndefined();
   });
 });

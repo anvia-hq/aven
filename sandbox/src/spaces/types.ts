@@ -28,6 +28,7 @@ export type SpacesWake = {
   record: SandboxRecord;
   client: SpacesClient;
   runnerUrl: string;
+  release?: string;
   saveSandboxId: (sandboxId: string) => Promise<void>;
   connected: () => boolean;
   forget?: () => void;

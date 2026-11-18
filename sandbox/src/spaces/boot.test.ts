@@ -37,6 +37,21 @@ describe("how a spaces sandbox starts its runner", () => {
     );
   });
 
+  test("passes the server's release to the sandbox, only when it is a plain version", () => {
+    expect(spacesBootEnv("https://a", "avrt_x", "0.10.5")).toBe(
+      "AVEN_URL=https://a\nAVEN_RUNTIME_TOKEN=avrt_x\nAVEN_DIRS=/home/user\nAVEN_RELEASE=0.10.5\n",
+    );
+
+    for (const release of ["dev", "0.10", "0.10.5-rc1", "0.10.5\nAVEN_URL=evil", ""])
+      expect(spacesBootEnv("https://a", "avrt_x", release)).not.toContain("AVEN_RELEASE");
+  });
+
+  test("brings an installed aven to that release, and keeps the one it has when that fails", () => {
+    expect(SPACES_BOOT_COMMAND).toContain('"$(aven version 2>/dev/null | head -n 1)" != "$want"');
+    expect(SPACES_BOOT_COMMAND).toContain('fetch_aven "v$want" || echo "could not update aven');
+    expect(SPACES_BOOT_COMMAND).toContain("fetch_aven latest || exit 1");
+  });
+
   test("refuses an address or token that would break the env file", () => {
     expect(() => spacesBootEnv("https://a b", "avrt_x")).toThrow("not usable");
     expect(() => spacesBootEnv("https://a", "avrt_x\nAVEN_URL=evil")).toThrow("not usable");

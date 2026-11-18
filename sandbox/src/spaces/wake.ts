@@ -40,7 +40,7 @@ export async function wakeSpacesSandbox(input: SpacesWake) {
       apiKey,
       sandboxId,
       SPACES_BOOT_PATH,
-      spacesBootEnv(input.runnerUrl, runnerToken),
+      spacesBootEnv(input.runnerUrl, runnerToken, input.release),
     );
     await input.client.command(apiKey, sandboxId, SPACES_BOOT_COMMAND, {
       detached: true,
