@@ -30,7 +30,7 @@ export function FileTabs({ open, active, onSelect, onClose }: Props) {
       onWheel={(event) => {
         if (event.deltaY !== 0 && strip.current) strip.current.scrollLeft += event.deltaY;
       }}
-      className="no-scrollbar flex h-9 shrink-0 items-stretch overflow-x-auto border-b"
+      className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {open.map((path) => {
         const name = baseName(path);
