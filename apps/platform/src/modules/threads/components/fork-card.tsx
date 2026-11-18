@@ -29,6 +29,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
             projectId={fork.projectId}
             runtimeId={fork.runtimeId}
             palette={palettes.get(fork.projectId)}
+            color={fork.markColor}
             working={fork.running}
             decorative
             className="size-8"

@@ -60,6 +60,7 @@ export type Thread = {
   id: string;
   projectId: string;
   title: string;
+  markColor: string | null;
   agentBackend: AgentBackendKind;
   modelProviderId: string | null;
   modelId: string | null;

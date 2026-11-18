@@ -8,6 +8,11 @@ import { attachmentBody } from "@aven/server-kit/attachments";
 
 export const threadParams = z.object({ id: z.uuid() });
 
+const threadColor = z
+  .string()
+  .regex(/^#[0-9a-f]{6}$/)
+  .nullable();
+
 export const messagesBeforeQuery = z.object({ before: z.coerce.number().int().min(0) });
 
 export const createThreadBody = z.object({
@@ -23,13 +28,15 @@ export const updateThreadBody = z
     state: z.enum(["open", "snoozed", "archived"]).optional(),
     visibility: z.enum(["private", "workspace"]).optional(),
     driving: z.number().int().min(1).max(DRIVING_DAYS_MAX).nullable().optional(),
+    markColor: threadColor.optional(),
   })
   .refine(
     (body) =>
       body.title !== undefined ||
       body.state !== undefined ||
       body.visibility !== undefined ||
-      body.driving !== undefined,
+      body.driving !== undefined ||
+      body.markColor !== undefined,
     {
       message: "Nothing to update",
     },

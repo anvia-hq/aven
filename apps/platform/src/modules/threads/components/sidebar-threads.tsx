@@ -1,11 +1,9 @@
 import { GitBranchIcon, ShareIcon } from "@solar-icons/react/linear";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
-import { Input } from "@aven/ui/input";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
-import { THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { dragThread } from "@/lib/thread-drag";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
@@ -28,6 +26,7 @@ import { ParticipantStack } from "./participant-stack";
 import { RecencyGroupSection } from "./recency-group-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadMark } from "./thread-mark";
+import { ThreadTitleField } from "./thread-title-field";
 
 const RUNNING_REFRESH_MS = 5000;
 
@@ -48,6 +47,7 @@ function SidebarThreadMark({
         projectId={project.id}
         runtimeId={thread.runtimeId}
         palette={palette}
+        color={thread.markColor}
         working={thread.running}
       />
     </span>
@@ -120,35 +120,6 @@ function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
   );
 }
 
-function TitleField({ title, onDone }: { title: string; onDone: (title?: string) => void }) {
-  const finished = useRef(false);
-  const finish = (value?: string) => {
-    if (finished.current) return;
-
-    finished.current = true;
-    onDone(value);
-  };
-  return (
-    <Input
-      autoFocus
-      aria-label="Thread title"
-      defaultValue={title}
-      maxLength={THREAD_TITLE_MAX}
-      className="h-6 flex-1 px-1.5 text-sm"
-      onFocus={(event) => event.currentTarget.select()}
-      onClick={(event) => event.preventDefault()}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-
-        if (event.key === "Enter") finish(event.currentTarget.value);
-
-        if (event.key === "Escape") finish();
-      }}
-      onBlur={(event) => finish(event.currentTarget.value)}
-    />
-  );
-}
-
 function ThreadTitle({
   thread,
   hint,
@@ -162,12 +133,13 @@ function ThreadTitle({
   onEdit: () => void;
   onDone: (title?: string) => void;
 }) {
-  if (editing) return <TitleField title={thread.title} onDone={onDone} />;
+  if (editing) return <ThreadTitleField title={thread.title} onDone={onDone} />;
 
   return (
     <span
       className="flex-1 truncate"
       title={hint}
+      style={thread.markColor ? { color: thread.markColor } : undefined}
       onDoubleClick={(event) => {
         event.preventDefault();
         onEdit();
@@ -357,7 +329,11 @@ export function SidebarThreads() {
                     palette={palettes.get(thread.projectId)}
                   />
                   <SharedMark thread={thread} />
-                  <span className="flex-1 truncate" title={`Shared by ${thread.createdByName}`}>
+                  <span
+                    className="flex-1 truncate"
+                    title={`Shared by ${thread.createdByName}`}
+                    style={thread.markColor ? { color: thread.markColor } : undefined}
+                  >
                     {thread.title}
                   </span>
                   <CrowdMark thread={thread} />

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { DOTS, orbShape, paintOrb } from "./orb-art";
+import { DOTS, markColors, orbShape, paintOrb } from "./orb-art";
 
 describe("orbShape", () => {
   test("is the same for a seed every time", () => {
@@ -56,5 +56,23 @@ describe("paintOrb", () => {
 
   test("dust fades in with the color, so one just starting to work already has it", () => {
     expect(circlesDrawn(1, 0.05, 0)).toBe(2 + DOTS * 2);
+  });
+});
+
+describe("markColors", () => {
+  test("keeps the color it is given and pads the lighter and the darker blend", () => {
+    const [own, lighter, darker] = markColors("#14b8a6");
+    expect(own).toBe("#14b8a6");
+    for (const color of [lighter, darker]) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+
+    const channels = (hex: string) =>
+      [1, 3, 5].map((at) => Number.parseInt(hex.slice(at, at + 2), 16));
+    expect(channels(lighter)[0]).toBeGreaterThan(channels(darker)[0]!);
+  });
+
+  test("a color at the edge still writes six digits", () => {
+    for (const hex of ["#000000", "#ffffff"]) {
+      for (const color of markColors(hex)) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    }
   });
 });
