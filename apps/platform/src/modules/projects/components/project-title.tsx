@@ -1,4 +1,4 @@
-import { Folder, GitBranch } from "@mynaui/icons-react";
+import { FolderIcon, GitBranchIcon } from "@solar-icons/react/linear";
 
 import { GithubMark } from "@/components/brand-icons";
 
@@ -28,13 +28,13 @@ export function ProjectTitle({ project }: { project: Project }) {
                 <span className="truncate">{project.repoFullName}</span>
               </a>
               <span className="flex shrink-0 items-center gap-1">
-                <GitBranch className="size-4" />
+                <GitBranchIcon className="size-4" />
                 <span className="font-mono text-xs">{project.defaultBranch}</span>
               </span>
             </>
           ) : (
             <span className="flex min-w-0 items-center gap-1.5">
-              <Folder className="size-4 shrink-0" />
+              <FolderIcon className="size-4 shrink-0" />
               <span className="truncate font-mono text-xs">{project.directory}</span>
             </span>
           )}

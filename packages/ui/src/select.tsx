@@ -4,10 +4,10 @@ import * as React from "react";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { cn } from "cn";
 import {
-  ChevronDown as ChevronDownIcon,
-  Check as CheckIcon,
-  ChevronUp as ChevronUpIcon,
-} from "@mynaui/icons-react";
+  AltArrowDownIcon as ChevronDownIcon,
+  CheckIcon,
+  AltArrowUpIcon as ChevronUpIcon,
+} from "@solar-icons/react/linear";
 
 const Select = SelectPrimitive.Root;
 

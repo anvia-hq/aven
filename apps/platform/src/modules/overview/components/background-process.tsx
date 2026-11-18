@@ -1,4 +1,5 @@
-import { Check, DangerCircle, StopSolid } from "@mynaui/icons-react";
+import { CheckIcon, DangerCircleIcon } from "@solar-icons/react/linear";
+import { StopIcon } from "@solar-icons/react/bold";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -40,14 +41,14 @@ function StatusMark({ process }: { process: ProcessView }) {
   }
 
   if (process.status === "exited" && process.exitCode) {
-    return <DangerCircle className="size-4 text-destructive" aria-hidden />;
+    return <DangerCircleIcon className="size-4 text-destructive" aria-hidden />;
   }
 
   if (process.status === "stopped") {
-    return <StopSolid className="size-3 text-muted-foreground" aria-hidden />;
+    return <StopIcon className="size-3 text-muted-foreground" aria-hidden />;
   }
 
-  return <Check className="size-4 text-muted-foreground" aria-hidden />;
+  return <CheckIcon className="size-4 text-muted-foreground" aria-hidden />;
 }
 
 function StateChip({ process }: { process: ProcessView }) {

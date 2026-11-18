@@ -1,4 +1,4 @@
-import { Download, Pencil } from "@mynaui/icons-react";
+import { DownloadIcon, PenIcon } from "@solar-icons/react/linear";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
@@ -43,7 +43,7 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
           disabled={exporting || stats === null}
           onClick={() => void exportProfile({ name, email, image, stats })}
         >
-          {exporting ? <Spinner /> : <Download />}
+          {exporting ? <Spinner /> : <DownloadIcon />}
           {exporting ? "Downloading" : "Download PNG"}
         </Button>
         <Button
@@ -51,7 +51,7 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
           size="sm"
           onClick={() => void navigate({ to: "/settings/general" })}
         >
-          <Pencil />
+          <PenIcon />
           Edit profile
         </Button>
       </div>

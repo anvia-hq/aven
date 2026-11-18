@@ -1,4 +1,4 @@
-import { ArrowUp } from "@mynaui/icons-react";
+import { ArrowUpIcon } from "@solar-icons/react/linear";
 import { useRef, type CSSProperties } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -34,7 +34,7 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
             onClick={() => onPick(text)}
           >
             <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-              <ArrowUp className="size-3" />
+              <ArrowUpIcon className="size-3" />
             </span>
             <span className="truncate">{text}</span>
           </Button>

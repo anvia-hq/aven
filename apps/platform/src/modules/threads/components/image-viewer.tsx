@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "@mynaui/icons-react";
+import { AltArrowLeftIcon, AltArrowRightIcon } from "@solar-icons/react/linear";
 
 import { Button } from "@aven/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@aven/ui/dialog";
@@ -44,13 +44,13 @@ export function ImageViewer({
         {open && images.length > 1 && (
           <div className="flex items-center justify-between gap-2 pt-2 text-xs text-muted-foreground">
             <Button variant="ghost" size="icon-sm" aria-label="Previous" onClick={() => step(-1)}>
-              <ChevronLeft />
+              <AltArrowLeftIcon />
             </Button>
             <span className="tabular-nums">
               {index + 1} of {images.length}
             </span>
             <Button variant="ghost" size="icon-sm" aria-label="Next" onClick={() => step(1)}>
-              <ChevronRight />
+              <AltArrowRightIcon />
             </Button>
           </div>
         )}

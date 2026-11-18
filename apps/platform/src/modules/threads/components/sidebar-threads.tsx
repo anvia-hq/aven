@@ -1,4 +1,4 @@
-import { GitBranch, Share } from "@mynaui/icons-react";
+import { GitBranchIcon, ShareIcon } from "@solar-icons/react/linear";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
@@ -91,13 +91,15 @@ function CrowdMark({ thread }: { thread: Thread }) {
 function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace" || crowdOf(thread)) return null;
 
-  return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
+  return (
+    <ShareIcon role="img" aria-label="Shared with workspace" className="text-muted-foreground" />
+  );
 }
 
 function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
 
-  return <GitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
+  return <GitBranchIcon role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
 
 function ForkElbow({ first, last }: { first: boolean; last: boolean }) {

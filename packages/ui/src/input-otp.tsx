@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "cn";
 import { OTPInput, OTPInputContext } from "input-otp";
-import { Minus as MinusIcon } from "@mynaui/icons-react";
+import { MinusIcon } from "@solar-icons/react/linear";
 
 function InputOTP({
   className,

@@ -1,4 +1,4 @@
-import { Plus } from "@mynaui/icons-react";
+import { AddIcon } from "@solar-icons/react/linear";
 import { MEMORY_NOTE_MAX } from "@aven/protocol/memory";
 import { useState, type FormEvent } from "react";
 
@@ -117,7 +117,7 @@ export function AddNoteDialog({ folders }: { folders: FolderChoice[] }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" />}>
-        <Plus /> Add note
+        <AddIcon /> Add note
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <NoteForm folders={folders} onDone={() => setOpen(false)} />

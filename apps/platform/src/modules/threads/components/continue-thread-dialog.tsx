@@ -1,4 +1,4 @@
-import { ArrowRight } from "@mynaui/icons-react";
+import { ArrowRightIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -56,7 +56,7 @@ export function ContinueThreadDialog({ thread }: { thread: Thread }) {
             />
           }
         >
-          <ArrowRight />
+          <ArrowRightIcon />
         </TooltipTrigger>
         <TooltipContent>Continue on another runner</TooltipContent>
       </Tooltip>

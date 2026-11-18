@@ -1,13 +1,13 @@
 import {
-  Check,
-  Folder,
-  GitDiff,
-  Globe,
-  LayoutPanelLeft,
-  List,
-  Terminal,
-  X,
-} from "@mynaui/icons-react";
+  CheckIcon,
+  FolderIcon,
+  GitDiffIcon,
+  GlobeIcon,
+  SidebarMinimalisticIcon,
+  ListIcon,
+  CodeSquareIcon,
+  CloseIcon,
+} from "@solar-icons/react/linear";
 import type { ComponentType } from "react";
 
 import { cn } from "cn";
@@ -40,11 +40,11 @@ type Toggle = {
 
 export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
   const toggles: Toggle[] = [
-    { label: "Overview", icon: List, panel: panels.overview, show: true },
-    { label: "Changes", icon: GitDiff, panel: panels.diff, show: true },
-    { label: "Files", icon: Folder, panel: panels.files, show: true },
-    { label: "Terminal", icon: Terminal, panel: panels.terminal, show: owned },
-    { label: "Browser", icon: Globe, panel: panels.preview, show: owned },
+    { label: "Overview", icon: ListIcon, panel: panels.overview, show: true },
+    { label: "Changes", icon: GitDiffIcon, panel: panels.diff, show: true },
+    { label: "Files", icon: FolderIcon, panel: panels.files, show: true },
+    { label: "Terminal", icon: CodeSquareIcon, panel: panels.terminal, show: owned },
+    { label: "Browser", icon: GlobeIcon, panel: panels.preview, show: owned },
   ];
   const shown = toggles.filter((toggle) => toggle.show);
 
@@ -60,7 +60,7 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
           title="Close"
           onClick={onClose}
         >
-          <X />
+          <CloseIcon />
         </Button>
       )}
       <div className={cn("hidden items-center gap-2 sm:flex", onClose && "sm:hidden")}>
@@ -93,14 +93,14 @@ function PanelsMenu({ toggles, className }: { toggles: Toggle[]; className?: str
           />
         }
       >
-        <LayoutPanelLeft />
+        <SidebarMinimalisticIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {toggles.map(({ label, icon: Icon, panel }) => (
           <DropdownMenuItem key={label} onClick={panel.toggle}>
             <Icon />
             <span className="flex-1">{label}</span>
-            {panel.open && <Check className="size-4 text-muted-foreground" />}
+            {panel.open && <CheckIcon className="size-4 text-muted-foreground" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

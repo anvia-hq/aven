@@ -1,4 +1,4 @@
-import { Plus } from "@mynaui/icons-react";
+import { AddIcon } from "@solar-icons/react/linear";
 import { Link } from "@tanstack/react-router";
 
 import { Badge } from "@aven/ui/badge";
@@ -59,7 +59,7 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                 aria-label={`New thread in ${project.name}`}
                 className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
               >
-                <Plus />
+                <AddIcon />
               </Link>
             </div>
             <ul aria-label={`Threads in ${project.name}`} className="flex flex-col border-t py-1">

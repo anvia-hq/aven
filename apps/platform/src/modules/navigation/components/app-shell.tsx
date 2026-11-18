@@ -1,4 +1,4 @@
-import { Cog, Search } from "@mynaui/icons-react";
+import { SettingsIcon, MagnifierIcon } from "@solar-icons/react/linear";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 
@@ -81,7 +81,7 @@ export function AppShell({ user, sidebar }: Props) {
               label="Settings"
               active={pathname.startsWith("/settings")}
             >
-              <Cog className="size-[17px]" />
+              <SettingsIcon className="size-[17px]" />
             </RailLink>
           </div>
         </nav>
@@ -108,7 +108,7 @@ export function AppShell({ user, sidebar }: Props) {
                   className="size-9 md:size-7"
                   onClick={() => setCommandOpen(true)}
                 >
-                  <Search />
+                  <MagnifierIcon />
                 </Button>
                 <MobileSidebarClose />
               </div>
@@ -125,7 +125,7 @@ export function AppShell({ user, sidebar }: Props) {
                 className="h-9 min-w-0 flex-1 justify-start"
                 onClick={() => navigate({ to: "/settings/general" })}
               >
-                <Cog />
+                <SettingsIcon />
                 <span>Settings</span>
               </Button>
             </div>
