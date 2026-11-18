@@ -31,11 +31,16 @@ fetch_aven() {
   fi
   file=aven-$(echo "$tag" | sed s/^v//)-linux-$arch.tar.gz
   tmp=$(mktemp -d)
-  curl -fsSL "$releases/download/$tag/$file" -o "$tmp/$file" || return 1
-  curl -fsSL "$releases/download/$tag/checksums.txt" -o "$tmp/checksums.txt" || return 1
-  (cd "$tmp" && grep " $file$" checksums.txt | sha256sum -c -) || return 1
-  tar -xzf "$tmp/$file" -C "$tmp" && as_root install -m 755 "$tmp/aven" /usr/local/bin/aven || return 1
+  (
+    curl -fsSL "$releases/download/$tag/$file" -o "$tmp/$file" &&
+    curl -fsSL "$releases/download/$tag/checksums.txt" -o "$tmp/checksums.txt" &&
+    (cd "$tmp" && grep " $file$" checksums.txt | sha256sum -c -) &&
+    tar -xzf "$tmp/$file" -C "$tmp" &&
+    as_root install -m 755 "$tmp/aven" /usr/local/bin/aven
+  )
+  status=$?
   rm -rf "$tmp"
+  return $status
 }
 if ! command -v aven >/dev/null 2>&1; then
   { [ -n "$want" ] && fetch_aven "v$want"; } || fetch_aven latest || exit 1
@@ -56,11 +61,14 @@ const unusable = (value: string) => /\s/.test(value) || value.includes("\0");
 
 const RELEASE = /^\d+\.\d+\.\d+$/;
 
+export const isRelease = (value: string | undefined): value is string =>
+  value !== undefined && RELEASE.test(value);
+
 export function spacesBootEnv(url: string, token: string, release?: string) {
   if (unusable(url) || unusable(token))
     throw new UnavailableError("The runner address or token is not usable");
 
-  const wanted = release !== undefined && RELEASE.test(release) ? `AVEN_RELEASE=${release}\n` : "";
+  const wanted = isRelease(release) ? `AVEN_RELEASE=${release}\n` : "";
 
   return `AVEN_URL=${url}\nAVEN_RUNTIME_TOKEN=${token}\nAVEN_DIRS=/home/user\n${wanted}`;
 }

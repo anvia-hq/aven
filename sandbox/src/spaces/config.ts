@@ -1,6 +1,7 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { sandboxSettingsOf } from "../settings";
+import { isRelease } from "./boot";
 
 const AUTO_STOP_SECONDS = 2 * 60 * 60;
 
@@ -30,10 +31,8 @@ export function spacesAutoStopSeconds() {
   return Number.isInteger(configured) && configured >= 60 ? configured : AUTO_STOP_SECONDS;
 }
 
-const RELEASE = /^\d+\.\d+\.\d+$/;
-
 export function spacesRelease(env: string | undefined = process.env.AVEN_VERSION) {
-  return env !== undefined && RELEASE.test(env) ? env : undefined;
+  return isRelease(env) ? env : undefined;
 }
 
 type RunnerUrlEnv = {
