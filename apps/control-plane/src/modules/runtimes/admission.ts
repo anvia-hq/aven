@@ -57,9 +57,9 @@ export function createAdmission({
       );
     }
 
-    if (waitMs > 0) await sleep(waitMs);
+    buckets.set(start.userId, { tokens: tokens - 1, at });
 
-    buckets.set(start.userId, { tokens: waitMs > 0 ? 0 : tokens - 1, at: now() });
+    if (waitMs > 0) await sleep(waitMs);
   }
 
   return {
