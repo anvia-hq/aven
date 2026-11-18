@@ -1,9 +1,4 @@
-import {
-  GitPullRequestIcon,
-  RefreshIcon,
-  RocketIcon,
-  SparklesIcon,
-} from "@solar-icons/react/linear";
+import { GitPullRequestIcon, RocketIcon, SparklesIcon } from "@solar-icons/react/linear";
 import { GithubMark } from "@/components/brand-icons";
 
 import { Button } from "@aven/ui/button";
@@ -19,29 +14,15 @@ type Props = {
   threadId: string;
   onShip: (mode?: "new") => void;
   onSetUp: () => void;
-  onRetry: () => void;
 };
 
 const UNKNOWN_GATE =
   "Could not check whether the repository is set up to ship. Is its runner online?";
 
-export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props) {
+export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
   if (action.kind === "loading") return null;
 
-  if (action.kind === "failed") {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        className={FLOATING_BUTTON}
-        title={action.reason}
-        onClick={onRetry}
-      >
-        <RefreshIcon />
-        Try again
-      </Button>
-    );
-  }
+  if (action.kind === "failed") return null;
 
   if (action.kind === "set-up") {
     return (
