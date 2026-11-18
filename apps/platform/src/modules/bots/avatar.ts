@@ -1,78 +1,7 @@
-import type { Avatar, AvatarSetting, Part, Point } from "./types";
+import { SHAPES } from "./avatar-shapes";
+import type { Avatar, AvatarSetting } from "./types";
 
-type Family = {
-  name: string;
-  parts: readonly Part[];
-  face: Point;
-  reach: number;
-};
-
-const circle = (cx: number, cy: number, r: number): Part => ({ kind: "circle", cx, cy, r });
-const rect = (x: number, y: number, width: number, height: number, r: number): Part => ({
-  kind: "rect",
-  x,
-  y,
-  width,
-  height,
-  r,
-});
-const polygon = (points: string): Part => ({ kind: "polygon", points });
-
-export const families: readonly Family[] = [
-  { name: "circle", parts: [circle(24, 24, 17)], face: { x: 24, y: 24 }, reach: 17 },
-  {
-    name: "flower",
-    parts: [
-      circle(15.5, 15.5, 9.5),
-      circle(32.5, 15.5, 9.5),
-      circle(15.5, 32.5, 9.5),
-      circle(32.5, 32.5, 9.5),
-      circle(24, 24, 12),
-    ],
-    face: { x: 24, y: 24.5 },
-    reach: 21.5,
-  },
-  {
-    name: "bean",
-    parts: [rect(7, 7, 34, 18.5, 8), rect(7, 22.5, 34, 18.5, 8)],
-    face: { x: 24, y: 24 },
-    reach: 21,
-  },
-  {
-    name: "stack",
-    parts: [rect(7, 6, 34, 13, 6.5), rect(7, 17.5, 34, 13, 6.5), rect(7, 29, 34, 13, 6.5)],
-    face: { x: 24, y: 24 },
-    reach: 21.5,
-  },
-  {
-    name: "crown",
-    parts: [rect(7, 13, 34, 28, 9), circle(13, 13, 6), circle(24, 12, 6), circle(35, 13, 6)],
-    face: { x: 24, y: 27 },
-    reach: 21.5,
-  },
-  {
-    name: "arch",
-    parts: [{ kind: "path", d: "M7 24a17 17 0 0 1 34 0v12a5 5 0 0 1-5 5H12a5 5 0 0 1-5-5Z" }],
-    face: { x: 24, y: 26 },
-    reach: 21,
-  },
-  {
-    name: "hexagon",
-    parts: [polygon("8,24 16,10 32,10 40,24 32,38 16,38")],
-    face: { x: 24, y: 24 },
-    reach: 19,
-  },
-  { name: "triangle", parts: [polygon("24,9 40,37 8,37")], face: { x: 24, y: 29 }, reach: 20 },
-  { name: "square", parts: [rect(8, 8, 32, 32, 7)], face: { x: 24, y: 24 }, reach: 20 },
-  {
-    name: "quarter",
-    parts: [{ kind: "path", d: "M41 41H12a5 5 0 0 1-5-5A29 29 0 0 1 36 7a5 5 0 0 1 5 5Z" }],
-    face: { x: 27, y: 29 },
-    reach: 22,
-  },
-  { name: "capsule", parts: [rect(5, 13, 38, 22, 11)], face: { x: 24, y: 24 }, reach: 19 },
-  { name: "diamond", parts: [polygon("24,8 40,24 24,40 8,24")], face: { x: 24, y: 24 }, reach: 19 },
-];
+export const families: readonly string[] = SHAPES.map((shape) => shape.name);
 
 export const colors: readonly string[] = [
   "#ff6eb4",
@@ -88,8 +17,6 @@ export const colors: readonly string[] = [
   "#ff9500",
   "#ffc400",
 ];
-
-export const faces = ["smile", "grin", "curious", "glance"] as const;
 
 const LIGHT_TINT = 0.35;
 
@@ -138,18 +65,9 @@ export function avatarFor(id: string, setting?: AvatarSetting): Avatar {
   const pick = <T>(values: readonly T[]) => values[Math.floor(next() * values.length)]!;
   const randomFamily = pick(families);
   const randomColor = pick(colors);
-  const face = pick(faces);
   const delay = Math.floor(next() * 4000);
-  const family = families.find((candidate) => candidate.name === setting?.family) ?? randomFamily;
-  return {
-    family: family.name,
-    color: setting?.color ?? randomColor,
-    face,
-    parts: family.parts,
-    center: family.face,
-    reach: family.reach,
-    delay,
-  };
+  const family = families.find((candidate) => candidate === setting?.family) ?? randomFamily;
+  return { family, color: setting?.color ?? randomColor, delay };
 }
 
 export const randomSeed = () =>

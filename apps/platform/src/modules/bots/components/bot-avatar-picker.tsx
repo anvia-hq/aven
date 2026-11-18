@@ -17,7 +17,7 @@ import { BotAvatar } from "./bot-avatar";
 import type { AvatarSetting } from "../types";
 
 const VARIANTS = 15;
-const CHOICE = "size-11 rounded-full p-0.5 [&_.bot-body]:animate-none";
+const CHOICE = "size-11 rounded-full p-0.5";
 
 const newSeeds = () => Array.from({ length: VARIANTS }, randomSeed);
 
@@ -64,14 +64,14 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
             <div role="group" aria-label="Shape" className="grid grid-cols-6 gap-1.5">
               {families.map((family) => (
                 <Toggle
-                  key={family.name}
-                  aria-label={family.name}
+                  key={family}
+                  aria-label={family}
                   className={CHOICE}
-                  pressed={current.family === family.name}
-                  onPressedChange={() => choose({ family: family.name })}
+                  pressed={current.family === family}
+                  onPressedChange={() => choose({ family })}
                 >
                   <BotAvatar
-                    bot={show({ ...setting, family: family.name, color: current.color })}
+                    bot={show({ ...setting, family, color: current.color })}
                     className="size-full"
                   />
                 </Toggle>
