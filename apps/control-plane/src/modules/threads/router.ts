@@ -2,6 +2,7 @@ import { Elysia, sse, status } from "elysia";
 
 import { orNotFound } from "@aven/server-kit/errors";
 import { threadAccess } from "./access";
+import { threadMarkdown } from "./export";
 import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
@@ -73,6 +74,20 @@ export const threadsRouter = (
           messages: shown.messages,
           hidden: shown.hidden,
         };
+      },
+      { thread: "read", params: threadParams },
+    )
+    .get(
+      "/:id/export",
+      async ({ params, organizationId, user }) => {
+        const thread = await threadsService.readable(
+          { organizationId, userId: user.id },
+          params.id,
+        );
+        const body = threadMarkdown(thread.title, await runs.history(thread));
+        return new Response(body, {
+          headers: { "content-type": "text/markdown; charset=utf-8" },
+        });
       },
       { thread: "read", params: threadParams },
     )
