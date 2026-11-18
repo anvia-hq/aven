@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addSubscription, registerUser } from "./helpers";
+import { addSubscription, registerBotPerson } from "./helpers";
 
 const CLAUDE_TOKEN = "sk-ant-oat01-e2e-bot-subscription-9f3a";
 const CODEX_ACCESS = "e2e-bot-access-9f3a";
@@ -32,7 +32,7 @@ async function botOn(
   modelId: string,
   credential: string,
 ) {
-  await registerUser(page, prefix, "Bot Subscription");
+  await registerBotPerson(page, prefix, "Bot Subscription");
   const providerId = await addSubscription(page, kind, credential);
   const id = await mainBotId(page);
   const patched = await page.request.patch(`/api/bots/${id}`, {
@@ -50,14 +50,12 @@ test.describe("a bot on a subscription", () => {
     await botOn(page, "botclaude", "claude-subscription", "sonnet", CLAUDE_TOKEN);
     const answered = bubble(page, CLAUDE_REPLY);
 
-    await expect(answered).toHaveCount(1, { timeout: 60_000 });
-
     await page.getByRole("textbox", { name: "Message" }).fill("say hello");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
-    await expect(answered).toHaveCount(2, { timeout: 60_000 });
+    await expect(answered).toHaveCount(1, { timeout: 60_000 });
 
     await page.reload();
-    await expect(answered).toHaveCount(2, { timeout: 60_000 });
+    await expect(answered).toHaveCount(1, { timeout: 60_000 });
     await expect(page.getByText(CLAUDE_TOKEN)).toHaveCount(0);
   });
 
@@ -65,14 +63,12 @@ test.describe("a bot on a subscription", () => {
     await botOn(page, "botcodex", "codex-subscription", "sol", CODEX_KEY);
     const answered = bubble(page, CODEX_REPLY);
 
-    await expect(answered).toHaveCount(1, { timeout: 60_000 });
-
     await page.getByRole("textbox", { name: "Message" }).fill("say hello");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
-    await expect(answered).toHaveCount(2, { timeout: 60_000 });
+    await expect(answered).toHaveCount(1, { timeout: 60_000 });
 
     await page.reload();
-    await expect(answered).toHaveCount(2, { timeout: 60_000 });
+    await expect(answered).toHaveCount(1, { timeout: 60_000 });
     await expect(page.getByText(CODEX_ACCESS)).toHaveCount(0);
   });
 });

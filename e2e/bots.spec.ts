@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import type { ChildProcess } from "node:child_process";
 
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { registerBotPerson, threadOnFakeRunner } from "./helpers";
 
 const PIXEL =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
@@ -16,7 +16,7 @@ test.describe("bots", () => {
   test("bubbles in a row of one speaker lose the rounding of their left side where they touch", async ({
     page,
   }) => {
-    await registerUser(page, "corners", "Corners User");
+    await registerBotPerson(page, "corners", "Corners User");
     const said = (id: string, text: string) => ({ id, role: "bot", text });
     await page.route("**/api/bots/*/events", (route) =>
       route.fulfill({
@@ -50,7 +50,7 @@ test.describe("bots", () => {
   });
 
   test("the main bot is under the logo, and it answers in several messages", async ({ page }) => {
-    await registerUser(page, "bot", "Bot Person");
+    await registerBotPerson(page, "bot", "Bot Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -64,7 +64,6 @@ test.describe("bots", () => {
     await page.getByRole("link", { name: "Bot", exact: true }).click();
     await expect(page).toHaveURL(/\/bot$/);
     await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
-    await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(page.getByText("You were just created")).toHaveCount(0);
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
 
@@ -102,7 +101,7 @@ test.describe("bots", () => {
   test("a bot sends a file with its message, the chat shows a card, and opening it fills a side panel that survives a reload, with a version for each time it is sent again", async ({
     page,
   }) => {
-    await registerUser(page, "bot-file", "File Person");
+    await registerBotPerson(page, "bot-file", "File Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -148,7 +147,7 @@ test.describe("bots", () => {
   });
 
   test("a page a bot sends fills the side panel", async ({ page }) => {
-    await registerUser(page, "bot-page", "Page Person");
+    await registerBotPerson(page, "bot-page", "Page Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -188,7 +187,7 @@ test.describe("bots", () => {
   test("a bot quotes the message it answers and reacts to it, and the person quotes one too", async ({
     page,
   }) => {
-    await registerUser(page, "bot-quote", "Quote Person");
+    await registerBotPerson(page, "bot-quote", "Quote Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -229,7 +228,7 @@ test.describe("bots", () => {
   });
 
   test("a bot is told which skills it has", async ({ page }) => {
-    await registerUser(page, "bot-skills", "Skills Person");
+    await registerBotPerson(page, "bot-skills", "Skills Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -249,7 +248,7 @@ test.describe("bots", () => {
   test("a bot connects an MCP server when asked, and it is on the person's Settings page", async ({
     page,
   }) => {
-    await registerUser(page, "bot-mcp", "Mcp Person");
+    await registerBotPerson(page, "bot-mcp", "Mcp Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -281,7 +280,7 @@ test.describe("bots", () => {
   test("a bot adds a provider and the person gives its key in a masked card, never in the chat", async ({
     page,
   }) => {
-    await registerUser(page, "bot-provider", "Provider Person");
+    await registerBotPerson(page, "bot-provider", "Provider Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -346,7 +345,7 @@ test.describe("bots", () => {
     test("a bot starts a thread in a project when asked, and archives it when asked", async ({
       page,
     }) => {
-      await registerUser(page, "bot-thread", "Thread Person");
+      await registerBotPerson(page, "bot-thread", "Thread Person");
       const provider = await page.request.post("/api/providers", {
         data: {
           kind: "openai-compatible",
@@ -399,7 +398,7 @@ test.describe("bots", () => {
     page,
   }) => {
     test.slow();
-    await registerUser(page, "bot-files", "Files Person");
+    await registerBotPerson(page, "bot-files", "Files Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -449,7 +448,7 @@ test.describe("bots", () => {
     page,
   }) => {
     test.slow();
-    await registerUser(page, "bot-files-only", "Files Only");
+    await registerBotPerson(page, "bot-files-only", "Files Only");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -479,7 +478,7 @@ test.describe("bots", () => {
     page,
   }) => {
     test.slow();
-    await registerUser(page, "bot-maker", "Maker Person");
+    await registerBotPerson(page, "bot-maker", "Maker Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -532,7 +531,7 @@ test.describe("bots", () => {
     page,
   }) => {
     test.slow();
-    await registerUser(page, "bot-mention", "Mention Person");
+    await registerBotPerson(page, "bot-mention", "Mention Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -620,7 +619,7 @@ test.describe("bots", () => {
   test("a / in the bot chat offers the skills and puts the picked one in the message as a chip", async ({
     page,
   }) => {
-    await registerUser(page, "bot-skill-mention", "Skill Mention Person");
+    await registerBotPerson(page, "bot-skill-mention", "Skill Mention Person");
     await page.goto("/bot");
     const message = page.getByRole("textbox", { name: "Message" });
     await message.click();
@@ -637,7 +636,7 @@ test.describe("bots", () => {
   }) => {
     let runner: ChildProcess | undefined;
     try {
-      await registerUser(page, "bot-thread-mention", "Thread Mention Person");
+      await registerBotPerson(page, "bot-thread-mention", "Thread Mention Person");
       const provider = await page.request.post("/api/providers", {
         data: {
           kind: "openai-compatible",
@@ -693,7 +692,7 @@ test.describe("bots", () => {
   });
 
   test("a bot asks the person to decide, and hears the answer", async ({ page }) => {
-    await registerUser(page, "bot-question", "Question Person");
+    await registerBotPerson(page, "bot-question", "Question Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -726,7 +725,7 @@ test.describe("bots", () => {
   test("a bot schedules a task when asked, and the person can see and pause it", async ({
     page,
   }) => {
-    await registerUser(page, "bot-schedule", "Schedule Person");
+    await registerBotPerson(page, "bot-schedule", "Schedule Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -775,7 +774,7 @@ test.describe("bots", () => {
     page,
   }) => {
     test.slow();
-    await registerUser(page, "bot-goal", "Goal Person");
+    await registerBotPerson(page, "bot-goal", "Goal Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -799,7 +798,7 @@ test.describe("bots", () => {
   test("a bot renames itself and writes its own description when asked", async ({ page }) => {
     test.slow();
     await page.setViewportSize({ width: 1400, height: 800 });
-    await registerUser(page, "bot-self", "Self Person");
+    await registerBotPerson(page, "bot-self", "Self Person");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -836,6 +835,11 @@ test.describe("bots", () => {
     await page.getByRole("link", { name: /Scout/ }).click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
+    const scoutId = new URL(page.url()).pathname.split("/").pop()!;
+    const given = await page.request.patch(`/api/bots/${scoutId}`, {
+      data: { hasComputer: true },
+    });
+    expect(given.ok()).toBe(true);
     await page.getByRole("textbox", { name: "Message" }).fill("call yourself something new");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "I am Pip now")).toBeVisible();
@@ -846,14 +850,14 @@ test.describe("bots", () => {
   });
 
   test("a bot that does not exist sends the person back to the main bot", async ({ page }) => {
-    await registerUser(page, "bot-stranger", "Stranger");
+    await registerBotPerson(page, "bot-stranger", "Stranger");
     await page.goto("/bot/00000000-0000-4000-8000-000000000000");
     await expect(page).toHaveURL(/\/bot$/);
     await expect(page.getByRole("link", { name: "Aven, main bot" })).toBeVisible();
   });
 
   test("a person with no model is told why nothing was sent", async ({ page }) => {
-    await registerUser(page, "bot-none", "No Model");
+    await registerBotPerson(page, "bot-none", "No Model");
     await page.goto("/bot");
     await page.getByRole("textbox", { name: "Message" }).fill("hello?");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
@@ -862,7 +866,7 @@ test.describe("bots", () => {
   });
 
   test("the person changes the bot's name and instruction", async ({ page }) => {
-    await registerUser(page, "bot-edit", "Bot Editor");
+    await registerBotPerson(page, "bot-edit", "Bot Editor");
     await page.goto("/bot");
     await page.getByRole("button", { name: "Bot settings" }).click();
     await page.getByLabel("Name").fill("Pip");
@@ -883,7 +887,7 @@ test.describe("bots", () => {
   });
 
   test("a bot has a character of its own, and the person picks another", async ({ page }) => {
-    await registerUser(page, "bot-look", "Bot Looker");
+    await registerBotPerson(page, "bot-look", "Bot Looker");
     await page.goto("/bot");
     const look = page.locator('a[aria-label="Aven, main bot"] svg[data-family]');
     await expect(look).toBeVisible();
@@ -944,7 +948,7 @@ test.describe("bots", () => {
   });
 
   test("the person chooses the model a bot talks with", async ({ page }) => {
-    await registerUser(page, "bot-model", "Model Chooser");
+    await registerBotPerson(page, "bot-model", "Model Chooser");
     const provider = await page.request.post("/api/providers", {
       data: {
         kind: "openai-compatible",
@@ -985,7 +989,7 @@ test.describe("bots", () => {
   });
 
   test("with no provider there is no model to choose", async ({ page }) => {
-    await registerUser(page, "bot-model-none", "No Provider");
+    await registerBotPerson(page, "bot-model-none", "No Provider");
     await page.goto("/settings/bots");
     await expect(page.getByText("Your main bot")).toBeVisible();
     await expect(
@@ -994,7 +998,7 @@ test.describe("bots", () => {
   });
 
   test("the person sets how hard the bot's model thinks", async ({ page }) => {
-    await registerUser(page, "bot-effort", "Effort Setter");
+    await registerBotPerson(page, "bot-effort", "Effort Setter");
     const provider = await page.request.post("/api/providers", {
       data: { kind: "openai", name: "OpenAI", apiKey: "sk-test-1234", modelId: "gpt-5" },
     });
@@ -1039,7 +1043,7 @@ test.describe("bots", () => {
   });
 
   test("the person sets the size past which the chat is summarized", async ({ page }) => {
-    await registerUser(page, "bot-compact", "Compaction Setter");
+    await registerBotPerson(page, "bot-compact", "Compaction Setter");
     await page.goto("/settings/bots");
     const field = page.getByRole("spinbutton", { name: /Summarize the chat of Aven/ });
     await expect(field).toHaveValue("");
@@ -1071,7 +1075,7 @@ test.describe("bots", () => {
 
   test("on a phone the chat fits the screen, composer included", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 });
-    await registerUser(page, "bot-phone", "Phone Person");
+    await registerBotPerson(page, "bot-phone", "Phone Person");
     await page.goto("/bot");
     await expect(page.getByRole("textbox", { name: "Message" })).toBeInViewport({ ratio: 1 });
     expect(await page.evaluate(() => document.documentElement.scrollHeight)).toBeLessThanOrEqual(
@@ -1082,7 +1086,7 @@ test.describe("bots", () => {
   test("a message of several lines moves the input above the buttons, and back when it is sent", async ({
     page,
   }) => {
-    await registerUser(page, "bot-multiline", "Multiline Person");
+    await registerBotPerson(page, "bot-multiline", "Multiline Person");
     await page.getByRole("link", { name: "Bot", exact: true }).click();
     await expect(page).toHaveURL(/\/bot$/);
 

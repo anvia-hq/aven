@@ -19,6 +19,7 @@ const MAIN_BOT = {
   instruction:
     "You are a warm, curious companion. Talk the way a friend texts: short, natural messages, one thought at a time.",
   avatar: "",
+  hasComputer: false,
 } as const;
 
 const view = (row: BotRow, attention: BotAttention | null): Bot => ({
@@ -152,7 +153,7 @@ export const botsService = {
       const handle = freeBotHandle(botHandleOf(name), new Set(handles.map((each) => each.handle)));
       const [row] = await tx
         .insert(bots)
-        .values({ userId, name, handle, instruction, description })
+        .values({ userId, name, handle, instruction, description, hasComputer: false })
         .returning();
       return view(row!, null);
     });
