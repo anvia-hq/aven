@@ -63,7 +63,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   );
 
   const frame =
-    "flex w-full max-w-md min-w-0 items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left";
+    "flex w-full max-w-md min-w-0 items-center gap-3 rounded-2xl border bg-card px-3 py-2.5 text-left";
 
   if (!fork)
     return (
