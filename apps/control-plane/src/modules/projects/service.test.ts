@@ -88,6 +88,68 @@ run("projectsService (postgres)", async () => {
     }
   });
 
+  test("a repository the app makes on GitHub becomes a project, and one it cannot reach is refused", async () => {
+    const made = spyOn(githubService, "createRepository").mockResolvedValue({
+      repository: {
+        id: 12,
+        fullName: "acme/gadgets",
+        cloneUrl: "https://github.com/acme/gadgets.git",
+        defaultBranch: "main",
+        private: true,
+      },
+      reachable: true,
+    });
+
+    try {
+      const project = await projectsService.addNewGithubRepository(orgA, userId, {
+        installationId: installation.id,
+        name: "gadgets",
+        private: true,
+      });
+
+      expect(made).toHaveBeenCalledWith(orgA, installation.id, userId, {
+        name: "gadgets",
+        private: true,
+      });
+      expect(project).toMatchObject({
+        runtimeId: null,
+        directory: null,
+        repoFullName: "acme/gadgets",
+        cloneUrl: "https://github.com/acme/gadgets.git",
+        defaultBranch: "main",
+        githubInstallationId: installation.id,
+        name: "gadgets",
+      });
+      await expect(
+        projectsService.addNewGithubRepository(orgA, userId, {
+          installationId: installation.id,
+          name: "gadgets",
+          private: true,
+        }),
+      ).rejects.toBeInstanceOf(RepositoryAlreadyImportedError);
+
+      made.mockResolvedValue({
+        repository: {
+          id: 13,
+          fullName: "acme/elsewhere",
+          cloneUrl: "https://github.com/acme/elsewhere.git",
+          defaultBranch: "main",
+          private: true,
+        },
+        reachable: false,
+      });
+      await expect(
+        projectsService.addNewGithubRepository(orgA, userId, {
+          installationId: installation.id,
+          name: "elsewhere",
+          private: true,
+        }),
+      ).rejects.toBeInstanceOf(RepositoryNotInstalledError);
+    } finally {
+      made.mockRestore();
+    }
+  });
+
   test("a project can be a folder that its runner serves", async () => {
     const { runtime } = await runtimesService.create(orgA, userId, { name: "my mac" });
     await runtimesService.setDirectories(runtime.id, ["/home/me/code"]);

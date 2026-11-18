@@ -5,6 +5,7 @@ import { authRouter } from "../auth/router";
 import {
   addFolderBody,
   addGithubRepositoryBody,
+  addNewGithubRepositoryBody,
   addRepositoryBody,
   commitParams,
   commitsQuery,
@@ -41,6 +42,12 @@ export const projectsRouter = (putAway: PutAwayThread, folders: ProjectFolders) 
       ({ body, organizationId, user }) =>
         projectsService.addGithubRepository(organizationId, user.id, body),
       { auth: true, org: true, body: addGithubRepositoryBody },
+    )
+    .post(
+      "/github/new",
+      ({ body, organizationId, user }) =>
+        projectsService.addNewGithubRepository(organizationId, user.id, body),
+      { auth: true, org: true, body: addNewGithubRepositoryBody },
     )
     .get(
       "/:id",

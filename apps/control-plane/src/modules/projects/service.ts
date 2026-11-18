@@ -21,12 +21,14 @@ import { runtimesService } from "../runtimes/service";
 import type {
   AddFolderBody,
   AddGithubRepositoryBody,
+  AddNewGithubRepositoryBody,
   AddRepositoryBody,
   UpdateProjectBody,
 } from "./schema";
 import type { ProjectFolders } from "./types";
 import type {
   GithubCommitFilters,
+  GithubRepository,
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedState,
@@ -56,6 +58,32 @@ function githubOf(project: GithubProject) {
     repo: project.repoFullName,
     branch: project.defaultBranch ?? "main",
   };
+}
+
+async function insertGithubProject(
+  organizationId: string,
+  userId: string,
+  installationRowId: string,
+  repository: GithubRepository,
+  name?: string,
+) {
+  const [project] = await db
+    .insert(projects)
+    .values({
+      organizationId,
+      createdBy: userId,
+      githubInstallationId: installationRowId,
+      repoFullName: repository.fullName,
+      cloneUrl: repository.cloneUrl,
+      defaultBranch: repository.defaultBranch,
+      name: name ?? repository.fullName.split("/")[1]!,
+    })
+    .onConflictDoNothing()
+    .returning();
+
+  if (!project) throw new RepositoryAlreadyImportedError("This repository is already a project");
+
+  return project;
 }
 
 export const projectsService = {
@@ -162,23 +190,28 @@ export const projectsService = {
       );
     }
 
-    const [project] = await db
-      .insert(projects)
-      .values({
-        organizationId,
-        createdBy: userId,
-        githubInstallationId: body.installationId,
-        repoFullName: repository.fullName,
-        cloneUrl: repository.cloneUrl,
-        defaultBranch: repository.defaultBranch,
-        name: body.name ?? repository.fullName.split("/")[1]!,
-      })
-      .onConflictDoNothing()
-      .returning();
+    return insertGithubProject(organizationId, userId, body.installationId, repository, body.name);
+  },
 
-    if (!project) throw new RepositoryAlreadyImportedError("This repository is already a project");
+  async addNewGithubRepository(
+    organizationId: string,
+    userId: string,
+    body: AddNewGithubRepositoryBody,
+  ) {
+    const { repository, reachable } = await githubService.createRepository(
+      organizationId,
+      body.installationId,
+      userId,
+      { name: body.name, private: body.private },
+    );
 
-    return project;
+    if (!reachable) {
+      throw new RepositoryNotInstalledError(
+        `GitHub made ${repository.fullName}, but the Aven app cannot reach it yet. Add it to the app's repositories there, then add the project again`,
+      );
+    }
+
+    return insertGithubProject(organizationId, userId, body.installationId, repository, body.name);
   },
 
   async requireManager(organizationId: string, userId: string, project: { createdBy: string }) {

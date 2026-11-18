@@ -66,6 +66,11 @@ export const githubRouter = (
       org: true,
     })
     .get(
+      "/installations/:id",
+      ({ params, organizationId }) => service.installation(organizationId, params.id),
+      { auth: true, org: true, params: installationParams },
+    )
+    .get(
       "/installations/:id/repositories",
       ({ params, organizationId }) => service.repositories(organizationId, params.id),
       { auth: true, org: true, params: installationParams },

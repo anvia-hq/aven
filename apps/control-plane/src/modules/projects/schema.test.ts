@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { commitsQuery, folderQuery, trackedQuery } from "./schema";
+import { addNewGithubRepositoryBody, commitsQuery, folderQuery, trackedQuery } from "./schema";
 
 describe("folderQuery", () => {
   test.each(["", "src", "src/modules/app", "my docs/a b", ".github", "a.b/c..d"])(
@@ -116,5 +116,25 @@ describe("commitsQuery", () => {
 
   test.each(["0", "-1", "1.5", "abc", "", "10001"])("refuses page %p", (page) => {
     expect(commitsQuery.safeParse({ page }).success).toBe(false);
+  });
+});
+
+describe("addNewGithubRepositoryBody", () => {
+  const installationId = "00000000-0000-4000-8000-000000000000";
+
+  test("makes a private repository unless told otherwise", () => {
+    expect(addNewGithubRepositoryBody.parse({ installationId, name: "my-project" })).toEqual({
+      installationId,
+      name: "my-project",
+      private: true,
+    });
+  });
+
+  test.each(["my-project", "app_2", ".github", "A.B-9"])("accepts the name %p", (name) => {
+    expect(addNewGithubRepositoryBody.safeParse({ installationId, name }).success).toBe(true);
+  });
+
+  test.each(["", "a b", "a/b", "..", "x".repeat(101)])("refuses the name %p", (name) => {
+    expect(addNewGithubRepositoryBody.safeParse({ installationId, name }).success).toBe(false);
   });
 });

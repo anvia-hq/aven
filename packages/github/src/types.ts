@@ -50,6 +50,18 @@ export type GithubRepository = {
   private: boolean;
 };
 
+export type GithubNewRepository = GithubRepository & { id: number };
+
+export type GithubInstallationAccountType = "user" | "organization";
+
+export type GithubInstallation = {
+  installationId: number;
+  accountLogin: string;
+  accountType: GithubInstallationAccountType;
+  selectedRepositories: boolean;
+  canCreateRepositories: boolean;
+};
+
 export type GithubFile = { path: string; text: string; truncated: boolean };
 
 export type GithubReadme = { name: string; path: string; text: string; truncated: boolean };

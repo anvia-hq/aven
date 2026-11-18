@@ -8,12 +8,14 @@ description: Connect GitHub to Aven, add a project (a folder or a repository), a
 ## The pieces
 
 - **GitHub App**: Aven reads repositories through a GitHub App installation, and asks each person to connect their own GitHub account so that `git` and `gh` in their sandbox act as them. The platform's owner creates the app once, in **Settings > Platform**, with GitHub's manifest flow.
-- **Project**: a folder on a runner's computer, added from **Add project** on the Projects page (its Repository tab has the runner clone a GitHub repository into its own repos folder). Every thread belongs to one and works in its own clone of it, on a branch `aven/<thread id prefix>`.
+- **Project**: a folder on a runner's computer, added from **Add project** on the Projects page (its Repository tab has the runner clone a GitHub repository into its own repos folder), or a repository on GitHub, which any computer can run and which Aven Cloud needs. Every thread belongs to one and works in its own clone of it, on a branch `aven/<thread id prefix>`.
 - **Runner** (Settings > Runtimes): a machine with Docker and git that connects out to Aven and hosts a sandbox for each thread and each bot. A server installed with `aven install` has one on its own machine.
 
 ## Adding a project
 
-**Add project** on the Projects page takes a computer and either a folder it serves or a repository (`owner/name`, an https address or `git@host:owner/name`). The computer clones the repository itself, with the git sign-in it already has: a private repository needs that sign-in on the computer, and a failed clone says so. A project needs a runner first (see below); an older runner answers that it must be updated.
+**Add project** on the Projects page has three tabs. **GitHub** takes a repository the Aven app can reach, or makes a new one (`New repository`: a name and private or public; Aven creates it on GitHub with a README, adds it to the app's installation if that installation only reaches chosen repositories, and adds it as the project). It is the only tab that needs no computer, which is what Aven Cloud uses. **Folder** and **Clone** take a computer: a folder it serves, or a repository (`owner/name`, an https address or `git@host:owner/name`) that the computer clones itself with the git sign-in it already has, so a private repository needs that sign-in on the computer, and a failed clone says so.
+
+Making a GitHub repository needs the app's Administration permission, which the platform owner approves on GitHub once; until then the dialog says so and offers the installation's settings link. The new-thread page's project menu offers the same "New repository" for a cloud computer.
 
 A person who will ship pull requests also connects **their own** GitHub account, from the Ship button (**Connect GitHub to ship**), so that commits and `gh` in their sandbox are theirs. The app needs write access to **contents** and **pull requests** for that: GitHub asks the app's owner to approve it when it changes.
 

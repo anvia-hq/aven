@@ -18,6 +18,7 @@ describe("appManifest", () => {
     expect(manifest.callback_urls).toEqual(["https://aven.example.com/api/github/callback"]);
     expect(manifest.request_oauth_on_install).toBe(true);
     expect(manifest.default_permissions).toMatchObject({
+      administration: "write",
       contents: "write",
       pull_requests: "write",
       issues: "read",
