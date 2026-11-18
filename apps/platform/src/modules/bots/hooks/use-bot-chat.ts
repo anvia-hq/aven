@@ -6,10 +6,10 @@ import { attempt, postJson } from "@/lib/api";
 import { refreshMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
 import { refreshMemory } from "@/modules/memory/hooks/use-memory";
 import { refreshProviders } from "@/modules/providers/hooks/use-providers";
-import type { AttachmentUpload } from "@/modules/threads/types";
+import type { AttachmentUpload, Handoff } from "@/modules/threads/types";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
-import { newPendingId, pendingMessage, settlePending } from "../pending";
+import { handoffOf, newPendingId, pendingMessage, settlePending } from "../pending";
 import type { BotChatMessage, BotChatQuote, PendingBotMessage } from "../types";
 import { refreshBots } from "./use-bots";
 import type { BotEvent } from "@aven/protocol/types";
@@ -53,6 +53,7 @@ export function useBotChat(botId: string) {
   const [messages, setMessages] = useState<BotChatMessage[]>([]);
   const [pending, setPending] = useState<PendingBotMessage[]>([]);
   const pendingRef = useRef<PendingBotMessage[]>([]);
+  const [handoffs, setHandoffs] = useState<Record<string, Handoff>>({});
   const [typing, setTyping] = useState(false);
   const [activity, setActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export function useBotChat(botId: string) {
   useEffect(() => {
     setMessages([]);
     changePending(() => []);
+    setHandoffs({});
     setTyping(false);
     setActivity(null);
     setError(null);
@@ -80,6 +82,13 @@ export function useBotChat(botId: string) {
       if (!event) return;
 
       setMessages((current) => applyBotEvent(current, event));
+
+      if (event.type === "message") {
+        const handoff = handoffOf(pendingRef.current, event);
+
+        if (handoff) setHandoffs((current) => ({ ...current, [event.message.id]: handoff }));
+      }
+
       changePending((current) => settlePending(current, event));
       setTyping((current) => isTyping(current, event));
       setActivity((current) => activityOf(current, event));
@@ -140,5 +149,5 @@ export function useBotChat(botId: string) {
 
   const shown = useMemo(() => pending.map((item) => item.message), [pending]);
 
-  return { messages, pending: shown, typing, activity, error, send };
+  return { messages, pending: shown, handoffs, typing, activity, error, send };
 }

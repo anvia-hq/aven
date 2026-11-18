@@ -29,7 +29,7 @@ export function BotChat({
   openArtifact: string | undefined;
   onOpenArtifact: (name: string) => void;
 }) {
-  const { messages, pending, typing, activity, error, send } = chat;
+  const { messages, pending, handoffs, typing, activity, error, send } = chat;
   const { bots } = useBots();
   const textSize = useTextSize("bot");
   const items = useMemo(() => chatItems([...messages, ...pending]), [messages, pending]);
@@ -65,6 +65,7 @@ export function BotChat({
               }
 
               const { message } = item;
+              const handoff = handoffs[message.id];
               const before = items[index - 1];
               const after = items[index + 1];
               const together = before?.type === "message" && before.message.role === message.role;
@@ -74,7 +75,7 @@ export function BotChat({
               };
               return (
                 <Message
-                  key={item.key}
+                  key={handoff?.key ?? item.key}
                   align={isPersons(message) ? "end" : "start"}
                   aria-busy={sending.has(message.id) || undefined}
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
@@ -87,6 +88,7 @@ export function BotChat({
                       bot={bot}
                       message={message}
                       bots={bots}
+                      previews={handoff?.previews}
                       onQuote={(quoted) => setQuoting(quoteOf(quoted))}
                       onOpenArtifact={onOpenArtifact}
                       openArtifact={openArtifact}
