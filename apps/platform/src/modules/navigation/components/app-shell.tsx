@@ -1,5 +1,5 @@
 import {
-  FolderIcon,
+  LayersMinimalisticIcon,
   MagnifierIcon,
   PenNewSquareIcon,
   SettingsIcon,
@@ -77,7 +77,7 @@ export function AppShell({ user, sidebar }: Props) {
           </RailLink>
           <div className="mt-1.5 flex flex-col items-center gap-1.5">
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
-              <FolderIcon className="size-[17px]" />
+              <LayersMinimalisticIcon className="size-[17px]" />
             </RailLink>
             <CockpitRailLink />
             <BotRailLink />
