@@ -22,12 +22,9 @@ describe("boxShape", () => {
     expect(looks.size).toBe(40);
   });
 
-  test("has two or three inner frames and the orb's dust", () => {
+  test("carries the project's dust", () => {
     for (let seed = 1; seed < 40; seed++) {
-      const shape = boxShape(seed);
-      expect(shape.frames.length).toBeGreaterThanOrEqual(2);
-      expect(shape.frames.length).toBeLessThanOrEqual(3);
-      expect(shape.orb.dots).toHaveLength(DOTS);
+      expect(boxShape(seed).orb.dots).toHaveLength(DOTS);
     }
   });
 });
@@ -52,7 +49,11 @@ describe("boxRotation", () => {
 
 function drawn(seed: number, color: number) {
   let circles = 0;
-  const answers: Record<string, unknown> = { arc: () => circles++ };
+  let strokes = 0;
+  const answers: Record<string, unknown> = {
+    arc: () => circles++,
+    stroke: () => strokes++,
+  };
   const context = new Proxy(
     {},
     { get: (_, key) => answers[String(key)] ?? (() => {}), set: () => true },
@@ -65,14 +66,18 @@ function drawn(seed: number, color: number) {
     time: 3,
     rotation: boxRotation(shape, 3, "tumble"),
   });
-  return circles;
+  return { circles, strokes };
 }
 
 describe("paintBox", () => {
   test("a box at rest has no dust and a working one has a halo and a core for every speck", () => {
     for (let seed = 1; seed < 10; seed++) {
-      expect(drawn(seed, 0)).toBe(0);
-      expect(drawn(seed, 1)).toBe(DOTS * 2);
+      expect(drawn(seed, 0).circles).toBe(0);
+      expect(drawn(seed, 1).circles).toBe(DOTS * 2);
     }
+  });
+
+  test("draws the cube's twelve edges and nothing inside it", () => {
+    for (let seed = 1; seed < 10; seed++) expect(drawn(seed, 1).strokes).toBe(12);
   });
 });
