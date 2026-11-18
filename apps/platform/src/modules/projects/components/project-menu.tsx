@@ -72,7 +72,7 @@ export function ProjectMenu({
             size="sm"
             aria-label="Project"
             aria-expanded={open}
-            className="border-transparent bg-muted/40 dark:bg-muted/40 max-w-48 min-w-0 rounded-full px-3 text-muted-foreground"
+            className="border-transparent bg-muted/40 dark:border-transparent dark:bg-muted/40 max-w-48 min-w-0 rounded-full px-3 text-muted-foreground"
           />
         }
       >
