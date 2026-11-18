@@ -56,6 +56,7 @@ export function useAttachments(threadId?: string) {
   const [restored, setRestored] = useState(threadId === undefined);
   const previews = useRef(new Set<string>());
   const removed = useRef(new Set<string>());
+  const cleared = useRef(false);
   const warned = useRef(false);
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export function useAttachments(threadId?: string) {
     let live = true;
     setRestored(false);
     removed.current.clear();
+    cleared.current = false;
     setFiles((current) => (current.length === 0 ? current : []));
 
     for (const url of previews.current) URL.revokeObjectURL(url);
@@ -86,15 +88,17 @@ export function useAttachments(threadId?: string) {
 
       if (!live) return;
 
-      const restored = stored.flatMap(({ id, file }) => {
-        if (removed.current.has(id)) return [];
+      const restored = cleared.current
+        ? []
+        : stored.flatMap(({ id, file }) => {
+            if (removed.current.has(id)) return [];
 
-        const preview = previewOf(file);
+            const preview = previewOf(file);
 
-        if (preview) previews.current.add(preview);
+            if (preview) previews.current.add(preview);
 
-        return [{ id, file, preview }];
-      });
+            return [{ id, file, preview }];
+          });
 
       setFiles((current) => mergeDraftFiles(restored, current));
       setRestored(true);
@@ -166,6 +170,7 @@ export function useAttachments(threadId?: string) {
   function clear() {
     files.forEach(free);
     setFiles([]);
+    cleared.current = true;
 
     if (threadId !== undefined) void forgetDraftFiles(threadId);
   }
