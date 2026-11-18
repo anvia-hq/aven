@@ -75,10 +75,6 @@ const localToken = configuredLocalToken
   ? localRunnerToken(configuredLocalToken, process.env.AVEN_LOCAL_RUNNER)
   : localRunnerToken(undefined, LOCAL_RUNNER_OFF);
 
-const SANDBOX_LIMIT = 20;
-
-const sandboxLimit = () => Number(process.env.AVEN_CLOUD_MAX_SANDBOXES) || SANDBOX_LIMIT;
-
 const visibleTo = (organizationId: string) =>
   or(
     eq(runtimes.organizationId, organizationId),
@@ -187,22 +183,6 @@ export const runtimesService = {
     const provider = templateProvider(templateId);
 
     if (!provider || !cloudEnabled(provider)) throw new UnavailableError(CLOUD_OFF);
-
-    const [live] = await db
-      .select({ total: count() })
-      .from(runtimes)
-      .where(
-        and(
-          eq(runtimes.organizationId, organizationId),
-          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
-          isNull(runtimes.revokedAt),
-        ),
-      );
-
-    if ((live?.total ?? 0) >= sandboxLimit())
-      throw new ConflictError(
-        `This workspace has ${sandboxLimit()} Aven Cloud computers. Archive a thread, or wait for one to expire`,
-      );
 
     const { token, columns } = issueToken();
     const environment = await environmentsService.ready(projectId, provider);

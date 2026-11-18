@@ -19,12 +19,10 @@ run("Aven Cloud runtime (postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
   const { seedProject } = await import("../../testing/seed-project");
   const { userId, orgA, orgB, cleanup } = await seedOrgPair();
-  const keptLimit = process.env.AVEN_CLOUD_MAX_SANDBOXES;
   const [kept] = await db.select().from(runtimes).where(eq(runtimes.id, CLOUD_RUNTIME_ID));
   const [keptSpaces] = await db.select().from(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
   beforeAll(async () => {
-    delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
     await useSandboxPlatform("boat", "boat_test_key_for_cloud");
   });
 
@@ -36,9 +34,6 @@ run("Aven Cloud runtime (postgres)", async () => {
     if (!keptSpaces) await db.delete(runtimes).where(eq(runtimes.id, SPACES_RUNTIME_ID));
 
     clearSandboxPlatform();
-
-    if (keptLimit === undefined) delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
-    else process.env.AVEN_CLOUD_MAX_SANDBOXES = keptLimit;
   });
 
   test("Aven Cloud is listed for every workspace once the platform has a sandbox, and only then", async () => {
@@ -170,27 +165,15 @@ run("Aven Cloud runtime (postgres)", async () => {
     );
   });
 
-  test("a workspace cannot hold more Aven Cloud computers than its limit", async () => {
+  test("a workspace has no limit on its Aven Cloud computers", async () => {
     const { project } = await seedProject(orgB, userId, null, "limit-repo");
     const existing = (await runtimesService.list(orgB, userId)).length;
-    process.env.AVEN_CLOUD_MAX_SANDBOXES = "2";
+    const starts = Array.from({ length: 21 }, () =>
+      threadsService.create(orgB, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
+    );
 
-    try {
-      await threadsService.create(orgB, userId, {
-        projectId: project.id,
-        runtimeId: CLOUD_RUNTIME_ID,
-      });
-      await threadsService.create(orgB, userId, {
-        projectId: project.id,
-        runtimeId: CLOUD_RUNTIME_ID,
-      });
-      await expect(
-        threadsService.create(orgB, userId, { projectId: project.id, runtimeId: CLOUD_RUNTIME_ID }),
-      ).rejects.toThrow("2 Aven Cloud computers");
-      expect((await runtimesService.list(orgB, userId)).length).toBe(existing + 2);
-    } finally {
-      delete process.env.AVEN_CLOUD_MAX_SANDBOXES;
-    }
+    await Promise.all(starts);
+    expect((await runtimesService.list(orgB, userId)).length).toBe(existing + 21);
   });
 
   test("without a sandbox platform Aven Cloud cannot start a thread", async () => {
