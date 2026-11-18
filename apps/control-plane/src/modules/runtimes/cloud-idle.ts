@@ -1,5 +1,6 @@
 import { describeError } from "@aven/server-kit/errors";
-import { EXTEND_EVERY_MS, idleWindows, shouldStopSandbox } from "@aven/sandbox/idle";
+import { EXTEND_EVERY_MS, shouldStopSandbox } from "@aven/sandbox/idle";
+import { cloudLifecycleService } from "../cloud-lifecycle/service";
 import { runtimeActivity } from "./activity";
 import { extendCloudRuntime, stopCloudRuntime } from "./providers";
 import { runtimesService } from "./service";
@@ -13,7 +14,7 @@ type Options = {
   hub: Pick<RuntimeHub, "get">;
   running: (threadId: string) => boolean;
   lastEventAt: (threadId: string) => number | undefined;
-  windows?: IdleWindows;
+  windows?: IdleWindows | (() => Promise<IdleWindows>);
   pageSize?: number;
   now?: () => number;
   stop?: (runtimeId: string) => Promise<void>;
@@ -38,7 +39,7 @@ export function createCloudIdle({
   hub,
   running,
   lastEventAt,
-  windows = idleWindows(),
+  windows = () => cloudLifecycleService.idleWindows(),
   pageSize = SANDBOX_PAGE,
   now = Date.now,
   stop = stopCloudRuntime,
@@ -48,7 +49,12 @@ export function createCloudIdle({
   let timer: ReturnType<typeof setInterval> | undefined;
   let ticking: Promise<unknown> | undefined;
 
-  async function visit(runtimeId: string, threads: CloudSandboxThread[], at: number) {
+  async function visit(
+    runtimeId: string,
+    threads: CloudSandboxThread[],
+    at: number,
+    limits: IdleWindows,
+  ) {
     if (!hub.get(runtimeId)) {
       seen.delete(runtimeId);
       return false;
@@ -65,7 +71,7 @@ export function createCloudIdle({
     );
     const lastUserAt = Math.max(lastAgentAt, known.since, runtimeActivity.lastAt(runtimeId) ?? 0);
 
-    if (shouldStopSandbox({ windows, now: at, lastAgentAt, lastUserAt, agentRunning })) {
+    if (shouldStopSandbox({ windows: limits, now: at, lastAgentAt, lastUserAt, agentRunning })) {
       try {
         await stop(runtimeId);
         runtimeActivity.forget(runtimeId);
@@ -93,6 +99,7 @@ export function createCloudIdle({
   }
 
   async function sweep(at = now()) {
+    const limits = typeof windows === "function" ? await windows() : windows;
     const visited = new Set<string>();
     let stopped = 0;
     let after: string | undefined;
@@ -103,7 +110,7 @@ export function createCloudIdle({
       for (const [runtimeId, threads] of grouped(page.threads)) {
         visited.add(runtimeId);
 
-        if (await visit(runtimeId, threads, at)) stopped += 1;
+        if (await visit(runtimeId, threads, at, limits)) stopped += 1;
       }
 
       const last = page.sandboxIds.at(-1);

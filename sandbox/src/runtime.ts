@@ -21,7 +21,7 @@ import type { RuntimeProviderKind } from "@aven/protocol/types";
 const RELEASE_TIMEOUT_MS = 30_000;
 
 export const EXPIRED_COMPUTER =
-  "This Aven Cloud computer was deleted after 48 hours without use. Continue the thread to start a new one";
+  "This Aven Cloud computer was deleted after going unused for too long. Continue the thread to start a new one";
 
 function manualProvider<T extends SandboxRunner>(): SandboxProvider<T> {
   return {

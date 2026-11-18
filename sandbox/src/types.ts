@@ -94,7 +94,7 @@ export type SandboxRemover = (sandboxId: string) => Promise<boolean>;
 
 export type CloudExpiryOptions = {
   intervalMs: number;
-  afterMs?: number;
+  afterMs?: number | (() => Promise<number>);
   idle(before: Date): Promise<IdleCloudSandbox[]>;
   expire(runtimeId: string): Promise<void>;
   remove(provider: RuntimeProviderKind, sandboxId: string): Promise<boolean>;
