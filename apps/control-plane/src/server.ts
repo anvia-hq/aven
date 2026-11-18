@@ -22,6 +22,7 @@ import { editionInUse } from "./edition/current";
 import type { Edition } from "./edition/types";
 import type { KnownRoute } from "./modules/bot-api/types";
 import { startLocalRunner } from "./modules/runtimes/local";
+import { computerUsageService } from "./modules/runtimes/computer-usage";
 import { runtimesService } from "./modules/runtimes/service";
 import { startPreviews } from "./modules/preview/start";
 
@@ -74,6 +75,7 @@ export async function startControlPlane(edition: Edition) {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
+  await computerUsageService.closeAll();
   scheduler.start();
   goalDriver.start();
   threadWatcher.start();
