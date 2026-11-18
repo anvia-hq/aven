@@ -582,6 +582,13 @@
       "when": 1794896215129,
       "tag": "0082_many_kid_colt",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1794988253450,
+      "tag": "0083_tranquil_nomad",
+      "breakpoints": true
     }
   ]
 }
