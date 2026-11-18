@@ -1,4 +1,4 @@
-import { BookOpen } from "@mynaui/icons-react";
+import { BookIcon } from "@solar-icons/react/linear";
 
 import { Markdown } from "@/components/markdown";
 import { SectionCard } from "@/components/section-card";
@@ -21,7 +21,7 @@ export function RepoReadme({ project }: { project: Project }) {
       label="README"
       title={
         <>
-          <BookOpen className="size-4 text-muted-foreground" />
+          <BookIcon className="size-4 text-muted-foreground" />
           {readme?.name ?? "README"}
         </>
       }

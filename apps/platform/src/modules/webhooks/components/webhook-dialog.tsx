@@ -1,4 +1,4 @@
-import { Check, Copy, Plus } from "@mynaui/icons-react";
+import { CheckIcon, CopyIcon, AddIcon } from "@solar-icons/react/linear";
 import { WEBHOOK_NAME_MAX } from "@aven/protocol/webhooks";
 import { useState, type FormEvent } from "react";
 
@@ -43,7 +43,7 @@ function Created({ created, onDone }: { created: WebhookCreated; onDone: () => v
       </pre>
       <div>
         <Button type="button" variant="outline" onClick={() => void copy(address)}>
-          {copied ? <Check /> : <Copy />} {copied ? "Copied" : "Copy address"}
+          {copied ? <CheckIcon /> : <CopyIcon />} {copied ? "Copied" : "Copy address"}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -114,7 +114,7 @@ export function WebhookDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button size="sm" />}>
-        <Plus /> New webhook
+        <AddIcon /> New webhook
       </DialogTrigger>
       <DialogContent>
         {created ? (

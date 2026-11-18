@@ -1,4 +1,4 @@
-import { UserPlus } from "@mynaui/icons-react";
+import { UserPlusIcon } from "@solar-icons/react/linear";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -34,7 +34,7 @@ export function InviteMemberDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
-        <UserPlus /> Invite member
+        <UserPlusIcon /> Invite member
       </DialogTrigger>
       <DialogContent>
         <Form onSubmit={handleSubmit} className="flex flex-col gap-4">

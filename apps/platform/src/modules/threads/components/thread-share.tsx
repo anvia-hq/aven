@@ -1,5 +1,5 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
-import { Check, Globe, Link, Lock, Share } from "@mynaui/icons-react";
+import { CheckIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon } from "@solar-icons/react/linear";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -28,13 +28,13 @@ import type { Thread, ThreadVisibility } from "../types";
 const CHOICES = [
   {
     value: "private",
-    icon: Lock,
+    icon: LockIcon,
     title: "Only me",
     detail: "Nobody else can see it.",
   },
   {
     value: "workspace",
-    icon: Globe,
+    icon: GlobeIcon,
     title: "Everyone in the workspace",
     detail:
       "They can read it, with its files and changes. Only you send messages, unless you turn on multiplayer.",
@@ -72,7 +72,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
           />
         }
       >
-        {shared ? <Globe /> : <Share />}
+        {shared ? <GlobeIcon /> : <ShareIcon />}
         <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
@@ -143,7 +143,7 @@ export function ThreadShare({ thread }: { thread: Thread }) {
           )}
           <DialogFooter className="sm:justify-between">
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
-              {copied ? <Check /> : <Link />}
+              {copied ? <CheckIcon /> : <LinkIcon />}
               {copied ? "Link copied" : "Copy link"}
             </Button>
             <DialogClose render={<Button type="button" />}>Done</DialogClose>

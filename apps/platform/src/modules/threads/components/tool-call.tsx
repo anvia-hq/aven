@@ -1,4 +1,4 @@
-import { DangerCircle } from "@mynaui/icons-react";
+import { DangerCircleIcon } from "@solar-icons/react/linear";
 
 import { cn } from "cn";
 
@@ -78,7 +78,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
           </span>
         )}
         {tool.status === "error" && (
-          <DangerCircle className="size-4 text-destructive" aria-label="Failed" />
+          <DangerCircleIcon className="size-4 text-destructive" aria-label="Failed" />
         )}
       </CollapsibleTrigger>
       {expandable && (

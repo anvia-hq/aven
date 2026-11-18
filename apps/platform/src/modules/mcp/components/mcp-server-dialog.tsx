@@ -1,4 +1,4 @@
-import { Plus, Trash } from "@mynaui/icons-react";
+import { AddIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
 import { MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { useState, type FormEvent } from "react";
 
@@ -155,7 +155,7 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
                 aria-label={`Remove ${row.name || "header"}`}
                 onClick={() => setHeaders((rows) => rows.filter((item) => item.key !== row.key))}
               >
-                <Trash />
+                <TrashBinMinimalisticIcon />
               </Button>
             </div>
           ))}
@@ -167,7 +167,7 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
               className="self-start"
               onClick={() => setHeaders((rows) => [...rows, blankRow()])}
             >
-              <Plus /> Add header
+              <AddIcon /> Add header
             </Button>
           )}
         </div>
@@ -201,7 +201,7 @@ export function McpServerDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button size="sm" />}>
-        <Plus /> Add server
+        <AddIcon /> Add server
       </DialogTrigger>
       <DialogContent>
         <McpServerForm onDone={() => setOpen(false)} />

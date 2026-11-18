@@ -1,4 +1,4 @@
-import { Plus } from "@mynaui/icons-react";
+import { AddIcon } from "@solar-icons/react/linear";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -65,7 +65,7 @@ export function NewRuntimeDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button />}>
-        <Plus /> Add runtime
+        <AddIcon /> Add runtime
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         {created ? (

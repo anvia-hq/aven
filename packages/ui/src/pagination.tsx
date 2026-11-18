@@ -3,10 +3,10 @@ import { cn } from "cn";
 
 import { Button } from "./button";
 import {
-  ChevronLeft as ChevronLeftIcon,
-  ChevronRight as ChevronRightIcon,
-  Dots as MoreHorizontalIcon,
-} from "@mynaui/icons-react";
+  AltArrowLeftIcon as ChevronLeftIcon,
+  AltArrowRightIcon as ChevronRightIcon,
+  MenuDotsIcon as MoreHorizontalIcon,
+} from "@solar-icons/react/linear";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (

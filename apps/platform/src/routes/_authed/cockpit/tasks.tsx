@@ -1,4 +1,4 @@
-import { Kanban, List, Plus } from "@mynaui/icons-react";
+import { KanbanIcon, ListIcon, AddIcon } from "@solar-icons/react/linear";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -45,10 +45,10 @@ function TasksPage() {
           >
             <TabsList aria-label="View">
               <TabsTrigger value="board">
-                <Kanban /> Board
+                <KanbanIcon /> Board
               </TabsTrigger>
               <TabsTrigger value="list">
-                <List /> List
+                <ListIcon /> List
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -56,7 +56,7 @@ function TasksPage() {
             size="sm"
             onClick={() => setOpen({ kind: "new", initial: { tags: tag ? [tag] : [] } })}
           >
-            <Plus /> New task
+            <AddIcon /> New task
           </Button>
         </>
       }

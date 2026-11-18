@@ -1,4 +1,11 @@
-import { Calendar, CircleDashed, Flag, Tag, Trash, X } from "@mynaui/icons-react";
+import {
+  CalendarIcon,
+  CircleDashedIcon,
+  FlagIcon,
+  TagIcon,
+  TrashBinMinimalisticIcon,
+  CloseIcon,
+} from "@solar-icons/react/linear";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -68,7 +75,7 @@ function TaskProperties({
 }) {
   return (
     <Properties>
-      <Property icon={CircleDashed} label="Status">
+      <Property icon={CircleDashedIcon} label="Status">
         <Select
           value={value.status}
           onValueChange={(next) => onChange({ status: next as TaskStatus })}
@@ -91,7 +98,7 @@ function TaskProperties({
           </SelectContent>
         </Select>
       </Property>
-      <Property icon={Flag} label="Priority">
+      <Property icon={FlagIcon} label="Priority">
         <Select
           value={value.priority}
           onValueChange={(next) => onChange({ priority: next as TaskPriority })}
@@ -114,10 +121,10 @@ function TaskProperties({
           </SelectContent>
         </Select>
       </Property>
-      <Property icon={Calendar} label="Due">
+      <Property icon={CalendarIcon} label="Due">
         <DueInput value={value.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
       </Property>
-      <Property icon={Tag} label="Tags">
+      <Property icon={TagIcon} label="Tags">
         <TagInput bare value={value.tags} onChange={(tags) => onChange({ tags })} />
       </Property>
     </Properties>
@@ -158,7 +165,7 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
                 if (await remove(task)) onClose();
               }}
             >
-              <Trash /> Delete task
+              <TrashBinMinimalisticIcon /> Delete task
             </DropdownMenuItem>
           </MoreMenu>
           <CloseButton />
@@ -278,7 +285,7 @@ const CloseButton = () => (
       <Button variant="ghost" size="icon-sm" aria-label="Close" className="text-muted-foreground" />
     }
   >
-    <X />
+    <CloseIcon />
   </DrawerClose>
 );
 

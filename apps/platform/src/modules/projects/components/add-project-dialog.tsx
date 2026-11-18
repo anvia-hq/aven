@@ -1,4 +1,4 @@
-import { Plus } from "@mynaui/icons-react";
+import { AddIcon } from "@solar-icons/react/linear";
 import type { ComponentProps } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -34,7 +34,7 @@ export function AddProjectDialog({ onAdded, variant, size }: Props) {
   return (
     <Dialog open={state.open} onOpenChange={state.handleOpenChange}>
       <DialogTrigger render={<Button variant={variant} size={size} />}>
-        <Plus /> Add project
+        <AddIcon /> Add project
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <Form onSubmit={state.handleSubmit} className="flex flex-col gap-4">

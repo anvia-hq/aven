@@ -1,4 +1,9 @@
-import { ChevronRight, ExternalLink, File, Folder } from "@mynaui/icons-react";
+import {
+  AltArrowRightIcon,
+  SquareArrowRightUpIcon,
+  FileIcon,
+  FolderIcon,
+} from "@solar-icons/react/linear";
 import { Link } from "@tanstack/react-router";
 
 import { SectionCard } from "@/components/section-card";
@@ -25,7 +30,7 @@ function Trail({ project, path }: Props) {
       </Link>
       {parts.map((part, index) => (
         <span key={parts.slice(0, index + 1).join("/")} className="flex min-w-0 items-center gap-1">
-          <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+          <AltArrowRightIcon className="size-3.5 shrink-0 text-muted-foreground" />
           {index === parts.length - 1 ? (
             <span className="truncate">{part}</span>
           ) : (
@@ -53,7 +58,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
         search={{ path: entry.path }}
         className={rowClass}
       >
-        <Folder className="size-4 shrink-0 text-muted-foreground" />
+        <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
         <span className="truncate">{entry.name}</span>
       </Link>
     );
@@ -62,7 +67,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
   if (!project.repoFullName) {
     return (
       <div className={rowClass}>
-        <File className="size-4 shrink-0 text-muted-foreground" />
+        <FileIcon className="size-4 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate">{entry.name}</span>
       </div>
     );
@@ -75,9 +80,9 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       rel="noreferrer noopener"
       className={`${rowClass} group/file`}
     >
-      <File className="size-4 shrink-0 text-muted-foreground" />
+      <FileIcon className="size-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-      <ExternalLink className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/file:opacity-100" />
+      <SquareArrowRightUpIcon className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/file:opacity-100" />
     </a>
   );
 }
@@ -112,7 +117,7 @@ export function RepoFiles({ project, path }: Props) {
               search={parent === "" ? {} : { path: parent }}
               className={rowClass}
             >
-              <Folder className="size-4 shrink-0 text-muted-foreground" />
+              <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
               <span>..</span>
             </Link>
           )}

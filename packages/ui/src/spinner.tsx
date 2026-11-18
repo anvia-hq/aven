@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { Spinner as Loader2Icon } from "@mynaui/icons-react";
+import { LoaderIcon as Loader2Icon } from "@solar-icons/react/linear";
 
 function Spinner({ className, ...props }: React.ComponentProps<"svg">) {
   return (

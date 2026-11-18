@@ -1,4 +1,4 @@
-import { ChevronRight } from "@mynaui/icons-react";
+import { AltArrowRightIcon } from "@solar-icons/react/linear";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 
@@ -38,7 +38,7 @@ export function BotActivity({
         <span className="text-foreground">
           {others.length === 1 ? others[0]!.name : `${others.length} bots`}
         </span>
-        <ChevronRight className="size-3 shrink-0 transition group-data-[panel-open]:rotate-90" />
+        <AltArrowRightIcon className="size-3 shrink-0 transition group-data-[panel-open]:rotate-90" />
       </CollapsibleTrigger>
       <CollapsibleContent className="mx-auto mt-1 max-w-[80%] space-y-1 border-l-2 pl-3 text-xs text-muted-foreground">
         {messages.map((message) => (

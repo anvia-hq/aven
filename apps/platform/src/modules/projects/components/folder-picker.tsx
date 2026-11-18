@@ -1,4 +1,4 @@
-import { ArrowUp, Folder, FolderPlus, GitBranch } from "@mynaui/icons-react";
+import { ArrowUpIcon, FolderIcon, AddFolderIcon, GitBranchIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -68,9 +68,9 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
                 openFolder(folder.path);
               }}
             >
-              <Folder className="size-4 shrink-0 text-muted-foreground" />
+              <FolderIcon className="size-4 shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1 truncate">{folder.name}</span>
-              {folder.git && <GitBranch className="size-3.5 shrink-0 text-muted-foreground" />}
+              {folder.git && <GitBranchIcon className="size-3.5 shrink-0 text-muted-foreground" />}
             </Button>
           </li>
         ))}
@@ -89,7 +89,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
           disabled={!browsing}
           onClick={() => openFolder(shown?.parent ?? "")}
         >
-          <ArrowUp />
+          <ArrowUpIcon />
         </Button>
         <span className="min-w-0 flex-1 truncate font-mono text-xs" title={browsing}>
           {browsing || "Folders this computer serves"}
@@ -102,7 +102,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
           disabled={!browsing}
           onClick={() => setNaming(true)}
         >
-          <FolderPlus />
+          <AddFolderIcon />
         </Button>
       </div>
       {naming && (

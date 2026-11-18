@@ -1,4 +1,4 @@
-import { GitBranch } from "@mynaui/icons-react";
+import { GitBranchIcon } from "@solar-icons/react/linear";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
@@ -21,7 +21,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   const body = (
     <>
       <span className="flex size-6 shrink-0 items-center justify-center text-primary">
-        <GitBranch className={cn("size-5", fork?.running && "animate-pulse")} />
+        <GitBranchIcon className={cn("size-5", fork?.running && "animate-pulse")} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{fork?.title ?? "Fork"}</span>
