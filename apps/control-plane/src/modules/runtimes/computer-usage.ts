@@ -1,6 +1,6 @@
 import { db } from "@aven/db/client";
 import { computerUsage } from "@aven/db/schema/computer-usage";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull, ne } from "drizzle-orm";
 
 import { CLOUD_TEMPLATE_IDS } from "@aven/sandbox/cloud-config";
 import type { ComputerRuntime } from "./types";
@@ -37,12 +37,16 @@ export const computerUsageService = {
       .where(isNull(computerUsage.stoppedAt));
   },
 
-  async runningIn(organizationId: string) {
+  async runningIn(organizationId: string, exceptRuntimeId?: string) {
     const [row] = await db
       .select({ total: count() })
       .from(computerUsage)
       .where(
-        and(eq(computerUsage.organizationId, organizationId), isNull(computerUsage.stoppedAt)),
+        and(
+          eq(computerUsage.organizationId, organizationId),
+          isNull(computerUsage.stoppedAt),
+          exceptRuntimeId === undefined ? undefined : ne(computerUsage.runtimeId, exceptRuntimeId),
+        ),
       );
 
     return row?.total ?? 0;

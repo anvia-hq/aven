@@ -1,3 +1,4 @@
+import type { CloudLifecycle } from "../cloud-lifecycle/types";
 import type { RuntimeConnection } from "./hub";
 import type { runnerVia } from "./ask-runner";
 import type { MODES } from "./local";
@@ -157,4 +158,20 @@ export type ComputerRuntime = {
   ownerId: string | null;
   parentRuntimeId: string | null;
   provider: string;
+};
+
+export type ComputerStart = {
+  runtimeId: string;
+  organizationId: string | null;
+  userId: string | null;
+};
+
+export type AdmissionOptions = {
+  settings: () => Promise<CloudLifecycle>;
+  running: (organizationId: string, exceptRuntimeId: string) => Promise<number>;
+  extra?: (start: ComputerStart) => Promise<void>;
+  now?: () => number;
+  sleep?: (ms: number) => Promise<void>;
+  pollMs?: number;
+  maxWaitMs?: number;
 };

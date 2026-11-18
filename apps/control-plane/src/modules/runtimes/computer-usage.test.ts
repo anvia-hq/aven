@@ -81,6 +81,8 @@ run("recording when Aven Cloud computers run (real postgres)", async () => {
     expect(await rows(machine!.id)).toHaveLength(0);
     expect(await computerUsageService.runningIn(orgA)).toBe(before + 1);
 
+    expect(await computerUsageService.runningIn(orgA, cloud.id)).toBe(before);
+
     await computerUsageService.closeAll();
 
     expect(await computerUsageService.runningIn(orgA)).toBe(0);

@@ -88,6 +88,45 @@ describe("reaching a runtime's sandbox", () => {
     ).rejects.toThrow(CLOUD_OFF);
   });
 
+  test("a cloud computer is admitted before it is started, and a refusal stops the start", async () => {
+    setSandboxSettings({ provider: "boat", base: "", apiKey: "boat_key", runnerUrl: "" });
+    const recorded: string[] = [];
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({
+        providerOf: async () => "boat",
+        record: async ({ runtimeId }) => {
+          recorded.push(runtimeId);
+          return null;
+        },
+        admit: async () => {
+          throw new Error("Not now");
+        },
+      }),
+    );
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toThrow("Not now");
+    expect(recorded).toEqual([]);
+  });
+
+  test("a manual runtime is never put through admission", async () => {
+    let asked = false;
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({
+        providerOf: async () => "manual",
+        admit: async () => {
+          asked = true;
+        },
+      }),
+    );
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toBeInstanceOf(RuntimeOfflineError);
+    expect(asked).toBe(false);
+  });
+
   test("a thread on a runtime nobody recorded has no runner to ask to free it", async () => {
     const asked: string[] = [];
     const sandbox = createSandboxRuntime<SandboxRunner>(store());
