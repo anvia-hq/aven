@@ -142,6 +142,7 @@ export function providerOptionsFor(provider: Provider) {
 
 export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
+  defaultEffort?: string | null,
 ): ReasoningControls | null {
   if (
     (config.provider === "openai-compatible" ||
@@ -162,5 +163,10 @@ export function reasoningControlsFor(
     "unused",
   ).controls;
   const control = controls?.reasoningEffort;
-  return control ? { options: control.options, defaultValue: control.defaultValue ?? null } : null;
+
+  if (!control) return null;
+
+  const chosen = defaultEffort && control.options.includes(defaultEffort) ? defaultEffort : null;
+
+  return { options: control.options, defaultValue: chosen ?? control.defaultValue ?? null };
 }

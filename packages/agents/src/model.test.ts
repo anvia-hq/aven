@@ -45,6 +45,13 @@ describe("createModel bedrock", () => {
     ]);
   });
 
+  test("starts the control on the host's own default, when it is one of its levels", () => {
+    const config = { ...bedrock, modelId: "openai.gpt-oss-120b", effortLevels: ["low", "high"] };
+    expect(reasoningControlsFor(config, "low")?.defaultValue).toBe("low");
+    expect(reasoningControlsFor(config, "max")?.defaultValue).toBeNull();
+    expect(reasoningControlsFor(config)?.defaultValue).toBeNull();
+  });
+
   test("sends chat completions to the endpoint with the key as a bearer token", async () => {
     const seen: { path: string; auth: string | null }[] = [];
     const server = Bun.serve({
