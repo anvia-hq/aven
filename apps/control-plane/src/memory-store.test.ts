@@ -39,6 +39,35 @@ run("memory store (postgres)", async () => {
     expect(loaded.map((message) => message.content)).toEqual(["remember 42", "ok", "what number?"]);
   });
 
+  test("a NUL character in a message is dropped instead of failing the whole append", async () => {
+    await store.append({
+      scope: scope("org-a"),
+      runId: "run-nul",
+      turn: 1,
+      messages: [
+        { role: "user", content: "cat the font" },
+        {
+          role: "tool",
+          content: [
+            {
+              type: "tool-result",
+              toolCallId: "call-1",
+              toolName: "exec_command",
+              output: {
+                type: "json",
+                value: { stdout: "wOFF\u0000\u0001\\u0000 kept", "a\u0000b": 1 },
+              },
+            },
+          ],
+        },
+      ],
+    });
+    const loaded = await store.load({ scope: scope("org-a") });
+    const tool = loaded.at(-1);
+    expect(JSON.stringify(tool)).toContain("wOFF\\u0001\\\\u0000 kept");
+    expect(JSON.stringify(tool)).toContain('"ab":1');
+  });
+
   test("the same session id in another organization sees nothing", async () => {
     expect(await store.load({ scope: scope("org-b") })).toEqual([]);
   });
