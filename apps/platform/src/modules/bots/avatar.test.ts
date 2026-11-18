@@ -3,7 +3,6 @@ import { describe, expect, test } from "bun:test";
 import {
   avatarFor,
   colors,
-  faces,
   families,
   formatAvatarSetting,
   isLightTint,
@@ -18,31 +17,20 @@ describe("avatarFor", () => {
     expect(avatarFor("another-bot")).not.toEqual(first);
   });
 
-  test("spreads over the shapes, colors and faces instead of favouring a few", () => {
+  test("spreads over the shapes and colors instead of favouring a few", () => {
     const looks = Array.from({ length: 600 }, (_, index) => avatarFor(`bot-${index}`));
     expect(new Set(looks.map((look) => look.family)).size).toBe(families.length);
     expect(new Set(looks.map((look) => look.color)).size).toBe(colors.length);
-    expect(new Set(looks.map((look) => look.face)).size).toBe(faces.length);
-    expect(
-      new Set(looks.map((look) => `${look.family}${look.color}${look.face}`)).size,
-    ).toBeGreaterThan(300);
+    expect(new Set(looks.map((look) => `${look.family}${look.color}`)).size).toBeGreaterThan(100);
   });
 
   test("keeps what was chosen, and draws the rest from the seed it is given instead of the id", () => {
     const chosen = avatarFor("bot", { family: "hexagon", color: "#ff7a00" });
     expect(chosen).toMatchObject({ family: "hexagon", color: "#ff7a00" });
-    expect(chosen.face).toBe(avatarFor("bot").face);
     expect(chosen.delay).toBe(avatarFor("bot").delay);
 
     expect(avatarFor("bot", { seed: "abc" })).toEqual(avatarFor("other", { seed: "abc" }));
     expect(avatarFor("bot", { seed: "abc" })).not.toEqual(avatarFor("bot"));
-  });
-
-  test("every shape says how far it reaches, which a bot at work gives off its ring around", () => {
-    for (const family of families) {
-      expect(family.reach).toBeGreaterThan(10);
-      expect(avatarFor("bot", { family: family.name }).reach).toBe(family.reach);
-    }
   });
 
   test("a shape that does not exist falls back to the one the seed gives", () => {

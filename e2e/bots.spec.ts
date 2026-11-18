@@ -73,8 +73,8 @@ test.describe("bots", () => {
     });
     expect(held.ok()).toBe(true);
 
-    const tile = page.locator('a[aria-label="Aven, main bot"] svg[data-mood]');
-    const typing = page.locator('[role="status"] svg[data-mood]');
+    const tile = page.locator('a[aria-label="Aven, main bot"] canvas[data-mood]');
+    const typing = page.locator('[role="status"] canvas[data-mood]');
 
     try {
       await page.getByRole("textbox", { name: "Message" }).fill(phrase);
@@ -572,13 +572,13 @@ test.describe("bots", () => {
     await expect(sent.locator('[data-mention="bot"]')).toHaveText("Scout");
     await expect(bubble(page, "I asked Scout")).toBeVisible();
     await expect(message).toHaveText("");
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood]')).toHaveAttribute(
+    await expect(page.locator('a[href^="/bot/"] canvas[data-mood]')).toHaveAttribute(
       "data-mood",
       "working",
     );
 
     await expect(bubble(page, "Scout answered")).toBeVisible();
-    await expect(page.locator('a[href^="/bot/"] svg[data-mood="idle"]').first()).toBeVisible();
+    await expect(page.locator('a[href^="/bot/"] canvas[data-mood="idle"]').first()).toBeVisible();
 
     const activity = page.locator('[data-activity="bots"]');
     await expect(activity).toContainText("2 messages with");
@@ -889,7 +889,7 @@ test.describe("bots", () => {
   test("a bot has a character of its own, and the person picks another", async ({ page }) => {
     await registerBotPerson(page, "bot-look", "Bot Looker");
     await page.goto("/bot");
-    const look = page.locator('a[aria-label="Aven, main bot"] svg[data-family]');
+    const look = page.locator('a[aria-label="Aven, main bot"] canvas[data-family]');
     await expect(look).toBeVisible();
     const family = await look.getAttribute("data-family");
     const color = await look.getAttribute("data-color");
@@ -908,7 +908,7 @@ test.describe("bots", () => {
     await page.getByRole("button", { name: `Color ${paint}` }).click();
     const preview = dialog
       .getByRole("button", { name: "Change avatar" })
-      .locator("svg[data-family]");
+      .locator("canvas[data-family]");
     await expect(preview).toHaveAttribute("data-family", shape);
     await expect(preview).toHaveAttribute("data-color", paint);
     await expect(look).toHaveAttribute("data-family", family!);
