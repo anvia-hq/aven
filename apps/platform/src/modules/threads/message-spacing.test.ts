@@ -45,7 +45,8 @@ describe("who is speaking", () => {
 
   test("a hidden message speaks for nobody, and a note is the agent's", () => {
     expect(speakerOf(said("user", "[process] a task ended"), viewer)).toBeNull();
-    expect(speakerOf(said("user", "[fork] forked"), viewer)).toEqual(agent);
+    expect(speakerOf(said("user", "[fork] forked"), viewer)).toBeNull();
+    expect(speakerOf(said("user", "[continued] moved on"), viewer)).toEqual(agent);
     expect(speakerOf({ ...said("assistant", ""), parts: [] }, viewer)).toBeNull();
   });
 

@@ -87,7 +87,7 @@ export const ThreadMessage = memo(function ThreadMessage({
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
     );
 
-    if (note?.kind === "process") return null;
+    if (note?.kind === "process" || note?.kind === "fork") return null;
 
     if (note?.kind === "compaction") return <CompactionDivider label={note.line} />;
 
