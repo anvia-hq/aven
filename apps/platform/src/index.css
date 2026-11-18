@@ -1919,12 +1919,14 @@
   .dark {
     color-scheme: dark;
   }
+  html {
+    font-size: 87.5%;
+  }
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply overflow-x-clip bg-background text-foreground antialiased;
-    font-size: 0.875rem;
   }
   h1,
   h2,
