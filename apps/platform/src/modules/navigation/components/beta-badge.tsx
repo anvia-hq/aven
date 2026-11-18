@@ -30,10 +30,10 @@ export function BetaBadge() {
       <div
         aria-hidden
         style={{ backgroundImage: FLOW }}
-        className="gradient-flow absolute inset-0 bg-size-[200%_100%]"
+        className="gradient-flow absolute -inset-4 bg-size-[200%_100%] blur-xl"
       />
-      <Wave className="h-3/4 opacity-[0.16] blur-[6px] [animation-duration:11s]" />
-      <Wave className="h-1/2 opacity-[0.12] blur-[4px] [animation-direction:reverse] [animation-duration:7s]" />
+      <Wave className="h-3/4 opacity-[0.16] blur-[12px] [animation-duration:11s]" />
+      <Wave className="h-1/2 opacity-[0.12] blur-[9px] [animation-direction:reverse] [animation-duration:7s]" />
       <div
         aria-hidden
         className="absolute inset-0 rounded-2xl shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground)_22%,transparent)]"
@@ -46,7 +46,7 @@ export function BetaBadge() {
           />
           Beta version
         </span>
-        <span className="text-xs leading-5 text-foreground/70">
+        <span className="text-xs leading-4 font-medium text-foreground/70">
           Expect rough edges while we are in beta. Tell us what breaks.
         </span>
       </div>
