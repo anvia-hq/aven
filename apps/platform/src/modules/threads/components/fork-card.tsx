@@ -1,4 +1,4 @@
-import { GitBranchIcon } from "@solar-icons/react/linear";
+import { GitForkIcon } from "@solar-icons/react/linear";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
@@ -20,8 +20,8 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
 
   const body = (
     <>
-      <span className="flex size-6 shrink-0 items-center justify-center text-primary">
-        <GitBranchIcon className={cn("size-5", fork?.running && "animate-pulse")} />
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-primary">
+        <GitForkIcon className={cn("size-5", fork?.running && "animate-pulse")} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-sm font-medium">{fork?.title ?? "Fork"}</span>
@@ -49,7 +49,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
   );
 
   const frame =
-    "flex w-full min-w-0 items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left";
+    "flex w-full max-w-md min-w-0 items-center gap-3 rounded-lg border bg-card px-3 py-2.5 text-left";
 
   if (!fork)
     return (
