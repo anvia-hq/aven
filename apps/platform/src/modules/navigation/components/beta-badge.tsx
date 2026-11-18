@@ -29,7 +29,9 @@ export function BetaBadge() {
       <Wave className="h-1/2 opacity-[0.12] [animation-direction:reverse] [animation-duration:7s]" />
       <div className="relative flex flex-col gap-0.5 leading-tight text-primary-foreground">
         <span className="text-sm font-semibold">Beta version</span>
-        <span className="text-xs opacity-80">Expect a few rough edges</span>
+        <span className="text-xs leading-5 opacity-80">
+          Aven is still in beta, so expect a few rough edges. If something breaks, let us know.
+        </span>
       </div>
     </div>
   );
