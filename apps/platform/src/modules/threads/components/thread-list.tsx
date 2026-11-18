@@ -3,11 +3,11 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@aven/ui/badge";
 import { authClient } from "@/lib/auth-client";
 import { timeAgo } from "@/lib/format";
-import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
 import type { Thread } from "../types";
+import { ThreadMark } from "./thread-mark";
 
 type Props = {
   threads: Thread[];
@@ -32,8 +32,9 @@ export function ThreadList({ threads, empty }: Props) {
             >
               {project ? (
                 <span title={project.name} className="flex shrink-0">
-                  <ProjectTile
+                  <ThreadMark
                     projectId={project.id}
+                    runtimeId={thread.runtimeId}
                     palette={palettes.get(project.id)}
                     working={thread.running}
                   />

@@ -1,10 +1,10 @@
-import type { Rgb } from "../types";
+import type { MarkInk } from "./types";
 
-const known = new Map<string, Rgb>();
+const known = new Map<string, MarkInk>();
 const scratch = document.createElement("canvas");
 scratch.width = scratch.height = 1;
 
-export function resolveInk(element: Element): Rgb {
+export function resolveInk(element: Element): MarkInk {
   const css = getComputedStyle(element).color;
   const cached = known.get(css);
 
@@ -15,7 +15,7 @@ export function resolveInk(element: Element): Rgb {
   context.fillStyle = css;
   context.fillRect(0, 0, 1, 1);
   const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
-  const ink: Rgb = [r!, g!, b!];
+  const ink: MarkInk = [r!, g!, b!];
   known.set(css, ink);
   return ink;
 }

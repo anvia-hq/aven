@@ -3,12 +3,12 @@ import { useEffect, useState } from "react";
 import { elapsed } from "@/lib/format";
 import { threadComputer } from "@/modules/computer/computer";
 import { useComputerStatus } from "@/modules/computer/hooks/use-computer-status";
-import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 import { isSandbox } from "@/modules/runtimes/sandbox";
 
 import { useWorkingWord } from "../hooks/use-working-word";
+import { ThreadMark } from "./thread-mark";
 
 function WorkingWord() {
   const { current, previous } = useWorkingWord();
@@ -83,8 +83,9 @@ export function WorkingIndicator({
           data-role="working"
           className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
         >
-          <ProjectTile
+          <ThreadMark
             projectId={projectId}
+            runtimeId={runtimeId}
             palette={palettes.get(projectId)}
             speed={2}
             working
