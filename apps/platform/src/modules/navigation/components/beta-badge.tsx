@@ -19,7 +19,7 @@ export function BetaBadge() {
   return (
     <div
       role="note"
-      className="pointer-events-none fixed right-2.5 bottom-2.5 z-40 hidden overflow-hidden rounded-2xl px-5 py-3.5 shadow-xl ring-1 ring-foreground/10 md:block"
+      className="pointer-events-none fixed right-3 bottom-6 z-40 hidden overflow-hidden rounded-2xl px-5 py-3.5 shadow-xl ring-1 ring-foreground/10 md:block"
     >
       <div
         aria-hidden
@@ -28,10 +28,8 @@ export function BetaBadge() {
       <Wave className="h-3/4 opacity-[0.14] [animation-duration:11s]" />
       <Wave className="h-1/2 opacity-[0.12] [animation-direction:reverse] [animation-duration:7s]" />
       <div className="relative flex flex-col gap-0.5 leading-tight text-primary-foreground">
-        <span className="text-[0.7rem] font-semibold tracking-[0.2em] uppercase opacity-80">
-          Beta
-        </span>
-        <span className="text-sm font-semibold">Expect rough edges</span>
+        <span className="text-sm font-semibold">Beta version</span>
+        <span className="text-xs opacity-80">Expect a few rough edges</span>
       </div>
     </div>
   );
