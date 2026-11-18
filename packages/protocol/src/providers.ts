@@ -1,10 +1,52 @@
 import { MODEL_APIS } from "./runtime-wire";
-import type { AgentBackendKind, ModelApi, Provider, ProviderKeyAsk, QuestionPrompt } from "./types";
+import type {
+  AgentBackendKind,
+  CompatibleVendor,
+  CompatibleVendorId,
+  ModelApi,
+  Provider,
+  ProviderKeyAsk,
+  QuestionPrompt,
+} from "./types";
 
 export const isModelApi = (kind: string): kind is ModelApi =>
   (MODEL_APIS as readonly string[]).includes(kind);
 
 export const providerNeedsKey = (kind: Provider) => kind !== "openai-compatible";
+
+export const COMPATIBLE_VENDORS: Readonly<Record<CompatibleVendorId, CompatibleVendor>> = {
+  openrouter: { baseUrl: "https://openrouter.ai/api/v1", catalog: "openrouter" },
+  groq: { baseUrl: "https://api.groq.com/openai/v1", catalog: "groq" },
+  deepseek: { baseUrl: "https://api.deepseek.com", catalog: "deepseek" },
+  mistral: { baseUrl: "https://api.mistral.ai/v1", catalog: "mistral" },
+  xai: { baseUrl: "https://api.x.ai/v1", catalog: "xai" },
+  ollama: { baseUrl: "http://localhost:11434/v1", catalog: null },
+};
+
+const hostOf = (value: string | null | undefined) => {
+  if (!value) return null;
+
+  try {
+    return new URL(value).host;
+  } catch {
+    return null;
+  }
+};
+
+const VENDOR_HOSTS = (Object.keys(COMPATIBLE_VENDORS) as CompatibleVendorId[]).map((id) => ({
+  id,
+  host: hostOf(COMPATIBLE_VENDORS[id].baseUrl),
+}));
+
+export function catalogVendorOf(baseUrl: string | null | undefined): string | null {
+  const host = hostOf(baseUrl);
+
+  if (!host) return null;
+
+  const vendor = VENDOR_HOSTS.find((candidate) => candidate.host === host);
+
+  return vendor ? COMPATIBLE_VENDORS[vendor.id].catalog : null;
+}
 
 export const SUBSCRIPTION_PROVIDERS = ["claude-subscription", "codex-subscription"] as const;
 

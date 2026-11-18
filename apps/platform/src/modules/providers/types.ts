@@ -1,4 +1,8 @@
-import type { AgentBackendKind, Provider as WireProvider } from "@aven/protocol/types";
+import type {
+  AgentBackendKind,
+  CompatibleVendorId,
+  Provider as WireProvider,
+} from "@aven/protocol/types";
 
 export type ProviderKind = WireProvider;
 
@@ -72,12 +76,11 @@ export type ProviderModels = {
 export type ListedModels = { models: string[]; labels?: Record<string, string> };
 
 export type CompatiblePreset = {
-  id: "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
+  id: CompatibleVendorId;
   name: string;
   description: string;
   baseUrl: string;
   needsKey: boolean;
-  exampleModel: string;
   keyPlaceholder: string;
 };
 
