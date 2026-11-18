@@ -29,17 +29,18 @@ export function BotChat({
   openArtifact: string | undefined;
   onOpenArtifact: (name: string) => void;
 }) {
-  const { messages, typing, activity, error, send } = chat;
+  const { messages, pending, typing, activity, error, send } = chat;
   const { bots } = useBots();
   const textSize = useTextSize("bot");
-  const items = useMemo(() => chatItems(messages), [messages]);
-  const scroll = useScrollToBottom(messages.length + (typing ? 1 : 0));
+  const items = useMemo(() => chatItems([...messages, ...pending]), [messages, pending]);
+  const sending = useMemo(() => new Set(pending.map(({ id }) => id)), [pending]);
+  const scroll = useScrollToBottom(messages.length + pending.length + (typing ? 1 : 0));
   const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
 
   useEffect(() => setQuoting(null), [bot.id]);
 
   const onSend = async (text: string, files: AttachmentUpload[] = []) => {
-    const sent = await send(text, files, quoting?.id);
+    const sent = await send(text, files, quoting ?? undefined);
 
     if (sent) setQuoting(null);
 
@@ -75,6 +76,7 @@ export function BotChat({
                 <Message
                   key={item.key}
                   align={isPersons(message) ? "end" : "start"}
+                  aria-busy={sending.has(message.id) || undefined}
                   className={cn(index > 0 && (together ? "mt-1.5" : "mt-5"))}
                 >
                   {isOpen(messages, message) && message.questions ? (

@@ -1,6 +1,6 @@
 import { activityOf, applyBotEvent, isTyping } from "@aven/protocol/bots";
 import { useSetAtom } from "jotai";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { attempt, postJson } from "@/lib/api";
 import { refreshMcpServers } from "@/modules/mcp/hooks/use-mcp-servers";
@@ -9,7 +9,8 @@ import { refreshProviders } from "@/modules/providers/hooks/use-providers";
 import type { AttachmentUpload } from "@/modules/threads/types";
 
 import { botLastMessagesAtom } from "../atoms/bot-last-messages-atom";
-import type { BotChatMessage } from "../types";
+import { newPendingId, pendingMessage, settlePending } from "../pending";
+import type { BotChatMessage, BotChatQuote, PendingBotMessage } from "../types";
 import { refreshBots } from "./use-bots";
 import type { BotEvent } from "@aven/protocol/types";
 
@@ -50,13 +51,24 @@ function botSaid(event: BotEvent) {
 
 export function useBotChat(botId: string) {
   const [messages, setMessages] = useState<BotChatMessage[]>([]);
+  const [pending, setPending] = useState<PendingBotMessage[]>([]);
+  const pendingRef = useRef<PendingBotMessage[]>([]);
   const [typing, setTyping] = useState(false);
   const [activity, setActivity] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const setLastMessages = useSetAtom(botLastMessagesAtom);
 
+  const changePending = useCallback(
+    (change: (current: PendingBotMessage[]) => PendingBotMessage[]) => {
+      pendingRef.current = change(pendingRef.current);
+      setPending(pendingRef.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     setMessages([]);
+    changePending(() => []);
     setTyping(false);
     setActivity(null);
     setError(null);
@@ -68,6 +80,7 @@ export function useBotChat(botId: string) {
       if (!event) return;
 
       setMessages((current) => applyBotEvent(current, event));
+      changePending((current) => settlePending(current, event));
       setTyping((current) => isTyping(current, event));
       setActivity((current) => activityOf(current, event));
       const last = botSaid(event);
@@ -100,24 +113,32 @@ export function useBotChat(botId: string) {
       if (source.readyState === EventSource.CLOSED) setError("Lost the connection to the server");
     };
     return () => source.close();
-  }, [botId, setLastMessages]);
+  }, [botId, changePending, setLastMessages]);
 
   const send = useCallback(
-    async (text: string, attachments: AttachmentUpload[] = [], quote?: string) => {
+    async (text: string, attachments: AttachmentUpload[] = [], quote?: BotChatQuote) => {
+      const id = newPendingId();
+      changePending((current) => [...current, pendingMessage(id, text, attachments, quote)]);
+
       const body: { text: string; attachments?: AttachmentUpload[]; quote?: string } = { text };
 
       if (attachments.length) body.attachments = attachments;
 
-      if (quote) body.quote = quote;
+      if (quote) body.quote = quote.id;
 
       const sent = await attempt("Could not send message", async () => {
         await postJson(`/bots/${botId}/messages`, body);
         return true;
       });
+
+      if (!sent) changePending((current) => current.filter((item) => item.id !== id));
+
       return sent ?? false;
     },
-    [botId],
+    [botId, changePending],
   );
 
-  return { messages, typing, activity, error, send };
+  const shown = useMemo(() => pending.map((item) => item.message), [pending]);
+
+  return { messages, pending: shown, typing, activity, error, send };
 }
