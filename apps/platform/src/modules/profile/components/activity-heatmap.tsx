@@ -8,9 +8,8 @@ const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
 const LEVELS = ["bg-muted", "bg-chart/20", "bg-chart/40", "bg-chart/65", "bg-chart"] as const;
 
-const CELL = 12;
-const GAP = 4;
-const CELL_STYLE = { width: CELL, height: CELL };
+const CELL = "0.75rem";
+const GAP = "0.25rem";
 const GAP_STYLE = { gap: GAP };
 
 type Props = {
@@ -20,7 +19,7 @@ type Props = {
 
 export function ActivityHeatmap({ days, today }: Props) {
   const weeks = heatmapWeeks(days, today);
-  const columns = `repeat(${weeks.length}, ${CELL}px)`;
+  const columns = `repeat(${weeks.length}, minmax(0, ${CELL}))`;
   const most = Math.max(1, ...days.map((day) => day.tokens));
 
   return (
@@ -34,7 +33,10 @@ export function ActivityHeatmap({ days, today }: Props) {
       <div className="flex flex-col gap-1.5 overflow-x-auto pb-1">
         <div className="flex gap-2">
           <span className="w-2 shrink-0" />
-          <div className="grid shrink-0" style={{ ...GAP_STYLE, gridTemplateColumns: columns }}>
+          <div
+            className="grid min-w-0 flex-1 overflow-clip"
+            style={{ ...GAP_STYLE, gridTemplateColumns: columns }}
+          >
             {weeks.map((week, index) => (
               <span
                 key={week.cells[0]?.date ?? index}
@@ -48,7 +50,7 @@ export function ActivityHeatmap({ days, today }: Props) {
         <div className="flex gap-2">
           <div
             className="grid w-2 shrink-0 text-[9px] leading-none text-muted-foreground"
-            style={{ ...GAP_STYLE, gridTemplateRows: `repeat(7, ${CELL}px)` }}
+            style={{ ...GAP_STYLE, gridTemplateRows: `repeat(7, minmax(0, 1fr))` }}
           >
             {WEEKDAYS.map((weekday, index) => (
               <span key={index} className="flex items-center">
@@ -57,18 +59,18 @@ export function ActivityHeatmap({ days, today }: Props) {
             ))}
           </div>
           <div
-            className="grid shrink-0"
+            className="grid min-w-0 flex-1"
             style={{
               ...GAP_STYLE,
               gridTemplateColumns: columns,
-              gridTemplateRows: `repeat(7, ${CELL}px)`,
+              gridTemplateRows: "repeat(7, auto)",
               gridAutoFlow: "column",
             }}
           >
             {weeks.flatMap((week) =>
               week.cells.map((cell, row) =>
                 cell === null ? (
-                  <span key={`${week.cells[0]?.date}-${row}`} style={CELL_STYLE} />
+                  <span key={`${week.cells[0]?.date}-${row}`} className="aspect-square" />
                 ) : (
                   <Tooltip key={cell.date}>
                     <TooltipTrigger
@@ -76,8 +78,7 @@ export function ActivityHeatmap({ days, today }: Props) {
                         <span
                           role="img"
                           aria-label={`${chartDate(cell.date)}: ${cell.tokens} tokens`}
-                          style={CELL_STYLE}
-                          className={`block rounded-[3px] transition-[box-shadow] hover:ring-1 hover:ring-foreground/25 ${
+                          className={`block aspect-square rounded-[3px] transition-[box-shadow] hover:ring-1 hover:ring-foreground/25 ${
                             LEVELS[levelOf(cell.tokens, most)] ?? ""
                           }`}
                         />

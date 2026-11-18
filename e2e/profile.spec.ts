@@ -28,6 +28,31 @@ test.describe("Settings > Profile", () => {
       "Your first thread starts this chart.",
     );
   });
+  test("the activity heatmap fits its section at every interface text size", async ({ page }) => {
+    await registerUser(page, "heatmap", "Heatmap Person");
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    for (const size of ["Small", "Default", "Large", "Extra large"]) {
+      await page.goto("/settings/general");
+      await page.getByRole("combobox", { name: "Interface text size" }).click();
+      await page.getByRole("option", { name: size, exact: true }).click();
+      await page.goto("/settings/profile");
+
+      const overflow = await page
+        .getByRole("region", { name: "Activity" })
+        .evaluate((region) =>
+          Math.max(
+            0,
+            ...Array.from(region.querySelectorAll<HTMLElement>("*")).flatMap((element) =>
+              ["auto", "scroll"].includes(getComputedStyle(element).overflowX)
+                ? [element.scrollWidth - element.clientWidth]
+                : [],
+            ),
+          ),
+        );
+      expect(overflow, size).toBe(0);
+    }
+  });
   test("the profile page offers a 4:5 PNG download of the person's profile", async ({ page }) => {
     await registerUser(page, "download", "Download Person");
     await page.goto("/settings/profile");
