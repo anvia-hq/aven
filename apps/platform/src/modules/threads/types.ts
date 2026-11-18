@@ -1,3 +1,5 @@
+import type { useComposer } from "@anvia/react-ui/chat";
+
 import type { useThreadPanels } from "./hooks/use-thread-panels";
 import type {
   AgentBackendKind,
@@ -102,6 +104,21 @@ export type ToolGroupEntry = { type: "tool"; tool: ToolPart } | { type: "reasoni
 export type NestedThread = { thread: Thread; nested: boolean };
 
 export type PendingFile = { id: string; file: File; preview?: string };
+
+export type DraftEntities = ReturnType<typeof useComposer>["entities"];
+
+export type DraftFileMeta = { id: string; name: string; type: string; size: number };
+
+export type DraftFile = { id: string; file: File };
+
+export type DraftRecord = {
+  v: 1;
+  input: string;
+  entities: DraftEntities;
+  files: DraftFileMeta[];
+};
+
+export type StoredDraftFile = { key: string; threadId: string; id: string; at: number; file: File };
 
 export type ShipGate =
   | { kind: "checking" }

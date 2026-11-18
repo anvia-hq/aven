@@ -5,6 +5,13 @@ import { ARTIFACT_MEDIA_TYPES } from "@aven/protocol/runtime-wire";
 import { toast } from "@aven/ui/toast";
 import { fileSize } from "@/lib/format";
 
+import {
+  forgetDraftFile,
+  forgetDraftFiles,
+  readDraftFiles,
+  storeDraftFile,
+  sweepDraftFiles,
+} from "../drafts";
 import type { AttachmentUpload, PendingFile } from "../types";
 
 const MODEL_IMAGES = new Set<string>(
@@ -39,15 +46,58 @@ function refusal(file: File, count: number, total: number) {
   return undefined;
 }
 
-export function useAttachments() {
+function previewOf(file: File) {
+  return MODEL_IMAGES.has(file.type) ? URL.createObjectURL(file) : undefined;
+}
+
+export function useAttachments(threadId?: string) {
   const [files, setFiles] = useState<PendingFile[]>([]);
+  const [restored, setRestored] = useState(threadId === undefined);
   const previews = useRef(new Set<string>());
+  const warned = useRef(false);
+
   useEffect(() => {
     const made = previews.current;
     return () => {
       for (const url of made) URL.revokeObjectURL(url);
     };
   }, []);
+
+  useEffect(() => {
+    if (threadId === undefined) {
+      setRestored(true);
+      return;
+    }
+
+    let live = true;
+    setRestored(false);
+
+    void (async () => {
+      await sweepDraftFiles();
+
+      const stored = await readDraftFiles(threadId);
+
+      if (!live) return;
+
+      for (const url of previews.current) URL.revokeObjectURL(url);
+      previews.current.clear();
+
+      setFiles(
+        stored.map(({ id, file }) => {
+          const preview = previewOf(file);
+
+          if (preview) previews.current.add(preview);
+
+          return { id, file, preview };
+        }),
+      );
+      setRestored(true);
+    })();
+
+    return () => {
+      live = false;
+    };
+  }, [threadId]);
 
   const free = (file: PendingFile) => {
     if (!file.preview) return;
@@ -56,8 +106,24 @@ export function useAttachments() {
     previews.current.delete(file.preview);
   };
 
+  function keep(id: string, file: File) {
+    if (threadId === undefined) return;
+
+    void storeDraftFile(threadId, id, file).then((stored) => {
+      if (stored || warned.current) return;
+
+      warned.current = true;
+      toast.add({
+        title: "Attached files won't survive a reload",
+        description: "This browser would not keep them.",
+        type: "error",
+      });
+    });
+  }
+
   function add(list: Iterable<File>) {
     const next = [...files];
+    const added: PendingFile[] = [];
     let total = next.reduce((sum, { file }) => sum + file.size, 0);
     for (const file of list) {
       const refused = refusal(file, next.length, total);
@@ -68,13 +134,16 @@ export function useAttachments() {
       }
 
       total += file.size;
-      const preview = MODEL_IMAGES.has(file.type) ? URL.createObjectURL(file) : undefined;
+      const pending: PendingFile = { id: crypto.randomUUID(), file, preview: previewOf(file) };
 
-      if (preview) previews.current.add(preview);
+      if (pending.preview) previews.current.add(pending.preview);
 
-      next.push({ id: crypto.randomUUID(), file, preview });
+      next.push(pending);
+      added.push(pending);
     }
     setFiles(next);
+
+    for (const { id, file } of added) keep(id, file);
   }
 
   function remove(id: string) {
@@ -83,11 +152,15 @@ export function useAttachments() {
     if (gone) free(gone);
 
     setFiles(files.filter((file) => file.id !== id));
+
+    if (threadId !== undefined) void forgetDraftFile(threadId, id);
   }
 
   function clear() {
     files.forEach(free);
     setFiles([]);
+
+    if (threadId !== undefined) void forgetDraftFiles(threadId);
   }
 
   const encode = () =>
@@ -99,5 +172,5 @@ export function useAttachments() {
       })),
     );
 
-  return { files, add, remove, clear, encode };
+  return { files, restored, add, remove, clear, encode };
 }

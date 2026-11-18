@@ -110,8 +110,8 @@ function Composer({
   const composer = useComposer();
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId, backend);
-  useComposerDraft(threadId, composer);
-  const attachments = useAttachments();
+  const attachments = useAttachments(threadId);
+  useComposerDraft(threadId, composer, attachments);
   const drop = useAttachmentDrop(attachments);
   const selection = model.selection;
 

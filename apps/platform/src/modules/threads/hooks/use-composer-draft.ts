@@ -1,41 +1,23 @@
 import type { useComposer } from "@anvia/react-ui/chat";
 import { useEffect, useState } from "react";
 
-import { safeStorage } from "@/hooks/use-local-storage";
-import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
-
-const DRAFT_PREFIX = "aven.thread.";
-const DRAFT_SUFFIX = ".draft";
-
-registerUserState(() => forgetStoredKeysStartingWith(DRAFT_PREFIX));
+import { readDraft, writeDraft } from "../drafts";
+import type { useAttachments } from "./use-attachments";
 
 type Composer = ReturnType<typeof useComposer>;
-type Draft = { input: string; entities: Composer["entities"] };
 
-function readDraft(key: string): Draft | null {
-  const raw = safeStorage.getItem(key);
-
-  if (raw === null) return null;
-
-  try {
-    const parsed = JSON.parse(raw) as Partial<Draft>;
-
-    if (typeof parsed.input !== "string") return null;
-
-    return { input: parsed.input, entities: Array.isArray(parsed.entities) ? parsed.entities : [] };
-  } catch {
-    return null;
-  }
-}
-
-export function useComposerDraft(threadId: string | undefined, composer: Composer) {
-  const key = threadId === undefined ? null : `${DRAFT_PREFIX}${threadId}${DRAFT_SUFFIX}`;
+export function useComposerDraft(
+  threadId: string | undefined,
+  composer: Composer,
+  attachments: ReturnType<typeof useAttachments>,
+) {
   const [restored, setRestored] = useState(false);
   const { input, entities, setInput, setEntities } = composer;
+  const { files, restored: filesRestored } = attachments;
 
   useEffect(() => {
-    if (key !== null) {
-      const draft = readDraft(key);
+    if (threadId !== undefined) {
+      const draft = readDraft(threadId);
 
       if (draft) {
         setInput(draft.input);
@@ -44,12 +26,20 @@ export function useComposerDraft(threadId: string | undefined, composer: Compose
     }
 
     setRestored(true);
-  }, [key, setInput, setEntities]);
+  }, [threadId, setInput, setEntities]);
 
   useEffect(() => {
-    if (key === null || !restored) return;
+    if (threadId === undefined || !restored || !filesRestored) return;
 
-    if (input === "") safeStorage.removeItem(key);
-    else safeStorage.setItem(key, JSON.stringify({ input, entities }));
-  }, [key, restored, input, entities]);
+    writeDraft(threadId, {
+      input,
+      entities,
+      files: files.map(({ id, file }) => ({
+        id,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      })),
+    });
+  }, [threadId, restored, filesRestored, input, entities, files]);
 }
