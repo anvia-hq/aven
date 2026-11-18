@@ -1717,6 +1717,10 @@
   --chrome: color-mix(in oklch, var(--frame), black 28%);
 }
 
+.dark:not([data-theme]) {
+  --chrome: color-mix(in oklch, var(--frame), black 48%);
+}
+
 /* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
 :root {
   --brand: oklch(0.22 0.01 160);
