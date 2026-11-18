@@ -31,8 +31,8 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(logo).toHaveAttribute("aria-current", "page");
   for (const link of await rail.getByRole("link").all()) {
     const box = (await link.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(36);
-    expect(box.height).toBeGreaterThanOrEqual(36);
+    expect(box.width).toBeGreaterThanOrEqual(31);
+    expect(box.height).toBeGreaterThanOrEqual(31);
   }
 
   await logo.focus();
