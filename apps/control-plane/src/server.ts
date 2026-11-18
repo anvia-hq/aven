@@ -49,6 +49,7 @@ export async function startControlPlane(edition: Edition) {
   if (!Number.isInteger(port) || port <= 0)
     throw new Error(`PORT must be a port number, got "${process.env.PORT}"`);
 
+  await computerUsageService.closeAll();
   app.listen(port);
 
   const localRunner = await startLocalRunner(port);
@@ -75,7 +76,6 @@ export async function startControlPlane(edition: Edition) {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
-  await computerUsageService.closeAll();
   scheduler.start();
   goalDriver.start();
   threadWatcher.start();
