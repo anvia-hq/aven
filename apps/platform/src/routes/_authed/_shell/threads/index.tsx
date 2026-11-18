@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ProjectMenu } from "@/modules/projects/components/project-menu";
@@ -13,12 +13,6 @@ import { useNewThreadComputer } from "@/modules/threads/hooks/use-new-thread-com
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
-
-const GlassMark = lazy(() =>
-  import("@/modules/threads/components/glass-mark").then((module) => ({
-    default: module.GlassMark,
-  })),
-);
 
 export const Route = createFileRoute("/_authed/_shell/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -61,12 +55,12 @@ function NewThread() {
     <div className="flex min-h-[calc(100svh-var(--mobile-chrome))] flex-col md:min-h-[calc(100svh-2px)]">
       <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-4">
         <div className="flex flex-col gap-1.5 text-center">
-          <Suspense fallback={<div className="h-24 md:h-32" />}>
-            <GlassMark />
-          </Suspense>
-          <h1 className="text-lg font-medium tracking-tight text-muted-foreground md:text-xl">
+          <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
             What should we build?
           </h1>
+          <p className="hidden text-sm text-muted-foreground md:block">
+            Start a thread inside a project. The agent reads, edits and runs code there.
+          </p>
         </div>
 
         {computer.loaded && (
