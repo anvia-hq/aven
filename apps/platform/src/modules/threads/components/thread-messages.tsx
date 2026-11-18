@@ -97,12 +97,12 @@ export function ThreadMessages({
   return (
     <div
       ref={scrollRef}
-      className="@container h-full scrollbar-gutter-stable overflow-y-auto"
+      className="h-full scrollbar-gutter-stable overflow-y-auto"
       style={textSize.style}
     >
       <div className="flex">
-        <div className="min-w-0 flex-1">
-          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)] [--table-wide:min(100cqw_-_2rem,60rem)]">
+        <div className="@container min-w-0 flex-1">
+          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)] [--table-wide:calc(100cqw_-_2rem)]">
             {hidden > 0 && (
               <div className="flex justify-center pb-4">
                 <Button
