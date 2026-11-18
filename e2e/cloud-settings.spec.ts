@@ -37,14 +37,14 @@ test.describe("the platform's sandbox page", () => {
     await expect(page.getByLabel("Boat API address (optional)")).toHaveValue("");
     await expect(page.getByLabel("Public address a sandbox dials")).toHaveValue("");
     await expect(page.getByLabel("API key")).toHaveValue("");
-    await expect(page.getByRole("button", { name: "Save" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Save", exact: true })).toBeDisabled();
 
     await page.getByLabel("API key").fill("boat_abcd");
 
     const put = page.waitForRequest(
       (request) => request.method() === "PUT" && request.url().endsWith("/api/platform/cloud"),
     );
-    await page.getByRole("button", { name: "Save" }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
 
     expect((await put).postDataJSON()).toMatchObject({
       provider: "boat",
@@ -54,12 +54,49 @@ test.describe("the platform's sandbox page", () => {
     });
   });
 
+  test("the computers' idle windows, lifetime and limits are saved, kept and reset", async ({
+    page,
+  }) => {
+    await registerPlatformOwner(page, 1);
+    await page.goto("/settings/sandbox");
+
+    const section = page.getByRole("region", { name: "Aven Cloud computers" });
+    await expect(
+      section.getByLabel("Delete a computer after this many hours without use"),
+    ).toHaveValue("48");
+    await expect(
+      section.getByLabel("Most computers a workspace may have running at once"),
+    ).toHaveValue("");
+
+    await section.getByLabel("Delete a computer after this many hours without use").fill("72");
+    await section.getByLabel("Most computers a workspace may have running at once").fill("6");
+    await section.getByRole("button", { name: "Save settings" }).click();
+    await expect(page.getByText("Computer settings saved")).toBeVisible();
+
+    await page.reload();
+    await expect(
+      section.getByLabel("Delete a computer after this many hours without use"),
+    ).toHaveValue("72");
+    await expect(
+      section.getByLabel("Most computers a workspace may have running at once"),
+    ).toHaveValue("6");
+
+    await section.getByRole("button", { name: "Reset to defaults" }).click();
+    await expect(
+      section.getByLabel("Delete a computer after this many hours without use"),
+    ).toHaveValue("48");
+    await expect(
+      section.getByLabel("Most computers a workspace may have running at once"),
+    ).toHaveValue("");
+  });
+
   test("is not there for someone who is not an owner of this installation", async ({ browser }) => {
     const other = await browser.newContext();
     const outsider = await other.newPage();
     await registerUser(outsider, "sandbox-outsider", "Sandbox Outsider");
 
     expect((await outsider.request.get("/api/platform/cloud")).status()).toBe(403);
+    expect((await outsider.request.get("/api/platform/cloud/lifecycle")).status()).toBe(403);
     await outsider.goto("/settings/sandbox");
     await expect(outsider).toHaveURL(/\/settings\/general$/);
     await other.close();
