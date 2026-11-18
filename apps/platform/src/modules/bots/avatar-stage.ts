@@ -143,6 +143,13 @@ function createStage(): Stage {
   });
 
   const entries = new Set<Entry>();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  reduced.addEventListener("change", () => {
+    for (const entry of entries) entry.dirty = true;
+
+    schedule();
+  });
 
   renderer.domElement.addEventListener("webglcontextlost", (event) => {
     event.preventDefault();
@@ -183,7 +190,7 @@ function createStage(): Stage {
     last: performance.now(),
     pending: 0,
     time: 0,
-    reduced: window.matchMedia("(prefers-reduced-motion: reduce)"),
+    reduced,
   };
 }
 
