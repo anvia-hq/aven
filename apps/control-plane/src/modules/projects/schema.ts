@@ -27,6 +27,20 @@ export const addGithubRepositoryBody = z.object({
   name: z.string().trim().min(1).max(200).optional(),
 });
 
+export const addNewGithubRepositoryBody = z.object({
+  installationId: z.uuid(),
+  name: z
+    .string()
+    .trim()
+    .min(1)
+    .max(100)
+    .regex(/^[A-Za-z0-9._-]+$/, "not a GitHub repository name")
+    .refine((name) => /[A-Za-z0-9]/.test(name), "not a GitHub repository name"),
+  private: z.boolean().default(true),
+});
+
+export type AddNewGithubRepositoryBody = z.infer<typeof addNewGithubRepositoryBody>;
+
 export type AddGithubRepositoryBody = z.infer<typeof addGithubRepositoryBody>;
 
 export const folderQuery = z.object({

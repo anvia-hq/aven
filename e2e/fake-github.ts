@@ -138,8 +138,10 @@ Bun.serve({
     if (/^\/app\/installations\/\d+$/.test(pathname)) {
       return Response.json({
         id: Number(pathname.split("/").pop()),
-        account: { login: "acme" },
+        account: { login: "acme", type: "Organization" },
+        repository_selection: "selected",
         permissions: {
+          administration: "write",
           contents: "write",
           pull_requests: "write",
           issues: "read",
@@ -152,6 +154,25 @@ Bun.serve({
       const expires = new Date(Date.now() + 60 * 60_000).toISOString();
       return Response.json({ token: "ghs_fake", expires_at: expires });
     }
+
+    if (request.method === "POST" && pathname === "/orgs/acme/repos") {
+      const { name } = (await request.json()) as { name: string };
+
+      if (repositories.includes(name)) return new Response("taken", { status: 422 });
+
+      repositories.push(name);
+      return Response.json(repo(name), { status: 201 });
+    }
+
+    if (
+      request.method === "PUT" &&
+      /^\/user\/installations\/\d+\/repositories\/\d+$/.test(pathname)
+    )
+      return new Response(null, { status: 204 });
+
+    const single = pathname.match(/^\/repos\/acme\/([\w.-]+)$/);
+
+    if (single && repositories.includes(single[1]!)) return Response.json(repo(single[1]!));
 
     const contents = pathname.match(/^\/repos\/acme\/([\w.-]+)\/contents(?:\/(.*))?$/);
 

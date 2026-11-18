@@ -6,12 +6,14 @@ import { and, desc, eq } from "drizzle-orm";
 import { NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
 import {
   github,
+  GithubCreateNotGrantedError,
   GithubNoPushAccessError,
   GithubWriteNotGrantedError,
   type GithubClient,
 } from "@aven/github/client";
 import { isLocalPath } from "./schema";
 import { githubUserTokenService } from "./user-tokens";
+import type { CreatedGithubRepository, GithubInstallationInfo } from "./types";
 import type {
   GithubCommitFilters,
   GithubTrackedFilters,
@@ -88,7 +90,7 @@ export function readState(
 
 export function createGithubService(
   client: GithubClient = github,
-  userTokens: Pick<typeof githubUserTokenService, "connect"> = githubUserTokenService,
+  userTokens: Pick<typeof githubUserTokenService, "connect" | "use"> = githubUserTokenService,
 ) {
   const get = async (organizationId: string, id: string) => {
     const [row] = await db
@@ -192,6 +194,51 @@ export function createGithubService(
 
       const { client, installationId } = await acting(installationRowId);
       return client.repositories(installationId);
+    },
+
+    async installation(
+      organizationId: string,
+      installationRowId: string,
+    ): Promise<GithubInstallationInfo> {
+      if (!(await get(organizationId, installationRowId))) throw new InstallationNotFoundError();
+
+      const { client, installationId } = await acting(installationRowId);
+      const found = await client.installation(installationId);
+      return {
+        accountLogin: found.accountLogin,
+        accountType: found.accountType,
+        canCreateRepository: found.canCreateRepositories,
+        settingsUrl: `${client.webUrl}/settings/installations/${found.installationId}`,
+      };
+    },
+
+    async createRepository(
+      organizationId: string,
+      installationRowId: string,
+      userId: string,
+      input: { name: string; private: boolean },
+    ): Promise<CreatedGithubRepository> {
+      if (!(await get(organizationId, installationRowId))) throw new InstallationNotFoundError();
+
+      const { client, installationId, accountLogin } = await acting(installationRowId);
+      const found = await client.installation(installationId);
+
+      if (!found.canCreateRepositories) throw new GithubCreateNotGrantedError(accountLogin);
+
+      const connection = await userTokens.use(userId);
+      const repository = await client.createRepository(installationId, {
+        owner: found.accountLogin,
+        name: input.name,
+        private: input.private,
+        accountType: found.accountType,
+        userToken: connection?.token ?? null,
+      });
+
+      if (found.selectedRepositories && connection) {
+        await client.addRepositoryToInstallation(installationId, connection.token, repository.id);
+      }
+
+      return { repository, reachable: await client.canReach(installationId, repository.fullName) };
     },
 
     async cloneToken(installationRowId: string) {

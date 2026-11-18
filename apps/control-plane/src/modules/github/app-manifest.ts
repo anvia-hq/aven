@@ -18,6 +18,7 @@ export function appManifest(origin: string, name: string, isPublic = false) {
     request_oauth_on_install: true,
     public: isPublic,
     default_permissions: {
+      administration: "write",
       contents: "write",
       pull_requests: "write",
       issues: "read",

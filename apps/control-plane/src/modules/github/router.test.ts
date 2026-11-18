@@ -43,6 +43,7 @@ run("connecting a GitHub account (real postgres, GitHub faked)", async () => {
       kept.push({ userId, grant: given });
       return { id: 42, login: "ada", name: null };
     },
+    use: async () => null,
   });
   const setupCalls: { call: string; arg: unknown }[] = [];
   let setupRefused: Error | null = null;

@@ -30,6 +30,28 @@ export class GithubNoPushAccessError extends ConflictError {
   }
 }
 
+export class GithubCreateNotGrantedError extends ConflictError {
+  constructor(accountLogin: string) {
+    super(
+      `The Aven app has not been approved to create repositories on ${accountLogin} on GitHub. Approve its new permissions there, then try again.`,
+    );
+  }
+}
+
+export class GithubRepositoryNotCreatedError extends ConflictError {
+  constructor(fullName: string) {
+    super(
+      `GitHub did not create ${fullName}. The name may be taken there, or that account may not let the app create repositories.`,
+    );
+  }
+}
+
+export class GithubUserRequiredError extends ConflictError {
+  constructor() {
+    super("Connect GitHub to create a repository in your own account, then try again");
+  }
+}
+
 class GithubApiError extends UnavailableError {
   constructor(
     message: string,
@@ -115,6 +137,9 @@ import type {
   GithubPullDetail,
   GithubPullRequest,
   GithubFile,
+  GithubInstallation,
+  GithubInstallationAccountType,
+  GithubNewRepository,
   GithubReadme,
   GithubReviewComment,
   GithubRepository,
@@ -150,6 +175,14 @@ type TrackedPayload = {
   user: { login: string } | null;
   labels?: { name: string }[];
   pull_request?: { merged_at: string | null };
+};
+
+type RepositoryPayload = {
+  id: number;
+  full_name: string;
+  clone_url: string;
+  default_branch: string;
+  private: boolean;
 };
 
 const SORTS = {
@@ -251,6 +284,10 @@ export class GithubClient {
     return this.#config().slug;
   }
 
+  get webUrl() {
+    return this.#config().webUrl;
+  }
+
   #config() {
     if (!this.config) throw new GithubNotConfiguredError();
 
@@ -331,12 +368,118 @@ export class GithubClient {
     );
   }
 
-  async installation(installationId: number) {
-    const found = await this.#api<{ id: number; account: { login: string } | null }>(
-      `/app/installations/${installationId}`,
-      this.#appJwt(),
+  async installation(installationId: number): Promise<GithubInstallation> {
+    const found = await this.#api<{
+      id: number;
+      account: { login: string; type?: string } | null;
+      repository_selection?: string;
+      permissions?: Record<string, string>;
+    }>(`/app/installations/${installationId}`, this.#appJwt());
+    return {
+      installationId: found.id,
+      accountLogin: found.account?.login ?? "unknown",
+      accountType: found.account?.type === "Organization" ? "organization" : "user",
+      selectedRepositories: found.repository_selection === "selected",
+      canCreateRepositories: found.permissions?.administration === "write",
+    };
+  }
+
+  async #writeToken(installationId: number, accountLogin: string) {
+    try {
+      const issued = await this.#api<{ token: string }>(
+        `/app/installations/${installationId}/access_tokens`,
+        this.#appJwt(),
+        {
+          method: "POST",
+          body: JSON.stringify({
+            permissions: { administration: "write", contents: "write", metadata: "read" },
+          }),
+        },
+      );
+      return issued.token;
+    } catch (error) {
+      if (error instanceof GithubApiError && error.status >= 400 && error.status < 500) {
+        throw new GithubCreateNotGrantedError(accountLogin);
+      }
+
+      throw error;
+    }
+  }
+
+  async #create(path: string, auth: string, body: string, fullName: string) {
+    try {
+      return await this.#api<RepositoryPayload>(path, auth, { method: "POST", body });
+    } catch (error) {
+      if (error instanceof GithubApiError && error.status >= 400 && error.status < 500) {
+        throw new GithubRepositoryNotCreatedError(fullName);
+      }
+
+      throw error;
+    }
+  }
+
+  async createRepository(
+    installationId: number,
+    input: {
+      owner: string;
+      name: string;
+      private: boolean;
+      accountType: GithubInstallationAccountType;
+      userToken: string | null;
+    },
+  ): Promise<GithubNewRepository> {
+    const fullName = `${input.owner}/${input.name}`;
+    const body = JSON.stringify({ name: input.name, private: input.private, auto_init: true });
+    let created: RepositoryPayload;
+
+    if (input.accountType === "organization") {
+      const token = await this.#writeToken(installationId, input.owner);
+      created = await this.#create(
+        `/orgs/${encodeURIComponent(input.owner)}/repos`,
+        token,
+        body,
+        fullName,
+      );
+    } else {
+      if (input.userToken === null) throw new GithubUserRequiredError();
+
+      created = await this.#create("/user/repos", input.userToken, body, fullName);
+    }
+
+    return {
+      id: created.id,
+      fullName: created.full_name,
+      cloneUrl: created.clone_url,
+      defaultBranch: created.default_branch,
+      private: created.private,
+    };
+  }
+
+  async addRepositoryToInstallation(
+    installationId: number,
+    userToken: string,
+    repositoryId: number,
+  ) {
+    try {
+      await this.#get(
+        `/user/installations/${installationId}/repositories/${repositoryId}`,
+        userToken,
+        { method: "PUT" },
+      );
+      return true;
+    } catch (error) {
+      if (error instanceof GithubApiError) return false;
+
+      throw error;
+    }
+  }
+
+  async canReach(installationId: number, fullName: string) {
+    const { token } = await this.installationToken(installationId);
+    const found = await this.#api<{ full_name: string }>(repoPath(fullName), token).catch(
+      nullWhenNotFound,
     );
-    return { installationId: found.id, accountLogin: found.account?.login ?? "unknown" };
+    return found !== null;
   }
 
   async installationToken(installationId: number) {

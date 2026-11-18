@@ -3,8 +3,11 @@ import { createVerify, generateKeyPairSync } from "node:crypto";
 
 import {
   GithubClient,
+  GithubCreateNotGrantedError,
   GithubIssuesNotGrantedError,
   GithubNotConfiguredError,
+  GithubRepositoryNotCreatedError,
+  GithubUserRequiredError,
   githubConfigFromEnv,
   README_MAX_CHARS,
   trackedQualifiers,
@@ -105,7 +108,13 @@ describe("GithubClient", () => {
     });
     const client = new GithubClient(config, github.fetch);
 
-    expect(await client.installation(7)).toEqual({ installationId: 7, accountLogin: "acme" });
+    expect(await client.installation(7)).toEqual({
+      installationId: 7,
+      accountLogin: "acme",
+      accountType: "user",
+      selectedRepositories: false,
+      canCreateRepositories: false,
+    });
 
     const [head, body, signature] = auth(github.calls[0]!).replace("Bearer ", "").split(".");
     expect(JSON.parse(Buffer.from(body!, "base64url").toString())).toMatchObject({ iss: "123" });
@@ -748,6 +757,149 @@ describe("writing to a repository", () => {
     expect(await client.canWrite(7)).toBe(true);
     expect(await client.canWrite(8)).toBe(false);
     expect(await client.canWrite(9)).toBe(false);
+  });
+
+  describe("a repository the app makes", () => {
+    const created = {
+      id: 9,
+      full_name: "acme/app",
+      clone_url: "https://github.com/acme/app.git",
+      default_branch: "main",
+      private: true,
+    };
+
+    test("is created in an organization with a token that may administer it, with a README", async () => {
+      const github = fakeGithub({
+        "POST /app/installations/7/access_tokens": { token: "ghs_admin" },
+        "POST /orgs/acme/repos": created,
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(
+        await client.createRepository(7, {
+          owner: "acme",
+          name: "app",
+          private: true,
+          accountType: "organization",
+          userToken: null,
+        }),
+      ).toEqual({
+        id: 9,
+        fullName: "acme/app",
+        cloneUrl: "https://github.com/acme/app.git",
+        defaultBranch: "main",
+        private: true,
+      });
+      expect(JSON.parse(String(github.calls[0]!.init?.body))).toEqual({
+        permissions: { administration: "write", contents: "write", metadata: "read" },
+      });
+      expect(auth(github.calls[1]!)).toBe("Bearer ghs_admin");
+      expect(JSON.parse(String(github.calls[1]!.init?.body))).toEqual({
+        name: "app",
+        private: true,
+        auto_init: true,
+      });
+    });
+
+    test("is created in a person's account with their own token", async () => {
+      const github = fakeGithub({
+        "POST /user/repos": {
+          ...created,
+          full_name: "ada/app",
+          clone_url: "https://github.com/ada/app.git",
+        },
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      const made = await client.createRepository(7, {
+        owner: "ada",
+        name: "app",
+        private: false,
+        accountType: "user",
+        userToken: "ghu_ada",
+      });
+
+      expect(made.fullName).toBe("ada/app");
+      expect(auth(github.calls[0]!)).toBe("Bearer ghu_ada");
+      expect(JSON.parse(String(github.calls[0]!.init?.body))).toMatchObject({ private: false });
+    });
+
+    test("needs the person connected before it can be made in their account", async () => {
+      const github = fakeGithub({});
+
+      await expect(
+        new GithubClient(config, github.fetch).createRepository(7, {
+          owner: "ada",
+          name: "app",
+          private: true,
+          accountType: "user",
+          userToken: null,
+        }),
+      ).rejects.toBeInstanceOf(GithubUserRequiredError);
+    });
+
+    test("says to approve the app when its new permissions are not approved yet", async () => {
+      const github = new GithubClient(config, async (_url, init) =>
+        init?.method === "POST" ? new Response("no", { status: 422 }) : new Response("no"),
+      );
+
+      await expect(
+        github.createRepository(7, {
+          owner: "acme",
+          name: "app",
+          private: true,
+          accountType: "organization",
+          userToken: null,
+        }),
+      ).rejects.toBeInstanceOf(GithubCreateNotGrantedError);
+    });
+
+    test("says why GitHub refused the name", async () => {
+      const github = new GithubClient(config, async (url, init) =>
+        init?.method === "POST" && url.includes("/access_tokens")
+          ? Response.json({ token: "ghs_admin" })
+          : new Response("exists", { status: 422 }),
+      );
+
+      await expect(
+        github.createRepository(7, {
+          owner: "acme",
+          name: "app",
+          private: true,
+          accountType: "organization",
+          userToken: null,
+        }),
+      ).rejects.toBeInstanceOf(GithubRepositoryNotCreatedError);
+    });
+
+    test("is added to an installation that only reaches chosen repositories", async () => {
+      const github = fakeGithub({
+        "PUT /user/installations/7/repositories/9": {},
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.addRepositoryToInstallation(7, "ghu_ada", 9)).toBe(true);
+      expect(auth(github.calls[0]!)).toBe("Bearer ghu_ada");
+    });
+
+    test("is not added when the person may not manage the installation", async () => {
+      const github = fakeGithub({});
+
+      expect(
+        await new GithubClient(config, github.fetch).addRepositoryToInstallation(7, "ghu", 9),
+      ).toBe(false);
+    });
+
+    test("is reachable once the installation token can read it", async () => {
+      const github = fakeGithub({
+        "POST /app/installations/7/access_tokens": { token: "ghs_read" },
+        "GET /repos/acme/app": {},
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      expect(await client.canReach(7, "acme/app")).toBe(true);
+      expect(await client.canReach(7, "acme/other")).toBe(false);
+    });
   });
 
   test("finds the pull requests of a thread's branches with a token that may only read them", async () => {
