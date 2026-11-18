@@ -32,7 +32,8 @@ export function UsageCard({
     0,
     totals.inputTokens - totals.cacheWriteTokens - totals.cacheReadTokens,
   );
-  const hitRate = totals.inputTokens > 0 ? (totals.cacheReadTokens / totals.inputTokens) * 100 : 0;
+  const hitRate =
+    totals.inputTokens > 0 ? Math.min(100, (totals.cacheReadTokens / totals.inputTokens) * 100) : 0;
   const rows = [
     { label: "Input", value: compactNumber(totals.inputTokens), tone: null },
     { label: "Output", value: compactNumber(totals.outputTokens), tone: "bg-usage-output" },
