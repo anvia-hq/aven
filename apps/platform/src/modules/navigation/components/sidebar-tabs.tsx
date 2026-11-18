@@ -12,7 +12,7 @@ export function SidebarTabs() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <SidebarMenu className="px-2">
+    <SidebarMenu className="px-2 md:hidden">
       {tabs.map((tab) => {
         const active = pathname === tab.to || (!tab.exact && pathname.startsWith(`${tab.to}/`));
         return (
