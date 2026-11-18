@@ -22,7 +22,7 @@ export function TerminalPanel({ computer, onClose }: Props) {
   const view = computerView(status, problem);
 
   return (
-    <SidePanel title="CodeSquareIcon" icon={CodeSquareIcon} onClose={onClose}>
+    <SidePanel title="Terminal" icon={CodeSquareIcon} onClose={onClose}>
       <div className="min-h-0 flex-1">
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "loading" && <Skeleton className="size-full rounded-none" />}
