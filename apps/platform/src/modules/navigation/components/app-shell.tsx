@@ -120,7 +120,7 @@ export function AppShell({ user, sidebar }: Props) {
                 <Button
                   size="icon-sm"
                   aria-label="New thread"
-                  className="size-9 md:size-7"
+                  className="size-9 rounded-full md:size-7"
                   onClick={() => navigate({ to: "/threads" })}
                 >
                   <PenNewSquareIcon />
