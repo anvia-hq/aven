@@ -9,7 +9,9 @@ import type { RuntimeConnection } from "./hub";
 import { threadsService } from "../threads/service";
 import { createCloudIdle } from "./cloud-idle";
 import { CLOUD_RUNTIME_ID, runtimesService } from "./service";
+import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { clearSandboxPlatform, useSandboxPlatform } from "../../testing/sandbox-platform";
+import { cloudLifecycleService } from "../cloud-lifecycle/service";
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
 
@@ -18,6 +20,8 @@ const MINUTE = 60_000;
 const WINDOWS = { agentIdleMs: 5 * MINUTE, userIdleMs: 20 * MINUTE };
 
 const connection = {} as unknown as RuntimeConnection;
+
+keepPlatformSettings(["cloud_lifecycle"], { cleared: true });
 
 run("stopping idle Aven Cloud computers (real postgres)", async () => {
   const { seedOrgPair } = await import("../../testing/seed-org-pair");
@@ -46,7 +50,12 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
     return { ...thread, name };
   }
 
-  function harness(options: { connected: string[]; running?: string[]; pageSize?: number }) {
+  function harness(options: {
+    connected: string[];
+    running?: string[];
+    pageSize?: number;
+    saved?: boolean;
+  }) {
     const stopped: string[] = [];
     const extended: string[] = [];
     const clock = { at: Date.now() };
@@ -58,7 +67,7 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
       },
       running: (threadId) => (options.running ?? []).includes(threadId),
       lastEventAt: () => undefined,
-      windows: WINDOWS,
+      windows: options.saved ? undefined : WINDOWS,
       pageSize: options.pageSize,
       now: () => clock.at,
       stop: async (runtimeId) => {
@@ -86,6 +95,26 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
 
     expect(await sweep.idle.sweep()).toBe(1);
     expect(sweep.stopped).toEqual([idle.runtimeId]);
+  });
+
+  test("the windows saved in the settings are the ones it stops by", async () => {
+    await cloudLifecycleService.save({
+      agentIdleSeconds: 60,
+      userIdleSeconds: 120,
+      expireHours: 48,
+      maxRunning: null,
+      startBurst: null,
+      startEveryMinutes: 5,
+    });
+    const quick = await cloudThread("quick-one", new Date(Date.now() - 3 * 60 * MINUTE));
+    const sweep = harness({ connected: [quick.runtimeId], saved: true });
+
+    await sweep.idle.sweep();
+    sweep.clock.at += 3 * MINUTE;
+
+    expect(await sweep.idle.sweep()).toBe(1);
+    expect(sweep.stopped).toEqual([quick.runtimeId]);
+    await cloudLifecycleService.reset();
   });
 
   test("never stops a sandbox that is working, and keeps its provider timer going while it does", async () => {

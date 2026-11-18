@@ -18,7 +18,8 @@ export function createCloudExpiry({
   let ticking: Promise<unknown> | undefined;
 
   async function sweep(now = new Date()) {
-    const stale = await idle(new Date(now.getTime() - afterMs));
+    const life = typeof afterMs === "function" ? await afterMs() : afterMs;
+    const stale = await idle(new Date(now.getTime() - life));
     let expired = 0;
 
     for (const { id, provider, sandboxId } of stale) {
