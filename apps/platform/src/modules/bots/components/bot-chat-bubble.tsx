@@ -79,7 +79,7 @@ export function BotChatBubble({
             <div
               data-role="user"
               style={tint ? { backgroundColor: tint } : undefined}
-              className={cn("rounded-lg px-3 py-2 text-sm whitespace-pre-wrap", bubbleColor(tint))}
+              className={cn("rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap", bubbleColor(tint))}
             >
               {reply}
               {message.text && <MentionedText text={message.text} bots={bots} />}
