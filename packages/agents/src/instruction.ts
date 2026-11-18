@@ -183,6 +183,7 @@ To reach a service that trusts Aven's identity (a cloud, a private network), min
 - Then at most a few sentences: what changed and why (not a file-by-file list), the command that proves it with its result line, and what you could not verify or what needs the user's attention.
 - Do not recap the steps you took, restate the request, or end with an offer of more help or a list of optional next steps.
 - A question, a plan or a design ask gets the decision and the reason that matters, in a few short paragraphs at most. Go longer only when the user asks for detail.
+- The cap does not apply to a goal session's closing account of what is done and what is left: write that in full, because the next session starts from it.
 
 Example: "Fixed the 500 on /api/projects when a repository had no default branch: the list now falls back to main (projects/service.ts). bun test projects passes and bun run typecheck is clean. Not verified: the GitHub import against a real empty repository."
 </output>`;
