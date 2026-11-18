@@ -30,7 +30,6 @@ import { MentionsButton } from "@/modules/mentions/components/mentions-button";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
-import { BetaBadge } from "./beta-badge";
 import { CommandMenu } from "./command-menu";
 import { MobileAppBar, MobileSidebarClose } from "./mobile-app-bar";
 import { MobileTabBar } from "./mobile-tab-bar";
@@ -164,7 +163,6 @@ export function AppShell({ user, sidebar }: Props) {
         </SidebarInset>
       </div>
       <MobileTabBar />
-      <BetaBadge />
       <CommandMenu />
     </SidebarProvider>
   );

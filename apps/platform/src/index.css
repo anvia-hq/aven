@@ -1857,34 +1857,6 @@
   animation: none;
 }
 
-@keyframes wave-drift {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes gradient-flow {
-  to {
-    background-position-x: 200%;
-  }
-}
-
-@utility wave-drift {
-  animation: wave-drift 9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
-@utility gradient-flow {
-  animation: gradient-flow 16s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
 /* The word of the working indicator blurs in as it arrives and out as it leaves. */
 @keyframes word-in {
   from {
