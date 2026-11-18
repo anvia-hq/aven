@@ -26,7 +26,7 @@ export function createPullRequestWatch(options: {
     if (detail.status === "merged") {
       const told = await notes.offer(pull.userId, { kind: "merged", thread, pull: named });
 
-      if (told !== "limited") await source.saveEnded(pull, "merged");
+      if (told === "sent" || told === "duplicate") await source.saveEnded(pull, "merged");
 
       return;
     }
