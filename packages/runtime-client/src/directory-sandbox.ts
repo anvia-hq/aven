@@ -11,6 +11,7 @@ import type {
 } from "@anvia/sandbox";
 
 import type { Launch, Spawned, Terminate } from "./types";
+import { validUtf8 } from "./valid-utf8";
 
 const encoder = new TextEncoder();
 
@@ -227,7 +228,9 @@ export class DirectorySandbox implements SandboxRuntime {
     const managed = this.#get(processId);
     const tail = (chunks: Buffer[]) => {
       const bytes = new Uint8Array(Buffer.concat(chunks));
-      return tailBytes === undefined ? bytes : bytes.slice(Math.max(0, bytes.length - tailBytes));
+      return validUtf8(
+        tailBytes === undefined ? bytes : bytes.slice(Math.max(0, bytes.length - tailBytes)),
+      );
     };
     return {
       stdout: tail(managed.stdout),
