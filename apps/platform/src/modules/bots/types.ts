@@ -75,6 +75,7 @@ export type BotChatState = {
   messages: BotChatMessage[];
   pending: BotChatMessage[];
   handoffs: Record<string, Handoff>;
+  arrived: ReadonlySet<string>;
   typing: boolean;
   activity: string | null;
   error: string | null;
