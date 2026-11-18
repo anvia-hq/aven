@@ -1,4 +1,4 @@
-import { ArrowUp, Lock } from "@mynaui/icons-react";
+import { ArrowUpIcon, LockIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -58,7 +58,7 @@ export function SecretForm({ tool, threadId, backend, onSubmit }: Props) {
       className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
     >
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <Lock className="size-3.5" />
+        <LockIcon className="size-3.5" />
         <span>The agent needs a secret. It will not see the value.</span>
       </div>
 
@@ -112,7 +112,7 @@ export function SecretForm({ tool, threadId, backend, onSubmit }: Props) {
           Decline
         </Button>
         <Button type="submit" size="sm" disabled={!complete || sending}>
-          <ArrowUp />
+          <ArrowUpIcon />
           Store and continue
         </Button>
       </div>

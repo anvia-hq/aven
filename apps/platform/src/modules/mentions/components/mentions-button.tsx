@@ -1,4 +1,4 @@
-import { At } from "@mynaui/icons-react";
+import { MentionCircleIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -23,7 +23,7 @@ export function MentionsButton() {
           />
         }
       >
-        <At />
+        <MentionCircleIcon />
         {unread > 0 && (
           <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" aria-hidden />
         )}

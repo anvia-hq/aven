@@ -1,4 +1,10 @@
-import { Clipboard, FileText, Inbox, Kanban, Tag } from "@mynaui/icons-react";
+import {
+  ClipboardIcon,
+  FileTextIcon,
+  InboxIcon,
+  KanbanIcon,
+  TagIcon,
+} from "@solar-icons/react/linear";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -57,10 +63,10 @@ export function CockpitSidebar() {
   ).length;
 
   const pages = [
-    { to: "/cockpit/inbox", label: "Inbox", icon: Inbox, count: open },
-    { to: "/cockpit/tasks", label: "Tasks", icon: Kanban, count: active },
-    { to: "/cockpit/notes", label: "Notes", icon: Clipboard, count: 0 },
-    { to: "/cockpit/tags", label: "Tags", icon: Tag, count: 0 },
+    { to: "/cockpit/inbox", label: "Inbox", icon: InboxIcon, count: open },
+    { to: "/cockpit/tasks", label: "Tasks", icon: KanbanIcon, count: active },
+    { to: "/cockpit/notes", label: "Notes", icon: ClipboardIcon, count: 0 },
+    { to: "/cockpit/tags", label: "Tags", icon: TagIcon, count: 0 },
   ] as const;
 
   return (
@@ -94,7 +100,7 @@ export function CockpitSidebar() {
                   tooltip={note.title}
                   render={<Link to="/cockpit/notes" search={{ note: note.id }} />}
                 >
-                  <FileText />
+                  <FileTextIcon />
                   <span>{note.title}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -124,7 +130,7 @@ export function CockpitSidebar() {
                       />
                     }
                   >
-                    <Tag
+                    <TagIcon
                       style={tagStyle(colorOf(tag.name))}
                       className="fill-(--tag) text-(--tag)"
                     />

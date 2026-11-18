@@ -1,9 +1,9 @@
-import { Globe, Users } from "@mynaui/icons-react";
+import { GlobeIcon, UsersGroupRoundedIcon } from "@solar-icons/react/linear";
 
 import type { Thread } from "../types";
 
 export function SharedNotice({ thread, driven }: { thread: Thread; driven: boolean }) {
-  const Icon = driven ? Users : Globe;
+  const Icon = driven ? UsersGroupRoundedIcon : GlobeIcon;
   return (
     <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
       <Icon className="size-4 shrink-0" />

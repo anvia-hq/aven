@@ -1,4 +1,4 @@
-import { Pencil, Trash } from "@mynaui/icons-react";
+import { PenIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Badge } from "@aven/ui/badge";
@@ -46,7 +46,7 @@ function McpServerRow({ server }: { server: McpServer }) {
         aria-label={`Edit ${server.name}`}
         onClick={() => setEditing(true)}
       >
-        <Pencil />
+        <PenIcon />
       </Button>
       <Button
         variant="ghost"
@@ -54,7 +54,7 @@ function McpServerRow({ server }: { server: McpServer }) {
         aria-label={`Remove ${server.name}`}
         onClick={() => void remove(server)}
       >
-        <Trash />
+        <TrashBinMinimalisticIcon />
       </Button>
       <EditMcpServerDialog server={server} open={editing} onOpenChange={setEditing} />
     </li>

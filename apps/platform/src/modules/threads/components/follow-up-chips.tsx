@@ -1,7 +1,8 @@
-import { ArrowUp } from "@mynaui/icons-react";
+import { ArrowUpIcon } from "@solar-icons/react/linear";
 import { useRef, type CSSProperties } from "react";
 
 import { Button } from "@aven/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 
 import { useFullyVisible } from "../hooks/use-fully-visible";
 
@@ -27,17 +28,26 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
           style={{ transitionDelay: `${index * 40}ms` } as CSSProperties}
           className="max-w-[16rem] min-w-0 transition-[opacity] duration-200 ease-out starting:opacity-0 motion-reduce:transition-none"
         >
-          <Button
-            variant="outline"
-            size="sm"
-            className="max-w-full gap-1.5 pr-2.5 pl-1.5 rounded-full shadow-md"
-            onClick={() => onPick(text)}
-          >
-            <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-              <ArrowUp className="size-3" />
-            </span>
-            <span className="truncate">{text}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="max-w-full gap-1.5 rounded-full bg-background/60 pr-2.5 pl-1.5 shadow-md backdrop-blur-md dark:bg-background/60"
+                  onClick={() => onPick(text)}
+                />
+              }
+            >
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                <ArrowUpIcon className="size-3" />
+              </span>
+              <span className="truncate">{text}</span>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-sm">
+              {text}
+            </TooltipContent>
+          </Tooltip>
         </li>
       ))}
     </ul>

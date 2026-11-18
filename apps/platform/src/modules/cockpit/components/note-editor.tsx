@@ -1,4 +1,9 @@
-import { Calendar, Pin, Tag, Trash } from "@mynaui/icons-react";
+import {
+  CalendarIcon,
+  PinIcon,
+  TagIcon,
+  TrashBinMinimalisticIcon,
+} from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { cn } from "cn";
@@ -62,7 +67,7 @@ export function NoteEditor({
             className={cn(note.pinned ? "text-foreground" : "text-muted-foreground")}
             onClick={() => void update(note, { pinned: !note.pinned })}
           >
-            <Pin className={cn(note.pinned && "fill-current")} />
+            <PinIcon className={cn(note.pinned && "fill-current")} />
           </Button>
           <MoreMenu>
             <DropdownMenuItem
@@ -74,7 +79,7 @@ export function NoteEditor({
                 if (await remove(note)) onClose();
               }}
             >
-              <Trash /> Delete note
+              <TrashBinMinimalisticIcon /> Delete note
             </DropdownMenuItem>
           </MoreMenu>
         </>
@@ -94,10 +99,10 @@ export function NoteEditor({
         }}
       />
       <Properties>
-        <Property icon={Tag} label="Tags">
+        <Property icon={TagIcon} label="Tags">
           <TagInput bare value={note.tags} onChange={(tags) => void update(note, { tags })} />
         </Property>
-        <Property icon={Calendar} label="Created">
+        <Property icon={CalendarIcon} label="Created">
           <span className="px-1">{new Date(note.createdAt).toLocaleDateString()}</span>
         </Property>
       </Properties>

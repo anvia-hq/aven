@@ -1,4 +1,4 @@
-import { Github } from "@mynaui/icons-react";
+import { GithubMark } from "@/components/brand-icons";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
@@ -35,7 +35,7 @@ function GithubSettings() {
                     variant="outline"
                     render={<a href={github.installUrl} />}
                   >
-                    <Github /> Install on GitHub
+                    <GithubMark /> Install on GitHub
                   </Button>
                 )}
               </SettingsRow>
@@ -52,7 +52,7 @@ function GithubSettings() {
                   variant="outline"
                   render={<a href="/api/github/connect?next=/settings/github" />}
                 >
-                  <Github /> {account?.data?.connected ? "Reconnect" : "Connect GitHub"}
+                  <GithubMark /> {account?.data?.connected ? "Reconnect" : "Connect GitHub"}
                 </Button>
               </SettingsRow>
             </>

@@ -1,22 +1,22 @@
 import {
-  BookOpen,
-  ChatDots,
-  Cog,
-  Github,
-  Flag,
-  Key,
-  Lock,
-  Api,
-  Servers,
-  SignalWaves,
-  Sparkles,
-  Terminal,
-  Users,
-  UsersGroup,
-  BookmarkUser,
-  Bell,
-  UserCircle,
-} from "@mynaui/icons-react";
+  BookIcon,
+  ChatRoundDotsIcon,
+  SettingsIcon,
+  FlagIcon,
+  KeyIcon,
+  LockIcon,
+  ProgrammingIcon,
+  ServerIcon,
+  SignalIcon,
+  SparklesIcon,
+  CodeSquareIcon,
+  UsersGroupRoundedIcon,
+  UsersGroupTwoRoundedIcon,
+  UserIdIcon,
+  BellIcon,
+  UserCircleIcon,
+} from "@solar-icons/react/linear";
+import { GithubMark } from "@/components/brand-icons";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -34,36 +34,36 @@ const groups = [
   {
     label: "Personal",
     items: [
-      { to: "/settings/general", label: "General", icon: Cog },
-      { to: "/settings/profile", label: "Profile", icon: UserCircle },
-      { to: "/settings/environment-variables", label: "Personal variables", icon: Lock },
+      { to: "/settings/general", label: "General", icon: SettingsIcon },
+      { to: "/settings/profile", label: "Profile", icon: UserCircleIcon },
+      { to: "/settings/environment-variables", label: "Personal variables", icon: LockIcon },
     ],
   },
   {
     label: "AI",
     items: [
-      { to: "/settings/providers", label: "Providers", icon: Sparkles },
-      { to: "/settings/bots", label: "Bots", icon: ChatDots },
-      { to: "/settings/memory", label: "Memory", icon: BookmarkUser },
+      { to: "/settings/providers", label: "Providers", icon: SparklesIcon },
+      { to: "/settings/bots", label: "Bots", icon: ChatRoundDotsIcon },
+      { to: "/settings/memory", label: "Memory", icon: UserIdIcon },
     ],
   },
   {
     label: "Agents and integrations",
     items: [
-      { to: "/settings/skills", label: "Skills", icon: BookOpen },
+      { to: "/settings/skills", label: "Skills", icon: BookIcon },
       { to: "/settings/mcp", label: "MCP Integrations", icon: McpLine },
-      { to: "/settings/mcp-access", label: "MCP access", icon: Api },
-      { to: "/settings/webhooks", label: "Webhooks", icon: SignalWaves },
+      { to: "/settings/mcp-access", label: "MCP access", icon: ProgrammingIcon },
+      { to: "/settings/webhooks", label: "Webhooks", icon: SignalIcon },
     ],
   },
   {
     label: "Workspace",
     items: [
-      { to: "/settings/members", label: "Members", icon: Users },
-      { to: "/settings/github", label: "GitHub", icon: Github },
-      { to: "/settings/runtimes", label: "Runtimes", icon: Terminal },
-      { to: "/settings/workspace-variables", label: "Workspace variables", icon: Key },
-      { to: "/settings/decision-model", label: "Decision model", icon: Flag },
+      { to: "/settings/members", label: "Members", icon: UsersGroupRoundedIcon },
+      { to: "/settings/github", label: "GitHub", icon: GithubMark },
+      { to: "/settings/runtimes", label: "Runtimes", icon: CodeSquareIcon },
+      { to: "/settings/workspace-variables", label: "Workspace variables", icon: KeyIcon },
+      { to: "/settings/decision-model", label: "Decision model", icon: FlagIcon },
     ],
   },
 ] as const;
@@ -71,10 +71,10 @@ const groups = [
 const platformGroup = {
   label: "Platform",
   items: [
-    { to: "/settings/platform", label: "Installation", icon: Servers },
+    { to: "/settings/platform", label: "Installation", icon: ServerIcon },
     { to: "/settings/sandbox", label: "Sandbox", icon: CloudLine },
-    { to: "/settings/people", label: "People", icon: UsersGroup },
-    { to: "/settings/announcements", label: "Announcements", icon: Bell },
+    { to: "/settings/people", label: "People", icon: UsersGroupTwoRoundedIcon },
+    { to: "/settings/announcements", label: "Announcements", icon: BellIcon },
   ],
 } as const;
 

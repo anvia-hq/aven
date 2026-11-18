@@ -1,4 +1,4 @@
-import { Inbox } from "@mynaui/icons-react";
+import { InboxIcon } from "@solar-icons/react/linear";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { withTag } from "@/modules/cockpit/components/cockpit-page";
@@ -48,7 +48,7 @@ function InboxPage() {
     }
 
     return (
-      <NothingOpen icon={Inbox}>
+      <NothingOpen icon={InboxIcon}>
         Pick something from your inbox, or add a new one with +.
       </NothingOpen>
     );

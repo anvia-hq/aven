@@ -30,24 +30,25 @@ Our own wrappers (`text-field.tsx`, `form.tsx`) live next to them. Hooks the CLI
 
 ## Icons
 
-Icons come from `@mynaui/icons-react` (import by name, e.g. `import { Plus, Moon } from "@mynaui/icons-react"`). `lucide-react` is not a dependency.
+Icons come from `@solar-icons/react`, by style and name (`import { AltArrowDownIcon } from "@solar-icons/react/linear"`; filled ones from `@solar-icons/react/bold`). `lucide-react` is not a dependency. Solar has no brand marks: the GitHub mark is `GithubMark` in `src/components/brand-icons.tsx`. Decision 0345.
 
-The shadcn CLI only knows lucide, so `components.json` still says `iconLibrary: "lucide"` and newly added components will import `lucide-react`. After `shadcn add`, convert those imports to Mynaui, aliasing to keep the JSX unchanged (`import { Check as CheckIcon } from "@mynaui/icons-react"`). Mapping used so far:
+The shadcn CLI only knows lucide, so `components.json` still says `iconLibrary: "lucide"` and newly added components will import `lucide-react`. After `shadcn add`, convert those imports to Solar, aliasing to keep the JSX unchanged (`import { CheckIcon } from "@solar-icons/react/linear"`, `import { LoaderIcon as Loader2Icon } from "@solar-icons/react/linear"`). Mapping used so far:
 
-| lucide                                      | Mynaui           |
-| ------------------------------------------- | ---------------- |
-| `Check`                                     | `Check`          |
-| `Chevron{Up,Down,Left,Right}`               | same             |
-| `MoreHorizontal`                            | `Dots`           |
-| `Minus`, `X`, `Search`, `Copy`, `ArrowDown` | same             |
-| `PanelLeft`                                 | `PanelLeft`      |
-| `CircleCheck`                               | `CheckCircle`    |
-| `Info`                                      | `InfoCircle`     |
-| `TriangleAlert`                             | `DangerTriangle` |
-| `OctagonX`                                  | `DangerOctagon`  |
-| `Loader2`                                   | `Spinner`        |
-| `LogOut`                                    | `Logout`         |
-| `LayoutDashboard`, `Moon`, `Sun`, `Plus`    | same             |
+| lucide                        | Solar                                |
+| ----------------------------- | ------------------------------------ |
+| `Check`, `Minus`, `Copy`      | `CheckIcon`, `MinusIcon`, `CopyIcon` |
+| `Chevron{Up,Down,Left,Right}` | `AltArrow{Up,Down,Left,Right}Icon`   |
+| `MoreHorizontal`              | `MenuDotsIcon`                       |
+| `X`                           | `CloseIcon`                          |
+| `Search`                      | `MagnifierIcon`                      |
+| `PanelLeft`                   | `PanelLeftIcon`                      |
+| `CircleCheck`                 | `CheckCircleIcon`                    |
+| `Info`                        | `InfoCircleIcon`                     |
+| `TriangleAlert`               | `DangerTriangleIcon`                 |
+| `OctagonX`                    | `DangerIcon`                         |
+| `Loader2`                     | `LoaderIcon`                         |
+| `LogOut`                      | `LogoutIcon`                         |
+| `Plus`                        | `AddIcon`                            |
 
 ## Enforcement
 

@@ -5,7 +5,8 @@ import {
   type ComposerInputEntity,
   type ComposerTriggerItem,
 } from "@anvia/react-ui/chat";
-import { ArrowUp, Sparkles, StopSolid } from "@mynaui/icons-react";
+import { ArrowUpIcon, SparklesIcon } from "@solar-icons/react/linear";
+import { StopIcon } from "@solar-icons/react/bold";
 import { cn } from "cn";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
@@ -66,7 +67,7 @@ const renderEntity =
   };
 
 function personIcon(people: MentionPerson[], item: ComposerTriggerItem) {
-  if (item.id === AGENT_ENTITY) return <Sparkles className="size-5 p-0.5" />;
+  if (item.id === AGENT_ENTITY) return <SparklesIcon className="size-5 p-0.5" />;
 
   const id = personIdOf(item.id);
 
@@ -150,7 +151,7 @@ function Composer({
 
   return (
     <div
-      className="relative flex cursor-text flex-col rounded-3xl border bg-card px-2 pt-2 pb-0 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
+      className="relative flex cursor-text flex-col rounded-3xl border border-foreground/15 bg-(--chrome) px-4 pt-4 pb-0 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       {...drop}
       onKeyDownCapture={handleKeyDown}
       onClick={focusOnBoxClick}
@@ -164,7 +165,7 @@ function Composer({
         renderEntity={renderEntity(people)}
         className="max-h-60 min-h-14 overflow-y-auto p-1 text-sm leading-6 [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
-      <div className="flex items-center gap-2 py-2">
+      <div className="flex items-center gap-2 pt-2 pb-4">
         <AttachButton
           onPick={attachments.add}
           disabled={running && !filesWhileRunning}
@@ -184,8 +185,8 @@ function Composer({
             disabled={!running && !canSend}
             onClick={running ? onStop : () => void submit()}
           >
-            <ArrowUp className={cn(swap, running && "scale-50 opacity-0")} />
-            <StopSolid className={cn(swap, !running && "scale-50 opacity-0")} />
+            <ArrowUpIcon className={cn(swap, running && "scale-50 opacity-0")} />
+            <StopIcon className={cn(swap, !running && "scale-50 opacity-0")} />
           </Button>
         </div>
       </div>

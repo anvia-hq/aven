@@ -1,4 +1,4 @@
-import { Star } from "@mynaui/icons-react";
+import { StarIcon } from "@solar-icons/react/linear";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { AvatarBadge } from "@aven/ui/avatar";
@@ -36,7 +36,7 @@ export function BotSidebar() {
               className="size-16 text-3xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
             >
               <AvatarBadge className="size-5! [&>svg]:size-3!">
-                <Star />
+                <StarIcon />
               </AvatarBadge>
               {main.attention && (
                 <AvatarBadge

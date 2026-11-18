@@ -169,7 +169,7 @@ test.describe("themes", () => {
     await page.goto("/settings/general");
     await page.getByRole("combobox", { name: "Interface text size" }).click();
     await page.getByRole("option", { name: "Large", exact: true }).click();
-    await expect(page.locator("html")).toHaveAttribute("style", /font-size: 112\.5%/);
+    await expect(page.locator("html")).toHaveAttribute("style", /--interface-scale: 1\.125/);
     await page.reload();
     await expect(page.getByRole("combobox", { name: "Interface text size" })).toContainText(
       "Large",

@@ -7,10 +7,10 @@ import { cn } from "cn";
 import { Button } from "./button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "./input-group";
 import {
-  ChevronDown as ChevronDownIcon,
-  X as XIcon,
-  Check as CheckIcon,
-} from "@mynaui/icons-react";
+  AltArrowDownIcon as ChevronDownIcon,
+  CloseIcon as XIcon,
+  CheckIcon,
+} from "@solar-icons/react/linear";
 
 const Combobox = ComboboxPrimitive.Root;
 

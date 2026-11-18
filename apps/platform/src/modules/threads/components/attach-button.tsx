@@ -1,4 +1,4 @@
-import { Paperclip } from "@mynaui/icons-react";
+import { PaperclipIcon } from "@solar-icons/react/linear";
 import { useRef } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -30,13 +30,13 @@ export function AttachButton({
       <Button
         variant="outline"
         size="icon-sm"
-        className="size-9 rounded-full bg-muted/40 text-muted-foreground md:size-7"
+        className="border-transparent bg-muted/40 dark:border-transparent dark:bg-muted/40 size-9 rounded-full text-muted-foreground md:size-7"
         aria-label="Attach files"
         title={title}
         disabled={disabled}
         onClick={() => picker.current?.click()}
       >
-        <Paperclip />
+        <PaperclipIcon />
       </Button>
     </>
   );

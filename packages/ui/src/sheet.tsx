@@ -3,7 +3,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 
 import { Button } from "./button";
-import { X as XIcon } from "@mynaui/icons-react";
+import { CloseIcon as XIcon } from "@solar-icons/react/linear";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;

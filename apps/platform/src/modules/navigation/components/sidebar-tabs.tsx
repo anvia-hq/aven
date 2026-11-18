@@ -1,18 +1,18 @@
-import { Chat, Folder } from "@mynaui/icons-react";
+import { ChatRoundIcon, FolderIcon } from "@solar-icons/react/linear";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
 const tabs = [
-  { to: "/threads", label: "New thread", icon: Chat, exact: true },
-  { to: "/projects", label: "Projects", icon: Folder, exact: false },
+  { to: "/threads", label: "New thread", icon: ChatRoundIcon, exact: true },
+  { to: "/projects", label: "Projects", icon: FolderIcon, exact: false },
 ] as const;
 
 export function SidebarTabs() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
-    <SidebarMenu className="px-2">
+    <SidebarMenu className="px-2 md:hidden">
       {tabs.map((tab) => {
         const active = pathname === tab.to || (!tab.exact && pathname.startsWith(`${tab.to}/`));
         return (

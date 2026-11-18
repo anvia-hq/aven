@@ -1,4 +1,4 @@
-import { X } from "@mynaui/icons-react";
+import { CloseIcon } from "@solar-icons/react/linear";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -42,7 +42,7 @@ export function AnnouncementBanner() {
         className="absolute top-1.5 right-1.5 text-white hover:bg-white/15 hover:text-white"
         onClick={() => dismiss(announcement.id)}
       >
-        <X />
+        <CloseIcon />
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md" showCloseButton={false}>

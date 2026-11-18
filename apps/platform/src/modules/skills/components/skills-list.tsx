@@ -1,4 +1,4 @@
-import { Archive, FolderOne, Trash } from "@mynaui/icons-react";
+import { ArchiveIcon, Folder2Icon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
 import { useRef, useState, type DragEvent } from "react";
 
 import { Badge } from "@aven/ui/badge";
@@ -83,11 +83,11 @@ function UploadSkill() {
           }}
         />
         <Button size="sm" variant="outline" disabled={busy} onClick={() => folder.current?.click()}>
-          <FolderOne />
+          <Folder2Icon />
           Upload folder
         </Button>
         <Button size="sm" variant="outline" disabled={busy} onClick={() => zip.current?.click()}>
-          <Archive />
+          <ArchiveIcon />
           Upload .zip
         </Button>
       </div>
@@ -118,7 +118,7 @@ function PersonalSkill({ skill }: { skill: Skill }) {
         aria-label={`Remove ${skill.name}`}
         onClick={() => remove(skill)}
       >
-        <Trash />
+        <TrashBinMinimalisticIcon />
       </Button>
     </li>
   );

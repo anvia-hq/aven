@@ -1,4 +1,4 @@
-import { Power } from "@mynaui/icons-react";
+import { PowerIcon } from "@solar-icons/react/linear";
 
 import { Button } from "@aven/ui/button";
 import { PanelNotice } from "@/components/panel-notice";
@@ -31,7 +31,7 @@ export function ComputerAsleepNotice({ computer, purpose, waking, onWake }: Prop
       <span className="flex flex-col items-center gap-4">
         {computer.asleep} You can also start it to {purpose}.
         <Button variant="outline" disabled={waking} onClick={onWake}>
-          {waking ? <Spinner /> : <Power />} {waking ? "Starting" : "Start"}
+          {waking ? <Spinner /> : <PowerIcon />} {waking ? "Starting" : "Start"}
         </Button>
       </span>
     </PanelNotice>

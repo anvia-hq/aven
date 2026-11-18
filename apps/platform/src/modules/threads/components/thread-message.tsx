@@ -87,7 +87,7 @@ export const ThreadMessage = memo(function ThreadMessage({
       message.parts.map((part) => (part.type === "text" ? part.text : "")).join(""),
     );
 
-    if (note?.kind === "process") return null;
+    if (note?.kind === "process" || note?.kind === "fork") return null;
 
     if (note?.kind === "compaction") return <CompactionDivider label={note.line} />;
 
@@ -125,7 +125,7 @@ export const ThreadMessage = memo(function ThreadMessage({
           />
         ) : null}
         {text && (
-          <div className="w-fit max-w-full rounded-2xl bg-accent px-4 py-2.5 [&_p]:whitespace-pre-line">
+          <div className="w-fit max-w-full rounded-2xl border border-foreground/10 bg-clip-padding bg-linear-to-r from-[color-mix(in_oklch,var(--accent),var(--background)_15%)] to-[color-mix(in_oklch,var(--accent),oklch(0.45_0.06_55)_28%)] px-4 py-2.5 [&_p]:whitespace-pre-line">
             {message.parts.map((part, index) =>
               part.type === "text" ? (
                 <Markdown key={index} components={{ code: mentionCode }}>

@@ -1,4 +1,4 @@
-import { Github } from "@mynaui/icons-react";
+import { GithubMark } from "@/components/brand-icons";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -61,7 +61,7 @@ export function GithubSection() {
                   })
                 }
               >
-                <Github /> Create GitHub App
+                <GithubMark /> Create GitHub App
               </Button>
             </div>
           </SettingsRow>
