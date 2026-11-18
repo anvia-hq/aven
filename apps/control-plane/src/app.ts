@@ -37,6 +37,7 @@ import { githubRouter } from "./modules/github/router";
 import { announcementsRouter } from "./modules/announcements/router";
 import { platformRouter } from "./modules/platform/router";
 import { serverModelsRouter } from "./modules/server-models/router";
+import { cloudLifecycleRouter } from "./modules/cloud-lifecycle/router";
 import { cloudSettingsRouter } from "./modules/cloud-settings/router";
 import { lensRouter } from "./modules/lens/router";
 import { preferencesRouter } from "./modules/preferences/router";
@@ -83,6 +84,7 @@ export const app = new Elysia()
   .use(announcementsRouter)
   .use(serverModelsRouter)
   .use(cloudSettingsRouter)
+  .use(cloudLifecycleRouter)
   .use(lensRouter)
   .use(preferencesRouter)
   .use(profileRouter)
