@@ -42,6 +42,7 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(page.getByText("Aven · threads", { exact: true })).toBeVisible();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
+  await page.keyboard.press("Tab");
   const bot = rail.getByRole("link", { name: "Bot", exact: true });
   await expect(bot).toBeFocused();
   await page.keyboard.press("Enter");
@@ -49,14 +50,14 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(bot).toHaveAttribute("aria-current", "page");
   await expect(rail.locator('[aria-current="page"]')).toHaveCount(1);
 
-  await rail.getByRole("link", { name: "Cockpit", exact: true }).click();
+  await rail.getByRole("link", { name: "Inbox", exact: true }).click();
   await expect(page).toHaveURL(/\/cockpit\/inbox$/);
-  await expect(rail.locator('[aria-current="page"]')).toHaveAccessibleName("Cockpit");
+  await expect(rail.locator('[aria-current="page"]')).toHaveAccessibleName("Inbox");
   await page
     .getByRole("navigation", { name: "Cockpit", exact: true })
     .getByRole("link", { name: /Tasks/ })
     .click();
-  await expect(rail.locator('[aria-current="page"]')).toHaveAccessibleName("Cockpit");
+  await expect(rail.locator('[aria-current="page"]')).toHaveAccessibleName("Inbox");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(rail).toBeHidden();
