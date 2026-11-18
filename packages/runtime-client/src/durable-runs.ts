@@ -25,6 +25,7 @@ import { AGENT_BACKEND_CAPABILITIES } from "@aven/protocol/runtime-wire";
 import { createDurableEventMapper } from "./durable-events";
 import { defineAvenGoal, startGoal } from "./durable-goals";
 import { assertDurableToolConcurrency } from "./durable-tool-concurrency";
+import { runnerHoldsLease } from "./lease-holder";
 import { openRunDatabase } from "./run-outbox";
 import type { SandboxToolName } from "@aven/agents/types";
 import type {
@@ -97,16 +98,28 @@ class TranscriptTurns {
   }
 }
 
-function releaseOwnLease(databasePath: string) {
+function releaseStaleLease(databasePath: string) {
   if (!existsSync(databasePath)) return;
 
   const database = new Database(databasePath);
   try {
-    database
-      .query(
-        "UPDATE anvia_durable_owner SET token = NULL, pid = NULL, host = NULL WHERE host <> ? OR (pid = ? AND host = ?)",
-      )
-      .run(hostname(), process.pid, hostname());
+    const owner = database
+      .query("SELECT token, pid, host FROM anvia_durable_owner WHERE singleton = 1")
+      .get() as { token: string | null; pid: number | null; host: string | null } | null;
+
+    if (!owner || owner.token === null) return;
+
+    const stale =
+      owner.host !== hostname() ||
+      owner.pid === process.pid ||
+      !runnerHoldsLease(Number(owner.pid));
+
+    if (stale)
+      database
+        .query(
+          "UPDATE anvia_durable_owner SET token = NULL, pid = NULL, host = NULL WHERE singleton = 1 AND token = ?",
+        )
+        .run(owner.token);
   } catch {
   } finally {
     database.close();
@@ -158,7 +171,7 @@ export class DurableRuns implements AgentBackend {
       throw new Error(`The run journal ${databasePath} is already open`);
 
     held.delete(databasePath);
-    releaseOwnLease(databasePath);
+    releaseStaleLease(databasePath);
     const contexts = new Map<string, GoalContext>();
     const goal = defineAvenGoal(contexts);
     const runtime = await DurableRuntime.open({
