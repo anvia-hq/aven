@@ -20,7 +20,9 @@ export function QueuedMessage({
   threadId: string;
   showAuthor?: boolean;
 }) {
-  if (systemNoteOf(message.prompt)?.kind === "process") return null;
+  const kind = systemNoteOf(message.prompt)?.kind;
+
+  if (kind === "process" || kind === "fork") return null;
 
   const { mine, name, text } = authorOf(message.prompt, viewer, message.senderId);
   return (

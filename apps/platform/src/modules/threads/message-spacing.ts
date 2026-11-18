@@ -24,7 +24,7 @@ export function speakerOf(message: ChatMessage, viewer: Viewer, sending = false)
 
   const note = systemNoteOf(text);
 
-  if (note?.kind === "process" || note?.kind === "compaction") return null;
+  if (note?.kind === "process" || note?.kind === "fork" || note?.kind === "compaction") return null;
 
   if (note) return AGENT;
 
@@ -32,7 +32,9 @@ export function speakerOf(message: ChatMessage, viewer: Viewer, sending = false)
 }
 
 export function steerSpeakerOf(steer: QueuedSteer, viewer: Viewer): Speaker | null {
-  if (systemNoteOf(steer.prompt)?.kind === "process") return null;
+  const kind = systemNoteOf(steer.prompt)?.kind;
+
+  if (kind === "process" || kind === "fork") return null;
 
   return personOf(steer.prompt, viewer, steer.senderId, false);
 }
