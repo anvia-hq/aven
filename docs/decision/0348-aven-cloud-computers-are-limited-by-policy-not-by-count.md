@@ -16,9 +16,9 @@ A workspace could hold 20 Aven Cloud computers (`AVEN_CLOUD_MAX_SANDBOXES`), cou
   - delete a computer after this many hours without use (48);
   - the most computers a workspace may have running at once (off);
   - the starts a person may make (a burst, then one every so many minutes) (off).
-- **Limits are off unless the owner turns them on, and they count running computers only.** A start over a limit waits and shows when it can begin, rather than failing.
-- **One seam decides.** `admit` in the control plane reads those settings and allows or delays a start. The hosted edition can supply its own, which is where a plan's hours belong (decision 0299: the open repository never imports the hosted one).
-- A refusal says what it is: the platform's own lack of capacity is shown as that, and no longer reads as the workspace's count.
+- **Limits are off unless the owner turns them on, and they count running computers only** (the open intervals of `computer_usage`). A start over a limit waits up to a minute for room, and is refused with when to try again after that.
+- **One seam decides.** A computer is admitted when it boots (a new one, or a stopped one waking), not when its thread is made. `admit` in the control plane reads those settings and allows, delays or refuses the start; then the edition's own `admit`, if it has one, can too. The hosted edition supplies that, which is where a plan's hours belong (decision 0299: the open repository never imports the hosted one).
+- A refusal by a limit says which limit it was and when to try again.
 
 ## Consequences
 
