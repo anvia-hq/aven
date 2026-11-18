@@ -107,12 +107,34 @@ describe("waking a spaces sandbox", () => {
     const file = calls[4]?.body as { path: string; content: string };
     expect(file.path).toBe(SPACES_BOOT_PATH);
     expect(file.content).toContain(TOKEN);
+    expect(file.content).not.toContain("AVEN_RELEASE");
     expect(calls[5]?.body).toEqual({
       command: SPACES_BOOT_COMMAND,
       detached: true,
       timeoutSeconds: 600,
     });
     expect(JSON.stringify(calls[5]?.body)).not.toContain(TOKEN);
+  });
+
+  test("tells the sandbox which release this server runs, so its runner can be brought to it", async () => {
+    let online = false;
+    const { calls, client } = scripted({ create: [ID], [ID]: ["ready"] }, () => {
+      online = true;
+    });
+    const { clock } = timed();
+
+    await wakeSpacesSandbox(
+      wake({
+        record: record(null),
+        client,
+        release: "0.10.5",
+        connected: () => online,
+        clock,
+      }),
+    );
+
+    const file = calls.find((call) => call.method === "PUT")?.body as { content: string };
+    expect(file.content).toContain("AVEN_RELEASE=0.10.5\n");
   });
 
   test("clears the runner's journal before booting a sandbox started from a saved environment", async () => {

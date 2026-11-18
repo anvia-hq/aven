@@ -30,6 +30,12 @@ export function spacesAutoStopSeconds() {
   return Number.isInteger(configured) && configured >= 60 ? configured : AUTO_STOP_SECONDS;
 }
 
+const RELEASE = /^\d+\.\d+\.\d+$/;
+
+export function spacesRelease(env: string | undefined = process.env.AVEN_VERSION) {
+  return env !== undefined && RELEASE.test(env) ? env : undefined;
+}
+
 type RunnerUrlEnv = {
   BETTER_AUTH_URL?: string;
 };

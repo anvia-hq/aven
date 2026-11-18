@@ -2,7 +2,13 @@ import { UnavailableError } from "@aven/server-kit/errors";
 
 import { RuntimeOfflineError } from "../offline";
 import { SpacesClient } from "./client";
-import { spacesApiBase, spacesApiKey, spacesAutoStopSeconds, spacesRunnerUrl } from "./config";
+import {
+  spacesApiBase,
+  spacesApiKey,
+  spacesAutoStopSeconds,
+  spacesRelease,
+  spacesRunnerUrl,
+} from "./config";
 import { spacesLifetime } from "./lifetime";
 import { destroySpacesSandbox, stopSpacesSandbox } from "./stop";
 import { wakeSpacesSandbox } from "./wake";
@@ -17,6 +23,7 @@ export type SpacesProviderDeps<T extends SandboxRunner> = ProviderDeps<T> & {
   apiKey?: () => string | null;
   client?: () => SpacesClient;
   runnerUrl?: () => string;
+  release?: () => string | undefined;
 };
 
 function defaultClient() {
@@ -32,6 +39,7 @@ export function createSpacesProvider<T extends SandboxRunner>(
 ): SpacesProvider<T> {
   const clientOf = deps.client ?? defaultClient;
   const runnerUrl = deps.runnerUrl ?? spacesRunnerUrl;
+  const release = deps.release ?? spacesRelease;
 
   async function wake(runtimeId: string, offline?: string) {
     const record = await deps.record({ runtimeId });
@@ -42,6 +50,7 @@ export function createSpacesProvider<T extends SandboxRunner>(
       record,
       client: clientOf(),
       runnerUrl: runnerUrl(),
+      release: release(),
       saveSandboxId: (sandboxId) => deps.saveSandboxId(runtimeId, sandboxId),
       connected: () => deps.hub.get(runtimeId) !== undefined,
       forget: () => deps.hub.disconnect?.(runtimeId, "The computer was stopped and started again"),
