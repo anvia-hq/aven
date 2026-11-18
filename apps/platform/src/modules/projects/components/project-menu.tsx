@@ -1,4 +1,10 @@
-import { ArrowLeftIcon, FolderIcon, GitBranchIcon, MagnifierIcon } from "@solar-icons/react/linear";
+import {
+  AddIcon,
+  ArrowLeftIcon,
+  FolderIcon,
+  GitBranchIcon,
+  MagnifierIcon,
+} from "@solar-icons/react/linear";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -15,6 +21,7 @@ import { projectFits } from "../project-fits";
 import { projectPlace } from "../place";
 import { recentProjects } from "../recent-projects";
 import type { FolderEntry, GithubRepository, Project } from "../types";
+import { AddProjectDialog } from "./add-project-dialog";
 
 type Props = {
   runtime: Runtime | undefined;
@@ -44,6 +51,7 @@ export function ProjectMenu({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
   const sandbox = runtime?.isCloud === true;
   const chosen = projects.find((project) => project.id === value);
   const recent = recentProjects(projects, threads).filter(
@@ -57,98 +65,111 @@ export function ProjectMenu({
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
 
-        if (!next) setQuery("");
-      }}
-    >
-      <PopoverTrigger
-        render={
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label="Project"
-            aria-expanded={open}
-            className="border-transparent bg-muted/40 dark:border-transparent dark:bg-muted/40 max-w-48 min-w-0 rounded-full px-3 text-muted-foreground"
-          />
-        }
+          if (!next) setQuery("");
+        }}
       >
-        {sandbox ? <GitBranchIcon /> : <FolderIcon />}
-        <span className="truncate">{chosen?.name ?? placeholder}</span>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 gap-0 p-0">
-        <div className="border-b p-2">
-          <div className="relative">
-            <MagnifierIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              aria-label={sandbox ? "Search repositories" : "Search folders"}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder={sandbox ? "Search repositories" : "Search folders"}
-              className="pl-8 focus-visible:ring-0!"
-              autoFocus
+        <PopoverTrigger
+          render={
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Project"
+              aria-expanded={open}
+              className="border-transparent bg-muted/40 dark:border-transparent dark:bg-muted/40 max-w-48 min-w-0 rounded-full px-3 text-muted-foreground"
             />
+          }
+        >
+          {sandbox ? <GitBranchIcon /> : <FolderIcon />}
+          <span className="truncate">{chosen?.name ?? placeholder}</span>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 gap-0 p-0">
+          <div className="border-b p-2">
+            <div className="relative">
+              <MagnifierIcon className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label={sandbox ? "Search repositories" : "Search folders"}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={sandbox ? "Search repositories" : "Search folders"}
+                className="pl-8 focus-visible:ring-0!"
+                autoFocus
+              />
+            </div>
           </div>
-        </div>
-        <div className="max-h-80 overflow-y-auto p-1">
-          {recent.length > 0 && (
-            <MenuGroup label="Recent">
-              {recent.map((project) => (
-                <MenuRow
-                  key={project.id}
-                  pressed={project.id === value}
-                  icon={project.repoFullName ? <GithubMark className="size-4" /> : <FolderIcon />}
-                  label={project.name}
-                  detail={projectPlace(project)}
-                  onClick={() => choose(project.id)}
-                />
-              ))}
-            </MenuGroup>
-          )}
-          {sandbox ? (
-            <Repositories
-              query={query}
-              projects={projects}
-              value={value}
-              adding={adding}
-              onPick={choose}
-              onAdd={(installationId, repository) => {
-                setOpen(false);
-                onAddRepository(installationId, repository);
-              }}
-            />
-          ) : (
-            <Folders
-              runtime={runtime}
-              query={query}
-              projects={projects}
-              adding={adding}
-              onPick={choose}
-              onAdd={(path) => {
-                setOpen(false);
-                onAddFolder(path);
-              }}
-            />
-          )}
-          {!sandbox && (
-            <Projects
-              label="Repositories"
-              projects={projects.filter(
-                (project) =>
-                  project.repoFullName !== null &&
-                  !recent.some((shown) => shown.id === project.id) &&
-                  matches(query, project.name, projectPlace(project)),
-              )}
-              value={value}
-              onPick={choose}
-            />
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+          <div className="max-h-80 overflow-y-auto p-1">
+            {recent.length > 0 && (
+              <MenuGroup label="Recent">
+                {recent.map((project) => (
+                  <MenuRow
+                    key={project.id}
+                    pressed={project.id === value}
+                    icon={project.repoFullName ? <GithubMark className="size-4" /> : <FolderIcon />}
+                    label={project.name}
+                    detail={projectPlace(project)}
+                    onClick={() => choose(project.id)}
+                  />
+                ))}
+              </MenuGroup>
+            )}
+            {sandbox ? (
+              <Repositories
+                query={query}
+                projects={projects}
+                value={value}
+                adding={adding}
+                onPick={choose}
+                onNew={() => {
+                  setOpen(false);
+                  setCreating(true);
+                }}
+                onAdd={(installationId, repository) => {
+                  setOpen(false);
+                  onAddRepository(installationId, repository);
+                }}
+              />
+            ) : (
+              <Folders
+                runtime={runtime}
+                query={query}
+                projects={projects}
+                adding={adding}
+                onPick={choose}
+                onAdd={(path) => {
+                  setOpen(false);
+                  onAddFolder(path);
+                }}
+              />
+            )}
+            {!sandbox && (
+              <Projects
+                label="Repositories"
+                projects={projects.filter(
+                  (project) =>
+                    project.repoFullName !== null &&
+                    !recent.some((shown) => shown.id === project.id) &&
+                    matches(query, project.name, projectPlace(project)),
+                )}
+                value={value}
+                onPick={choose}
+              />
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+      {creating && (
+        <AddProjectDialog
+          open={creating}
+          onOpenChange={setCreating}
+          onAdded={(project) => onPick(project.id)}
+        />
+      )}
+    </>
   );
 }
 
@@ -187,6 +208,7 @@ function Repositories({
   value,
   adding,
   onPick,
+  onNew,
   onAdd,
 }: {
   query: string;
@@ -194,6 +216,7 @@ function Repositories({
   value: string | undefined;
   adding: boolean;
   onPick: (projectId: string) => void;
+  onNew: () => void;
   onAdd: (installationId: string, repository: GithubRepository) => void;
 }) {
   const github = useGithubRepositories(true);
@@ -214,10 +237,17 @@ function Repositories({
 
   if (waiting && shown.length === 0) return <MenuSkeleton />;
 
-  if (!browsing && shown.length === 0) return <GithubNote />;
+  if (!browsing && shown.length === 0)
+    return (
+      <>
+        {github.configured && <NewRepositoryRow adding={adding} onNew={onNew} />}
+        <GithubNote />
+      </>
+    );
 
   return (
     <>
+      {github.configured && <NewRepositoryRow adding={adding} onNew={onNew} />}
       <Projects label="Repositories" projects={shown} value={value} onPick={onPick} />
       {browsing && (
         <MenuGroup label="Repositories">
@@ -258,6 +288,20 @@ function Repositories({
         </MenuGroup>
       )}
     </>
+  );
+}
+
+function NewRepositoryRow({ adding, onNew }: { adding: boolean; onNew: () => void }) {
+  return (
+    <div className="py-1">
+      <MenuRow
+        icon={<AddIcon className="size-4" />}
+        label="New repository"
+        detail="Aven makes one on GitHub"
+        disabled={adding}
+        onClick={onNew}
+      />
+    </div>
   );
 }
 

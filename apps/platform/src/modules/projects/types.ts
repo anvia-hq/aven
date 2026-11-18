@@ -122,6 +122,13 @@ export type FolderListing = { path: string | null; parent: string | null; folder
 
 export type GithubInstallation = { id: string; accountLogin: string };
 
+export type GithubInstallationInfo = {
+  accountLogin: string;
+  accountType: "user" | "organization";
+  canCreateRepository: boolean;
+  settingsUrl: string;
+};
+
 export type GithubRepository = {
   fullName: string;
   defaultBranch: string;

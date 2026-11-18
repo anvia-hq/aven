@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { connectGithub, registerUser } from "./helpers";
 
 const CLOUD_ID = "00000000-0000-4000-8000-000000000002";
 const MAC_ID = "00000000-0000-4000-8000-0000000000aa";
@@ -93,5 +93,27 @@ test.describe("Aven Cloud", () => {
       projectId: repository.id,
       runtimeId: CLOUD_ID,
     });
+  });
+
+  test("offers to make a repository in the project menu, which opens Add project", async ({
+    page,
+  }) => {
+    await registerUser(page, "cloud-menu", "Cloud Menu");
+    await connectGithub(page);
+    await page.route("**/api/runtimes", (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: [runtime(CLOUD_ID, "spaces", { isCloud: true })] })
+        : route.continue(),
+    );
+    await page.route("**/api/projects", (route) =>
+      route.request().method() === "GET" ? route.fulfill({ json: [] }) : route.continue(),
+    );
+
+    await page.goto("/threads");
+    await page.getByRole("button", { name: "Project", exact: true }).click();
+    await page.getByRole("button", { name: "New repository" }).click();
+
+    await expect(page.getByRole("heading", { name: "Add a project" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "New repository" })).toBeVisible();
   });
 });

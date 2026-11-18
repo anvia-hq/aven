@@ -26,23 +26,30 @@ type Props = {
   onAdded?: (project: Project) => void;
   variant?: ComponentProps<typeof Button>["variant"];
   size?: ComponentProps<typeof Button>["size"];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function AddProjectDialog({ onAdded, variant, size }: Props) {
-  const state = useAddProject(onAdded);
+export function AddProjectDialog({ onAdded, variant, size, open, onOpenChange }: Props) {
+  const state = useAddProject(
+    onAdded,
+    open === undefined ? undefined : { open, onOpenChange: (next) => onOpenChange?.(next) },
+  );
 
   return (
     <Dialog open={state.open} onOpenChange={state.handleOpenChange}>
-      <DialogTrigger render={<Button variant={variant} size={size} />}>
-        <AddIcon /> Add project
-      </DialogTrigger>
+      {open === undefined && (
+        <DialogTrigger render={<Button variant={variant} size={size} />}>
+          <AddIcon /> Add project
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-lg">
         <Form onSubmit={state.handleSubmit} className="flex flex-col gap-4">
           <DialogHeader>
             <DialogTitle>Add a project</DialogTitle>
             <DialogDescription>
-              A repository on GitHub can run on any computer, including Aven Cloud. A folder is a
-              project that stays on the computer that serves it.
+              A repository on GitHub can run on any computer, including Aven Cloud, and Aven can
+              make one for you. A folder is a project that stays on the computer that serves it.
             </DialogDescription>
           </DialogHeader>
           <Tabs value={state.kind} onValueChange={(next) => state.setKind(next)}>
@@ -55,13 +62,21 @@ export function AddProjectDialog({ onAdded, variant, size }: Props) {
           <ProjectSource state={state} />
           <DialogFooter>
             <Button type="submit" disabled={state.submitting || !state.canSubmit}>
-              {state.kind === "repository" ? "Clone and add" : "Add"}
+              {submitLabel(state)}
             </Button>
           </DialogFooter>
         </Form>
       </DialogContent>
     </Dialog>
   );
+}
+
+function submitLabel(state: ReturnType<typeof useAddProject>) {
+  if (state.kind === "repository") return "Clone and add";
+
+  if (state.kind === "github" && state.githubMode === "new") return "Create and add";
+
+  return "Add";
 }
 
 function ProjectSource({ state }: { state: ReturnType<typeof useAddProject> }) {
