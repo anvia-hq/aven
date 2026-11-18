@@ -48,7 +48,7 @@
   --graph-4: oklch(0.68 0.15 70);
   --graph-5: oklch(0.62 0.12 200);
   --graph-6: oklch(0.62 0.19 25);
-  --code: oklch(0.42 0.008 240);
+  --code: oklch(0.45 0.07 55);
   --effort: oklch(0.7 0.19 160);
   --frame: oklch(0.955 0.008 240);
   --border: oklch(0.89 0.008 240);
@@ -91,7 +91,7 @@
   --graph-4: oklch(0.8 0.15 70);
   --graph-5: oklch(0.76 0.12 200);
   --graph-6: oklch(0.76 0.19 25);
-  --code: oklch(0.82 0.004 240);
+  --code: oklch(0.84 0.07 70);
   --effort: oklch(0.74 0.2 160);
   --frame: oklch(0.225 0.024 205);
   --border: oklch(1 0 0 / 5%);
