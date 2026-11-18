@@ -264,19 +264,20 @@ function tick(current: Stage, now: number) {
   current.time += dt;
   current.materials.clock.value = current.time;
 
-  let drawn = false;
+  let animating = false;
 
   for (const entry of current.entries) {
     if (!entry.visible) continue;
+
+    animating = true;
 
     if (current.reduced.matches && !entry.dirty) continue;
 
     entry.dirty = false;
     draw(current, entry, dt);
-    drawn = true;
   }
 
-  if (drawn || current.entries.size > 0) schedule();
+  if (animating && !current.reduced.matches) schedule();
 }
 
 function schedule() {
