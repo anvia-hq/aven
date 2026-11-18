@@ -1701,10 +1701,10 @@
 }
 
 :root {
-  --usage-output: oklch(0.84 0.08 300);
-  --usage-cache-write: oklch(0.85 0.08 75);
-  --usage-cache-read: oklch(0.84 0.08 200);
-  --usage-uncached: oklch(0.8 0.1 25);
+  --usage-output: var(--effort);
+  --usage-cache-read: oklch(from var(--effort) l calc(c * 0.7) calc(h + 70));
+  --usage-cache-write: oklch(from var(--effort) l calc(c * 0.7) calc(h + 150));
+  --usage-uncached: oklch(from var(--effort) l calc(c * 0.7) calc(h + 220));
 }
 
 /* What the rail and the sidebar are painted with: the palette's frame in a light theme, and the frame
