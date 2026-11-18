@@ -1,6 +1,6 @@
 # A gateway says which reasoning levels its models take
 
-Status: accepted. Extends 0006 and 0007 (the model and its effort are chosen per message) and the gateway context window of `gateway-context` (now `gateway-info.ts`).
+Status: accepted. Extended by `0352` (a model's levels come from the server, then its vendor). Extends 0006 and 0007 (the model and its effort are chosen per message) and the gateway context window of `gateway-context` (now `gateway-info.ts`).
 
 ## Context
 

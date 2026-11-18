@@ -1,3 +1,6 @@
+import { COMPATIBLE_VENDORS } from "@aven/protocol/providers";
+
+import type { ModelFacts } from "./types";
 import type { Provider } from "@aven/protocol/types";
 
 type Entry = {
@@ -26,8 +29,15 @@ const MAX_MODELS = 4096;
 
 type Snapshot = {
   entries: Partial<Record<Provider, Map<string, Entry>>>;
+  vendors: Map<string, Map<string, Entry>>;
   windows: Map<string, number[]>;
 };
+
+const VENDOR_KEYS = [
+  ...new Set(
+    Object.values(COMPATIBLE_VENDORS).flatMap((vendor) => (vendor.catalog ? [vendor.catalog] : [])),
+  ),
+];
 
 type CatalogModel = {
   name?: string;
@@ -100,12 +110,34 @@ function boundedWindows(byName: Map<string, number[]>) {
   return new Map([...byName].sort(frequentFirst).slice(0, MAX_WINDOWS));
 }
 
+function entriesOf(models: Record<string, unknown>) {
+  return new Map(
+    Object.entries(models)
+      .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))
+      .slice(0, MAX_MODELS)
+      .map(([id, info]) => {
+        return [
+          id,
+          {
+            usable: isUsable(info),
+            deprecated: info.status === "deprecated",
+            efforts: effortsOf(info),
+            contextWindow: contextWindowOf(info),
+            images: imagesOf(info),
+            label: typeof info.name === "string" && info.name.trim() ? info.name.trim() : null,
+          },
+        ];
+      }),
+  );
+}
+
 export function createModelCatalog(
   fetchFn: typeof fetch = fetch,
   now: () => number = Date.now,
   catalogUrl: () => string = configuredUrl,
 ) {
   let entries: Partial<Record<Provider, Map<string, Entry>>> | null = null;
+  let vendors = new Map<string, Map<string, Entry>>();
   let windows = new Map<string, number[]>();
   let nextTry = 0;
   let loading: Promise<void> | null = null;
@@ -118,26 +150,12 @@ export function createModelCatalog(
     const json = (await res.json()) as Record<string, { models?: Record<string, unknown> }>;
     const next: Partial<Record<Provider, Map<string, Entry>>> = {};
     for (const kind of ["openai", "anthropic", "gemini", "bedrock", "vertex", "azure"] as const) {
-      const models = json[CATALOG_KEYS[kind] ?? kind]?.models ?? {};
-      next[kind] = new Map(
-        Object.entries(models)
-          .filter((entry): entry is [string, CatalogModel] => isRecord(entry[1]))
-          .slice(0, MAX_MODELS)
-          .map(([id, info]) => {
-            return [
-              id,
-              {
-                usable: isUsable(info),
-                deprecated: info.status === "deprecated",
-                efforts: effortsOf(info),
-                contextWindow: contextWindowOf(info),
-                images: imagesOf(info),
-                label: typeof info.name === "string" && info.name.trim() ? info.name.trim() : null,
-              },
-            ];
-          }),
-      );
+      next[kind] = entriesOf(json[CATALOG_KEYS[kind] ?? kind]?.models ?? {});
     }
+
+    const byVendor = new Map<string, Map<string, Entry>>();
+    for (const key of VENDOR_KEYS) byVendor.set(key, entriesOf(json[key]?.models ?? {}));
+
     const byName = new Map<string, number[]>();
     for (const provider of Object.values(json)) {
       for (const [id, info] of Object.entries(provider?.models ?? {})) {
@@ -151,7 +169,7 @@ export function createModelCatalog(
         byName.set(name, seen);
       }
     }
-    return { entries: next, windows: boundedWindows(byName) };
+    return { entries: next, vendors: byVendor, windows: boundedWindows(byName) };
   }
 
   async function refresh() {
@@ -165,6 +183,7 @@ export function createModelCatalog(
       }
 
       entries = snapshot.entries;
+      vendors = snapshot.vendors;
       windows = snapshot.windows;
       nextTry = now() + TTL_MS;
     } catch {
@@ -182,14 +201,22 @@ export function createModelCatalog(
     return shared;
   }
 
-  async function lookup(kind: Provider) {
+  async function current() {
     if (now() >= nextTry) {
       const pending = startLoading();
 
       if (!entries) await pending;
     }
+  }
 
+  async function lookup(kind: Provider) {
+    await current();
     return entries?.[kind] ?? null;
+  }
+
+  async function lookupVendor(key: string) {
+    await current();
+    return vendors.get(key) ?? null;
   }
 
   return {
@@ -234,6 +261,18 @@ export function createModelCatalog(
       if (kind === "openai-compatible") return true;
 
       return (await lookup(kind))?.get(catalogId(kind, id))?.images ?? true;
+    },
+    async vendorModel(key: string, id: string): Promise<ModelFacts | null> {
+      const entry = (await lookupVendor(key))?.get(id);
+
+      if (!entry) return null;
+
+      return {
+        effortLevels: entry.efforts.length > 0 ? entry.efforts : null,
+        defaultEffort: null,
+        contextWindow: entry.contextWindow,
+        label: entry.label,
+      };
     },
     async canRun(kind: Provider, id: string) {
       if (kind === "openai-compatible") return true;

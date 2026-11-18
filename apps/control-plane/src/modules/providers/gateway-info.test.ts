@@ -22,7 +22,17 @@ function gateway(body: unknown, status = 200) {
   return { fetch, calls };
 }
 
-const NOTHING = { contextWindow: null, effortLevels: null };
+function serving(answers: { info?: unknown; models?: unknown }) {
+  const calls: string[] = [];
+  const fetch = async (url: string) => {
+    calls.push(url);
+    const answer = url.endsWith("/model/info") ? answers.info : answers.models;
+    return answer === undefined
+      ? new Response("not found", { status: 404 })
+      : Response.json(answer);
+  };
+  return { fetch, calls };
+}
 
 describe("a gateway's context window", () => {
   test("reads max_input_tokens of the model from /model/info, with the provider's key", async () => {
@@ -35,7 +45,7 @@ describe("a gateway's context window", () => {
 
     const model = await createGatewayInfo({ fetch })("https://gw.test/v1/", "sk-1", "muse");
 
-    expect(model.contextWindow).toBe(128000);
+    expect(model?.contextWindow).toBe(128000);
     expect(calls).toEqual([{ url: "https://gw.test/v1/model/info", authorization: "Bearer sk-1" }]);
   });
 
@@ -48,9 +58,9 @@ describe("a gateway's context window", () => {
     );
     const model = createGatewayInfo({ fetch });
 
-    expect((await model("https://gw.test/v1", undefined, "muse")).contextWindow).toBe(32000);
-    expect(await model("https://gw.test/v1", undefined, "missing")).toEqual(NOTHING);
-    expect((await model("https://gw.test/v1", undefined, "writer")).contextWindow).toBeNull();
+    expect((await model("https://gw.test/v1", undefined, "muse"))?.contextWindow).toBe(32000);
+    expect(await model("https://gw.test/v1", undefined, "missing")).toBeNull();
+    expect((await model("https://gw.test/v1", undefined, "writer"))?.contextWindow).toBeNull();
   });
 
   test("says nothing when the gateway refuses, fails or answers with something else", async () => {
@@ -60,11 +70,9 @@ describe("a gateway's context window", () => {
       throw new Error("connection refused");
     };
 
-    expect(await createGatewayInfo(refused)("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
-    expect(await createGatewayInfo(odd)("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
-    expect(await createGatewayInfo({ fetch: down })("https://gw.test/v1", "k", "muse")).toEqual(
-      NOTHING,
-    );
+    expect(await createGatewayInfo(refused)("https://gw.test/v1", "k", "muse")).toBeNull();
+    expect(await createGatewayInfo(odd)("https://gw.test/v1", "k", "muse")).toBeNull();
+    expect(await createGatewayInfo({ fetch: down })("https://gw.test/v1", "k", "muse")).toBeNull();
   });
 
   test("asks once an hour, once for all the models of a gateway", async () => {
@@ -95,9 +103,9 @@ describe("a gateway's context window", () => {
         : new Response("down", { status: 503 });
     const model = createGatewayInfo({ fetch });
 
-    expect(await model("https://gw.test/v1", "k", "muse")).toEqual(NOTHING);
+    expect(await model("https://gw.test/v1", "k", "muse")).toBeNull();
     up = true;
-    expect((await model("https://gw.test/v1", "k", "muse")).contextWindow).toBe(8000);
+    expect((await model("https://gw.test/v1", "k", "muse"))?.contextWindow).toBe(8000);
   });
 
   test("models asked for at the same moment share one request", async () => {
@@ -137,7 +145,7 @@ describe("a gateway's reasoning effort levels", () => {
     );
 
     expect(
-      (await createGatewayInfo({ fetch })("https://gw.test/v1", "k", "muse")).effortLevels,
+      (await createGatewayInfo({ fetch })("https://gw.test/v1", "k", "muse"))?.effortLevels,
     ).toEqual(levels);
   });
 
@@ -159,7 +167,71 @@ describe("a gateway's reasoning effort levels", () => {
     const model = createGatewayInfo({ fetch });
 
     for (const name of ["plain", "off", "empty", "odd"]) {
-      expect((await model("https://gw.test/v1", "k", name)).effortLevels).toBeNull();
+      expect((await model("https://gw.test/v1", "k", name))?.effortLevels).toBeNull();
     }
+  });
+});
+
+describe("a vendor's own model listing", () => {
+  const listing = {
+    data: [
+      {
+        id: "deepseek-flash",
+        name: "DeepSeek-V4.1-Flash",
+        context_window: 1048576,
+        effort: { supported_levels: ["low", "high", "max"], default_level: "high" },
+      },
+      { id: "plain", name: "Plain" },
+      { id: "odd", effort: { supported_levels: ["low"], default_level: "max" } },
+    ],
+  };
+
+  test("is read when the address answers no /model/info", async () => {
+    const { fetch, calls } = serving({ models: listing });
+
+    const model = await createGatewayInfo({ fetch })("https://gw.test", "sk-1", "deepseek-flash");
+
+    expect(model).toEqual({
+      contextWindow: 1048576,
+      effortLevels: ["low", "high", "max"],
+      effortKnown: true,
+      defaultEffort: "high",
+      label: "DeepSeek-V4.1-Flash",
+    });
+    expect(calls).toEqual(["https://gw.test/model/info", "https://gw.test/models"]);
+  });
+
+  test("a model it lists without a word on reasoning is not a model without it", async () => {
+    const { fetch } = serving({ models: listing });
+
+    const model = await createGatewayInfo({ fetch })("https://gw.test", undefined, "plain");
+
+    expect(model).toEqual({
+      contextWindow: null,
+      effortLevels: null,
+      effortKnown: false,
+      defaultEffort: null,
+      label: "Plain",
+    });
+  });
+
+  test("keeps a default effort only among the levels it lists", async () => {
+    const { fetch } = serving({ models: listing });
+
+    expect(
+      (await createGatewayInfo({ fetch })("https://gw.test", undefined, "odd"))?.defaultEffort,
+    ).toBeNull();
+  });
+
+  test("gives way to /model/info, which is asked once for the whole gateway", async () => {
+    const { fetch, calls } = serving({
+      info: info({ name: "muse", info: { max_input_tokens: 8000 } }),
+      models: listing,
+    });
+
+    expect(
+      (await createGatewayInfo({ fetch })("https://gw.test", undefined, "muse"))?.label,
+    ).toBeNull();
+    expect(calls).toEqual(["https://gw.test/model/info"]);
   });
 });

@@ -155,4 +155,25 @@ describe("the efforts of a gateway's models", () => {
   test("are none for a server with no address to ask", async () => {
     expect(await effortsByModel({ kind: "openai-compatible" }, ["muse"])).toEqual({});
   });
+
+  test("are none for a server whose listing names models without a word on reasoning", async () => {
+    const bare = Bun.serve({
+      port: 0,
+      fetch: (request) =>
+        request.url.endsWith("/model/info")
+          ? new Response("not found", { status: 404 })
+          : Response.json({ data: [{ id: "deepseek-flash" }] }),
+    });
+    try {
+      const listing = {
+        kind: "openai-compatible" as const,
+        baseUrl: `http://localhost:${bare.port}`,
+      };
+
+      expect(await effortsByModel(listing, ["deepseek-flash"])).toEqual({});
+      expect((await effortsFor(listing, "deepseek-flash")).effortLevels).toBeUndefined();
+    } finally {
+      bare.stop(true);
+    }
+  });
 });

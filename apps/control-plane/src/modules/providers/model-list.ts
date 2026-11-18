@@ -2,7 +2,7 @@ import { reasoningControlsFor } from "@aven/agents/model";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { assertProviderAddress } from "./address-guard";
-import { gatewayModel } from "./gateway-info";
+import { compatibleModelFacts } from "./model-facts";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, bedrockEndpoint } from "./schema";
 import type { ModelSource } from "./types";
@@ -142,10 +142,17 @@ async function listedEfforts(source: ModelSource, modelId: string) {
   if (source.kind === "openai-compatible") {
     if (!source.baseUrl) return null;
 
-    return (await gatewayModel(source.baseUrl, source.apiKey, modelId)).effortLevels;
+    const facts = await compatibleModelFacts(
+      { kind: source.kind, baseUrl: source.baseUrl, apiKey: source.apiKey },
+      modelId,
+    );
+
+    return { effortLevels: facts.effortLevels, defaultEffort: facts.defaultEffort };
   }
 
-  return modelCatalog.efforts(source.kind, modelId);
+  const levels = await modelCatalog.efforts(source.kind, modelId);
+
+  return levels ? { effortLevels: levels, defaultEffort: null } : null;
 }
 
 export async function effortsFor(source: ModelSource, modelId: string | undefined) {
@@ -153,9 +160,14 @@ export async function effortsFor(source: ModelSource, modelId: string | undefine
 
   if (sdk || !modelId) return { controls: sdk, effortLevels: undefined };
 
-  const effortLevels = (await listedEfforts(source, modelId)) ?? undefined;
+  const listed = await listedEfforts(source, modelId);
+  const effortLevels = listed?.effortLevels ?? undefined;
+
   return {
-    controls: reasoningControlsFor({ provider: source.kind, modelId, effortLevels }),
+    controls: reasoningControlsFor(
+      { provider: source.kind, modelId, effortLevels },
+      listed?.defaultEffort,
+    ),
     effortLevels,
   };
 }
@@ -169,9 +181,22 @@ export async function effortsByModel(source: ModelSource, ids: string[]) {
   );
 }
 
+async function labelOf(source: ModelSource, id: string) {
+  if (source.kind !== "openai-compatible") return modelCatalog.label(source.kind, id);
+
+  if (!source.baseUrl) return null;
+
+  const facts = await compatibleModelFacts(
+    { kind: source.kind, baseUrl: source.baseUrl, apiKey: source.apiKey },
+    id,
+  );
+
+  return facts.label;
+}
+
 export async function labelsByModel(source: ModelSource, ids: string[]) {
   const entries = await Promise.all(
-    ids.map(async (id) => [id, await modelCatalog.label(source.kind, id)] as const),
+    ids.map(async (id) => [id, await labelOf(source, id)] as const),
   );
   return Object.fromEntries(
     entries.filter((entry): entry is readonly [string, string] => entry[1] !== null),

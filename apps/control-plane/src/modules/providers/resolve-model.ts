@@ -4,8 +4,8 @@ import { isModelApi, providerNeedsKey } from "@aven/protocol/providers";
 import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { readKey } from "./crypto";
 import { defaultModelId } from "./default-model";
-import { gatewayModel } from "./gateway-info";
 import { modelCatalog } from "./model-catalog";
+import { compatibleModelFacts } from "./model-facts";
 import { effortsFor } from "./model-list";
 import { providersService } from "./service";
 import type { ModelSelection } from "./types";
@@ -109,8 +109,13 @@ async function contextWindowOf(config: ModelConfig) {
 
   if (!modelId) return null;
 
-  if (config.provider === "openai-compatible" && config.baseUrl)
-    return (await gatewayModel(config.baseUrl, config.apiKey, modelId)).contextWindow;
+  if (config.provider === "openai-compatible") {
+    if (!config.baseUrl) return null;
+
+    const source = { kind: config.provider, baseUrl: config.baseUrl, apiKey: config.apiKey };
+
+    return (await compatibleModelFacts(source, modelId)).contextWindow;
+  }
 
   return modelCatalog.contextWindow(config.provider, modelId);
 }
