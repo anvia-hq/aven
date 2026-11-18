@@ -2,10 +2,10 @@ import {
   CheckIcon,
   FolderIcon,
   GitDiffIcon,
-  GlobeIcon,
+  WindowFrameIcon,
   SidebarMinimalisticIcon,
   ListIcon,
-  CodeSquareIcon,
+  Code2Icon,
   CloseIcon,
 } from "@solar-icons/react/linear";
 import type { ComponentType } from "react";
@@ -43,8 +43,8 @@ export function ThreadHeader({ thread, panels, owned, onClose }: Props) {
     { label: "Overview", icon: ListIcon, panel: panels.overview, show: true },
     { label: "Changes", icon: GitDiffIcon, panel: panels.diff, show: true },
     { label: "Files", icon: FolderIcon, panel: panels.files, show: true },
-    { label: "Terminal", icon: CodeSquareIcon, panel: panels.terminal, show: owned },
-    { label: "Browser", icon: GlobeIcon, panel: panels.preview, show: owned },
+    { label: "Terminal", icon: Code2Icon, panel: panels.terminal, show: owned },
+    { label: "Browser", icon: WindowFrameIcon, panel: panels.preview, show: owned },
   ];
   const shown = toggles.filter((toggle) => toggle.show);
 
