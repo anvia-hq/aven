@@ -90,6 +90,9 @@ function ForkMark({ thread }: { thread: Thread }) {
   return <GitBranchIcon role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
 
+const ELBOW_RADIUS = "0.375rem";
+const ELBOW_COLOR = "border-[color-mix(in_oklch,var(--muted-foreground)_40%,var(--sidebar))]";
+
 function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
   const line =
     "pointer-events-none absolute left-[calc(1rem-0.5px)] group-data-[collapsible=icon]:hidden";
@@ -98,16 +101,19 @@ function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
       <span
         aria-hidden
         data-slot="fork-elbow"
+        style={{ borderBottomLeftRadius: ELBOW_RADIUS }}
         className={cn(
           line,
-          "bottom-1/2 w-3 rounded-bl-md border-b border-l border-muted-foreground/40",
+          "bottom-1/2 w-3 border-b border-l",
+          ELBOW_COLOR,
           first ? "-top-2" : "top-0",
         )}
       />
       {!last && (
         <span
           aria-hidden
-          className={cn(line, "top-1/2 bottom-0 border-l border-muted-foreground/40")}
+          style={{ top: `calc(50% - ${ELBOW_RADIUS})` }}
+          className={cn(line, "bottom-0 border-l", ELBOW_COLOR)}
         />
       )}
     </>
