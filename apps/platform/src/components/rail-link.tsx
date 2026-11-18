@@ -24,7 +24,7 @@ export function RailLink({ to, label, tooltip = label, active, children }: Props
             aria-current={active ? "page" : undefined}
             className={cn(
               "relative flex size-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground outline-none transition-[color,background-color,transform] duration-200 hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-(--chrome) active:scale-95 motion-reduce:transition-none",
-              active && "bg-accent text-foreground",
+              active && "text-foreground",
             )}
           />
         }
