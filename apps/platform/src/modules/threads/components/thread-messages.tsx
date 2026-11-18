@@ -102,7 +102,7 @@ export function ThreadMessages({
     >
       <div className="flex">
         <div className="min-w-0 flex-1">
-          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)] [&_table]:relative [&_table]:left-1/2 [&_table]:w-max [&_table]:max-w-[min(100cqw_-_2rem,60rem)] [&_table]:min-w-full [&_table]:-translate-x-1/2">
+          <div className="mx-auto flex max-w-3xl flex-col px-4 pt-5 pb-[calc(var(--composer-height,12rem)+1rem)] [--table-wide:min(100cqw_-_2rem,60rem)]">
             {hidden > 0 && (
               <div className="flex justify-center pb-4">
                 <Button
