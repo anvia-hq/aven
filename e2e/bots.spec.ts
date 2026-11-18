@@ -93,6 +93,8 @@ test.describe("bots", () => {
     await expect(typing).toHaveCount(0);
     await expect(tile).toHaveAttribute("data-mood", "idle");
 
+    await expect(page.getByRole("link", { name: "Projects" })).toBeHidden();
+
     await page.reload();
     await expect(bubble(page, "hello bot")).toBeVisible();
     await expect(bubble(page, "Hey there!")).toBeVisible();

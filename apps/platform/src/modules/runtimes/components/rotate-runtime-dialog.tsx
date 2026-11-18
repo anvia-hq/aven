@@ -1,4 +1,4 @@
-import { RefreshIcon } from "@solar-icons/react/linear";
+import { Refresh } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -68,7 +68,7 @@ export function RotateRuntimeDialog({ runtime }: { runtime: Runtime }) {
           <Button variant="ghost" size="icon-sm" aria-label={`Rotate token for ${runtime.name}`} />
         }
       >
-        <RefreshIcon />
+        <Refresh />
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         {rotated ? (

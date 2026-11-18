@@ -1,4 +1,4 @@
-import { ReplyIcon } from "@solar-icons/react/linear";
+import { MessageReply } from "@mynaui/icons-react";
 
 import { Bubble, BubbleContent } from "@aven/ui/bubble";
 import { Button } from "@aven/ui/button";
@@ -58,7 +58,7 @@ export function BotChatBubble({
       onClick={() => onQuote(message)}
       className="absolute -top-2.5 -right-1.5 z-10 rounded-full border bg-card text-muted-foreground opacity-0 shadow-sm transition-opacity group-hover/message:opacity-100 focus-visible:opacity-100 hover:text-foreground"
     >
-      <ReplyIcon />
+      <MessageReply />
     </Button>
   );
   const reply = message.quote && (

@@ -4,9 +4,9 @@ import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-reac
 
 import { Button } from "./button";
 import {
-  AltArrowLeftIcon as ChevronLeftIcon,
-  AltArrowRightIcon as ChevronRightIcon,
-} from "@solar-icons/react/linear";
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+} from "@mynaui/icons-react";
 
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;

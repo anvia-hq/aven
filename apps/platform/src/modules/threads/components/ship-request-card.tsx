@@ -1,4 +1,4 @@
-import { RocketIcon } from "@solar-icons/react/linear";
+import { Rocket } from "@mynaui/icons-react";
 
 export function ShipRequestCard() {
   return (
@@ -7,7 +7,7 @@ export function ShipRequestCard() {
       data-role="user"
     >
       <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-linear-to-r from-ship-from via-ship-via to-ship-to text-ship-foreground">
-        <RocketIcon className="size-4" />
+        <Rocket className="size-4" />
       </span>
       <span className="min-w-0">
         <span className="block font-medium">Ship this thread</span>

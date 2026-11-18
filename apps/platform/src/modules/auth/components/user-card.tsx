@@ -1,4 +1,4 @@
-import { ChevronsUpDownIcon, CommandIcon, LogoutIcon, UserIcon } from "@solar-icons/react/linear";
+import { ChevronsUpDown, Command, Logout, User } from "@mynaui/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
@@ -37,7 +37,7 @@ export function UserCard({ name, email, image, onSignOut, onOpenCommand }: Props
               </AvatarFallback>
             </Avatar>
             <span className="flex-1 truncate text-left text-xs font-medium">{name}</span>
-            <ChevronsUpDownIcon className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
+            <ChevronsUpDown className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
           <DropdownMenuContent side="bottom" align="start" className="w-76 p-2">
             <div className="flex items-center gap-3 px-2 py-1.5">
@@ -56,16 +56,16 @@ export function UserCard({ name, email, image, onSignOut, onOpenCommand }: Props
             <OrganizationMenu />
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate({ to: "/settings/general" })}>
-              <UserIcon /> Personal settings
+              <User /> Personal settings
               <DropdownMenuShortcut>⌘,</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onOpenCommand}>
-              <CommandIcon /> Command palette
+              <Command /> Command palette
               <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem variant="destructive" onClick={onSignOut}>
-              <LogoutIcon /> Sign out
+              <Logout /> Sign out
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

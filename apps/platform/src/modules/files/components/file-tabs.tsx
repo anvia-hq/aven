@@ -1,4 +1,4 @@
-import { CloseIcon } from "@solar-icons/react/linear";
+import { X } from "@mynaui/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef } from "react";
 
@@ -63,7 +63,7 @@ export function FileTabs({ open, active, onSelect, onClose }: Props) {
               aria-label={`Close ${path}`}
               onClick={() => onClose(path)}
             >
-              <CloseIcon />
+              <X />
             </Button>
           </div>
         );

@@ -1,4 +1,4 @@
-import { CheckIcon, TagIcon } from "@solar-icons/react/linear";
+import { Check, Tag } from "@mynaui/icons-react";
 import { normalizeTag, TAG_PATTERN } from "@aven/protocol/cockpit";
 import { useState, type FormEvent } from "react";
 
@@ -67,7 +67,7 @@ function ColorPicker({ tag }: { tag: CockpitTag }) {
               className="rounded-full bg-(--tag) text-(--tag-ink) hover:bg-(--tag) hover:text-(--tag-ink) hover:opacity-85"
               onClick={() => pick(color)}
             >
-              {current === color && <CheckIcon />}
+              {current === color && <Check />}
             </Button>
           ))}
         </div>
@@ -120,7 +120,7 @@ export function TagsPage() {
         onSubmit={onSubmit}
         className="mt-8 flex items-center gap-2 border-b border-border/60 pb-2"
       >
-        <TagIcon className="size-4 shrink-0 text-muted-foreground" />
+        <Tag className="size-4 shrink-0 text-muted-foreground" />
         <Input
           aria-label="New tag"
           placeholder="New tag"

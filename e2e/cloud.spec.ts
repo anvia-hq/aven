@@ -64,6 +64,11 @@ test.describe("Aven Cloud", () => {
     await expect(page.getByRole("listitem", { name: "sleepy-mac" })).toBeVisible();
     await expect(page.getByRole("listitem", { name: "boat.dev" })).toHaveCount(0);
 
+    await page.getByRole("img", { name: "Machines", exact: true }).hover();
+    const machines = page.getByRole("list", { name: "Registered machines" });
+    await expect(machines.getByRole("listitem", { name: "sleepy-mac" })).toBeVisible();
+    await expect(machines.getByRole("listitem", { name: "boat.dev" })).toHaveCount(0);
+
     await page.goto("/threads");
     await page.getByRole("button", { name: "Project", exact: true }).click();
     await page.getByRole("button", { name: "widgets" }).click();

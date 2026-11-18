@@ -1,9 +1,6 @@
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { cn } from "cn";
-import {
-  AltArrowDownIcon as ChevronDownIcon,
-  AltArrowUpIcon as ChevronUpIcon,
-} from "@solar-icons/react/linear";
+import { ChevronDown as ChevronDownIcon, ChevronUp as ChevronUpIcon } from "@mynaui/icons-react";
 
 function Accordion({ className, ...props }: AccordionPrimitive.Root.Props) {
   return (

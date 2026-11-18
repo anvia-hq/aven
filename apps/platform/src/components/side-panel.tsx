@@ -1,4 +1,4 @@
-import { CloseIcon } from "@solar-icons/react/linear";
+import { X } from "@mynaui/icons-react";
 import type { ComponentType, ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -27,7 +27,7 @@ export function SidePanel({ title, icon: Icon, actions, onClose, children }: Pro
           aria-label={`Close ${title.toLowerCase()}`}
           onClick={onClose}
         >
-          <CloseIcon />
+          <X />
         </Button>
       </header>
       {children}

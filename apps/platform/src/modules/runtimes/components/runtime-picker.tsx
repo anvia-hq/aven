@@ -1,4 +1,4 @@
-import { MonitorIcon } from "@solar-icons/react/linear";
+import { Monitor } from "@mynaui/icons-react";
 
 import { CloudLine } from "@/components/cloud-line";
 
@@ -25,7 +25,7 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
       <SelectTrigger
         size="sm"
         aria-label="Computer"
-        className="border-transparent bg-muted/40 dark:bg-muted/40 max-w-48 min-w-0 rounded-full! px-3 text-muted-foreground"
+        className="max-w-48 min-w-0 rounded-full! border bg-muted/40 px-3 text-muted-foreground dark:bg-muted/40"
       >
         <SelectValue placeholder="Choose a computer" />
       </SelectTrigger>
@@ -45,7 +45,7 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
               {choice.runtime.isCloud ? (
                 <CloudLine className="text-muted-foreground" />
               ) : (
-                <MonitorIcon className="text-muted-foreground" />
+                <Monitor className="text-muted-foreground" />
               )}
               {labelOf(choice)}
             </span>

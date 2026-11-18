@@ -1,4 +1,4 @@
-import { CloseIcon } from "@solar-icons/react/linear";
+import { X } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
@@ -73,7 +73,7 @@ export function VariableRows({
                 aria-label={`Remove row ${index + 1}`}
                 onClick={() => onRemove(row.id)}
               >
-                <CloseIcon />
+                <X />
               </Button>
             </div>
             {problem && <p className="text-xs text-destructive">{PROBLEM_TEXT[problem]}</p>}

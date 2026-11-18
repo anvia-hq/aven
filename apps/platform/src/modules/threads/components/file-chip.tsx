@@ -1,4 +1,4 @@
-import { FileIcon, CloseIcon } from "@solar-icons/react/linear";
+import { File as FileIcon, X } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { fileSize } from "@/lib/format";
@@ -23,7 +23,7 @@ export function FileChip({
       </div>
       {onRemove && (
         <Button variant="ghost" size="icon-xs" aria-label={`Remove ${name}`} onClick={onRemove}>
-          <CloseIcon />
+          <X />
         </Button>
       )}
     </div>

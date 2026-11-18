@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ProjectMenu } from "@/modules/projects/components/project-menu";
 import { projectFits } from "@/modules/projects/project-fits";
-import { recentProjects } from "@/modules/projects/recent-projects";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import { RuntimePicker } from "@/modules/runtimes/components/runtime-picker";
 import { PromptInput } from "@/modules/threads/components/prompt-input";
@@ -35,9 +34,7 @@ function NewThread() {
   const asked = Route.useSearch().project;
   const [chosen, setProjectId] = useState<string | undefined>(undefined);
   const picked = projects.find((project) => project.id === (chosen ?? asked));
-  const fitting = projects.filter((project) => projectFits(project, computer.runtime));
-  const fallback = recentProjects(fitting, all)[0] ?? fitting[0];
-  const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : fallback?.id;
+  const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : undefined;
   const [adding, setAdding] = useState(false);
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>

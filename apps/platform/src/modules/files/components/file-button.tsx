@@ -1,4 +1,4 @@
-import { FileIcon } from "@solar-icons/react/linear";
+import { File } from "@mynaui/icons-react";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
 
@@ -23,7 +23,7 @@ export function FileButton({ path, label, active, title, style, onOpen }: Props)
       title={title}
       onClick={() => onOpen(path)}
     >
-      <FileIcon className="text-muted-foreground" />
+      <File className="text-muted-foreground" />
       <span className="truncate">{label}</span>
     </Button>
   );

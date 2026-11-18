@@ -1,4 +1,4 @@
-import { PenIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { Pencil, Trash } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -26,7 +26,7 @@ function NoteRow({ note }: { note: MemoryNote }) {
         aria-label={`Edit ${note.name}`}
         onClick={() => setEditing(true)}
       >
-        <PenIcon />
+        <Pencil />
       </Button>
       <Button
         variant="ghost"
@@ -34,7 +34,7 @@ function NoteRow({ note }: { note: MemoryNote }) {
         aria-label={`Delete ${note.name}`}
         onClick={() => void remove(note)}
       >
-        <TrashBinMinimalisticIcon />
+        <Trash />
       </Button>
       <EditNoteDialog note={note} open={editing} onOpenChange={setEditing} />
     </li>

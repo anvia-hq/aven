@@ -1,4 +1,4 @@
-import { FolderIcon, RefreshIcon, MagnifierIcon, SidebarIcon } from "@solar-icons/react/linear";
+import { Folder, Refresh, Search, Sidebar } from "@mynaui/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -32,7 +32,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
   return (
     <SidePanel
       title="Files"
-      icon={FolderIcon}
+      icon={Folder}
       onClose={onClose}
       actions={
         <>
@@ -43,7 +43,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
             aria-label="Reload files"
             onClick={() => void refresh()}
           >
-            <RefreshIcon />
+            <Refresh />
           </Button>
           <Button
             variant={explorer.treeShown ? "secondary" : "ghost"}
@@ -52,7 +52,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
             aria-pressed={explorer.treeShown}
             onClick={explorer.toggleTree}
           >
-            <SidebarIcon />
+            <Sidebar />
           </Button>
         </>
       }
@@ -77,7 +77,7 @@ export function FilesPanel({ threadId, running, onClose }: Props) {
           {explorer.treeShown && (
             <aside className="flex w-56 shrink-0 flex-col gap-2 border-l p-2">
               <div className="relative">
-                <MagnifierIcon className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   className="h-8 pl-7 text-xs md:text-xs"
                   placeholder="Filter files"

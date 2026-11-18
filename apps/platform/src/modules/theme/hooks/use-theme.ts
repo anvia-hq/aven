@@ -69,8 +69,8 @@ export function useTheme() {
   useEffect(() => {
     const scale = scaleOf(interfaceSize);
 
-    if (scale === 1) document.documentElement.style.removeProperty("--interface-scale");
-    else document.documentElement.style.setProperty("--interface-scale", String(scale));
+    if (scale === 1) document.documentElement.style.removeProperty("font-size");
+    else document.documentElement.style.setProperty("font-size", `${scale * 100}%`);
   }, [interfaceSize]);
 
   useEffect(() => {

@@ -209,7 +209,7 @@ test.describe("an agent on the control plane", () => {
     const name = served.slice(served.lastIndexOf("/") + 1);
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
-    await expect(page.getByRole("button", { name: "Project", exact: true })).toContainText(name);
+    await expect(page.getByLabel("Project")).toContainText(name);
     await page.getByRole("textbox", { name: "Prompt" }).fill(PROMPT);
     await page.getByRole("button", { name: "Send" }).click();
 

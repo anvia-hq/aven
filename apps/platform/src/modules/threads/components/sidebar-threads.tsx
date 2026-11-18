@@ -1,4 +1,4 @@
-import { GitBranchIcon, ShareIcon } from "@solar-icons/react/linear";
+import { GitBranch, Share } from "@mynaui/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useRef, useState } from "react";
@@ -35,10 +35,12 @@ function SidebarThreadMark({
   thread,
   project,
   palette,
+  machine,
 }: {
   thread: Thread;
   project?: Project;
   palette?: number;
+  machine?: { name: string; online: boolean };
 }) {
   if (!project) return <span className="-mx-0.5 size-5 shrink-0" aria-hidden />;
 
@@ -50,6 +52,16 @@ function SidebarThreadMark({
         palette={palette}
         working={thread.running}
       />
+      {machine && (
+        <span
+          role="img"
+          aria-label={`On ${machine.name}, ${machine.online ? "online" : "offline"}`}
+          className={cn(
+            "absolute right-0 bottom-0 size-1.5 rounded-full ring-1 ring-sidebar",
+            machine.online ? "bg-success" : "bg-muted-foreground",
+          )}
+        />
+      )}
     </span>
   );
 }
@@ -79,19 +91,14 @@ function CrowdMark({ thread }: { thread: Thread }) {
 function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace" || crowdOf(thread)) return null;
 
-  return (
-    <ShareIcon role="img" aria-label="Shared with workspace" className="text-muted-foreground" />
-  );
+  return <Share role="img" aria-label="Shared with workspace" className="text-muted-foreground" />;
 }
 
 function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
 
-  return <GitBranchIcon role="img" aria-label="Fork" className="text-muted-foreground" />;
+  return <GitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
-
-const ELBOW_RADIUS = "0.375rem";
-const ELBOW_COLOR = "border-[color-mix(in_oklch,var(--muted-foreground)_40%,var(--sidebar))]";
 
 function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
   const line =
@@ -101,19 +108,16 @@ function ForkElbow({ first, last }: { first: boolean; last: boolean }) {
       <span
         aria-hidden
         data-slot="fork-elbow"
-        style={{ borderBottomLeftRadius: ELBOW_RADIUS }}
         className={cn(
           line,
-          "bottom-1/2 w-3 border-b border-l",
-          ELBOW_COLOR,
+          "bottom-1/2 w-3 rounded-bl-md border-b border-l border-muted-foreground/40",
           first ? "-top-2" : "top-0",
         )}
       />
       {!last && (
         <span
           aria-hidden
-          style={{ top: `calc(50% - ${ELBOW_RADIUS})` }}
-          className={cn(line, "bottom-0 border-l", ELBOW_COLOR)}
+          className={cn(line, "top-1/2 bottom-0 border-l border-muted-foreground/40")}
         />
       )}
     </>
@@ -208,6 +212,11 @@ export function SidebarThreads() {
     return `${thread.running ? "Running" : "Hosted"} on ${host}`;
   }
 
+  function machineOf(thread: Thread) {
+    const runtime = runtimes.find((candidate) => candidate.id === thread.runtimeId);
+    return runtime?.ownerId ? { name: runtime.name, online: runtime.online } : undefined;
+  }
+
   function row(
     thread: Thread,
     {
@@ -234,6 +243,7 @@ export function SidebarThreads() {
             thread={thread}
             project={projects.find((candidate) => candidate.id === thread.projectId)}
             palette={palettes.get(thread.projectId)}
+            machine={machineOf(thread)}
           />
           <SharedMark thread={thread} />
           <ForkMark thread={thread} />

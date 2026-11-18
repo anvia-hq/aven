@@ -1,4 +1,4 @@
-import { SquareArrowRightUpIcon } from "@solar-icons/react/linear";
+import { ExternalLink } from "@mynaui/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
@@ -33,7 +33,7 @@ export function PullRequestChip({ pullRequests }: Props) {
         render={<a href={newest.url} target="_blank" rel="noreferrer" />}
       >
         #{newest.number}
-        <SquareArrowRightUpIcon />
+        <ExternalLink />
       </Button>
       {more > 0 && (
         <DropdownMenu>

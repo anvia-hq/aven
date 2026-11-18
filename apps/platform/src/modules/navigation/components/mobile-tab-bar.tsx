@@ -1,4 +1,4 @@
-import { WidgetIcon } from "@solar-icons/react/linear";
+import { Grid } from "@mynaui/icons-react";
 import { Link, useRouterState, type LinkProps } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
@@ -63,7 +63,7 @@ export function MobileTabBar() {
         <AvenMark className="w-5 text-brand" />
       </Tab>
       <Tab to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
-        <WidgetIcon className="size-5" strokeWidth={1.7} />
+        <Grid className="size-5" strokeWidth={1.7} />
       </Tab>
       <Tab to="/bot" label="Bot" active={pathname.startsWith("/bot")}>
         {main ? (
