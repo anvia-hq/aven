@@ -4,7 +4,9 @@ import type {
   GithubCheckRun,
   GithubFileChange,
   GithubPullDetail,
+  GithubReviewComment,
   ReviewPayload,
+  ReviewThreadsPayload,
 } from "./types";
 
 export const TEXT_MAX_CHARS = 20_000;
@@ -75,4 +77,27 @@ export function checksOf(runs: CheckRunPayload[] | null): GithubPullDetail["chec
   if (shaped.some((run) => run.state === "failure")) state = "failure";
 
   return { state, runs: shaped };
+}
+
+export const REVIEW_COMMENT_MAX_CHARS = 1000;
+
+export const REVIEW_THREADS_QUERY =
+  "query($owner:String!,$name:String!,$number:Int!){repository(owner:$owner,name:$name){pullRequest(number:$number){reviewThreads(first:100){nodes{isResolved isOutdated path comments(first:1){nodes{body author{login}}}}}}}}";
+
+export function unresolvedComments(payload: ReviewThreadsPayload): GithubReviewComment[] {
+  const nodes = payload.data?.repository?.pullRequest?.reviewThreads.nodes ?? [];
+  return nodes.flatMap((thread) => {
+    const first = thread.comments.nodes[0];
+
+    if (thread.isResolved || !first) return [];
+
+    return [
+      {
+        author: first.author?.login ?? null,
+        path: thread.path,
+        text: first.body.slice(0, REVIEW_COMMENT_MAX_CHARS),
+        outdated: thread.isOutdated,
+      },
+    ];
+  });
 }

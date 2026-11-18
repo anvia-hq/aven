@@ -4,6 +4,7 @@ import { createBotAgent } from "@aven/agents/bot-agent";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 
 import { UnavailableError } from "@aven/server-kit/errors";
+import { noWorld } from "../../testing/no-world";
 import { TalkBotReplier } from "./talk-replier";
 import type { BotReplyInput } from "./types";
 import type { BotRunChoice } from "../providers/types";
@@ -49,6 +50,7 @@ function replier(steps: Parameters<typeof scriptedModel>[0]) {
   return new TalkBotReplier(
     store(),
     { list: async () => [bot], deliver: async () => ({ handle: "scout", name: "Scout" }) },
+    noWorld,
     async () => undefined,
     (options) => createBotAgent({ ...options, model: scriptedModel(steps) }),
   );

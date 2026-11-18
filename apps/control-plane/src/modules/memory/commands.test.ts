@@ -122,6 +122,92 @@ run("runMemoryCommand (postgres)", async () => {
     ]);
   });
 
+  test("a bot reads the person's project notes, listed by slug, and can change none of them", async () => {
+    await memoryService.write(
+      { userId, scope: "project", projectId: project.id },
+      "deploy.md",
+      "---\ndescription: Deploys go on Fridays\n---\nNever on Fridays.",
+      { source: "person" },
+    );
+    const asBot: MemoryCaller = {
+      owner: { userId, botId: bot.id, readProjects: [{ id: project.id, slug: "remembered" }] },
+      actor: { source: "bot", botId: bot.id },
+      writable: true,
+    };
+    const folders = await memoryService.folders(asBot.owner);
+    expect(folders.find((folder) => folder.projectSlug === "remembered")).toMatchObject({
+      scope: "project",
+      notes: [{ name: "deploy.md", description: "Deploys go on Fridays" }],
+    });
+    expect(await ask({ command: "view", path: "/memories/project/remembered" }, asBot)).toBe(
+      "/memories/project/remembered:\n- deploy.md: Deploys go on Fridays",
+    );
+    expect(
+      await ask({ command: "view", path: "/memories/project/remembered/deploy.md" }, asBot),
+    ).toContain("Never on Fridays.");
+
+    const path = "/memories/project/remembered/deploy.md";
+    const refused = "read-only for you";
+    await expect(ask({ command: "create", path, fileText: "x" }, asBot)).rejects.toThrow(refused);
+    await expect(
+      ask({ command: "str_replace", path, oldStr: "Never", newStr: "Always" }, asBot),
+    ).rejects.toThrow(refused);
+    await expect(ask({ command: "delete", path }, asBot)).rejects.toThrow(refused);
+    await expect(
+      ask({ command: "rename", oldPath: "/memories/personal/a.md", newPath: path }, asBot),
+    ).rejects.toThrow(refused);
+    await expect(
+      ask({ command: "view", path: "/memories/project/elsewhere" }, asBot),
+    ).rejects.toThrow("no such project folder");
+    expect(
+      (await memoryService.read({ userId, scope: "project", projectId: project.id }, "deploy.md"))
+        ?.body,
+    ).toContain("Never on Fridays.");
+  });
+
+  test("the app writes the activity digest once while it is fresh, and a bot can only read it", async () => {
+    const place = { userId, scope: "bot" as const, botId: bot.id };
+    const stale = new Date(Date.now() + 60_000);
+    const asBot: MemoryCaller = {
+      owner: { userId, botId: bot.id },
+      actor: { source: "bot", botId: bot.id },
+      writable: true,
+    };
+    expect(await memoryService.refresh(place, "activity-digest.md", "first", stale)).toBe(true);
+    expect(
+      await memoryService.refresh(
+        place,
+        "activity-digest.md",
+        "second",
+        new Date(Date.now() - 60_000),
+      ),
+    ).toBe(false);
+    expect((await memoryService.read(place, "activity-digest.md"))?.body).toBe("first");
+    const path = "/memories/bot/activity-digest.md";
+    await expect(ask({ command: "view", path }, asBot)).resolves.toContain("first");
+    const refused = "written by the app";
+    await expect(ask({ command: "create", path, fileText: "x" }, asBot)).rejects.toThrow(refused);
+    await expect(ask({ command: "delete", path }, asBot)).rejects.toThrow(refused);
+    await expect(
+      ask({ command: "rename", oldPath: path, newPath: "/memories/bot/other.md" }, asBot),
+    ).rejects.toThrow(refused);
+    await memoryService.remove(place, "activity-digest.md", { source: "app" });
+  });
+
+  test("a thread's run still sees its one project folder at /memories/project, with no slugs", async () => {
+    const folders = await memoryService.folders(inProject.owner);
+    expect(folders.map((folder) => folder.projectSlug)).toEqual([undefined, undefined]);
+    expect(
+      await ask({ command: "view", path: "/memories/project/deploy.md" }, inProject),
+    ).toContain("Never on Fridays.");
+    await expect(
+      ask({ command: "view", path: "/memories/project/remembered/deploy.md" }, inProject),
+    ).rejects.toThrow("A folder holds notes");
+    await memoryService.remove({ userId, scope: "project", projectId: project.id }, "deploy.md", {
+      source: "person",
+    });
+  });
+
   test("an owner that may only read is refused every change", async () => {
     const reading = { ...caller, writable: false };
     expect(await ask({ command: "view", path: "/memories/personal" }, reading)).toContain(

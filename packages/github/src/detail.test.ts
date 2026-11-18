@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { checksOf, latestReviews, shapeFiles } from "./detail";
+import { checksOf, latestReviews, shapeFiles, unresolvedComments } from "./detail";
 
 describe("checksOf", () => {
   const run = (name: string, status: string, conclusion: string | null) => ({
@@ -77,5 +77,31 @@ describe("shapeFiles", () => {
       deletions: 0,
     }));
     expect(shapeFiles(many)).toHaveLength(100);
+  });
+});
+
+describe("unresolvedComments", () => {
+  const thread = (isResolved: boolean, body: string, author: string | null = "ada") => ({
+    isResolved,
+    isOutdated: false,
+    path: "src/a.ts",
+    comments: { nodes: [{ body, author: author ? { login: author } : null }] },
+  });
+  const payload = (nodes: ReturnType<typeof thread>[]) => ({
+    data: { repository: { pullRequest: { reviewThreads: { nodes } } } },
+  });
+
+  test("keeps the first comment of each thread that is not resolved", () => {
+    expect(
+      unresolvedComments(payload([thread(true, "done"), thread(false, "fix this", null)])),
+    ).toEqual([{ author: null, path: "src/a.ts", text: "fix this", outdated: false }]);
+  });
+
+  test("cuts a long comment and has none for a missing pull request", () => {
+    expect(unresolvedComments(payload([thread(false, "x".repeat(5000))]))[0]?.text).toHaveLength(
+      1000,
+    );
+    expect(unresolvedComments({ data: { repository: { pullRequest: null } } })).toEqual([]);
+    expect(unresolvedComments({ errors: [{ message: "no" }] })).toEqual([]);
   });
 });

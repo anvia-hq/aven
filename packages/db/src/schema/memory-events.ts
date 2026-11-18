@@ -18,7 +18,7 @@ export const memoryEvents = pgTable(
     name: text("name").notNull(),
     action: text("action", { enum: ["created", "updated", "removed", "renamed"] }).notNull(),
     from: text("from"),
-    source: text("source", { enum: ["person", "thread", "bot"] }).notNull(),
+    source: text("source", { enum: ["person", "thread", "bot", "app"] }).notNull(),
     threadId: uuid("thread_id").references(() => threads.id, { onDelete: "set null" }),
     byBotId: uuid("by_bot_id").references(() => bots.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

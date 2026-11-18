@@ -1,3 +1,4 @@
+import type { GithubPullDetail, GithubReviewComment } from "@aven/github/types";
 import type { RunEnding } from "../runs/types";
 import type { createThreadContinuation } from "./continuation";
 import type { acting, createThreadMessages } from "./messages";
@@ -124,3 +125,13 @@ export type ThreadRetentionOptions = {
   afterMs?: number;
   limit?: number;
 };
+
+export type PullRequestSource = {
+  pull(number: number): Promise<GithubPullDetail | null>;
+  comments(number: number): Promise<GithubReviewComment[]>;
+};
+
+export type PullRequestSources = (
+  userId: string,
+  projectId: string,
+) => Promise<PullRequestSource | null>;

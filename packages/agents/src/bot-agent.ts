@@ -13,6 +13,7 @@ import { createGoalTools } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools } from "./tools/mcp-servers";
 import { createProviderTools } from "./tools/providers";
+import { createReadProjectFileTool } from "./tools/read-project-file";
 import { createReactToMessageTool } from "./tools/react-to-message";
 import { createThreadTools } from "./tools/threads";
 import { createCockpitTool } from "./tools/cockpit";
@@ -30,6 +31,7 @@ import type {
   GoalHost,
   McpServersHost,
   MemoryHost,
+  ProjectFilesHost,
   ProvidersHost,
   ReactToMessage,
   ScheduleHost,
@@ -40,6 +42,7 @@ import type {
 } from "./tools/types";
 import type {
   BotPeer,
+  BotReplyProject,
   CockpitAccess,
   RunLens,
   RunMemory,
@@ -76,6 +79,9 @@ type BotAgentOptions = ModelSource & {
   api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
+  context?: string;
+  projects?: readonly BotReplyProject[];
+  projectFiles?: ProjectFilesHost;
   webSearch?: RunWebSearch;
   lens?: RunLens;
   onActivity?: (label: string | null) => void;
@@ -121,6 +127,9 @@ export function botAgentParts(options: BotPartsOptions) {
     api,
     notes,
     cockpit,
+    context,
+    projects,
+    projectFiles,
     paths,
     webSearch,
   } = options;
@@ -147,6 +156,9 @@ export function botAgentParts(options: BotPartsOptions) {
         threads: Boolean(threads),
         api: Boolean(api),
         notes: notes?.memory,
+        context,
+        projects,
+        readProjects: Boolean(projectFiles),
       }),
       paths ?? SANDBOX_PATHS,
     ),
@@ -169,6 +181,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...usingApi(api),
       ...keepingNotes(notes?.host),
       ...workingCockpit(cockpit),
+      ...readingProjects(projectFiles),
       ...searching(webSearch),
     ],
   };
@@ -198,6 +211,8 @@ export function createBotAgent(options: BotAgentOptions) {
   });
 }
 
+const readingProjects = (host?: ProjectFilesHost) =>
+  host ? [createReadProjectFileTool(host)] : [];
 const searching = (webSearch?: RunWebSearch) =>
   webSearch ? [createWebSearchTool({ apiKey: webSearch.apiKey })] : [];
 const usingApi = (host?: ApiHost) => (host ? createApiTools(host) : []);

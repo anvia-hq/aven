@@ -6,8 +6,16 @@ import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 import { ModelUnavailableError } from "../providers/resolve-model";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
+import { noWorld } from "../../testing/no-world";
 import { RemoteBotReplier } from "./remote-replier";
-import type { BotKeeper, BotLetter, BotMemoryNotes, BotSkills, NewBot } from "./types";
+import type {
+  BotKeeper,
+  BotLetter,
+  BotMemoryNotes,
+  BotSkills,
+  BotWorldKeeper,
+  NewBot,
+} from "./types";
 import type { BotMcp } from "../mcp/types";
 import type { BotProviders } from "../providers/types";
 import type { BotReplySink } from "../runtimes/types";
@@ -17,6 +25,7 @@ import type {
   Bot,
   BotGoalView,
   BotReplyInfo,
+  BotReplyProject,
   CockpitAccess,
   RunAttachment,
   RunMcpServer,
@@ -62,6 +71,7 @@ function fakeRunner(
     providers?: Partial<BotProviders>;
     threads?: Partial<BotThreads>;
     notes?: Partial<BotMemoryNotes>;
+    world?: BotWorldKeeper;
     agentOnControlPlane?: boolean;
     refuseRuntime?: string;
     runtimeId?: string;
@@ -83,6 +93,8 @@ function fakeRunner(
     mcp?: RunMcpServer[];
     memory?: RunMemory;
     cockpit?: CockpitAccess;
+    context?: string;
+    projects?: BotReplyProject[];
     machine?: string;
   }[] = [];
   const cancelled: { replyId: string; reason: string }[] = [];
@@ -224,10 +236,12 @@ function fakeRunner(
       ...options.threads,
     },
     {
+      keepDigest: async () => undefined,
       folders: async () => [],
       run: async () => "done",
       ...options.notes,
     },
+    options.world ?? noWorld,
     options.agentOnControlPlane ?? false,
   );
   const only = () => [...sinks.values()][0]!;
@@ -1874,6 +1888,75 @@ describe("RemoteBotReplier", () => {
       } finally {
         await person.remove();
       }
+    });
+  });
+
+  describe("what the person is working on (decision 0339)", () => {
+    const world: BotWorldKeeper = {
+      forReply: async () => ({
+        context: "<current-work>snapshot</current-work>",
+        projects: [{ id: "p1", slug: "web", repository: "acme/web", brief: "A web app" }],
+      }),
+      folder: async (userId, projectId, path) => [
+        { name: `${userId}:${projectId}:${path}`, path: "x", type: "file" },
+      ],
+      file: async (_userId, _projectId, path) => ({ path, text: "hello", truncated: false }),
+    };
+
+    test("a reply carries the snapshot and the projects, and its memory may read the project folders", async () => {
+      const owners: unknown[] = [];
+      const run = fakeRunner({
+        world,
+        notes: { folders: async (owner) => (owners.push(owner), []) },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      run.only().end();
+      await answering;
+
+      expect(run.started[0]).toMatchObject({
+        context: "<current-work>snapshot</current-work>",
+        projects: [{ id: "p1", slug: "web", repository: "acme/web", brief: "A web app" }],
+      });
+      expect(owners).toEqual([
+        { userId: "u1", botId: "b1", readProjects: [{ id: "p1", slug: "web" }] },
+      ]);
+    });
+
+    test("the activity digest is kept before the memory index is read, and its failure does not stop the reply", async () => {
+      const order: string[] = [];
+      const run = fakeRunner({
+        world,
+        notes: {
+          keepDigest: async (userId, botId) => {
+            order.push(`digest ${userId} ${botId}`);
+            throw new Error("db down");
+          },
+          folders: async () => (order.push("folders"), []),
+        },
+      });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      run.only().end();
+      await answering;
+
+      expect(order).toEqual(["digest u1 b1", "folders"]);
+    });
+
+    test("bot.project lists a folder and reads a file for the reply's own person", async () => {
+      const run = fakeRunner({ world });
+      const answering = run.replier.answer(input(() => undefined));
+      await Bun.sleep(0);
+      const sink = run.only();
+
+      expect(
+        await sink.project({ replyId: "x", op: "folder", projectId: "p1", path: "src" }),
+      ).toEqual({ entries: [{ name: "u1:p1:src", path: "x", type: "file" }] });
+      expect(
+        await sink.project({ replyId: "x", op: "file", projectId: "p1", path: "a.ts" }),
+      ).toEqual({ path: "a.ts", text: "hello", truncated: false });
+      sink.end();
+      await answering;
     });
   });
 

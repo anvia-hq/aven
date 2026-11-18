@@ -2,6 +2,7 @@ import type {
   BotMemoryParams,
   BotPeer,
   BotReplyInfo,
+  BotReplyProject,
   CockpitAccess,
   ComputerState,
   ControlPlaneToRuntime,
@@ -42,6 +43,7 @@ import type {
   SendMessage,
   TakenChanges,
   ApiHost,
+  ProjectFilesHost,
   ThreadsHost,
   UpdateSelf,
 } from "@aven/agents/tools/types";
@@ -107,6 +109,9 @@ export type CreateBotReplyAgent = (input: {
   api?: ApiHost;
   notes?: { memory: RunMemory; host: MemoryHost };
   cockpit?: { access: CockpitAccess; host: CockpitHost };
+  context?: string;
+  projects?: readonly BotReplyProject[];
+  projectFiles?: ProjectFilesHost;
   webSearch?: RunWebSearch;
   lens?: RunLens;
 }) => Pick<Agent<unknown>, "generate">;

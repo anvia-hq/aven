@@ -5,6 +5,7 @@ import { BOT_DESCRIPTION_MAX, BOT_INSTRUCTION_MAX, BOT_MESSAGE_MAX, BOT_NAME_MAX
 import {
   parseBotCreateParams,
   parseBotMemoryParams,
+  parseBotProjectParams,
   parseBotGoalParams,
   parseBotReactParams,
   parseBotScheduleParams,
@@ -131,6 +132,7 @@ describe("calls from a runtime", () => {
       "bot.create",
       "bot.update",
       "bot.send",
+      "bot.project",
       "bot.question",
       "bot.schedule",
       "bot.goal",
@@ -440,6 +442,28 @@ describe("a bot's schedules", () => {
     ]) {
       expect(() => parseBotScheduleParams(bad)).toThrow();
     }
+  });
+});
+
+describe("a bot reading a project", () => {
+  const base = { replyId: "r1", projectId: "11111111-2222-4333-8444-555555555555" };
+
+  test("takes a folder with an optional path and a file with a path", () => {
+    expect(parseBotProjectParams({ ...base, op: "folder" })).toEqual({ ...base, op: "folder" });
+    expect(parseBotProjectParams({ ...base, op: "file", path: "src/a.ts" })).toEqual({
+      ...base,
+      op: "file",
+      path: "src/a.ts",
+    });
+  });
+
+  test("refuses a file with no path, a project that is not an id and a workspace id field", () => {
+    expect(() => parseBotProjectParams({ ...base, op: "file" })).toThrow();
+    expect(() => parseBotProjectParams({ ...base, projectId: "x", op: "folder" })).toThrow();
+    expect(parseBotProjectParams({ ...base, op: "folder", workspaceId: "w" })).toEqual({
+      ...base,
+      op: "folder",
+    });
   });
 });
 

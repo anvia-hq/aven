@@ -4,11 +4,23 @@ import { threadPlanLimits } from "@aven/db/schema/thread-plan-limits";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
+import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { isDriving } from "@aven/protocol/drivers";
 import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
-import { and, desc, eq, getTableColumns, inArray, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  isNotNull,
+  isNull,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import {
   ConflictError,
@@ -500,6 +512,38 @@ export const threadsService = {
           updatedAt: new Date(),
         },
       });
+  },
+
+  async openPullRequests(limit: number) {
+    const rows = await db
+      .select({
+        threadId: threads.id,
+        userId: threads.createdBy,
+        threadTitle: threads.title,
+        installationId: projects.githubInstallationId,
+        repository: projects.repoFullName,
+        number: threadPullRequests.number,
+        url: threadPullRequests.url,
+        branch: threadPullRequests.branch,
+        title: threadPullRequests.title,
+      })
+      .from(threadPullRequests)
+      .innerJoin(threads, eq(threads.id, threadPullRequests.threadId))
+      .innerJoin(projects, eq(projects.id, threads.projectId))
+      .where(
+        and(
+          eq(threadPullRequests.state, "open"),
+          ne(threads.state, "archived"),
+          isNotNull(projects.githubInstallationId),
+          isNotNull(projects.repoFullName),
+          isNull(projects.deletedAt),
+        ),
+      )
+      .orderBy(desc(threadPullRequests.createdAt))
+      .limit(limit);
+    return rows.flatMap(({ installationId, repository, ...row }) =>
+      installationId && repository ? [{ ...row, installationId, repository }] : [],
+    );
   },
 
   async runtimeOf(id: string) {

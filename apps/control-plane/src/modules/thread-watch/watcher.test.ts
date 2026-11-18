@@ -164,8 +164,8 @@ run("createThreadWatcher (postgres)", async () => {
 
   test("the run's end wakes the bot once, however often it is heard", async () => {
     const { thread, watcher, woken } = await setup();
-    await watcher.ended(thread.id, RUN, { outcome: "done" });
-    await watcher.ended(thread.id, RUN, { outcome: "done" });
+    expect(await watcher.ended(thread.id, RUN, { outcome: "done" })).toBe(true);
+    expect(await watcher.ended(thread.id, RUN, { outcome: "done" })).toBe(false);
     await watcher.tick();
     expect(woken).toHaveLength(1);
     expect(woken[0]!.botId).toBe(bot.id);

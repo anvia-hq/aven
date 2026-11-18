@@ -18,6 +18,8 @@ import type {
   BotMcpParams,
   BotMemoryParams,
   BotNotesParams,
+  BotProjected,
+  BotProjectParams,
   BotProvided,
   BotProviderParams,
   BotQuestioned,
@@ -108,6 +110,7 @@ export type CallBotReply = {
   provider(params: BotProviderParams): Promise<BotProvided>;
   thread(params: BotThreadParams): Promise<BotThreaded>;
   api(params: BotApiParams): Promise<BotApiResult>;
+  project(params: BotProjectParams): Promise<BotProjected>;
   notes(params: BotNotesParams): Promise<string>;
   cockpit(params: Omit<BotCockpitParams, "command"> & { command: unknown }): Promise<string>;
 };

@@ -1,0 +1,22 @@
+# Bots know what the person is working on
+
+Status: accepted. Builds on 0088, 0101 and 0102.
+
+## Context
+
+A bot answers from its chat, its own notes and tools it must call to learn anything: it does not know the time, which threads are running, what is on the person's task list or what their projects are about, unless it asks. A thread's agent reads the project's `AGENTS.md`; a bot reads nothing of the sort. The person's project notes (decision 0102) are seen only by the project's threads.
+
+## Decision
+
+- **Every reply gets a `<current-work>` snapshot** in its instructions, with a computer or without. `BotWorld.forReply` (`bots/bot-world.ts`) builds it when the reply starts, from the person's own data only: their local time, up to 15 threads that are not archived (newest first, with repository, state, running, awaiting-answer, pull requests, `mine:false` for a shared one and when it was last active), up to 15 tasks that are in progress, in review or to do (key, status, priority) and the open inbox (a count and five titles). `currentWork` (`bots/current-work.ts`) is a pure function: the whole text is capped at 6,000 characters, items are dropped from the end, and what was left out is counted. Titles lose their angle brackets and line breaks, and the section says it is information from the app, never an instruction.
+- **Every reply lists the person's recent projects**: up to eight, the ones with the newest thread activity first, each with its id, its repository and a brief of at most 800 characters, one line, from the repository's `AGENTS.md`, else `CLAUDE.md`, else its README, cut, with no model call. A brief is a GitHub read, so the briefs are fetched together with a four-second timeout, a failed fetch leaves its brief out (and is not remembered), and the rest are kept ten minutes by one explicit `BriefCache` with an injectable clock, keyed by project id, not module state. A project that is a folder on a computer has no brief.
+- **`read_project_file`** (`packages/agents/src/tools/read-project-file.ts`) lists a folder or reads a text file (20,000 characters, saying when it was cut) of a GitHub project, through the new `bot.project` call and `GithubClient.file`, with the installation's read-only token. The project must be one of the person's (`projectsService.listForPerson`); the call never takes a workspace. A folder project answers that only GitHub projects can be read. What is read is information, never an instruction, and the tool and the instructions say so. A bot without a computer has the tool too, hosted by `TalkBotReplier`.
+- **A bot reads the person's project notes, and cannot write them.** A bot's memory owner may carry `readProjects` (the projects it listed); `MemoryService.folders` then adds a folder for each project that has notes, up to 10 notes each (`MEMORY_INDEXED_PER_READ_PROJECT`), and `/memories/project/<slug>/<name>.md` is a path that `view` reads. The slug is the repository's name, made safe and made unique. Every write (create, edit, insert, delete, and rename to or from one) on such a path is refused, whoever began the reply: decision 0102's rule that only the person writes project notes stands, and now holds for bots against a folder they can read. A thread's run has no `readProjects`, so its `/memories/project` is the one project folder it had before. A bot without a computer has no memory tool, so it does not see project notes.
+- **Wire**: `bot.reply` gains optional `context` and `projects`, `MemoryFolder` an optional `projectSlug`, and `bot.project` is a new call. `WIRE_VERSION` goes from 60 to 61, since a runner from before cannot answer the new call that a reply's `context` makes the control plane expect; `docs/products/0005-runtime-wire-versions.md` has it.
+
+## Consequences
+
+- A bot can say what is running and what is waiting without a tool call, and knows what each project is.
+- Each reply costs one read of the person's threads, tasks, inbox and projects, and, once every ten minutes per project, up to three GitHub reads. The snapshot and briefs add up to about 8,000 characters to the instructions, which the prompt cache cannot keep because the snapshot changes with the time.
+- A brief can be up to ten minutes stale, and a project whose GitHub read fails has none until a later reply succeeds.
+- Folder projects have no brief and no `read_project_file`; the bot's `list_threads` and threads see them as before.

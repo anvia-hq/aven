@@ -18,6 +18,7 @@ import type { ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
   BotGoalView,
   BotMcpView,
+  BotProjectEntry,
   BotProjectView,
   BotProviderView,
   BotReplyInfo,
@@ -65,6 +66,9 @@ export const defaultCreateBotAgent =
     api,
     notes,
     cockpit,
+    context,
+    projects,
+    projectFiles,
     lens,
   }) =>
     createBotAgent({
@@ -102,6 +106,9 @@ export const defaultCreateBotAgent =
       api,
       notes,
       cockpit,
+      context,
+      projects,
+      projectFiles,
       lens,
     });
 
@@ -472,6 +479,24 @@ export class BotReplies {
         access: cockpit,
         host: (command) => call("bot.cockpit", { replyId, command }),
       },
+      context: message.context,
+      projects: message.projects,
+      projectFiles: message.projects?.length
+        ? {
+            folder: async (projectId, path) =>
+              (
+                (await call("bot.project", { replyId, op: "folder", projectId, path })) as {
+                  entries: BotProjectEntry[];
+                }
+              ).entries,
+            file: async (projectId, path) =>
+              (await call("bot.project", { replyId, op: "file", projectId, path })) as {
+                path: string;
+                text: string;
+                truncated: boolean;
+              },
+          }
+        : undefined,
       webSearch,
       lens: message.lens,
       createBot: bot.canCreateBots

@@ -20,12 +20,13 @@ import type {
   BotReplier,
   BotReplyInput,
   BotSkills,
+  BotWorldKeeper,
   NewBot,
 } from "./types";
 import type { BotMcp } from "../mcp/types";
 import type { BotProviders, BotRunChoice } from "../providers/types";
 import type { BotThreads } from "../threads/types";
-import { UnavailableError } from "@aven/server-kit/errors";
+import { describeError, UnavailableError } from "@aven/server-kit/errors";
 import type {
   AgentBackendKind,
   Bot,
@@ -35,6 +36,8 @@ import type {
   BotMcpParams,
   BotNotesParams,
   BotPeer,
+  BotProjected,
+  BotProjectParams,
   BotProvided,
   BotProviderParams,
   BotQuestioned,
@@ -102,8 +105,9 @@ export class RemoteBotReplier implements BotReplier {
     private providers: BotProviders,
     private threads: BotThreads,
     private notes: BotMemoryNotes,
+    private world: BotWorldKeeper,
     private agentOnControlPlane = true,
-    private talk = new TalkBotReplier(store, bots),
+    private talk = new TalkBotReplier(store, bots, world),
   ) {}
 
   ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId" | "hasComputer">) {
@@ -148,8 +152,18 @@ export class RemoteBotReplier implements BotReplier {
     const skills = await this.skills.forRun(userId);
     const mcpServers = await this.mcp.forRun(userId);
     const givenMcp = new Set(mcpServers.map((server) => server.id));
-    const memoryOwner = { userId, botId: bot.id };
+    const world = await this.world.forReply(userId);
+    const memoryOwner = {
+      userId,
+      botId: bot.id,
+      readProjects: world.projects.map(({ id, slug }) => ({ id, slug })),
+    };
     const keepsNotes = onPersonsWord;
+    await this.notes
+      .keepDigest(userId, bot.id)
+      .catch((error: unknown) =>
+        console.warn(`Could not keep the activity digest of bot ${bot.id}:`, describeError(error)),
+      );
     const folders = await this.notes.folders(memoryOwner);
     signal.throwIfAborted();
     const runtimeId = this.#runtimeOf(bot);
@@ -442,6 +456,10 @@ export class RemoteBotReplier implements BotReplier {
 
         return { name: changed.name, description: changed.description };
       },
+      project: async (params: BotProjectParams): Promise<BotProjected> =>
+        params.op === "folder"
+          ? { entries: await this.world.folder(userId, params.projectId, params.path) }
+          : this.world.file(userId, params.projectId, params.path),
       notes: ({ command }: Omit<BotNotesParams, "replyId">) =>
         this.notes.run(
           { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: keepsNotes },
@@ -473,6 +491,8 @@ export class RemoteBotReplier implements BotReplier {
           mcp: mcpServers.length ? mcpServers : undefined,
           memory: { folders, writable: keepsNotes },
           cockpit: "write",
+          context: world.context,
+          projects: world.projects.length ? world.projects : undefined,
           webSearch: webSearchForRun,
           lens: choice.backend === "native" ? await lensSettingsService.forRun() : undefined,
           machine,
