@@ -15,7 +15,7 @@ import {
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
 import { afterEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { mkdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { hostname } from "node:os";
 import { z } from "zod";
 
@@ -249,6 +249,56 @@ describe("DurableRuns after a reload in the same process", () => {
       .run();
     database.close();
     await opened(path);
+  });
+
+  const onLinux = test.skipIf(!existsSync("/proc/self/status"));
+
+  const leaseHeldBy = async (path: string, pid: number) => {
+    await (await DurableRuns.open(path)).close();
+    const database = new Database(path);
+    database
+      .query("UPDATE anvia_durable_owner SET token = 'earlier-boot', pid = ?, host = ?")
+      .run(pid, hostname());
+    database.close();
+  };
+
+  onLinux(
+    "a lease from before a reboot does not lock the journal when another program now has its pid",
+    async () => {
+      const path = journalPath();
+      const other = Bun.spawn(["sleep", "30"]);
+      try {
+        await leaseHeldBy(path, other.pid);
+        await opened(path);
+      } finally {
+        other.kill();
+      }
+    },
+  );
+
+  onLinux(
+    "a lease whose pid is only a thread of this process does not lock the journal",
+    async () => {
+      const path = journalPath();
+      const thread = readdirSync("/proc/self/task")
+        .map(Number)
+        .find((id) => id !== process.pid);
+
+      expect(thread).toBeDefined();
+      await leaseHeldBy(path, thread ?? 0);
+      await opened(path);
+    },
+  );
+
+  onLinux("a lease held by another running runner still locks the journal", async () => {
+    const path = journalPath();
+    const other = Bun.spawn([process.execPath, "-e", "setTimeout(() => {}, 30000)"]);
+    try {
+      await leaseHeldBy(path, other.pid);
+      await expect(DurableRuns.open(path)).rejects.toThrow("live owner");
+    } finally {
+      other.kill();
+    }
   });
 
   test("a journal that is open in this process is not opened twice", async () => {

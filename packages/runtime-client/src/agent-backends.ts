@@ -47,18 +47,36 @@ export function openAgentBackends(
   journalPath: string,
   keepAgents: ReadonlySet<string>,
 ): AgentBackendSet {
-  const native = DurableRuns.open(journalPath, keepAgents);
-  native.catch(() => undefined);
+  const openNative = () => {
+    const opening = DurableRuns.open(journalPath, keepAgents);
+    opening.catch((error) =>
+      console.error(
+        `The native agent backend could not open its journal: ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    );
+    return opening;
+  };
+  let native = openNative();
+  const nativeBackend = async () => {
+    const attempt = native;
+
+    try {
+      return await attempt;
+    } catch {
+      if (native === attempt) native = openNative();
+
+      return native;
+    }
+  };
   const claude = Promise.resolve(ClaudeRuns.open(journalPath, claudeQueryForProcess()));
   const codex = Promise.resolve(CodexRuns.open(journalPath, codexQueryForProcess()));
   const installed = new Map<string, Promise<AgentBackend>>([
-    [NATIVE, native],
     [CLAUDE, claude],
     [CODEX, codex],
   ]);
   return {
     offered: [NATIVE, CLAUDE, CODEX],
-    get: (kind) => backendFor(installed, kind),
+    get: (kind) => ((kind ?? NATIVE) === NATIVE ? nativeBackend() : backendFor(installed, kind)),
     async close() {
       const opened = await Promise.all([
         native.catch(() => undefined),
