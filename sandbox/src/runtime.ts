@@ -70,6 +70,8 @@ export function createSandboxRuntime<T extends SandboxRunner>(store: SandboxStor
 
     if (isCloudProvider(kind) && !cloudEnabled(kind)) throw new RuntimeOfflineError(CLOUD_OFF);
 
+    if (isCloudProvider(kind)) await store.admit?.(place.runtimeId);
+
     return providerFor(kind, hub).start(place, offline);
   }
 

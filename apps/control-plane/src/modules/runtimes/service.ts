@@ -205,6 +205,16 @@ export const runtimesService = {
     return publicRuntime(row!);
   },
 
+  async computerOf(runtimeId: string) {
+    const [row] = await db
+      .select({ organizationId: runtimes.organizationId, userId: runtimes.ownerId })
+      .from(runtimes)
+      .where(
+        and(eq(runtimes.id, runtimeId), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)),
+      );
+    return row ?? null;
+  },
+
   async idleCloudSandboxes(before: Date, limit = 100) {
     const lastUsed = sql`greatest(
       ${runtimes.createdAt},

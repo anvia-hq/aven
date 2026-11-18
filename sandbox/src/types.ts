@@ -42,6 +42,7 @@ export type SandboxStore = {
   saveSandboxId(runtimeId: string, sandboxId: string): Promise<void>;
   providerOf(runtimeId: string): Promise<RuntimeProviderKind | undefined>;
   isExpiredCloud(runtimeId: string): Promise<boolean>;
+  admit?(runtimeId: string): Promise<void>;
 };
 
 export type ProviderDeps<T extends SandboxRunner> = {
