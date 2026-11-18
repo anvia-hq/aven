@@ -32,20 +32,30 @@ export function UsageCard({
     0,
     totals.inputTokens - totals.cacheWriteTokens - totals.cacheReadTokens,
   );
+  const hitRate = totals.inputTokens > 0 ? (totals.cacheReadTokens / totals.inputTokens) * 100 : 0;
   const rows = [
-    { label: "Input", value: totals.inputTokens, tone: null },
+    { label: "Input", value: compactNumber(totals.inputTokens), tone: null },
+    { label: "Output", value: compactNumber(totals.outputTokens), tone: "bg-usage-output" },
+    {
+      label: "Cache read",
+      value: compactNumber(totals.cacheReadTokens),
+      tone: "bg-usage-cache-read",
+    },
+    { label: "Cache hit rate", value: `${hitRate.toFixed(1)}%`, tone: null },
+  ] as const;
+  const segments = [
     { label: "Output", value: totals.outputTokens, tone: "bg-usage-output" },
     { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-usage-cache-write" },
     { label: "Cache read", value: totals.cacheReadTokens, tone: "bg-usage-cache-read" },
     { label: "Uncached", value: uncached, tone: "bg-usage-uncached" },
   ] as const;
-  const total = totals.outputTokens + totals.cacheWriteTokens + totals.cacheReadTokens + uncached;
+  const total = segments.reduce((sum, { value }) => sum + value, 0);
 
   return (
     <OverviewCard title="Usage">
       <div aria-hidden className="flex h-2 w-full gap-px overflow-hidden rounded-full bg-muted">
-        {rows.map(({ label, value, tone }) =>
-          tone && value > 0 ? (
+        {segments.map(({ label, value, tone }) =>
+          value > 0 ? (
             <span
               key={label}
               className={tone}
@@ -64,7 +74,7 @@ export function UsageCard({
               />
               {label}
             </dt>
-            <dd className="tabular-nums">{compactNumber(value)}</dd>
+            <dd className="tabular-nums">{value}</dd>
           </div>
         ))}
       </dl>
