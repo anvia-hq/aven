@@ -93,11 +93,6 @@ export function boxShape(seed: number): BoxShape {
     turnAbout("z", turn()),
   );
   const half: Vec3 = [0.78 + next() * 0.22, 0.78 + next() * 0.22, 0.78 + next() * 0.22];
-  const frames = Array.from({ length: 2 + Math.floor(next() * 2) }, () => ({
-    across: 0.3 + next() * 0.6,
-    tilt: multiply(turnAbout("x", next() * Math.PI), turnAbout("y", next() * Math.PI)),
-    speed: sign() * (0.4 + next() * 0.7),
-  }));
   return {
     orb: orbShape(seed),
     start,
@@ -108,7 +103,6 @@ export function boxShape(seed: number): BoxShape {
       sign() * (0.4 + next() * 0.6),
     ],
     half,
-    frames,
   };
 }
 
@@ -203,30 +197,6 @@ export function paintBox(
     context.closePath();
     context.fill();
   }
-
-  context.lineWidth = stroke * 0.8;
-  shape.frames.forEach((frame, index) => {
-    const spin = turnAbout("z", time * frame.speed);
-    const placed = multiply(rotation, multiply(frame.tilt, spin));
-    const reach = 0.92;
-    const ring: Vec3[] = [
-      [-reach, -reach * frame.across, 0],
-      [reach, -reach * frame.across, 0],
-      [reach, reach * frame.across, 0],
-      [-reach, reach * frame.across, 0],
-    ];
-    context.strokeStyle = rgba(index % 2 ? b : c, 0.7 * (0.35 + 0.65 * color));
-    context.beginPath();
-    ring.forEach((corner, step) => {
-      const { x: px, y: py } = project(apply(placed, corner));
-
-      if (step === 0) context.moveTo(px, py);
-      else context.lineTo(px, py);
-    });
-    context.closePath();
-    context.stroke();
-  });
-  context.lineWidth = stroke;
 
   EDGES.forEach(([from, to], index) => {
     const start = points[from]!;

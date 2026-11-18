@@ -1,6 +1,6 @@
 # A computer is a turning box beside the sandbox orb
 
-Status: accepted
+Status: accepted; 0342 gives the box its places in the interface, 0343 drops the frames inside it.
 
 ## Context
 
