@@ -30,6 +30,18 @@ const catalog = {
       },
     },
   },
+  deepseek: {
+    models: {
+      "deepseek-flash": {
+        name: "DeepSeek V4.1 Flash",
+        tool_call: true,
+        modalities: { input: ["text", "image"], output: ["text"] },
+        reasoning_options: [{ type: "toggle" }, { type: "effort", values: ["low", "high", "max"] }],
+        limit: { context: 1048576 },
+      },
+      "deepseek-quiet": { tool_call: true, modalities: { output: ["text"] } },
+    },
+  },
 };
 
 const url = () => "https://catalog.test/api.json";
@@ -350,5 +362,31 @@ describe("vertex in the catalog", () => {
     expect(await models.canRun("vertex", "google/gemini-live")).toBe(false);
     expect(await models.canRun("vertex", "meta/llama-4")).toBe(true);
     expect(await models.efforts("vertex", "google/gemini-2.5-flash")).toBeNull();
+  });
+});
+
+describe("a preset vendor's models", () => {
+  test("are read under the vendor's own key, with the levels and window it lists", async () => {
+    const models = createModelCatalog(serving(catalog), () => 0, url);
+
+    expect(await models.vendorModel("deepseek", "deepseek-flash")).toEqual({
+      effortLevels: ["low", "high", "max"],
+      defaultEffort: null,
+      contextWindow: 1048576,
+      label: "DeepSeek V4.1 Flash",
+    });
+  });
+
+  test("offer no levels when the entry lists none, and nothing for a model it lacks", async () => {
+    const models = createModelCatalog(serving(catalog), () => 0, url);
+
+    expect(await models.vendorModel("deepseek", "deepseek-quiet")).toEqual({
+      effortLevels: null,
+      defaultEffort: null,
+      contextWindow: null,
+      label: null,
+    });
+    expect(await models.vendorModel("deepseek", "never-heard-of")).toBeNull();
+    expect(await models.vendorModel("groq", "deepseek-flash")).toBeNull();
   });
 });

@@ -29,7 +29,14 @@ export type BotProviders = {
   keyFor(userId: string, id: string): Promise<ProviderKeyAsk>;
 };
 
-export type GatewayModel = { contextWindow: number | null; effortLevels: string[] | null };
+export type ModelFacts = {
+  effortLevels: string[] | null;
+  defaultEffort: string | null;
+  contextWindow: number | null;
+  label: string | null;
+};
+
+export type GatewayModel = ModelFacts & { effortKnown: boolean };
 
 export type ProviderKind = ModelConfig["provider"];
 
