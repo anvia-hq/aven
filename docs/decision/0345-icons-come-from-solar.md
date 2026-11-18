@@ -10,7 +10,7 @@ The platform and `@aven/ui` drew their icons with `@mynaui/icons-react`. The pro
 
 - Icons come from `@solar-icons/react`, imported by style and name: `import { AltArrowDownIcon } from "@solar-icons/react/linear"`. Linear is the default; the filled icons (a favourite star, the stop square, a project's folder in the picker) come from `@solar-icons/react/bold`, aliased `StarBoldIcon` where a file uses both.
 - `@mynaui/icons-react` is removed from `apps/platform` and `packages/ui`.
-- Solar has no brand marks, so `apps/platform/src/components/github-icon.tsx` draws the GitHub mark.
+- Solar has no brand marks, so `GithubMark` in `apps/platform/src/components/brand-icons.tsx` draws the GitHub mark.
 - A vendored shadcn component keeps the alias it was converted with, so its JSX does not change (`LoaderIcon as Loader2Icon`).
 
 ## Consequences

@@ -30,7 +30,7 @@ Our own wrappers (`text-field.tsx`, `form.tsx`) live next to them. Hooks the CLI
 
 ## Icons
 
-Icons come from `@solar-icons/react`, by style and name (`import { AltArrowDownIcon } from "@solar-icons/react/linear"`; filled ones from `@solar-icons/react/bold`). `lucide-react` is not a dependency. Solar has no brand marks: the GitHub mark is `src/components/github-icon.tsx`. Decision 0345.
+Icons come from `@solar-icons/react`, by style and name (`import { AltArrowDownIcon } from "@solar-icons/react/linear"`; filled ones from `@solar-icons/react/bold`). `lucide-react` is not a dependency. Solar has no brand marks: the GitHub mark is `GithubMark` in `src/components/brand-icons.tsx`. Decision 0345.
 
 The shadcn CLI only knows lucide, so `components.json` still says `iconLibrary: "lucide"` and newly added components will import `lucide-react`. After `shadcn add`, convert those imports to Solar, aliasing to keep the JSX unchanged (`import { CheckIcon } from "@solar-icons/react/linear"`, `import { LoaderIcon as Loader2Icon } from "@solar-icons/react/linear"`). Mapping used so far:
 

@@ -1,4 +1,4 @@
-import { GithubIcon } from "@/components/github-icon";
+import { GithubMark } from "@/components/brand-icons";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -43,7 +43,7 @@ export function GithubRuntimeDialog({ runtime }: { runtime: Runtime }) {
       <DialogTrigger
         render={<Button variant="ghost" size="icon-sm" aria-label={`GitHub of ${runtime.name}`} />}
       >
-        <GithubIcon />
+        <GithubMark />
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

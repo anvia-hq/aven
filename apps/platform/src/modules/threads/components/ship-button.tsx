@@ -4,7 +4,7 @@ import {
   RocketIcon,
   SparklesIcon,
 } from "@solar-icons/react/linear";
-import { GithubIcon } from "@/components/github-icon";
+import { GithubMark } from "@/components/brand-icons";
 
 import { Button } from "@aven/ui/button";
 import { ButtonGroup } from "@aven/ui/button-group";
@@ -67,7 +67,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp, onRetry }: Props
         nativeButton={false}
         render={<a href={`/api/github/connect?next=${next}`} />}
       >
-        <GithubIcon />
+        <GithubMark />
         Connect GitHub to ship
       </Button>
     );

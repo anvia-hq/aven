@@ -1,5 +1,5 @@
 import { FolderIcon, GitBranchIcon, MonitorIcon } from "@solar-icons/react/linear";
-import { GithubIcon } from "@/components/github-icon";
+import { GithubMark } from "@/components/brand-icons";
 import type { ReactNode } from "react";
 import { threadBranch } from "@aven/protocol/thread-branch";
 
@@ -55,7 +55,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         )}
         <Row icon={<GitBranchIcon />}>{threadBranch(thread.id)}</Row>
         {github && (
-          <Row icon={<GithubIcon />}>
+          <Row icon={<GithubMark />}>
             <span title={github.detail}>{github.label}</span>
           </Row>
         )}
