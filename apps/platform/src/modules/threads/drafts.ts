@@ -135,6 +135,12 @@ export async function readDraftFiles(threadId: string): Promise<DraftFile[]> {
   return (records ?? []).toSorted((a, b) => a.at - b.at).map(({ id, file }) => ({ id, file }));
 }
 
+export function mergeDraftFiles<T extends { id: string }>(restored: T[], current: T[]): T[] {
+  const known = new Set(restored.map(({ id }) => id));
+
+  return [...restored, ...current.filter(({ id }) => !known.has(id))];
+}
+
 export async function storeDraftFile(threadId: string, id: string, file: File) {
   const record: StoredDraftFile = {
     key: fileKey(threadId, id),
