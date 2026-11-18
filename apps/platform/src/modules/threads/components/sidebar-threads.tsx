@@ -7,7 +7,6 @@ import { Input } from "@aven/ui/input";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { THREAD_TITLE_MAX } from "@aven/protocol/threads";
 import { dragThread } from "@/lib/thread-drag";
-import { ProjectTile } from "@/modules/projects/components/project-tile";
 import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
@@ -28,10 +27,11 @@ import type { Thread, ThreadStatus } from "../types";
 import { ParticipantStack } from "./participant-stack";
 import { RecencyGroupSection } from "./recency-group-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
+import { ThreadMark } from "./thread-mark";
 
 const RUNNING_REFRESH_MS = 5000;
 
-function SidebarProjectTile({
+function SidebarThreadMark({
   thread,
   project,
   palette,
@@ -46,7 +46,12 @@ function SidebarProjectTile({
 
   return (
     <span className="relative -mx-0.5 shrink-0">
-      <ProjectTile projectId={project.id} palette={palette} working={thread.running} />
+      <ThreadMark
+        projectId={project.id}
+        runtimeId={thread.runtimeId}
+        palette={palette}
+        working={thread.running}
+      />
       {machine && (
         <span
           role="img"
@@ -234,7 +239,7 @@ export function SidebarThreads() {
           isActive={pathname === `/threads/${thread.id}`}
           className={cn(nested && "pl-8")}
         >
-          <SidebarProjectTile
+          <SidebarThreadMark
             thread={thread}
             project={projects.find((candidate) => candidate.id === thread.projectId)}
             palette={palettes.get(thread.projectId)}
@@ -277,7 +282,7 @@ export function SidebarThreads() {
         >
           <span className="flex shrink-0 -space-x-1.5">
             {[left, right].map((thread) => (
-              <SidebarProjectTile
+              <SidebarThreadMark
                 key={thread.id}
                 thread={thread}
                 project={projects.find((candidate) => candidate.id === thread.projectId)}
@@ -356,7 +361,7 @@ export function SidebarThreads() {
                   }
                   isActive={pathname === `/threads/${thread.id}`}
                 >
-                  <SidebarProjectTile
+                  <SidebarThreadMark
                     thread={thread}
                     project={projects.find((candidate) => candidate.id === thread.projectId)}
                     palette={palettes.get(thread.projectId)}

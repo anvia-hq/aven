@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Badge } from "@aven/ui/badge";
 import { buttonVariants } from "@aven/ui/button";
 import { shortTimeAgo } from "@/lib/format";
+import { ThreadMark } from "@/modules/threads/components/thread-mark";
 
 import { projectPlace } from "../place";
 import type { ProjectActivity } from "../types";
@@ -71,8 +72,9 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center">
                       {thread.running ? (
-                        <ProjectTile
+                        <ThreadMark
                           projectId={project.id}
+                          runtimeId={thread.runtimeId}
                           palette={palettes.get(project.id)}
                           working
                           className="size-4"
