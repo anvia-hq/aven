@@ -70,8 +70,7 @@ export function AppShell({ user, sidebar }: Props) {
           >
             <AvenMark className="w-[17px] text-brand" />
           </RailLink>
-          <span aria-hidden="true" className="my-2.5 h-px w-4.5 bg-input" />
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="mt-5 flex flex-col items-center gap-1.5">
             <CockpitRailLink />
             <BotRailLink />
           </div>
