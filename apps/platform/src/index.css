@@ -1857,28 +1857,14 @@
   animation: none;
 }
 
-@keyframes wave-drift {
+@keyframes ring-turn {
   to {
-    transform: translateX(-50%);
+    transform: rotateY(360deg);
   }
 }
 
-@keyframes gradient-flow {
-  to {
-    background-position-x: 200%;
-  }
-}
-
-@utility wave-drift {
-  animation: wave-drift 9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
-@utility gradient-flow {
-  animation: gradient-flow 16s linear infinite;
+@utility ring-turn {
+  animation: ring-turn 9s linear infinite;
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;

@@ -1,17 +1,29 @@
 import { cn } from "cn";
 
-const WAVE = "M0 10 Q12.5 0 25 10 T50 10 T75 10 T100 10 T125 10 T150 10 T175 10 T200 10 V20 H0 Z";
+const RINGS = [
+  { turn: "rotate-0", speed: "[animation-duration:9s]" },
+  { turn: "rotate-60", speed: "[animation-duration:13s]" },
+  { turn: "rotate-120", speed: "[animation-duration:11s] [animation-direction:reverse]" },
+];
 
-function Wave({ className }: { className?: string }) {
+function Medallion() {
   return (
-    <svg
+    <div
       aria-hidden
-      viewBox="0 0 200 20"
-      preserveAspectRatio="none"
-      className={cn("wave-drift absolute bottom-0 left-0 w-[200%] fill-foreground", className)}
+      className="absolute -top-7 right-4 size-14 rounded-full border border-effort/40 bg-background shadow-lg perspective-[240px]"
     >
-      <path d={WAVE} />
-    </svg>
+      {RINGS.map((ring) => (
+        <span
+          key={ring.turn}
+          className={cn(
+            "ring-turn absolute inset-2 rounded-full border border-effort/80",
+            ring.turn,
+            ring.speed,
+          )}
+        />
+      ))}
+      <span className="absolute inset-[1.35rem] rounded-full bg-effort/70 blur-[3px]" />
+    </div>
   );
 }
 
@@ -19,20 +31,14 @@ export function BetaBadge() {
   return (
     <div
       role="note"
-      className="pointer-events-none fixed right-4 bottom-4 z-40 hidden overflow-hidden rounded-2xl px-5 py-3.5 shadow-xl ring-1 ring-foreground/10 md:block"
+      className="pointer-events-none fixed right-2.5 bottom-2.5 z-40 hidden w-72 rounded-2xl border border-effort/35 bg-card bg-[radial-gradient(120%_140%_at_0%_0%,color-mix(in_oklch,var(--info)_30%,transparent),transparent_62%),radial-gradient(110%_130%_at_100%_100%,color-mix(in_oklch,var(--effort)_26%,transparent),transparent_60%)] p-4 pr-5 shadow-xl md:block"
     >
-      <div
-        aria-hidden
-        className="gradient-flow absolute inset-0 bg-[linear-gradient(115deg,var(--meter),color-mix(in_oklch,var(--meter),var(--info)_50%),var(--info),color-mix(in_oklch,var(--meter),var(--info)_50%),var(--meter))] bg-size-[200%_100%]"
-      />
-      <Wave className="h-3/4 opacity-[0.14] [animation-duration:11s]" />
-      <Wave className="h-1/2 opacity-[0.12] [animation-direction:reverse] [animation-duration:7s]" />
-      <div className="relative flex flex-col gap-0.5 leading-tight text-primary-foreground">
-        <span className="text-[0.7rem] font-semibold tracking-[0.2em] uppercase opacity-80">
-          Beta
-        </span>
-        <span className="text-sm font-semibold">Expect rough edges</span>
-      </div>
+      <Medallion />
+      <p className="text-[0.7rem] font-medium tracking-[0.18em] text-effort uppercase">Beta</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">You are early</p>
+      <p className="mt-0.5 text-xs leading-5 text-muted-foreground">
+        Aven is in beta. Expect rough edges, and tell us what breaks.
+      </p>
     </div>
   );
 }
