@@ -9,6 +9,7 @@ import type {
 } from "@anvia/sandbox";
 
 import type { MachineCall } from "./types";
+import { validUtf8 } from "./valid-utf8";
 
 const encoder = new TextEncoder();
 
@@ -101,7 +102,11 @@ export class RemoteSandbox implements SandboxRuntime {
   }
 
   async readProcessLogs(options: { processId: string; tailBytes?: number }) {
-    return decoded((await this.call("readProcessLogs", options)) as Encoded<SandboxProcessLogs>);
+    const logs = decoded(
+      (await this.call("readProcessLogs", options)) as Encoded<SandboxProcessLogs>,
+    );
+
+    return { ...logs, stdout: validUtf8(logs.stdout), stderr: validUtf8(logs.stderr) };
   }
 
   async stopProcess({ processId }: { processId: string }) {
