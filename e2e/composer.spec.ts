@@ -2,6 +2,11 @@ import { expect, test, type Page } from "@playwright/test";
 
 import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
+const SHOT = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
+
 async function createProject(page: Page) {
   await addRunner(page);
   await connectGithub(page);
@@ -135,5 +140,30 @@ test.describe("prompt composer", () => {
     await expect(menu).toContainText("gpt-4o");
     await page.goto("/threads");
     await expect(menu).toContainText("gpt-4o");
+  });
+
+  test("a thread keeps its draft, attached image included, across a reload", async ({ page }) => {
+    await registerUser(page, "cmp", "Composer User");
+    await createProject(page);
+    const made = await page.request.post("/api/threads", {
+      data: { projectId: await projectId(page, "composer-app") },
+    });
+    const { id } = (await made.json()) as { id: string };
+    await page.goto(`/threads/${id}`);
+
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    await prompt.fill("look at this");
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "shot.png",
+      mimeType: "image/png",
+      buffer: SHOT,
+    });
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
+
+    await page.reload();
+
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toContainText("look at this");
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
+    await expect(page.getByRole("img", { name: "shot.png" })).toHaveAttribute("src", /^blob:/);
   });
 });

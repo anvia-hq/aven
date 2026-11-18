@@ -1,6 +1,6 @@
 # A thread keeps its message draft
 
-Status: accepted.
+Status: accepted; the rule that attached files are not saved is superseded by 0341.
 
 ## Context
 
