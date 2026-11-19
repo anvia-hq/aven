@@ -1,4 +1,4 @@
-import { IconArchive, IconDots, IconRestore } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconPin, IconRestore } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -8,9 +8,21 @@ import {
 } from "@aven/ui/dropdown-menu";
 import { SidebarMenuAction } from "@aven/ui/sidebar";
 
-type Props = { title: string; onArchive?: () => void; onRestore?: () => void };
+type Props = {
+  title: string;
+  pinned?: boolean;
+  onTogglePin?: () => void;
+  onArchive?: () => void;
+  onRestore?: () => void;
+};
 
-export function ThreadActionsMenu({ title, onArchive, onRestore }: Props) {
+export function ThreadActionsMenu({
+  title,
+  pinned = false,
+  onTogglePin,
+  onArchive,
+  onRestore,
+}: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -25,6 +37,12 @@ export function ThreadActionsMenu({ title, onArchive, onRestore }: Props) {
         <IconDots />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
+        {onTogglePin && (
+          <DropdownMenuItem onClick={onTogglePin}>
+            <IconPin />
+            {pinned ? "Unpin" : "Pin"}
+          </DropdownMenuItem>
+        )}
         {onRestore && (
           <DropdownMenuItem onClick={onRestore}>
             <IconRestore />
