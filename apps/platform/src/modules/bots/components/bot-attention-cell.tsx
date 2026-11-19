@@ -66,7 +66,13 @@ export function BotAttentionCell({
           )
         }
       >
-        <BotAvatar bot={bot} mood={working ? "working" : "idle"} className="size-5" delayMs={0} />
+        <BotAvatar
+          bot={bot}
+          mood={working ? "working" : "idle"}
+          steady
+          className="size-5"
+          delayMs={0}
+        />
       </TooltipTrigger>
       <TooltipContent side="right" sideOffset={10} className="pointer-events-none">
         {reason ? `${bot.name} · ${reason}` : bot.name}

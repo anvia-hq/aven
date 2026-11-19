@@ -20,20 +20,21 @@ export function BotSidebar() {
   return (
     <>
       {!loaded && (
-        <div className="mx-auto mt-2 mb-3 h-[110px] w-28 rounded-xl bg-sidebar-accent/50 group-data-[collapsible=icon]:hidden" />
+        <div className="mx-auto mt-2 mb-3 h-[130px] w-32 rounded-xl bg-sidebar-accent/50 group-data-[collapsible=icon]:hidden" />
       )}
       {main && (
         <div className="mx-auto mt-2 mb-3">
           <Link
             to="/bot"
             aria-label={`${main.name}, main bot`}
-            className="flex w-28 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-xs text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-1"
+            className="flex w-32 flex-col items-center gap-1.5 rounded-xl px-3 py-3 text-xs text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring data-[active=true]:bg-sidebar-accent group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:p-1"
             data-active={pathname === "/bot" || pathname === "/bot/"}
           >
             <BotAvatar
               bot={main}
               mood={working.has(main.id) ? "working" : "idle"}
-              className="size-16 text-3xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
+              steady
+              className="size-20 text-4xl group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:text-sm"
             >
               <AvatarBadge className="size-5! [&>svg]:size-3!">
                 <IconStar />

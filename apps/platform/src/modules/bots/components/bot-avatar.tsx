@@ -13,6 +13,7 @@ export function BotAvatar({
   children,
   delayMs,
   follow = false,
+  steady = false,
 }: {
   bot: Pick<Bot, "id" | "avatar">;
   mood?: BotMood;
@@ -20,6 +21,7 @@ export function BotAvatar({
   children?: ReactNode;
   delayMs?: number;
   follow?: boolean;
+  steady?: boolean;
 }) {
   const setting = parseAvatarSetting(bot.avatar);
   const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
@@ -31,6 +33,7 @@ export function BotAvatar({
     mood,
     delayMs: delayMs ?? look.delay,
     follow,
+    steady,
   });
 
   return (

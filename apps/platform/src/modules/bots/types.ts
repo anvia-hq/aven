@@ -95,7 +95,12 @@ export type ArtifactTextState =
   | { status: "failed" }
   | { status: "ready"; text: string };
 
-export type MotionInput = { mood: BotMood; pointer: Point | null; reduced: boolean };
+export type MotionInput = {
+  mood: BotMood;
+  pointer: Point | null;
+  reduced: boolean;
+  steady?: boolean;
+};
 
 export type AvatarMotion = {
   work: number;
@@ -137,6 +142,7 @@ export type AvatarLook = {
   mood: BotMood;
   delayMs: number;
   follow?: boolean;
+  steady?: boolean;
 };
 
 export type AvatarHandle = { setMood(mood: BotMood): void; dispose(): void };

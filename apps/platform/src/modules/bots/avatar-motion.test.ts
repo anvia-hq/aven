@@ -56,6 +56,13 @@ describe("a hop", () => {
 });
 
 describe("an avatar's motion", () => {
+  test("idle, it sways side to side unless it is steady, when it keeps facing front", () => {
+    const sway = (input: MotionInput) =>
+      Math.max(...run(createMotion(1, calm), input, 12).map((pose) => Math.abs(pose.rotY)));
+    expect(sway(idle)).toBeGreaterThan(0.05);
+    expect(sway({ ...idle, steady: true })).toBeLessThan(0.001);
+  });
+
   test("at rest it floats a little and never hops", () => {
     const poses = run(createMotion(1, calm), idle, 6);
     expect(Math.max(...poses.map((pose) => pose.lift))).toBeLessThan(0.2);

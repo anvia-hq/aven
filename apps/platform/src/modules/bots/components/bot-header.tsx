@@ -4,7 +4,7 @@ import { BotAvatar } from "./bot-avatar";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
 const PILL =
-  "pointer-events-auto flex h-auto max-w-full items-center gap-2 rounded-full border border-border/60 bg-card/70 px-3 py-1.5 shadow-sm backdrop-blur-md";
+  "pointer-events-auto flex h-auto max-w-full items-center gap-2 rounded-full border border-border/60 bg-accent/90 px-3 py-1.5 shadow-xl backdrop-blur-md";
 
 function BotPill({ bot }: { bot: Bot }) {
   const working = useBotsWorking();
