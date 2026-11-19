@@ -190,6 +190,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           threadId={thread.id}
                           backend={thread.agentBackend}
                           onSubmit={answer}
+                          onCancel={cancel}
                         />
                       ) : (
                         <>
