@@ -5,45 +5,33 @@ description: Set up how this repository's changes are shipped, so the Ship butto
 
 # Setting up shipping
 
-The **Ship** button sends the agent a prompt and lets it do the work in the thread, with `git` and `gh` signed in as the user. Without a repository file, the prompt is Aven's default: commit, rebase onto the default branch, run the checks, push the branch, open a **draft** pull request with `gh pr create --draft`, and report its URL. This skill writes the repository's own version, `.aven/ship.md`, so Ship follows the team's way: its pull request template, its checks, its merge rules, its release steps.
+The **Ship** button sends the agent a prompt and lets it do the work in the thread, with `git` and `gh` signed in as the user. Ship works without a repository file: the prompt is then Aven's default: commit, rebase onto the default branch, run the checks, push the branch, open a **draft** pull request with `gh pr create --draft`, and report its URL. This skill writes the repository's own version, `.aven/ship.md`, so Ship follows the team's way: its pull request template, its checks, its merge rules, its release steps.
 
 `.aven/ship.md` is sent as it is, followed by one line saying which branch the thread is on and which is the default. It has no template variables and may be up to 10,000 characters. Write it as instructions to an agent, in the second person, with concrete commands.
 
 ## 1. Learn how the team ships
 
-Read what exists before asking anything:
+Work it out from the repository before you ask anything. Read:
 
 - `CONTRIBUTING`, `AGENTS.md`, `CLAUDE.md`, the README: branch names, commit style, review rules;
-- `.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE/`: the pull request description the team expects;
+- `.github/pull_request_template.md` or `.github/PULL_REQUEST_TEMPLATE/`: the description the team expects;
 - `.github/workflows`: the checks CI runs, so the agent can run the same ones before pushing;
 - `.github/CODEOWNERS`, `.github/labeler.yml`, `release-please` or `changesets` files, a merge queue or `auto-merge` mentioned anywhere;
-- `git log --oneline -30` and `gh pr list --state merged --limit 10`: the real commit style (conventional commits? ticket numbers?), whether pull requests are squashed, who reviews;
+- `git log --oneline -30` and `gh pr list --state merged --limit 10 --json title,baseRefName,labels,reviewDecision,mergedBy`: the real commit style, which branch pull requests target, whether they are squashed, who reviews, which labels they carry;
 - scripts named `ship`, `release`, `prepare`, `verify` in `package.json`, a `Makefile` or a `justfile`.
 
-Then ask the user, in one message, with your guess for each so they can just confirm. Skip a question only when the repository answers it for certain:
+Settle each of these from what you found and note where it came from, so the person can see why:
 
-**Where the work goes**
+- the branch pull requests target, and the branch naming;
+- commit message style;
+- the checks to run before pushing, as exact commands;
+- the pull request description (the template, or the shape recent merged pull requests have);
+- draft or ready, reviewers, labels, a ticket to link;
+- squash, rebase or merge, and whether anyone turns on auto-merge.
 
-- Which branch do pull requests target: the default branch, or another one (a `develop` or release branch)? Does it depend on the kind of change?
-- Branch names: keep the thread's own branch, or follow a pattern (`feat/<topic>`, a ticket number)?
-- Draft pull request or ready for review?
-- Reviewers, labels, a ticket or issue to link?
+Do not ask about anything the repository answers. Where it is silent or contradicts itself, use Aven's default (draft pull request into the default branch, the project's own checks, no merge by the agent) and say you did.
 
-**What the pull request holds**
-
-- What should the description say: a summary of the change, why, how it was tested, risks, follow-ups? Use the repository's template if there is one.
-- Should it include **proof** that the change works? Offer the options and let them pick any: command output of the checks and tests, screenshots of the changed screens, a screen recording of the flow (a Playwright test run with video on, or a recording of the desktop with `ffmpeg`), before and after images. Ask which changes need proof (every UI change? only when asked?) and where the files go: committed to the branch in a folder such as `.aven/proof/` (and whether that folder should be removed before merging), or described in text only. `gh` cannot attach files to a pull request, so proof files must be in the branch, with the description linking to them.
-- Is anything not allowed in the description (internal links, customer names)?
-
-**How it is checked and merged**
-
-- Which checks must pass locally before pushing?
-- Squash, rebase or merge? Should the agent turn on auto-merge, or leave merging to people?
-- Anything that must **not** happen (pushing to the default branch, touching a lockfile by hand, shipping with failing tests)?
-
-Check what the proof needs before promising it: Playwright and its browsers are on the machine only if someone installed them. If the user wants Playwright proof and the machine lacks it, say so.
-
-## 2. Write `.aven/ship.md`
+## 2. Write the draft `.aven/ship.md`
 
 Say what to do in order, with the exact commands. Keep what the default prompt gets right (commit with clear messages, update from the default branch, never force-push the default branch, tell the user the URL) and replace what the repository does differently. A good shape:
 
@@ -69,11 +57,21 @@ Rules:
 - **No secrets.** The file is committed.
 - Under 10,000 characters, and shorter is better: a long prompt is followed less carefully.
 
-## 3. Check it with the user
+## 3. Show it and ask only what is left
 
-Show them the file and ask if it matches how they ship. Offer to press **Ship** on a thread with a small change to try it, and adjust the file from what happens.
+Show the draft you wrote, with one short line for each choice that came from evidence ("Targets `develop`: your last 10 pull requests did"). Ask at most three questions, and only about what you could not settle:
 
-## 4. Tell the user
+- **Proof.** Should a pull request include proof that the change works: the output of the checks, screenshots of changed screens, a recording of the flow (Playwright with video, or `ffmpeg` on the desktop), before and after images? Ask which changes need it. `gh` cannot attach files to a pull request, so proof files go in the branch (a folder such as `.aven/proof/`, removed before merging or not), with the description linking to them. Check first that Playwright and its browsers are on the machine; if they are not, say so instead of promising it.
+- **Anything that must not happen**, only if the repository gives no hint (pushing to the default branch, hand-editing a lockfile, shipping with failing tests).
+- **A choice the repository contradicts itself on**, such as two pull request templates, with your pick.
+
+If nothing is left to ask, ask nothing: show the draft and say what you based it on.
+
+## 4. Check it with the user
+
+Adjust the file from their answers, then offer to press **Ship** on a thread with a small change to try it, and adjust the file from what happens.
+
+## 5. Tell the user
 
 - `.aven/ship.md` is read from the repository's workspace each time Ship is pressed, so it works in this thread now; **commit it** so every thread has it.
 - To change what Ship does, edit the file and commit it: there is nothing to save anywhere else.

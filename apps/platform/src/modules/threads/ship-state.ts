@@ -27,13 +27,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
 
   if (gate.kind === "unknown") return { kind: "blocked", label: shipLabel(latest) };
 
-  if (gate.kind === "missing") {
-    const command = gate.commands[0];
-
-    if (!command) return { kind: "none" };
-
-    return { kind: "set-up", command, skill: command.replace(/^\//, ""), disabled: busy };
-  }
+  const { custom } = gate;
 
   if (connected === null) return { kind: "loading" };
 
@@ -47,6 +41,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
       disabled: busy,
       shipping,
       canOpenNew: latest?.state === "open",
+      custom,
     };
   }
 
@@ -63,7 +58,7 @@ export function shipActionOf(facts: ShipFacts): ShipAct {
   if (branchPulls.problem !== null || !branchPulls.known || branchPulls.any)
     return { kind: "none" };
 
-  return { kind: "open", disabled: busy };
+  return { kind: "open", disabled: busy, custom };
 }
 
 export function connectionOf({ machine, account }: ShipConnectionFacts): boolean | null {

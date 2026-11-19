@@ -392,16 +392,16 @@ test.describe("shipping a thread", () => {
       return { threadId, events };
     }
 
-    test("with no way of shipping it offers to set it up, and sends /setup-ship", async ({
+    test("with no ship.md it still ships, and the menu offers to set it up, sending /setup-ship", async ({
       page,
     }) => {
       const { events } = await threadWith(page, "");
 
-      await expect(setUpButton(page)).toBeEnabled();
-      await expect(shipButton(page)).toHaveCount(0);
-      await expect(connectButton(page)).toHaveCount(0);
+      await expect(shipButton(page)).toBeEnabled();
+      await expect(setUpButton(page)).toHaveCount(0);
 
-      await setUpButton(page).click();
+      await page.getByRole("button", { name: "More ways to ship" }).click();
+      await page.getByRole("menuitem", { name: "Set up shipping" }).click();
       await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
       const started = events.find((event) => event.type === "started");
       expect(started?.prompt).toBe("/setup-ship");
@@ -413,6 +413,9 @@ test.describe("shipping a thread", () => {
 
       await expect(shipButton(page)).toBeEnabled();
       await expect(setUpButton(page)).toHaveCount(0);
+
+      await page.getByRole("button", { name: "More ways to ship" }).click();
+      await expect(page.getByRole("menuitem", { name: "Change how Ship works" })).toBeVisible();
     });
   });
 });
