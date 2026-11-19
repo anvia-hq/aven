@@ -15,7 +15,7 @@ export function HintedRow({
 }) {
   return (
     <Tooltip>
-      <TooltipTrigger render={<div className="flex cursor-default justify-between" />}>
+      <TooltipTrigger render={<div tabIndex={0} className="flex cursor-default justify-between" />}>
         <dt className="flex items-center gap-2 text-muted-foreground">
           {marker}
           {label}

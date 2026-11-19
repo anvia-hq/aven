@@ -84,7 +84,9 @@ export function ContextCard({
           <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>
           <Tooltip>
             <TooltipTrigger
-              render={<span className="w-fit cursor-default text-xs text-muted-foreground" />}
+              render={
+                <span tabIndex={0} className="w-fit cursor-default text-xs text-muted-foreground" />
+              }
             >
               {compactNumber(context.usedTokens)} / {compactNumber(context.contextWindow)}
             </TooltipTrigger>
