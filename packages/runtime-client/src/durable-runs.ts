@@ -1,6 +1,7 @@
 import type { AgentPrompt, Message } from "@anvia/core";
 import type { AgentInteractionResponse } from "@anvia/core/agent/interactions";
 import {
+  agentVersion,
   DurableConflictError,
   DurableRuntime,
   type DefinedGoal,
@@ -38,8 +39,6 @@ import type {
   RunInput,
 } from "@aven/agent-backend/types";
 import type { FollowOptions, GoalContext, GoalJournal } from "./types";
-
-const AGENT_VERSION = "2";
 
 const TOOL_CONCURRENCY = 4;
 
@@ -231,7 +230,7 @@ export class DurableRuns implements AgentBackend {
     input: RunInput,
     onEvent: Emit,
   ) {
-    this.#register(input);
+    await this.#register(input);
     try {
       const agent = this.#agent(input);
       const run = await this.#runtime.submit(
@@ -268,7 +267,7 @@ export class DurableRuns implements AgentBackend {
     onEvent: Emit,
   ) {
     const input = restore();
-    this.#registerOrKeep(input);
+    await this.#registerOrKeep(input);
     const run = await this.#runtime.getRun(asked.runId);
 
     if (response.type === "tool-question")
@@ -300,7 +299,7 @@ export class DurableRuns implements AgentBackend {
     after: number,
     onEvent: Emit,
   ): Promise<FollowedRun> {
-    this.#registerOrKeep(input);
+    await this.#registerOrKeep(input);
     const run = await this.#runtime.getRun(durableId);
     const followed = this.#follow(run, input, onEvent, { after });
     followed.done.catch(() => undefined);
@@ -380,11 +379,9 @@ export class DurableRuns implements AgentBackend {
   }
 
   #registerOrKeep(input: RunInput) {
-    try {
-      this.#register(input);
-    } catch (error) {
+    return this.#register(input).catch((error: unknown) => {
       if (!(error instanceof DurableConflictError)) throw error;
-    }
+    });
   }
 
   #agent(input: RunInput) {
@@ -393,12 +390,12 @@ export class DurableRuns implements AgentBackend {
     return input.agent;
   }
 
-  #register(input: RunInput) {
+  async #register(input: RunInput) {
     const agent = this.#agent(input);
     this.#runtime.registerAgents([
       {
         agent,
-        version: AGENT_VERSION,
+        version: await agentVersion(agent),
         stream: true,
         toolConcurrency: TOOL_CONCURRENCY,
         modelRetry: MODEL_RETRY,

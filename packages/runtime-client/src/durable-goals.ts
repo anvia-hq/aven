@@ -57,7 +57,7 @@ export async function startGoal(journal: GoalJournal, goal: GoalSpec): Promise<F
 
   if (!agentId) throw new Error("The native agent backend was started without an agent");
 
-  journal.registerOrKeep(input);
+  await journal.registerOrKeep(input);
   journal.contexts.set(agentId, { verify });
   const finished = async () => {
     journal.contexts.delete(agentId);

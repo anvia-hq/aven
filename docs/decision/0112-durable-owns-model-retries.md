@@ -12,7 +12,7 @@ Status: accepted.
 - `defaultCreateAgent` passes `retries: false` for journaled coding agents. `DurableRuns` retains its existing registration-level policy of five attempts, starting at one second and capped at thirty seconds.
 - Plain subagents, identified by `role`, keep agent-level retries because they run outside the journal. Bots use their separate factory and are unchanged.
 - The explicit compaction agent already has no agent-level retry policy; durable owns its summary retries too.
-- Do not bump the agent registration version: effective execution, tools and instructions are unchanged, so existing parked runs can continue.
+- The registration version follows the agent's declared configuration rather than a hand-kept constant (0365), so the factory is part of what a parked run is pinned to: a change to it refuses the run instead of replaying it.
 
 ## Consequences
 

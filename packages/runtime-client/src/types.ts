@@ -158,7 +158,7 @@ export type GoalJournal = {
   runtime: DurableRuntime;
   goal: DefinedGoal;
   contexts: Map<string, GoalContext>;
-  registerOrKeep(input: RunInput): void;
+  registerOrKeep(input: RunInput): Promise<void>;
   follow(run: DurableRun, input: RunInput, onEvent: Emit, options?: FollowOptions): FollowedRun;
   release(agentId: string, end: DurableEnd): Promise<void>;
   revive(agentIds: readonly string[]): Promise<void>;
