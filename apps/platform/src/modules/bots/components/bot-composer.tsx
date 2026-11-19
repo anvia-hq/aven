@@ -6,14 +6,7 @@ import {
 } from "@anvia/react-ui/chat";
 import { IconArrowBackUp, IconArrowUp, IconX } from "@tabler/icons-react";
 import { cn } from "cn";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@aven/ui/button";
 import { AttachButton } from "@/modules/threads/components/attach-button";
@@ -28,7 +21,6 @@ import { toast } from "@aven/ui/toast";
 import { avatarFor, parseAvatarSetting } from "../avatar";
 import { useBotMentions } from "../hooks/use-bot-mentions";
 import { useBots } from "../hooks/use-bots";
-import { tintOf } from "../tint";
 import { BotMentionChip } from "./bot-mention-chip";
 import { MentionChip } from "@/modules/threads/components/mention-chip";
 import { MentionIcon } from "./mention-icon";
@@ -62,15 +54,15 @@ function kindOf(data: ComposerInputEntity["data"]) {
 
 const renderEntity = (
   { triggerId, id, label, data }: ComposerInputEntity,
-  tint: CSSProperties | undefined,
+  color: string | undefined,
 ) => {
-  if (triggerId === "skill") return <MentionChip type="skill" name={id} tint={tint} />;
+  if (triggerId === "skill") return <MentionChip type="skill" name={id} color={color} />;
 
   if (triggerId !== "bot") return null;
 
-  if (kindOf(data) === "thread") return <ThreadMentionChip id={id} title={label} tint={tint} />;
+  if (kindOf(data) === "thread") return <ThreadMentionChip id={id} title={label} color={color} />;
 
-  return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} tint={tint} />;
+  return <BotMentionChip bot={{ id, name: label, avatar: avatarOf(data) }} color={color} />;
 };
 
 function QuotePreview({
@@ -150,8 +142,7 @@ function Composer({
   color,
 }: Omit<Props, "botId"> & { color?: string }) {
   const composer = useComposer();
-  const tint = tintOf(color);
-  const entity = useCallback((found: ComposerInputEntity) => renderEntity(found, tint), [tint]);
+  const entity = useCallback((found: ComposerInputEntity) => renderEntity(found, color), [color]);
   const attachments = useAttachments();
   const drop = useAttachmentDrop(attachments);
   const [sending, setSending] = useState(false);
