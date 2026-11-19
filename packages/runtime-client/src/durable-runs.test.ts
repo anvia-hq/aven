@@ -458,7 +458,7 @@ describe("DurableRuns goals", () => {
   });
 });
 
-describe("steering a goal (decision 0210)", () => {
+describe("steering a goal (decision 0375)", () => {
   const request = {
     objective: "Make the tests pass",
     acceptanceCriteria: ["the work is done"],

@@ -1,6 +1,6 @@
 # A pinned thread belongs to one person and stays above Today
 
-Status: accepted. Built by decision 0363. It follows decision 0293 (thread recency) and the sidebar's thread list in `apps/platform/src/modules/threads/components/sidebar-threads.tsx`.
+Status: accepted. Built by decision 0386. It follows decision 0293 (thread recency) and the sidebar's thread list in `apps/platform/src/modules/threads/components/sidebar-threads.tsx`.
 
 ## What a person sees
 
@@ -118,7 +118,7 @@ The archive sweep in `apps/control-plane/src/modules/threads/retention.ts` gains
 - `apps/control-plane/src/modules/threads/pins.ts` and its test.
 - `apps/control-plane/src/modules/threads/service.ts`, `router.ts`, `retention.ts`.
 - `apps/platform/src/modules/threads/{types.ts,hooks/use-threads.ts,hooks/use-pin-thread.ts,pinned-threads.ts,components/sidebar-threads.tsx,components/thread-actions-menu.tsx}` and their tests.
-- `docs/decision/0363-a-thread-pin-belongs-to-one-person.md`, and the thread recency bullet in `docs/products/0007-system-reference.md`.
+- `docs/decision/0386-a-thread-pin-belongs-to-one-person.md`, and the thread recency bullet in `docs/products/0007-system-reference.md`.
 
 ## Testing
 

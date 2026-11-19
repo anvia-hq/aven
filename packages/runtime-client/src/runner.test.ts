@@ -1820,7 +1820,7 @@ describe("startRuntime runs", () => {
     expect(ended(plane)[0]).toMatchObject({ outcome: "error", error: "Cancelled by user" });
   });
 
-  test("a message sent while the goal works is taken by its session at the next step (decision 0210)", async () => {
+  test("a message sent while the goal works is taken by its session at the next step (decision 0375)", async () => {
     const { sandbox, up } = slowSandbox();
     up();
     const gate = Promise.withResolvers<void>();
