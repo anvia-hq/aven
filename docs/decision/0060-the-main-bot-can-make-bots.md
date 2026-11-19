@@ -18,3 +18,4 @@ A person has one bot (0058), their main one, and the platform could show others 
 
 - The main bot can be talked into making bots by the person's own words only; text it is shown cannot change that rule, but a model can still be fooled, which is why a bot costs the person nothing but a row until they use it, and why there is a limit.
 - A created bot cannot be removed or renamed by the main bot afterwards; the person changes it in its settings.
+- The main bot makes bots with or without a computer: a new bot has none (0324), and a bot with none answers in the control plane, so `create_bot` is there too (0358). The tool is the person's main bot's alone in both paths.
