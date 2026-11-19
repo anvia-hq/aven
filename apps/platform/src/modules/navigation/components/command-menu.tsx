@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import {
   Command,
@@ -27,6 +27,7 @@ export function CommandMenu() {
   const { threads, shared } = useThreads();
   const { projects } = useProjects();
   const navigate = useNavigate();
+  const [query, setQuery] = useState("");
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -34,6 +35,7 @@ export function CommandMenu() {
 
       if (event.key === "k") {
         event.preventDefault();
+        setQuery("");
         setOpen((value) => !value);
       }
 
@@ -54,12 +56,20 @@ export function CommandMenu() {
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={(next) => {
+        if (next) setQuery("");
+
+        setOpen(next);
+      }}
       title="Search"
       description="Jump to a page, thread or project."
     >
       <Command>
-        <CommandInput placeholder="Search threads, projects and pages…" />
+        <CommandInput
+          placeholder="Search threads, projects and pages…"
+          value={query}
+          onValueChange={setQuery}
+        />
         <CommandList>
           <CommandEmpty>No results.</CommandEmpty>
           <CommandGroup heading="Pages">
