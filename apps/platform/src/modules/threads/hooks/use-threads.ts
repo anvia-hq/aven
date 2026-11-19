@@ -64,6 +64,16 @@ export function useThreads() {
     [setThreads],
   );
 
+  const setPinned = useCallback(
+    (threadId: string, pinnedAt: string | null) =>
+      setThreads(
+        (current) =>
+          current?.map((thread) => (thread.id === threadId ? { ...thread, pinnedAt } : thread)) ??
+          current,
+      ),
+    [setThreads],
+  );
+
   const all = threads ?? [];
   return {
     threads: all.filter((thread) => thread.createdBy === me),
@@ -74,6 +84,7 @@ export function useThreads() {
     setRunning,
     setTitle,
     setMarkColor,
+    setPinned,
     add,
   };
 }

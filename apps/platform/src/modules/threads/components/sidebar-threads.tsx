@@ -13,12 +13,14 @@ import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { nestForks } from "../fork-nesting";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
+import { usePinThread } from "../hooks/use-pin-thread";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useRestoreThread } from "../hooks/use-restore-thread";
 import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
+import { splitPinned, withoutPinned } from "../pinned-threads";
 import { recencyGroups } from "../recency-groups";
 import { crowdOf } from "../thread-crowd";
 import { statusOfPair, threadStatus } from "../thread-status";
@@ -162,12 +164,14 @@ export function SidebarThreads() {
   const archive = useArchiveThread();
   const restore = useRestoreThread();
   const rename = useRenameThread();
+  const pin = usePinThread();
   useFinishedSound();
   const unread = useUnreadThreads();
   const mentioned = useMentionedThreads();
   const { pairs, partnerOf } = useSplitPairs();
   const [editing, setEditing] = useState<string | null>(null);
-  const groups = recencyGroups(threads);
+  const { pinned, pinnedIds } = splitPinned(threads);
+  const groups = withoutPinned(recencyGroups(threads), pinnedIds);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   const anyRunning = [...own, ...others].some((thread) => thread.running);
@@ -229,6 +233,8 @@ export function SidebarThreads() {
         </SidebarMenuButton>
         <ThreadActionsMenu
           title={thread.title}
+          pinned={thread.pinnedAt !== null}
+          onTogglePin={archived ? undefined : () => void pin(thread)}
           onArchive={archived ? undefined : () => void archive(thread)}
           onRestore={archived ? () => void restore(thread) : undefined}
         />
@@ -307,6 +313,11 @@ export function SidebarThreads() {
   return (
     <>
       <div className="px-2 pt-4 group-data-[collapsible=icon]:hidden">
+        {pinned.length > 0 && (
+          <SidebarSection id="pinned" label="Pinned">
+            <SidebarMenu>{rows(pinned)}</SidebarMenu>
+          </SidebarSection>
+        )}
         {groups.map((group) => (
           <SidebarSection key={group.id} id={group.id} label={group.label}>
             <SidebarMenu>{rows(group.threads)}</SidebarMenu>
