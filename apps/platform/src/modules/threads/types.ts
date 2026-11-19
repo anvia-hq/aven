@@ -80,6 +80,7 @@ export type Thread = {
   pullRequests: ThreadPullRequest[];
   createdAt: string;
   updatedAt: string;
+  pinnedAt: string | null;
 };
 
 export type Crowd = { shown: ThreadPerson[]; more: number; names: string[] };
