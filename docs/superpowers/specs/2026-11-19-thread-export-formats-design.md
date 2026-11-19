@@ -119,7 +119,7 @@ Text, reasoning, tool calls as `name target (status)`, attachments as
 
 ## Docs
 
-New decision `docs/decision/0361-…` for the four formats and the print-view PDF;
+New decision `docs/decision/0364-…` for the four formats and the print-view PDF;
 the threads section of `docs/products/0007-system-reference.md` gains the format
 list. Decision 0350 stays as history.
 
