@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { registerUser, revealToast, threadOnFakeRunner } from "./helpers";
 
 const GITHUB_URL = `http://localhost:${process.env.E2E_GITHUB_PORT ?? 8101}`;
 
@@ -61,6 +61,7 @@ test.describe("shipping a thread", () => {
     });
     await shipButton(page).click();
 
+    await revealToast(page, "The agent is working on it in this thread");
     await expect(page.getByText("The agent is working on it in this thread")).toBeVisible();
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
     const prompt = String(events.find((event) => event.type === "started")?.prompt);
@@ -102,6 +103,7 @@ test.describe("shipping a thread", () => {
       held.resolve();
     }
     await expect.poll(() => page.getByText("Ship this thread").count()).toBe(1);
+    await revealToast(page, "The agent is working on it in this thread");
     await expect(page.getByText("The agent is working on it in this thread")).toBeVisible();
   });
 

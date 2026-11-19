@@ -7,6 +7,7 @@ import {
   connectGithub,
   importRepository,
   registerUser,
+  revealToast,
   threadOnFakeRunner,
 } from "./helpers";
 
@@ -141,6 +142,7 @@ test.describe("threads", () => {
     await startThread(page, "Explain the project layout");
 
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+    await revealToast(page, "The runtime for this project is offline");
     await expect(page.getByText("The runtime for this project is offline")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Explain the project layout" })).toBeVisible();
     await expect(
@@ -637,6 +639,7 @@ test.describe("a message sent to an idle agent", () => {
     await prompt.fill("please build it");
     await page.getByRole("button", { name: "Send" }).click();
 
+    await revealToast(page, "Not like that");
     await expect(page.getByText("Not like that").first()).toBeVisible();
     await expect(page.locator('[data-role="user"]')).toHaveCount(0);
     await expect(prompt).toHaveText("please build it");

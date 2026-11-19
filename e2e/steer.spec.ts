@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 
 import { expect, test, type Page } from "@playwright/test";
 
-import { addSubscription, registerUser, threadOnFakeRunner } from "./helpers";
+import { addSubscription, registerUser, revealToast, threadOnFakeRunner } from "./helpers";
 
 test.describe("steering a running agent", () => {
   let runner: ChildProcess | undefined;
@@ -97,6 +97,7 @@ test.describe("steering a running agent", () => {
     await expect(page.locator("[data-queued]")).toHaveCount(1, { timeout: 4000 });
     await expect(page.locator("[data-queued]")).toContainText("first");
     await expect(prompt).toHaveText("second");
+    await revealToast(page, "No thanks");
     await expect(page.getByText("No thanks").first()).toBeVisible();
   });
 
@@ -106,6 +107,7 @@ test.describe("steering a running agent", () => {
     await page.keyboard.type("hello?");
     await page.keyboard.press("Enter");
 
+    await revealToast(page, "The agent is working on a goal");
     await expect(page.getByText("The agent is working on a goal").first()).toBeVisible();
     await expect(page.locator("[data-queued]")).toHaveCount(0);
   });

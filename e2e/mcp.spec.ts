@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { registerUser, revealToast } from "./helpers";
 
 test.describe("MCP servers", () => {
   test("a server is added with a secret header, edited, switched off and removed", async ({
@@ -61,6 +61,7 @@ test.describe("MCP servers", () => {
     await expect(page.getByText("MCP server added")).toBeVisible();
     await expect(page.getByRole("button", { name: "Add server" })).toHaveCount(1);
     await add("docs-site");
+    await revealToast(page, "You already have an MCP server with that name");
     await expect(page.getByText("You already have an MCP server with that name")).toBeVisible();
   });
 });
