@@ -107,6 +107,8 @@ run("a thread's access (real postgres)", async () => {
     ["POST", `/threads/${id}/compact`],
     ["POST", `/threads/${id}/answer`, { answers: [{ questionId: "q", value: "a" }] }],
     ["POST", `/threads/${id}/cancel`],
+    ["PUT", `/threads/${id}/pin`],
+    ["DELETE", `/threads/${id}/pin`],
     ["GET", `/threads/${id}/ship`],
     ["POST", `/threads/${id}/ship`],
     ["GET", `/threads/${id}/processes`],
