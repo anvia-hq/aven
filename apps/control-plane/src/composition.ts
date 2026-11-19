@@ -5,6 +5,7 @@ import { botMemoryStore, memoryStore } from "./memory-store";
 import { createGoalDriver } from "./modules/goals/driver";
 import { goalsService } from "./modules/goals/service";
 import { createBotChats } from "./modules/bots/chats";
+import { registeredComputerOf } from "./modules/bots/default-runtime";
 import { RemoteBotReplier } from "./modules/bots/remote-replier";
 import { BotRunner } from "./modules/bots/runner";
 import { botsService } from "./modules/bots/service";
@@ -230,8 +231,12 @@ export const botApi = createBotApi({
 
 export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
+export const botDefaultRuntime = (userId: string) =>
+  registeredComputerOf(userId, (runtimeId) => runtimeHub.isOnline(runtimeId));
+
 export const botRunner = new BotRunner({
   store: botMemoryStore,
+  defaultRuntime: botDefaultRuntime,
   replier: new RemoteBotReplier(
     runtimeHub,
     runGateway,

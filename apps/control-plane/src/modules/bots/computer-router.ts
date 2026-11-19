@@ -7,8 +7,12 @@ import type { RuntimeHub } from "../runtimes/hub";
 import { botRunnerFor, requireOwnBot } from "./computer";
 import { botArtifactParams, botParams } from "./schema";
 
-export const botComputerRouter = (hub: RuntimeHub, runtimeId: string) => {
-  const runner = botRunnerFor(hub, runtimeId);
+export const botComputerRouter = (
+  hub: RuntimeHub,
+  runtimeId: string,
+  defaultRuntime: (userId: string) => Promise<string | null>,
+) => {
+  const runner = botRunnerFor(hub, runtimeId, defaultRuntime);
   const computer = createComputerService(runner);
   const artifacts = createArtifactsService(runner);
 

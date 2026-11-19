@@ -61,15 +61,18 @@ export class BotRunner {
   #settled?: BotSettled;
   #said?: BotSaid;
   #shutdown = new AbortController();
+  #defaultRuntime?: (userId: string) => Promise<string | null>;
 
   constructor(deps: {
     store: MemoryStore;
     replier: BotReplier;
+    defaultRuntime?: (userId: string) => Promise<string | null>;
     settled?: BotSettled;
     said?: BotSaid;
   }) {
     this.#store = deps.store;
     this.#replier = deps.replier;
+    this.#defaultRuntime = deps.defaultRuntime;
     this.#settled = deps.settled;
     this.#said = deps.said;
   }
@@ -133,8 +136,16 @@ export class BotRunner {
     if (channel) this.#say(channel, role, text, { peer });
   }
 
+  async #placed(userId: string, bot: Bot): Promise<Bot> {
+    if (!bot.hasComputer || bot.runtimeId || !this.#defaultRuntime) return bot;
+
+    const runtimeId = await this.#defaultRuntime(userId);
+    return runtimeId ? { ...bot, runtimeId } : bot;
+  }
+
   async #enqueue(input: ReplyRequest & { body: string; shown: Shown | null }) {
-    const { shown, body, ...reply } = input;
+    const { shown, body, ...placed } = input;
+    const reply = { ...placed, bot: await this.#placed(placed.userId, placed.bot) };
     this.#replier.ready(reply.choice, reply.bot);
     const channel = await this.#open(reply.bot.id, reply.userId);
 
