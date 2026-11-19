@@ -1,5 +1,6 @@
-import { IconMessageDots } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
+
+import { ThreadMentionMark } from "./thread-mention-mark";
 
 type Props = { id: string; title: string; link?: boolean };
 
@@ -9,7 +10,7 @@ const CHIP =
 export function ThreadMentionChip({ id, title, link = false }: Props) {
   const content = (
     <>
-      <IconMessageDots className="size-3.5 shrink-0" aria-hidden />
+      <ThreadMentionMark id={id} className="size-3.5 shrink-0" />
       <span className="truncate">{title}</span>
     </>
   );
