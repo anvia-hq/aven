@@ -16,7 +16,7 @@ A skill is a folder with a `SKILL.md` (YAML frontmatter with `name` and `descrip
 - **In the sandbox, skills are files, read with `exec_command` (`cat`).** (`read_file` is confined to `/workspace` and cannot reach `/skills`; an early version of the instructions said to use it, and agents fell back to `cat` after an error.) Before a run, the runner fills `<AVEN_RUNTIME_HOME>/skills/threads/<thread id>/` with the run's skills, and every container of the thread mounts it read-only at `/skills`. Repository skills are read where they are, in `/workspace/.aven/skills`. The agent is not given Anvia's skill tools: its instructions list each skill's name, description and `SKILL.md` path, and say to read one with `read_file` when it fits the task and to run its scripts with `exec_command`.
 - **A repository skill is read only inside the workspace**: a SKILL.md whose real path is outside it (a symlink) is left out, as the Files panel confines reads (0031).
 - **A skill that does not validate is left out** of the run, with a warning in the runner's log, instead of failing it. This matters for repository skills, which nobody checked before the run.
-- **The run's record keeps its skill list** (`RunRecord.skillListing`), so a run taken up after a restart has the same instructions. `AGENT_VERSION` is 2.
+- **The run's record keeps its skill list** (`RunRecord.skillListing`), so a run taken up after a restart has the same instructions. The registration version is derived from the agent, which keeps skills in its instructions (0365).
 
 ## Consequences
 

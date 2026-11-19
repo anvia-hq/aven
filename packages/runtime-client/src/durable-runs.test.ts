@@ -193,6 +193,48 @@ describe("DurableRuns after the process restarts", () => {
     expect(await after.asked("thread-1")).toBeUndefined();
   });
 
+  test("a run whose agent's declared configuration changed is refused, not replayed", async () => {
+    const path = journalPath();
+    const before = await opened(path);
+    const asked = await before.start(
+      "run-1",
+      "thread-1",
+      "paint it",
+      input("run-1", question),
+      () => {},
+    );
+    const end = await asked.done;
+    expect(end.type).toBe("interaction");
+
+    if (end.type !== "interaction") return;
+
+    const { interaction } = end.continuation as {
+      interaction: { id: string; toolCallId: string };
+    };
+    await closed(before);
+
+    const after = await opened(path);
+    const parked = await after.asked("thread-1");
+    const answered = await after.answer(
+      parked!,
+      interaction,
+      { type: "tool-question", answers: [{ questionId: "color", value: "red" }] },
+      () => ({
+        agent: new Agent({
+          id: "run-1",
+          instructions: "something else",
+          tools: [createQuestionTool()],
+          model: scriptedModel([[text("never")]]),
+        }),
+      }),
+      () => {},
+    );
+    const done = await answered.done;
+
+    expect(done).toMatchObject({ type: "error" });
+    expect(done.type === "error" ? done.error : "").toContain("declared configuration");
+  });
+
   test("a run that was working is ended, so its thread can start another", async () => {
     const path = journalPath();
     const before = await opened(path);
