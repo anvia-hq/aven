@@ -28,6 +28,13 @@ export function CommandMenu() {
   const { projects } = useProjects();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+
+  if (wasOpen !== open) {
+    setWasOpen(open);
+
+    if (open) setQuery("");
+  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -35,7 +42,6 @@ export function CommandMenu() {
 
       if (event.key === "k") {
         event.preventDefault();
-        setQuery("");
         setOpen((value) => !value);
       }
 
@@ -56,11 +62,7 @@ export function CommandMenu() {
   return (
     <CommandDialog
       open={open}
-      onOpenChange={(next) => {
-        if (next) setQuery("");
-
-        setOpen(next);
-      }}
+      onOpenChange={setOpen}
       title="Search"
       description="Jump to a page, thread or project."
     >
