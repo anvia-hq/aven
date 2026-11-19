@@ -1,6 +1,6 @@
 # The ship bar does not hold an invisible place
 
-Status: accepted.
+Status: accepted. Superseded in part by 0286 (the placeholders no longer pulse).
 
 ## Context
 

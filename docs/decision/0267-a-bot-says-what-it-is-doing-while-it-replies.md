@@ -1,4 +1,4 @@
-# 0267. A bot says what it is doing while it replies
+# A bot says what it is doing while it replies
 
 Status: accepted. Adds to 0059 and to the Bots chat of 0058. Changes the runtime wire (version 58).
 

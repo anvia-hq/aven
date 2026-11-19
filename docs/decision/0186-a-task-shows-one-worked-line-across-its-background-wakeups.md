@@ -1,4 +1,4 @@
-# 0186: A task shows one Worked line across its background wake-ups
+# A task shows one Worked line across its background wake-ups
 
 Status: accepted. Refines decisions 0176 and 0182 where they hide the process note.
 

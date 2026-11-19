@@ -1,4 +1,4 @@
-# 0367. The context card shows how the context is spent
+# The context card shows how the context is spent
 
 Status: accepted.
 

@@ -1,6 +1,6 @@
 # The machines popover lists runners only and is a card of gauges
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0160: An archived thread's workspace is removed after a day
+# An archived thread's workspace is removed after a day
 
 Status: accepted. Refines decision 0118 (archiving frees the sandbox and keeps the files).
 

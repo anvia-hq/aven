@@ -1,4 +1,4 @@
-# 0273: A pull in a thread fetches GitHub through the folder
+# A pull in a thread fetches GitHub through the folder
 
 Status: accepted. Refines 0218 (a runner serves folders) and 0231 (a ship reaches GitHub from the folder).
 

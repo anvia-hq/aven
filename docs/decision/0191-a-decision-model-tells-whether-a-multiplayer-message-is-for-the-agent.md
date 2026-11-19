@@ -1,4 +1,4 @@
-# 0191: A decision model tells whether a multiplayer message is for the agent
+# A decision model tells whether a multiplayer message is for the agent
 
 Status: accepted. Builds on 0179 (teammates drive a thread while multiplayer is on).
 

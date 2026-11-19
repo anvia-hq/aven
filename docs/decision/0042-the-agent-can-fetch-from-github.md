@@ -1,6 +1,6 @@
 # The agent can fetch from GitHub, through the runner
 
-Status: accepted; the agent's use of it narrows to a person who has not connected GitHub once 0044 signs `gh` and `git` in. Builds on 0013 (the clone's read-only token), 0040 and 0041 (no GitHub credential in a sandbox).
+Status: accepted. Superseded in part by 0044: the agent's own fetch, once `gh` and `git` are signed in. It is left for a person who has not connected GitHub. Builds on 0013 (the clone's read-only token), 0040 and 0041 (no GitHub credential in a sandbox).
 
 ## Context
 

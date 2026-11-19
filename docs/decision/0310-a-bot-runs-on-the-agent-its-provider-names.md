@@ -1,6 +1,6 @@
-# 0310. A bot runs on the agent its provider names
+# A bot runs on the agent its provider names
 
-Status: accepted. Adds to 0309 (a subscription is a provider), 0242 and 0298 (the Claude and Codex
+Status: accepted. Adds to 0309 (a subscription is a provider), 0242 and 0379 (the Claude and Codex
 backends) and 0220 (agent backends).
 
 ## Context

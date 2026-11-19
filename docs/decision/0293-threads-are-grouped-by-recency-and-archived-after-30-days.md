@@ -1,4 +1,4 @@
-# 0293. Threads are grouped by recency and archived after 30 days
+# Threads are grouped by recency and archived after 30 days
 
 Status: accepted. Supersedes 0212 (thread folders is removed) and the pulsing and folder parts of the sidebar before it.
 

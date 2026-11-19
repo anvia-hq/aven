@@ -1,4 +1,4 @@
-# 0136: The agent shows images and videos, several at once, as a grid
+# The agent shows images and videos, several at once, as a grid
 
 Status: accepted. Carries on from 0033 (the agent shows images), which it replaces where they differ.
 

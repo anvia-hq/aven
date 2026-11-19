@@ -1,4 +1,4 @@
-# 0372. The Aven neutrals lean slightly cool
+# The Aven neutrals lean slightly cool
 
 Status: accepted. Amends [0366](0366-the-aven-theme-is-neutral-gray.md).
 

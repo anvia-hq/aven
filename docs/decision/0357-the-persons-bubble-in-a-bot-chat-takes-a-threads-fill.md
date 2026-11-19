@@ -1,4 +1,4 @@
-# 0357. The person's bubble in a bot chat takes a thread's fill
+# The person's bubble in a bot chat takes a thread's fill
 
 Status: accepted. Adds to 0351 (the person's bubble in a bot chat is as round as the bot's).
 

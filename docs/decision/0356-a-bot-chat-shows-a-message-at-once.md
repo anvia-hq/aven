@@ -1,4 +1,4 @@
-# 0356. A bot chat shows your message at once, and a new one rises into place
+# A bot chat shows your message at once, and a new one rises into place
 
 Status: accepted. Builds on 0117 (a thread shows the message at once) and 0333 (messages rise into place and the view glides to your own message); it covers the case 0117 left out.
 

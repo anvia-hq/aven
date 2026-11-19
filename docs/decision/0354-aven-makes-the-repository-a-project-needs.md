@@ -1,8 +1,6 @@
-# 0353: Aven makes the repository a project needs
+# Aven makes the repository a project needs
 
-Date: 2026-11-18
-
-Status: accepted. Supersedes the "There is no New project" clause of 0013, and extends 0299 (a repository is a project any computer can run) and 0252 (Add project's Folder and Clone tabs ask a computer).
+Status: accepted. Supersedes the "There is no New project" clause of 0013, and extends 0299 (a repository is a project any computer can run) and 0252 (Add project's Folder and Clone tabs ask a computer). Decided 2026-11-18.
 
 ## Context
 

@@ -1,6 +1,6 @@
-# 0294: CI and Hammer run on Blacksmith runners
+# CI and Hammer run on Blacksmith runners
 
-Date: 2026-11-15
+Status: superseded by 0295 (CI and Hammer are back on GitHub-hosted runners). Decided 2026-11-15.
 
 ## Decision
 

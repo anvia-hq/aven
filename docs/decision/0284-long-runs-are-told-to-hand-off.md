@@ -1,6 +1,6 @@
 # A long run is told at turn 100 to hand off to a goal
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0280: The Claude backend is its own package
+# The Claude backend is its own package
 
 Status: accepted.
 

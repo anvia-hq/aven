@@ -1,4 +1,4 @@
-# 0292. Aven is the default theme
+# Aven is the default theme
 
 Status: accepted. Builds on 0155.
 

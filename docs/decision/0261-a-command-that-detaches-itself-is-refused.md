@@ -1,4 +1,6 @@
-# 0261. A command that detaches itself is refused
+# A command that detaches itself is refused
+
+Status: accepted.
 
 An agent that wanted a server to outlive its turn wrapped it in `setsid nohup … &`. The process ran where Aven could not see it: it was not under Background tasks, nobody was told when it ended, and the agent and the user could not tell it from a command that had never started.
 

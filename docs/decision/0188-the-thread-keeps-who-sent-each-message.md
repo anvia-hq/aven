@@ -1,4 +1,4 @@
-# 0188: The thread keeps who sent each message
+# The thread keeps who sent each message
 
 Status: accepted. Refines decisions 0179 and 0187.
 

@@ -1,4 +1,4 @@
-# 0363. The runtimes list shows one number and a thin ring per metric
+# The runtimes list shows one number and a thin ring per metric
 
 Status: accepted. Supersedes 0290 (a card of four load tiles, each with a sparkline and the move since the previous report).
 

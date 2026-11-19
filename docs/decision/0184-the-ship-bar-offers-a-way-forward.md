@@ -1,4 +1,4 @@
-# 0184: The ship bar always offers a way forward
+# The ship bar always offers a way forward
 
 Status: accepted. Supersedes the silent hiding of decision 0129, refines 0069's menu and keeps
 0161's bar (Ship and the changes badge at the left, Actions at the right). Decision 0349

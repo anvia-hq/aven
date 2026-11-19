@@ -1,6 +1,6 @@
-# 0298. A native macOS app mirrors the web control plane
+# A native macOS app mirrors the web control plane
 
-Date: 2026-11-14
+Status: accepted. Decided 2026-11-14.
 
 Renumbered from 0297 after 0297 landed on main for the boat.dev runtime.
 

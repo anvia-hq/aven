@@ -1,4 +1,4 @@
-# 0148: The control plane can update to the newest release
+# The control plane can update to the newest release
 
 Status: accepted. Builds on decision 0146 (the runner Update button).
 

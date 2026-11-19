@@ -1,8 +1,6 @@
-# 0316: Husky runs the fast CI checks before a commit
+# Husky runs the fast CI checks before a commit
 
-Date: 2026-11-16
-
-Status: accepted.
+Status: accepted. Decided 2026-11-16.
 
 ## Decision
 

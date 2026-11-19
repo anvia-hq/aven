@@ -1,6 +1,6 @@
 # Messages rise into place and the view glides to your own message
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

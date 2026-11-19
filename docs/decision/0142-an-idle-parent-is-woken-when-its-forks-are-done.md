@@ -1,4 +1,4 @@
-# 0142: An idle parent is woken when its forks are done
+# An idle parent is woken when its forks are done
 
 Status: accepted. Changes one rule of decision 0135.
 

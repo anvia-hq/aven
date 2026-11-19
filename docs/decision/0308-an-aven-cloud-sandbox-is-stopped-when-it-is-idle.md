@@ -1,4 +1,4 @@
-# 0308. An Aven Cloud sandbox is stopped when it is idle
+# An Aven Cloud sandbox is stopped when it is idle
 
 Status: accepted. Partly supersedes 0299 (a sandbox waited for boat's two-hour auto-stop) and
 changes how 0297 and 0306's providers are stopped.

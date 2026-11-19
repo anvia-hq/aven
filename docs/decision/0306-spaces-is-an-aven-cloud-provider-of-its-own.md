@@ -1,4 +1,4 @@
-# 0306. Spaces is an Aven Cloud provider of its own
+# Spaces is an Aven Cloud provider of its own
 
 Status: accepted. Adds to 0299, which made Aven Cloud a list of providers.
 

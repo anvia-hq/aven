@@ -1,4 +1,4 @@
-# 0291. Center is removed
+# Center is removed
 
 Status: accepted. Supersedes 0131 and 0132.
 

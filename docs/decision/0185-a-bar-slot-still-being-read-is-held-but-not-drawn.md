@@ -1,4 +1,4 @@
-# 0185: A ship bar slot that is still being read is held, not drawn
+# A ship bar slot that is still being read is held, not drawn
 
 Status: accepted. Refines decision 0184.
 

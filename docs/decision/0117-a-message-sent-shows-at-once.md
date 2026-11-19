@@ -1,6 +1,6 @@
 # A message sent shows at once
 
-Status: accepted.
+Status: accepted. Superseded in part by 0287: the dimming.
 
 ## Context
 

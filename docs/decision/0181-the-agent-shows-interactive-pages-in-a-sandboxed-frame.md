@@ -1,4 +1,4 @@
-# 0181: The agent shows interactive pages in a sandboxed frame
+# The agent shows interactive pages in a sandboxed frame
 
 Status: accepted. Carries on from 0136 (the agent shows images and videos), which it extends.
 

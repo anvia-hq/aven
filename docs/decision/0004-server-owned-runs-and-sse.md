@@ -1,6 +1,6 @@
 # Server-owned runs and the SSE protocol
 
-Status: accepted; what it says about background jobs and restarting a run is superseded by 0012.
+Status: accepted. Superseded in part by 0012: background jobs and restarting a run.
 
 ## Context
 

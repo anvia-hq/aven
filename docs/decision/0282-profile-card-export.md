@@ -1,6 +1,6 @@
 # Profile card export
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

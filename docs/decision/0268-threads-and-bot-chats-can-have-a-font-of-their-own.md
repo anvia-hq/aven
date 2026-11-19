@@ -1,4 +1,4 @@
-# 0268: Threads and bot chats can have a font of their own
+# Threads and bot chats can have a font of their own
 
 Status: superseded by 0270 (the request was for text size, not typeface). Builds on 0157 (the interface font).
 
@@ -12,4 +12,4 @@ Status: superseded by 0270 (the request was for text size, not typeface). Builds
 ## Consequences
 
 - A new font is still one entry in `SANS_FONTS`; all three dropdowns pick it up.
-- A color theme's heading face still wins over the chosen font for headings (0257).
+- A color theme's heading face still wins over the chosen font for headings (0377).

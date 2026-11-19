@@ -1,8 +1,6 @@
-# 0315: Aven is licensed under Apache 2.0
+# Aven is licensed under Apache 2.0
 
-Date: 2026-11-16
-
-Status: accepted. Supersedes 0167 (the MIT license).
+Status: accepted. Supersedes 0167 (the MIT license). Decided 2026-11-16.
 
 ## Decision
 

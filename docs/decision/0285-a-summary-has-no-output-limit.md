@@ -1,4 +1,6 @@
-# 0285. A summary has no output limit
+# A summary has no output limit
+
+Status: accepted.
 
 Compacting a native thread on a reasoning model could end with "Memory compaction model returned an empty summary." `@anvia/core`'s summary compactor always sends `maxTokens`, 1,024 when none is given, so a model that spends its output budget on reasoning returned no text.
 

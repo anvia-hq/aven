@@ -1,4 +1,4 @@
-# 0190: Open a PR asks GitHub about the branch
+# Open a PR asks GitHub about the branch
 
 Status: accepted. Refines decision 0184.
 

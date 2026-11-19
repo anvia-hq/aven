@@ -1,4 +1,4 @@
-# 0270: Text size is chosen for the interface, for threads and for bot chats
+# Text size is chosen for the interface, for threads and for bot chats
 
 Status: accepted. Supersedes 0268 (a font of their own for threads and bot chats): the request was for the size of the text, not its typeface.
 

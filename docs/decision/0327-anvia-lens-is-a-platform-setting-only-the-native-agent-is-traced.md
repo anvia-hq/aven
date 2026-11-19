@@ -1,7 +1,6 @@
-# 0327 — Anvia Lens is a platform setting, and only the native agent is traced
+# — Anvia Lens is a platform setting, and only the native agent is traced
 
-- **Status:** accepted
-- **Date:** 2026-11-17
+Status: accepted. Decided 2026-11-17.
 
 ## Context
 
@@ -16,7 +15,7 @@ without a restart and not sit in `.env`. That is the same shape of value as the 
 server (0311) and the server's default models (0243), both of which are rows in `platform_settings`
 with the secret encrypted and a section in the settings that edits them.
 
-Aven runs three agent backends (`native`, `claude`, `codex`, decision 0298). Only `native` is built on
+Aven runs three agent backends (`native`, `claude`, `codex`, decision 0379). Only `native` is built on
 `@anvia/core` and takes an `AgentObserver`; the other two are the Claude Agent SDK and the Codex SDK,
 which report nothing to Lens.
 

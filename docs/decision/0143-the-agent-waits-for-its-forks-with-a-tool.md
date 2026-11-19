@@ -1,4 +1,4 @@
-# 0143: The agent waits for its forks with a tool
+# The agent waits for its forks with a tool
 
 Status: accepted. Builds on decisions 0135, 0137 and 0142.
 

@@ -1,8 +1,6 @@
-# 0317: The subscriptions lead the Providers page as cards
+# The subscriptions lead the Providers page as cards
 
-Date: 2026-11-16
-
-Status: accepted. Follows 0309, which made a subscription a provider row like any other.
+Status: accepted. Follows 0309, which made a subscription a provider row like any other. Decided 2026-11-16.
 
 ## Decision
 

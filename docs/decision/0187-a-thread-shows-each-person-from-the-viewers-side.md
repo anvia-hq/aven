@@ -1,4 +1,4 @@
-# 0187: A thread shows each person's words from the viewer's side
+# A thread shows each person's words from the viewer's side
 
 Status: accepted. Refines decision 0179.
 

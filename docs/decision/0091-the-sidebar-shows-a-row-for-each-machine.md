@@ -1,6 +1,6 @@
 # The sidebar shows a row for each machine, with how loaded it is
 
-Status: accepted. Extends 0008 (runtimes) and 0073 (install and update). How the rows are drawn is superseded by 0103, which gives each row a card of its own; the reporting, the numbers and the rest of the row are unchanged.
+Status: accepted. Extends 0008 (runtimes) and 0073 (install and update). Superseded in part by 0103, which gives each row a card of its own: how the rows are drawn. The reporting, the numbers and the rest of the row are unchanged.
 
 ## Context
 

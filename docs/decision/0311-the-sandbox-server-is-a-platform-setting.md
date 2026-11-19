@@ -1,7 +1,6 @@
-# 0311 — The Aven Cloud sandbox server is a platform setting
+# — The Aven Cloud sandbox server is a platform setting
 
-- **Status:** accepted
-- **Date:** 2026-11-16
+Status: accepted. Decided 2026-11-16.
 
 ## Context
 

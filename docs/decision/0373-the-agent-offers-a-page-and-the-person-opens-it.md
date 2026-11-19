@@ -1,4 +1,4 @@
-# 0373. The agent offers a page and the person opens it
+# The agent offers a page and the person opens it
 
 Status: accepted. Amends [0237](0237-a-runners-ports-are-served-on-aven-run-subdomains.md).
 

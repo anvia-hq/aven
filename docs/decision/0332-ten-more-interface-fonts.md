@@ -1,4 +1,4 @@
-# 0332: Ten more interface fonts
+# Ten more interface fonts
 
 Status: accepted. Builds on 0157.
 

@@ -1,4 +1,4 @@
-# 0200: A pasted .env becomes rows to edit
+# A pasted .env becomes rows to edit
 
 Status: accepted. Builds on 0045 (project variables and secrets) and 0046 (their scopes).
 

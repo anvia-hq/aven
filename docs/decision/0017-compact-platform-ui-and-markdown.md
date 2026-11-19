@@ -1,6 +1,6 @@
 # Compact platform UI and Markdown for agent text
 
-Status: accepted
+Status: accepted.
 
 ## Decision
 

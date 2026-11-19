@@ -1,8 +1,6 @@
-# 0312: Hammer reviews every pull request but the one from staging to main
+# Hammer reviews every pull request but the one from staging to main
 
-Date: 2026-11-16
-
-Status: superseded by 0314 (there is no `staging` branch, so Hammer reviews every pull request).
+Status: superseded by 0314 (there is no `staging` branch, so Hammer reviews every pull request). Decided 2026-11-16.
 
 ## Decision
 

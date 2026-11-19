@@ -1,6 +1,6 @@
 # The platform owner publishes announcements
 
-Status: accepted
+Status: accepted.
 
 ## Context
 
