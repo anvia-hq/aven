@@ -1,13 +1,14 @@
 import { Link } from "@tanstack/react-router";
+import type { CSSProperties } from "react";
 
 import { ThreadMentionMark } from "./thread-mention-mark";
 
-type Props = { id: string; title: string; link?: boolean };
+type Props = { id: string; title: string; link?: boolean; tint?: CSSProperties };
 
 const CHIP =
   "inline-flex h-fit max-w-64 items-center gap-1 rounded-full bg-muted py-0.5 pr-2 pl-1.5 align-middle leading-none font-medium text-[0.9em] text-foreground";
 
-export function ThreadMentionChip({ id, title, link = false }: Props) {
+export function ThreadMentionChip({ id, title, link = false, tint }: Props) {
   const content = (
     <>
       <ThreadMentionMark id={id} className="size-3.5 shrink-0" />
@@ -17,7 +18,7 @@ export function ThreadMentionChip({ id, title, link = false }: Props) {
 
   if (!link) {
     return (
-      <span className={CHIP} title={`Thread: ${title}`} data-mention="thread">
+      <span className={CHIP} style={tint} title={`Thread: ${title}`} data-mention="thread">
         {content}
       </span>
     );
