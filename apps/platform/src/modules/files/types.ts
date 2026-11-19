@@ -20,3 +20,10 @@ export type ExplorerState = {
 };
 
 export type HighlightedLine = ThemedToken[];
+
+export type FileIconTheme = {
+  fileNames: Record<string, string>;
+  fileExtensions: Record<string, string>;
+  iconDefinitions: Record<string, { iconPath: string }>;
+  file: string;
+};
