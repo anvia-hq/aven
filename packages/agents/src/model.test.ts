@@ -3,23 +3,9 @@ import { Agent, defineCompletionModelControls } from "@anvia/core";
 import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
-import { azureApiFor, createModel, providerOptionsFor, reasoningControlsFor } from "./model";
+import { azureApiFor, createModel, reasoningControlsFor } from "./model";
 import type { ModelConfig } from "./types";
 import { MODEL_APIS } from "@aven/protocol/runtime-wire";
-
-describe("providerOptionsFor", () => {
-  test("only anthropic gets automatic prompt caching", () => {
-    expect(providerOptionsFor("anthropic")).toEqual({
-      cache_control: { type: "ephemeral", ttl: "1h" },
-    });
-    expect(providerOptionsFor("openai")).toBeUndefined();
-    expect(providerOptionsFor("openai-compatible")).toBeUndefined();
-    expect(providerOptionsFor("azure")).toBeUndefined();
-    expect(providerOptionsFor("gemini")).toBeUndefined();
-    expect(providerOptionsFor("bedrock")).toBeUndefined();
-    expect(providerOptionsFor("vertex")).toBeUndefined();
-  });
-});
 
 describe("createModel bedrock", () => {
   const bedrock = {
@@ -239,19 +225,23 @@ describe("anthropic request", () => {
   });
   afterAll(() => server.stop(true));
 
-  test("the SDK sends a top-level cache_control", async () => {
-    const model = new AnthropicClient({
+  test("the model places the prompt cache breakpoints itself", async () => {
+    const { agent } = createCodingAgent({
+      provider: "anthropic",
+      modelId: "claude-sonnet-5",
       apiKey: "k",
       baseUrl: `http://localhost:${server.port}`,
-    }).completionModel({ modelId: "claude-sonnet-5" });
-    const agent = new Agent({
-      id: "t",
-      model,
-      instructions: "be brief",
-      providerOptions: providerOptionsFor("anthropic"),
+      tools: [],
     });
     await agent.generate({ prompt: "hello" }).catch(() => undefined);
-    expect(bodies[0]?.cache_control).toEqual({ type: "ephemeral", ttl: "1h" });
+    const body = bodies.at(-1)!;
+    const cache = { type: "ephemeral", ttl: "1h" };
+    const system = body.system as { cache_control?: unknown }[];
+    const messages = body.messages as { content: { cache_control?: unknown }[] }[];
+
+    expect(body.cache_control).toBeUndefined();
+    expect(system.at(-1)?.cache_control).toEqual(cache);
+    expect(messages.at(-1)?.content.at(-1)?.cache_control).toEqual(cache);
   });
 
   test("an effort on a model the SDK does not know is sent as output_config.effort", async () => {
