@@ -40,6 +40,15 @@ export function FileTabs({ open, active, onSelect, onClose }: Props) {
           <div
             key={path}
             data-path={path}
+            onMouseDown={(event) => {
+              if (event.button === 1) event.preventDefault();
+            }}
+            onAuxClick={(event) => {
+              if (event.button !== 1) return;
+
+              event.preventDefault();
+              onClose(path);
+            }}
             className={cn(
               "group relative flex max-w-56 shrink-0 items-center border-r pr-1 pl-3 text-xs",
               current
