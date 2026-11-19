@@ -29,6 +29,7 @@ import { toast } from "@aven/ui/toast";
 
 import { copyToClipboard } from "@/lib/clipboard";
 
+import { EXPORT_FORMATS } from "../export-formats";
 import { useExportThread } from "../hooks/use-export-thread";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useThreadColors } from "../hooks/use-thread-colors";
@@ -200,10 +201,22 @@ export function ThreadOptionsMenu({
             Manage Sharing
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => void exportThread(thread)}>
-          <IconDownload />
-          Export
-        </DropdownMenuItem>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="[&>svg:last-child]:ml-0">
+            <IconDownload />
+            Export
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {EXPORT_FORMATS.map((format) => (
+              <DropdownMenuItem
+                key={format.id}
+                onClick={() => void exportThread(thread, format.id)}
+              >
+                {format.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         {canRun && (
           <>
             <DropdownMenuSeparator className="my-1.5 bg-border/70" />

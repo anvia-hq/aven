@@ -4,36 +4,32 @@ import { toast } from "@aven/ui/toast";
 
 import { request } from "@/lib/api";
 
-import type { Thread } from "../types";
-
-function fileStem(title: string) {
-  return (
-    title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
-      .slice(0, 60) || "thread"
-  );
-}
+import { exportFileName } from "../export-formats";
+import type { Thread, ThreadExportFormat } from "../types";
 
 export function useExportThread() {
   const busy = useRef(false);
 
   return {
-    async exportThread(thread: Thread) {
+    async exportThread(thread: Thread, format: ThreadExportFormat) {
+      if (format === "pdf") {
+        window.open(`/api/threads/${thread.id}/export?format=html`, "_blank");
+        return;
+      }
+
       if (busy.current) return;
 
       busy.current = true;
 
       try {
-        const response = await request(`/threads/${thread.id}/export`);
+        const response = await request(`/threads/${thread.id}/export?format=${format}`);
 
         if (!response.ok) throw new Error("Could not export the thread");
 
         const url = URL.createObjectURL(await response.blob());
         const link = document.createElement("a");
         link.href = url;
-        link.download = `${fileStem(thread.title)}.md`;
+        link.download = exportFileName(thread.title, format);
         document.body.appendChild(link);
         link.click();
         link.remove();

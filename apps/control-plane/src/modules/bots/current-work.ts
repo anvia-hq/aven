@@ -18,17 +18,23 @@ const title = (text: string) => oneLine(text).slice(0, TITLE_MAX);
 
 function localTime(now: Date, timezone: string) {
   const zone = oneLine(timezone);
-  const format = (timeZone: string) =>
-    new Intl.DateTimeFormat("en-GB", {
+  const format = (timeZone: string) => {
+    const day = new Intl.DateTimeFormat("en-GB", {
       timeZone,
       weekday: "short",
       year: "numeric",
       month: "short",
       day: "numeric",
+    }).format(now);
+    const time = new Intl.DateTimeFormat("en-GB", {
+      timeZone,
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(now);
+
+    return `${day}, ${time}`;
+  };
 
   try {
     return `${format(zone)} (${zone})`;
