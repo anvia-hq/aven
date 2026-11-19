@@ -246,5 +246,10 @@ test.describe("sidebar and search", () => {
     await page.keyboard.type("docs-site");
     await page.getByRole("option", { name: "docs-site", exact: true }).click();
     await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
+
+    const search = page.getByPlaceholder("Search threads, projects and pages…");
+    await page.getByRole("button", { name: "Search", exact: true }).click();
+    await expect(search).toHaveValue("");
+    await expect(page.getByRole("option", { name: "docs-site", exact: true })).toBeVisible();
   });
 });
