@@ -7,6 +7,7 @@ import { mcpInstructions } from "./mcp";
 import { memoryInstructions } from "./memory";
 import { codingInstructions } from "./instruction";
 import { CODING_MAX_TURNS } from "./turn-limits";
+import { createOpenBrowserTool } from "./tools/open-browser";
 import { createSecretRequestTool } from "./tools/request-secret";
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
@@ -41,7 +42,8 @@ export function createCodingAgent(options: CodingAgentOptions) {
 
   if (options.webSearch) tools.push(createWebSearchTool({ apiKey: options.webSearch.apiKey }));
 
-  if (options.questions ?? true) tools.push(createQuestionTool(), createSecretRequestTool());
+  if (options.questions ?? true)
+    tools.push(createQuestionTool(), createSecretRequestTool(), createOpenBrowserTool());
 
   const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
   const agentModel = resolveAgentModel(options);

@@ -20,6 +20,7 @@ describe("the sandbox's tools", () => {
     expect(target("read_process_logs", { processId: "p1" })).toBe("p1");
     expect(target("stop_process", { processId: "p1" })).toBe("p1");
     expect(target("wait_for_port", { containerPort: 3000 })).toBe("3000");
+    expect(target("open_browser", { port: 5173 })).toBe("localhost:5173");
     expect(target("web_search", { query: "bun" })).toBe("bun");
     expect(target("grep", { pattern: "createTool" })).toBe("createTool");
     expect(target("find", { name: "config" })).toBe("config");
