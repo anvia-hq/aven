@@ -73,14 +73,14 @@ export function AppShell({ user }: Props) {
           >
             <AvenMark className="w-[17px] text-brand" />
           </RailLink>
-          <div className="mt-1.5 flex flex-col items-center gap-1.5">
+          <div className="mt-[0.45rem] flex flex-col items-center gap-[0.45rem]">
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
               <FolderIcon className="size-[17px]" />
             </RailLink>
             <CockpitRailLink active={pathname.startsWith("/cockpit")} />
             <BotRailLink active={pathname.startsWith("/bot")} />
           </div>
-          <div className="mt-auto flex flex-col items-center gap-1.5">
+          <div className="mt-auto flex flex-col items-center gap-[0.45rem]">
             <RailLink
               to="/settings/general"
               label="Settings"
