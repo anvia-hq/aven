@@ -337,3 +337,38 @@ describe("the plan limits a run reported", () => {
     expect((await snapshotOf(manager, thread))?.usage?.limits).toEqual([week]);
   });
 });
+
+describe("draining before a shutdown", () => {
+  test("waits for a running thread, refuses a new run meanwhile, and returns once none is left", async () => {
+    const { runtime, current } = scriptedRuntime();
+    const manager = managerFor(runtime);
+    const working = newThread();
+
+    await manager.start(working, "one");
+    expect(manager.runningCount()).toBe(1);
+
+    const draining = manager.drain(5000);
+
+    await expect(manager.start(newThread(), "two")).rejects.toThrow("restarting");
+
+    current().finish();
+    expect(await draining).toBe(0);
+  });
+
+  test("gives up at the deadline and says how many runs are still working", async () => {
+    const { runtime } = scriptedRuntime();
+    const manager = managerFor(runtime);
+
+    await manager.start(newThread(), "one");
+
+    expect(await manager.drain(300)).toBe(1);
+  });
+
+  test("returns at once when nothing is running", async () => {
+    const manager = managerFor(scriptedRuntime().runtime);
+    const started = Date.now();
+
+    expect(await manager.drain(5000)).toBe(0);
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+});

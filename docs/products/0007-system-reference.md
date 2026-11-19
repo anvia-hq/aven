@@ -165,6 +165,10 @@ The Changes panel (`apps/platform/src/modules/diff`) draws one virtual list (`@t
 
 The control plane holds runner connections, runs, watched channels and run tokens in process memory, so it runs as one replica. More are by runtime affinity at the edge (a runner and the requests for its runtime go to one replica, hashed on the runtime id), not by replicas calling each other.
 
+### Restarting the control plane (decision 0359)
+
+`server.ts` answers SIGINT and SIGTERM by calling `RunManager.drain` (`runs/service.ts`) with `shutdownDrainMs` of `AVEN_SHUTDOWN_DRAIN_SECONDS` (`runs/drain.ts`, default 120 seconds): new runs are refused ("The server is restarting") and it returns when no run is left or the deadline passes. The compose file's `stop_grace_period` (150s) outlasts it. `RuntimeHub.closeAll` ends the runs still open with "The control plane restarted"; a runner that goes away is "The runtime disconnected", and both closing a connection with runs open and giving up on held ones are logged. Runs are still not kept across a control-plane restart (decision 0359, "Not decided here").
+
 ### Email sign-in off (decision 0239)
 
 `auth/email-login.ts` (`emailLoginOf`) reads `AVEN_EMAIL_LOGIN`: `off` disables Better Auth's `emailAndPassword` and refuses to start without GitHub sign-in. `/platform/config` says `emailLogin`, and the sign-in and register pages show the email form only when it is on.

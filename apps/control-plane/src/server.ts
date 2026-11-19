@@ -1,6 +1,7 @@
 import { closeLens } from "@aven/agents/lens";
 
 import { cloudSettingsService } from "./modules/cloud-settings/service";
+import { shutdownDrainMs } from "./modules/runs/drain";
 import { app } from "./app";
 import {
   botApiApp,
@@ -58,6 +59,12 @@ export async function startControlPlane(edition: Edition) {
   const previewListener = startPreviews(previews);
 
   const shutdown = async () => {
+    const stillRunning = await runsService.drain(
+      shutdownDrainMs(process.env.AVEN_SHUTDOWN_DRAIN_SECONDS),
+    );
+
+    if (stillRunning > 0) console.warn(`Shutting down with ${stillRunning} run(s) still working`);
+
     botRunner.dispose();
     previewListener?.stop();
     await localRunner?.stop();

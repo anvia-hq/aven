@@ -31,6 +31,7 @@ services:
   server:
     image: ${AVEN_SERVER_IMAGE:-ghcr.io/anvia-hq/aven-server}:${AVEN_VERSION:-latest}
     restart: unless-stopped
+    stop_grace_period: 150s
     depends_on:
       postgres:
         condition: service_healthy
