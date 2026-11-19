@@ -24,5 +24,5 @@ The switch alone did not change what a person meets first. `bots.has_computer` d
 
 ## Not done
 
-- The no-computer agent does not get the tools that call back into the control plane (schedules, goals, threads, providers, MCP, the API, notes, the cockpit). Those do not need a machine; they are still wired through the runner's reply.
+- ~~The no-computer agent does not get the tools that call back into the control plane (schedules, goals, threads, providers, MCP, the API, notes, the cockpit). Those do not need a machine; they are still wired through the runner's reply.~~ Superseded by 0358: a bot without a computer has every tool that needs no machine, built once in `reply-hosts.ts` for both paths. Goals still wait for a computer, since their checks are shell commands.
 - Files the person attaches are named in the prompt and not written anywhere, because there is no computer to write them to.
