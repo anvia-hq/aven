@@ -1,59 +1,54 @@
-import type { ChatMessage, MessageAttachment, MessagePart } from "@aven/protocol/types";
+import type { ChatMessage } from "@aven/protocol/types";
 
-type Block = { text: string; bullet: boolean };
+import { transcriptOf } from "./transcript";
+import type { TranscriptEntry } from "./types";
 
-const prose = (text: string): Block => ({ text, bullet: false });
-const bullet = (text: string): Block => ({ text, bullet: true });
-
-function partBlock(part: MessagePart): Block | null {
-  if (part.type === "text") {
-    const text = part.text.trim();
-    return text.length > 0 ? prose(text) : null;
-  }
-
-  if (part.type === "reasoning") {
-    const text = part.text.trim();
-    return text.length > 0
-      ? prose(`<details>\n<summary>Reasoning</summary>\n\n${text}\n</details>`)
-      : null;
-  }
-
-  return bullet(`\`${part.tool.name}\` ${part.tool.target} (${part.tool.status})`);
-}
-
-function attachmentBlock(attachment: MessageAttachment) {
-  return bullet(`Attached: ${attachment.name} (${attachment.mediaType})`);
-}
-
-function joinBlocks(blocks: readonly Block[]) {
+function joinEntries(
+  entries: readonly TranscriptEntry[],
+  render: (entry: TranscriptEntry) => string,
+) {
   let joined = "";
 
-  blocks.forEach((block, index) => {
-    const text = block.bullet ? `- ${block.text}` : block.text;
+  entries.forEach((entry, index) => {
+    const text = render(entry);
 
     if (index === 0) {
       joined = text;
       return;
     }
 
-    const tight = blocks[index - 1]?.bullet === true && block.bullet;
+    const tight = entries[index - 1]?.kind === "bullet" && entry.kind === "bullet";
     joined = `${joined}${tight ? "\n" : "\n\n"}${text}`;
   });
 
   return joined;
 }
 
-function messageBlock(message: ChatMessage): Block | null {
-  const blocks = message.parts.flatMap((part) => partBlock(part) ?? []);
+function markdownEntry(entry: TranscriptEntry) {
+  if (entry.kind === "heading") return `${"#".repeat(entry.level)} ${entry.text}`;
 
-  for (const attachment of message.attachments ?? []) blocks.push(attachmentBlock(attachment));
+  if (entry.kind === "reasoning")
+    return `<details>\n<summary>Reasoning</summary>\n\n${entry.text}\n</details>`;
 
-  if (blocks.length === 0) return null;
+  if (entry.kind === "bullet")
+    return entry.code ? `- \`${entry.code}\` ${entry.text}` : `- ${entry.text}`;
 
-  return prose(`${message.role === "user" ? "## User" : "## Assistant"}\n\n${joinBlocks(blocks)}`);
+  return entry.text;
+}
+
+function textEntry(entry: TranscriptEntry) {
+  if (entry.kind === "reasoning") return `Reasoning:\n${entry.text}`;
+
+  if (entry.kind === "bullet")
+    return entry.code ? `- ${entry.code} ${entry.text}` : `- ${entry.text}`;
+
+  return entry.text;
 }
 
 export function threadMarkdown(title: string, messages: readonly ChatMessage[]) {
-  const blocks = messages.flatMap((message) => messageBlock(message) ?? []);
-  return `${[`# ${title}`, ...blocks.map((block) => block.text)].join("\n\n")}\n`;
+  return `${joinEntries(transcriptOf(title, messages), markdownEntry)}\n`;
+}
+
+export function threadText(title: string, messages: readonly ChatMessage[]) {
+  return `${joinEntries(transcriptOf(title, messages), textEntry)}\n`;
 }

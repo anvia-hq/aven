@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import type { ChatMessage } from "@aven/protocol/types";
 
-import { threadMarkdown } from "./export";
+import { threadMarkdown, threadText } from "./export";
 
 describe("threadMarkdown", () => {
   test("writes just the title when the thread has no messages", () => {
@@ -50,5 +50,49 @@ describe("threadMarkdown", () => {
         "",
       ].join("\n"),
     );
+  });
+});
+
+describe("threadText", () => {
+  test("writes the title, roles, reasoning and bullets", () => {
+    const messages: ChatMessage[] = [
+      { id: "m-1", role: "user", parts: [{ type: "text", text: "  Export this thread  " }] },
+      {
+        id: "m-2",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "Here is the plan" },
+          { type: "reasoning", text: "Think it through" },
+          { type: "tool", tool: { id: "t-1", name: "bash", target: "bun test", status: "done" } },
+        ],
+        attachments: [{ name: "trace.log", mediaType: "text/plain", size: 12 }],
+      },
+      { id: "m-3", role: "assistant", parts: [{ type: "text", text: "   " }] },
+    ];
+
+    expect(threadText("Fix the export button", messages)).toBe(
+      [
+        "Fix the export button",
+        "",
+        "User",
+        "",
+        "Export this thread",
+        "",
+        "Assistant",
+        "",
+        "Here is the plan",
+        "",
+        "Reasoning:",
+        "Think it through",
+        "",
+        "- bash bun test (done)",
+        "- Attached: trace.log (text/plain)",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  test("writes just the title when the thread has no messages", () => {
+    expect(threadText("Fix the export button", [])).toBe("Fix the export button\n");
   });
 });
