@@ -14,6 +14,7 @@ import { nestForks } from "../fork-nesting";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
 import { useRenameThread } from "../hooks/use-rename-thread";
+import { useRestoreThread } from "../hooks/use-restore-thread";
 import { useThreads } from "../hooks/use-threads";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useMentionedThreads } from "../hooks/use-mentioned-threads";
@@ -23,7 +24,7 @@ import { crowdOf } from "../thread-crowd";
 import { statusOfPair, threadStatus } from "../thread-status";
 import type { Thread, ThreadStatus } from "../types";
 import { ParticipantStack } from "./participant-stack";
-import { RecencyGroupSection } from "./recency-group-section";
+import { SidebarSection } from "./sidebar-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadMark } from "./thread-mark";
 import { ThreadTitleField } from "./thread-title-field";
@@ -153,11 +154,13 @@ function ThreadTitle({
 export function SidebarThreads() {
   const { threads: own, shared: others, refresh } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
+  const archived = own.filter((thread) => thread.state === "archived");
   const shared = others.filter((thread) => thread.state === "open");
   const { computers: runtimes } = useRuntimes({ poll: true });
   const { projects } = useProjects();
   const palettes = useProjectPalettes();
   const archive = useArchiveThread();
+  const restore = useRestoreThread();
   const rename = useRenameThread();
   useFinishedSound();
   const unread = useUnreadThreads();
@@ -186,7 +189,8 @@ export function SidebarThreads() {
       nested = false,
       first = true,
       last = true,
-    }: { nested?: boolean; first?: boolean; last?: boolean },
+      archived = false,
+    }: { nested?: boolean; first?: boolean; last?: boolean; archived?: boolean },
   ) {
     return (
       <SidebarMenuItem key={thread.id}>
@@ -196,7 +200,7 @@ export function SidebarThreads() {
             <Link
               to="/threads/$threadId"
               params={{ threadId: thread.id }}
-              onDragStart={(event) => dragThread(event, thread.id)}
+              onDragStart={archived ? undefined : (event) => dragThread(event, thread.id)}
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
@@ -221,9 +225,13 @@ export function SidebarThreads() {
             }}
           />
           <CrowdMark thread={thread} />
-          <StatusDot status={threadStatus(thread, { mentioned, unread })} />
+          {!archived && <StatusDot status={threadStatus(thread, { mentioned, unread })} />}
         </SidebarMenuButton>
-        <ThreadActionsMenu title={thread.title} onArchive={() => void archive(thread)} />
+        <ThreadActionsMenu
+          title={thread.title}
+          onArchive={archived ? undefined : () => void archive(thread)}
+          onRestore={archived ? () => void restore(thread) : undefined}
+        />
       </SidebarMenuItem>
     );
   }
@@ -300,10 +308,20 @@ export function SidebarThreads() {
     <>
       <div className="px-2 pt-4 group-data-[collapsible=icon]:hidden">
         {groups.map((group) => (
-          <RecencyGroupSection key={group.id} group={group}>
+          <SidebarSection key={group.id} id={group.id} label={group.label}>
             <SidebarMenu>{rows(group.threads)}</SidebarMenu>
-          </RecencyGroupSection>
+          </SidebarSection>
         ))}
+        {archived.length > 0 && (
+          <SidebarSection
+            id="archived"
+            label={`Archived (${archived.length})`}
+            defaultOpen={false}
+            lazy
+          >
+            <SidebarMenu>{archived.map((thread) => row(thread, { archived: true }))}</SidebarMenu>
+          </SidebarSection>
+        )}
       </div>
       {shared.length > 0 && (
         <>

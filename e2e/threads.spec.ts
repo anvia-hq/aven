@@ -63,6 +63,33 @@ test.describe("threads", () => {
     await expect(item).toHaveCount(0);
   });
 
+  test("an archived thread waits under the groups until it is restored", async ({ page }) => {
+    await registerUser(page, "thr", "Thread User");
+    await addRunner(page);
+    await createProject(page, "project");
+    await page.getByRole("textbox", { name: "Prompt" }).fill("put me away");
+    await page.getByRole("button", { name: "Send" }).click();
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    const item = page.locator("[data-slot=sidebar-menu-item]", { hasText: "put me away" });
+    await item.hover();
+    await item.getByRole("button", { name: "Options for put me away" }).click();
+    await page.getByRole("menuitem", { name: "Archive" }).click();
+    await expect(item).toHaveCount(0);
+
+    const section = page.getByRole("region", { name: "Archived (1)" });
+    await expect(section).toBeVisible();
+    await section.getByRole("button", { name: "Archived (1)" }).click();
+    await expect(item).toHaveCount(1);
+
+    await item.hover();
+    await item.getByRole("button", { name: "Options for put me away" }).click();
+    await page.getByRole("menuitem", { name: "Restore" }).click();
+    await expect(page.getByText("Thread restored")).toBeVisible();
+    await expect(page.getByRole("region", { name: "Archived (1)" })).toHaveCount(0);
+    await expect(item).toHaveCount(1);
+  });
+
   test("sending to an archived thread puts it back in the sidebar", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
     const provider = await page.request.post("/api/providers", {
