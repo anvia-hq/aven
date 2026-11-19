@@ -76,8 +76,8 @@ export function paintedBody(base: BodyBase, hex: string) {
   const { geometry, minY, maxY } = base;
   const position = geometry.getAttribute("position");
   const colors = new Float32Array(position.count * 3);
-  const body = vivid(new Color(hex).lerp(WHITE, 0.16), 1.18);
-  const top = vivid(body.clone().lerp(WHITE, 0.12), 1);
+  const body = vivid(new Color(hex), 1.18);
+  const top = vivid(body.clone().lerp(WHITE, 0.04), 1);
   const blush = vivid(body.clone().lerp(BLUSH, 0.82), 1.25);
   const color = new Color();
   const span = maxY - minY;
@@ -95,9 +95,12 @@ export function paintedBody(base: BodyBase, hex: string) {
   }
 
   const painted = new BufferGeometry();
-  painted.setIndex(geometry.getIndex());
-  painted.setAttribute("position", position);
-  painted.setAttribute("normal", geometry.getAttribute("normal"));
+  const index = geometry.getIndex();
+
+  if (index) painted.setIndex(index.clone());
+
+  painted.setAttribute("position", position.clone());
+  painted.setAttribute("normal", geometry.getAttribute("normal").clone());
   painted.setAttribute("color", new BufferAttribute(colors, 3));
   return painted;
 }
