@@ -3,8 +3,9 @@ import {
   type ComposerTriggerItem,
   type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
-import { IconCommand, IconFile } from "@tabler/icons-react";
+import { IconCodeblock, IconFile, IconWand } from "@tabler/icons-react";
 import { cn } from "cn";
+import { COMPACT_COMMAND } from "../mentions";
 import { useEffect, useRef, type ReactNode } from "react";
 
 const NOTHING_MATCHES: Record<string, string> = {
@@ -21,7 +22,7 @@ const HEADINGS: Record<string, string> = {
 
 const FALLBACK_ICONS: Record<string, ReactNode> = {
   file: <IconFile />,
-  skill: <IconCommand />,
+  skill: <IconWand />,
 };
 
 function splitPath(path: string) {
@@ -56,7 +57,7 @@ function MentionOption({
   }, [selected]);
   const given = icon?.(item);
   const file = kind === "file" ? splitPath(item.label) : null;
-  const fallback = FALLBACK_ICONS[kind] ?? null;
+  const fallback = item.id === COMPACT_COMMAND ? <IconCodeblock /> : (FALLBACK_ICONS[kind] ?? null);
   return (
     <ComposerPrimitive.TriggerItem
       index={index}
