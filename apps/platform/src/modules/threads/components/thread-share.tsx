@@ -1,5 +1,5 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
-import { IconCheck, IconLink, IconLock, IconShare, IconWorld } from "@tabler/icons-react";
+import { IconCheck, IconLink, IconShare, IconWorld } from "@tabler/icons-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -9,7 +9,6 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@aven/ui/dialog";
@@ -27,16 +26,13 @@ import type { Thread, ThreadVisibility } from "../types";
 const CHOICES = [
   {
     value: "private",
-    icon: IconLock,
     title: "Only me",
     detail: "Nobody else can see it.",
   },
   {
     value: "workspace",
-    icon: IconWorld,
     title: "Everyone in the workspace",
-    detail:
-      "They can read it, with its files and changes. Only you send messages, unless you turn on multiplayer.",
+    detail: "They can read it, with its files and changes. Only you send messages.",
   },
 ] as const;
 
@@ -86,11 +82,11 @@ export function ThreadShare({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <div className="flex flex-col gap-4">
+      <DialogContent className="rounded-3xl p-6 sm:max-w-md">
+        <div className="flex flex-col gap-5">
           <DialogHeader>
-            <DialogTitle>Share this thread</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base">Share this thread</DialogTitle>
+            <DialogDescription className="sr-only">
               Choose who can read it, and whether teammates can message the agent.
             </DialogDescription>
           </DialogHeader>
@@ -98,37 +94,27 @@ export function ThreadShare({
             aria-label="Who can see this thread"
             value={thread.visibility}
             onValueChange={(value) => void share(thread, value as ThreadVisibility)}
-            className="gap-1.5"
+            className="gap-2"
           >
-            {CHOICES.map(({ value, icon: Icon, title, detail }) => (
+            {CHOICES.map(({ value, title, detail }) => (
               <Label
                 key={value}
-                className="cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-data-checked:border-primary has-data-checked:bg-accent"
+                className="cursor-pointer flex-col items-start gap-0.5 rounded-2xl border border-transparent bg-muted/40 px-4 py-3 font-normal transition-colors hover:bg-muted has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary/60 has-data-checked:bg-primary/10"
               >
-                <RadioGroupItem value={value} className="mt-0.5" />
-                <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium">{title}</span>
-                  <span className="text-xs text-muted-foreground">{detail}</span>
-                </span>
+                <RadioGroupItem value={value} className="absolute size-px opacity-0" />
+                <span className="text-sm font-medium">{title}</span>
+                <span className="text-xs text-muted-foreground">{detail}</span>
               </Label>
             ))}
           </RadioGroup>
           {shared && (
-            <div className="flex items-start gap-3 rounded-lg border px-3 py-2.5">
-              <Switch
-                aria-label="Let teammates message this thread"
-                checked={driving}
-                disabled={needsDecisionModel}
-                onCheckedChange={(on) => void drive(thread, on ? DRIVING_DAYS_DEFAULT : null)}
-                className="mt-0.5"
-              />
-              <span className="flex flex-1 flex-col">
+            <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3">
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium">Multiplayer</span>
                 <span className="text-xs text-muted-foreground">
                   {driving
                     ? `Teammates can message, steer and stop the agent until ${new Date(thread.drivingUntil ?? "").toLocaleDateString()}. A message from a teammate runs on their own model and bill, and without your personal variables or MCP servers.`
-                    : `Let teammates message the agent for ${DRIVING_DAYS_DEFAULT} days. A message from a teammate runs on their own model and bill.`}
+                    : `Teammates message the agent for ${DRIVING_DAYS_DEFAULT} days, on their own model and bill.`}
                 </span>
                 {needsDecisionModel && (
                   <span className="text-xs text-muted-foreground">
@@ -143,24 +129,38 @@ export function ThreadShare({
               {driving && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
+                  className="rounded-full px-3"
                   onClick={() => void drive(thread, DRIVING_DAYS_DEFAULT)}
                 >
                   Extend
                 </Button>
               )}
+              <Switch
+                aria-label="Let teammates message this thread"
+                checked={driving}
+                disabled={needsDecisionModel}
+                onCheckedChange={(on) => void drive(thread, on ? DRIVING_DAYS_DEFAULT : null)}
+              />
             </div>
           )}
-          <DialogFooter className="sm:justify-between">
-            <Button type="button" variant="outline" onClick={() => void copyLink()}>
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              className="rounded-full px-4 text-muted-foreground"
+              onClick={() => void copyLink()}
+            >
               {copied ? <IconCheck /> : <IconLink />}
               {copied ? "Link copied" : "Copy link"}
             </Button>
-            <DialogClose render={<Button type="button" />}>Done</DialogClose>
-          </DialogFooter>
+            <DialogClose render={<Button type="button" className="rounded-full px-5" />}>
+              Done
+            </DialogClose>
+          </div>
           {!shared && (
-            <p className="text-xs text-muted-foreground">
+            <p className="-mt-2 text-xs text-muted-foreground">
               The link opens only for you until you share the thread.
             </p>
           )}
