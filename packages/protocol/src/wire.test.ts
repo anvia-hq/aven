@@ -16,7 +16,7 @@ import {
   parseRuntimeFrame,
 } from "./wire";
 import type { WireRunEvent } from "./wire";
-import type { RunEvent } from "./types";
+import type { ContextSegment, RunEvent } from "./types";
 
 const frame = (event: unknown) => JSON.stringify({ type: "run.event", runId: "r1", seq: 1, event });
 
@@ -47,6 +47,27 @@ describe("run events from a runtime", () => {
       seq: 1,
       event: bare,
     });
+  });
+
+  test("a usage event keeps how the context is split, and refuses a segment it does not know", () => {
+    const segments: ContextSegment[] = [
+      { id: "instructions", tokens: 120 },
+      { id: "tools", tokens: 80 },
+      { id: "messages", tokens: 130 },
+    ];
+    const event = {
+      type: "usage",
+      turn,
+      context: { usedTokens: 330, contextWindow: 1000, segments },
+    } as const;
+    expect(parseRuntimeFrame(frame(event))).toEqual({
+      type: "run.event",
+      runId: "r1",
+      seq: 1,
+      event,
+    });
+    const unknown = { ...event, context: { usedTokens: 1, segments: [{ id: "x", tokens: 1 }] } };
+    expect(parseRuntimeFrame(frame(unknown))).toBeNull();
   });
 
   test("the model's reasoning is accepted, as the thread shows it (decision 0115)", () => {
