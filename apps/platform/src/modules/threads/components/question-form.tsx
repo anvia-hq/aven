@@ -25,10 +25,12 @@ export function Question({
   prompt,
   draft,
   onChange,
+  onChoose,
 }: {
   prompt: QuestionPrompt;
   draft: Draft | undefined;
   onChange: (draft: Draft) => void;
+  onChoose?: () => void;
 }) {
   const current = draft ?? { choice: "", custom: "" };
   const hasChoices = Boolean(prompt.choices?.length);
@@ -41,7 +43,10 @@ export function Question({
         <RadioGroup
           aria-label={prompt.text}
           value={current.custom.trim() ? "" : current.choice}
-          onValueChange={(choice) => onChange({ choice: String(choice), custom: "" })}
+          onValueChange={(choice) => {
+            onChange({ choice: String(choice), custom: "" });
+            onChoose?.();
+          }}
           className="gap-2"
         >
           {prompt.choices?.map((choice) => (
@@ -128,6 +133,7 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
         prompt={prompt}
         draft={drafts[prompt.id]}
         onChange={(draft) => setDrafts((current) => ({ ...current, [prompt.id]: draft }))}
+        onChoose={last ? undefined : () => setStep(step + 1)}
       />
 
       <div className="flex items-center justify-between">
