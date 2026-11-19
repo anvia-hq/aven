@@ -11,6 +11,36 @@ test.describe("the agent's question", () => {
     runner = undefined;
   });
 
+  test("declining sends no choice, goes back to the prompt and leaves the sidebar quiet", async ({
+    page,
+  }) => {
+    await registerUser(page, "decline", "Decline User");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, events, threadId } = await threadOnFakeRunner(page, { FAKE_QUESTION: "1" });
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    await page.getByRole("textbox", { name: "Prompt" }).fill("paint it");
+    await page.getByRole("button", { name: "Send" }).click();
+
+    const form = page.getByRole("form", { name: "Answer the agent" });
+    await expect(form).toBeVisible();
+    await expect(page.getByText("Needs answer")).toBeVisible();
+    await form.getByRole("button", { name: "Decline" }).click();
+
+    await expect(form).toHaveCount(0);
+    await expect(page.getByRole("textbox", { name: "Prompt" })).toBeVisible();
+    await expect(page.getByText("Needs answer")).toHaveCount(0);
+    await expect(async () => {
+      expect(events.find((entry) => entry.type === "answered")).toMatchObject({
+        response: { type: "tool-question", answers: [{ questionId: "color", value: "declined" }] },
+      });
+    }).toPass({ timeout: 5000 });
+  });
+
   test("stops the run until it is answered, then continues in the same message", async ({
     page,
   }) => {

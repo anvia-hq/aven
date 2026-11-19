@@ -57,8 +57,21 @@ function SidebarThreadMark({
   );
 }
 
-function StatusDot({ status }: { status: ThreadStatus | null }) {
+function StatusDot({
+  status,
+  question = false,
+}: {
+  status: ThreadStatus | null;
+  question?: boolean;
+}) {
   if (!status) return null;
+
+  if (question)
+    return (
+      <span className="shrink-0 rounded-full bg-graph-4/45 px-2 py-0.5 text-[11px] leading-4 font-medium text-foreground">
+        Needs answer
+      </span>
+    );
 
   return (
     <span
@@ -229,7 +242,12 @@ export function SidebarThreads() {
             }}
           />
           <CrowdMark thread={thread} />
-          {!archived && <StatusDot status={threadStatus(thread, { mentioned, unread })} />}
+          {!archived && (
+            <StatusDot
+              status={threadStatus(thread, { mentioned, unread })}
+              question={thread.awaitingAnswer}
+            />
+          )}
         </SidebarMenuButton>
         <ThreadActionsMenu
           title={thread.title}
@@ -274,6 +292,7 @@ export function SidebarThreads() {
               threadStatus(left, { mentioned, unread }),
               threadStatus(right, { mentioned, unread }),
             )}
+            question={left.awaitingAnswer || right.awaitingAnswer}
           />
         </SidebarMenuButton>
       </SidebarMenuItem>
