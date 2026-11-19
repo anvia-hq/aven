@@ -50,11 +50,11 @@ function bodyMaterial(shared: AvatarMaterials, wobble: { value: number }) {
     metalness: 0,
     clearcoat: 0.35,
     clearcoatRoughness: 0.5,
-    sheen: 0.6,
+    sheen: 0.15,
     sheenRoughness: 0.55,
     sheenColor: new Color("#ffffff"),
     envMap: shared.environment,
-    envMapIntensity: 0.55,
+    envMapIntensity: 0.4,
   });
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uWobble = wobble;
