@@ -231,8 +231,9 @@ export const botApi = createBotApi({
 
 export const botRuntimeId = process.env.AVEN_BOT_RUNNER || LOCAL_RUNTIME_ID;
 
-export const botDefaultRuntime = (userId: string) =>
-  registeredComputerOf(userId, (runtimeId) => runtimeHub.isOnline(runtimeId));
+export const botDefaultRuntime = process.env.AVEN_BOT_RUNNER
+  ? async () => null
+  : (userId: string) => registeredComputerOf(userId, (runtimeId) => runtimeHub.isOnline(runtimeId));
 
 export const botRunner = new BotRunner({
   store: botMemoryStore,

@@ -94,7 +94,7 @@ Settings > General > Small models holds a per-person switch and model for follow
 
 ### A bot's computer is on a runner of its choice (decision 0227)
 
-`bots.runtime_id` (null: the built-in runner, or `AVEN_BOT_RUNNER`) is set in the bot's settings under Computer and checked by `requireUsableRuntime`. `RemoteBotReplier` and the bot's computer and artifact routes use the bot's runner; the folder is `<runner home>/bots/<id>`, moved from `workspaces/<id>` on first use (`HostSandboxes`, `ThreadRef.bot`).
+`bots.runtime_id` (null: `AVEN_BOT_RUNNER` when a deployment names one, else the person's registered computer, the online one or else the one seen last (`modules/bots/default-runtime.ts`, decision 0371), else the built-in runner) is set in the bot's settings under Computer and checked by `requireUsableRuntime`. `RemoteBotReplier` and the bot's computer and artifact routes use the bot's runner; the folder is `<runner home>/bots/<id>`, moved from `workspaces/<id>` on first use (`HostSandboxes`, `ThreadRef.bot`).
 
 ### A bot does not need a computer (decisions 0324 and 0358)
 
