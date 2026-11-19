@@ -42,12 +42,12 @@ export function Question({
           aria-label={prompt.text}
           value={current.custom.trim() ? "" : current.choice}
           onValueChange={(choice) => onChange({ choice: String(choice), custom: "" })}
-          className="gap-1.5"
+          className="gap-2"
         >
           {prompt.choices?.map((choice) => (
             <Label
               key={choice.value}
-              className="cursor-pointer rounded-lg border px-3 py-2.5 font-normal transition-colors hover:bg-muted/50 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary has-data-checked:bg-primary/10"
+              className="cursor-pointer rounded-2xl border border-transparent bg-muted/40 px-4 py-3 font-normal transition-colors hover:bg-muted has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary/60 has-data-checked:bg-primary/10"
             >
               <RadioGroupItem value={choice.value} className="absolute size-px opacity-0" />
               {choice.label}
@@ -62,9 +62,9 @@ export function Question({
           value={current.custom}
           onChange={(event) => onChange({ choice: "", custom: event.target.value })}
           className={cn(
-            "h-9 rounded-lg border-border px-3 py-0 font-normal hover:bg-muted/50 dark:bg-transparent",
+            "h-11 rounded-2xl border-transparent bg-muted/40 px-4 py-0 font-normal hover:bg-muted dark:bg-muted/40",
             current.custom.trim() &&
-              "border-primary bg-primary/10 hover:bg-primary/10 dark:bg-primary/10",
+              "border-primary/60 bg-primary/10 hover:bg-primary/10 dark:bg-primary/10",
           )}
         />
       )}
@@ -100,23 +100,25 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
     <Form
       aria-label="Answer the agent"
       onFormSubmit={() => (last ? void submit() : answered && setStep(step + 1))}
-      className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
+      className="flex flex-col gap-5 rounded-3xl border border-border/50 bg-card p-5"
     >
-      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground/80">
         <span>The agent needs your answer</span>
         {prompts.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span>
-              {step + 1} of {prompts.length}
-            </span>
-            <div className="flex gap-1" aria-hidden>
-              {prompts.map((item, index) => (
-                <span
-                  key={item.id}
-                  className={cn("h-1 w-5 rounded-full", index <= step ? "bg-primary" : "bg-border")}
-                />
-              ))}
-            </div>
+          <div
+            role="img"
+            aria-label={`Question ${step + 1} of ${prompts.length}`}
+            className="flex gap-1"
+          >
+            {prompts.map((item, index) => (
+              <span
+                key={item.id}
+                className={cn(
+                  "h-1 w-4 rounded-full",
+                  index <= step ? "bg-foreground/70" : "bg-foreground/10",
+                )}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -130,7 +132,13 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
 
       <div className="flex items-center justify-between">
         {step > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="rounded-full px-4"
+            onClick={() => setStep(step - 1)}
+          >
             <IconArrowLeft />
             Back
           </Button>
@@ -138,12 +146,17 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
           <span />
         )}
         {last ? (
-          <Button type="submit" size="sm" disabled={!answered || sending}>
+          <Button
+            type="submit"
+            size="sm"
+            className="rounded-full px-4"
+            disabled={!answered || sending}
+          >
             <IconArrowUp />
             Send answer
           </Button>
         ) : (
-          <Button type="submit" size="sm" disabled={!answered}>
+          <Button type="submit" size="sm" className="rounded-full px-4" disabled={!answered}>
             Next
             <IconArrowRight />
           </Button>
