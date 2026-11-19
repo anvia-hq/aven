@@ -13,7 +13,7 @@
   "dependencies": {
     "@anvia/anthropic": "^1.3.0",
     "@anvia/azure": "^0.1.10",
-    "@anvia/core": "^1.20.0",
+    "@anvia/core": "^1.21.0",
     "@anvia/gemini": "^1.1.10",
     "@anvia/lens": "1.2.5",
     "@anvia/openai": "^1.3.8",
