@@ -14,7 +14,7 @@ Tabler is larger still (5,800 icons), is MIT, and draws outline and filled varia
 - **State uses the filled variant of the same name**, chosen in the component rather than with a fill class: a favourite thread is `IconStarFilled` or `IconStar`, a pinned note is `IconPinFilled` or `IconPin`, the picked project is `IconFolderFilled`, and send/stop is `IconPlayerStopFilled`.
 - **One value weighs the interface.** `apps/platform/src/index.css` sets `.tabler-icon { stroke-width: 1.75 }`, which beats the `stroke-width="2"` attribute Tabler puts on every icon. An icon that needs another weight sets it inline, because inline style beats that rule: the rail and the phone's tab bar at 1.7, a subagent's status at 2.4.
 - `@solar-icons/react` is removed from `apps/platform` and `packages/ui`.
-- Solar had no brand marks and Tabler has no brand marks either, so `GithubMark` in `apps/platform/src/components/brand-icons.tsx` still draws the GitHub mark.
+- The brand marks stay our own: `GithubMark` in `apps/platform/src/components/brand-icons.tsx` still draws the GitHub mark, as it did under Solar, rather than Tabler's `IconBrandGithub`. The provider logos in that file are unchanged too.
 - The vendored shadcn components keep their own names for icons (`LoaderIcon as Loader2Icon` in converted files is now `IconLoader2`), and `components.json` still says `iconLibrary: "lucide"`, since the shadcn CLI only knows lucide.
 
 ## Consequences
