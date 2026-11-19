@@ -25,6 +25,7 @@ rules/0001-typescript-strict.md
 bugs/0001-somelib-crash-on-empty-input.md
 ```
 
-- Numbers are per folder, start at `0001`, and run without gaps.
+- Numbers are per folder and start at `0001`. They run without gaps, except in `decision/`, where a number is never reused (0387).
 - A doc that is no longer true (its bug is fixed upstream, or its workaround is gone) is deleted, and the folder renumbered. Fix the links to the docs that moved.
-- Start each doc with a `# Title` and a `Status:` line.
+- Start each doc with a `# Title` and a `Status:` line. The number stays in the file name, not in the title (0387).
+- `decision/` keeps its own rules (0154, 0387). A decision keeps its number and its `Status:` line when a later one supersedes it, because it still records what was decided and why; a number is never reused, so the folder may have gaps; and `decision/README.md` names every decision whose own `Status:` line says a later one superseded it, and what replaced it.

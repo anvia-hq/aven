@@ -27,7 +27,7 @@ It reads the comments between the tokens of the parsed file, so text inside stri
 For every comment it finds, decide which it is:
 
 - **It says what the code does.** Delete it. If the code is not clear without it, rename the variable or function, extract a well-named function, or add a type, until it is.
-- **It says why** (a workaround, a limit, a surprising order, a security reason). Delete the comment and put the reason in a decision record: `docs/decision/<next number>-<name>.md` with `Status:`, `Context` and `Decision`, in the same pull request (`docs/README.md` has the format and numbering). When an existing decision already covers it, say its number in the pull request description. For a bug in a library, `docs/bugs/`.
+- **It says why** (a workaround, a limit, a surprising order, a security reason). Delete the comment and put the reason in a decision record: `docs/decision/<next number>-<name>.md` with `Status:`, `Context` and `Decision`, in the same pull request (`docs/README.md` has the format and numbering). When an existing decision already covers it, say its number in the pull request description; a decision superseded by the new one keeps its number, and its `Status:` line and its row in `docs/decision/README.md` say so. For a bug in a library, `docs/bugs/`.
 - **It marks unfinished work** (`TODO`, `FIXME`). Finish it, or write it as a task for the person; do not leave it in the code.
 - **An empty `catch {}`** is read as "ignored on purpose": do not explain it, and make sure it really is meant.
 - **`any`.** Do not comment it: say why in the pull request.
