@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 import type { ChildProcess } from "node:child_process";
 
-import { registerBotPerson, threadOnFakeRunner } from "./helpers";
+import { registerBotPerson, revealToast, threadOnFakeRunner } from "./helpers";
 
 const PIXEL =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==";
@@ -862,6 +862,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("hello?");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(page.getByText("Could not send message")).toBeVisible();
+    await revealToast(page, "ANTHROPIC_API_KEY is not set");
     await expect(page.getByText("ANTHROPIC_API_KEY is not set")).toBeVisible();
   });
 
@@ -1064,6 +1065,7 @@ test.describe("bots", () => {
 
     await field.fill("10");
     await field.press("Enter");
+    await revealToast(page, /Use a whole number of tokens from 1,000/);
     await expect(page.getByText(/Use a whole number of tokens from 1,000/)).toBeVisible();
     await expect(field).toHaveValue("50000");
     expect(await size()).toBe(50000);

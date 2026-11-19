@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { registerUser } from "./helpers";
+import { registerUser, revealToast } from "./helpers";
 
 test.describe("providers", () => {
   test("a provider's models can be fetched again, and a failure says why", async ({ page }) => {
@@ -22,9 +22,11 @@ test.describe("providers", () => {
     const refetch = page.getByRole("button", { name: "Refetch models" });
 
     await refetch.click();
+    await revealToast(page, "Work: 2 models");
     await expect(page.getByText("Work: 2 models")).toBeVisible();
 
     await refetch.click();
+    await revealToast(page, "Work: 3 models");
     await expect(page.getByText("Work: 3 models")).toBeVisible();
 
     await refetch.click();

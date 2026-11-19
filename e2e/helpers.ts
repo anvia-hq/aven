@@ -26,6 +26,10 @@ export async function registerUser(page: Page, prefix: string, name = "E2E User"
   return email;
 }
 
+export async function revealToast(page: Page, text: string | RegExp) {
+  await page.locator("[data-slot=toast]").filter({ hasText: text }).first().hover();
+}
+
 export async function registerBotPerson(page: Page, prefix: string, name = "E2E User") {
   await registerUser(page, prefix, name);
   const listed = await page.request.get("/api/bots");

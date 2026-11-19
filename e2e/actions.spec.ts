@@ -2,7 +2,7 @@ import type { ChildProcess } from "node:child_process";
 
 import { expect, test } from "@playwright/test";
 
-import { registerUser, threadOnFakeRunner } from "./helpers";
+import { registerUser, revealToast, threadOnFakeRunner } from "./helpers";
 
 test.describe("a repository's actions", () => {
   let runner: ChildProcess | undefined;
@@ -44,6 +44,7 @@ test.describe("a repository's actions", () => {
       .getByTestId("conversation")
       .getByRole("button", { name: "Test", exact: true })
       .click();
+    await revealToast(page, "Running in the sandbox, under Background tasks");
     await expect(page.getByText("Running in the sandbox, under Background tasks")).toBeVisible();
     await expect(page.getByText("Done", { exact: true }).first()).toBeVisible({
       timeout: 15_000,

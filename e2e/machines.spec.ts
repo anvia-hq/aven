@@ -3,7 +3,7 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { expect, test, type Page } from "@playwright/test";
 
 import { fakeRunnerProcessEnv } from "./fake-runner-config";
-import { registerUser } from "./helpers";
+import { registerUser, revealToast } from "./helpers";
 
 const API_URL = "http://localhost:8100";
 
@@ -74,6 +74,7 @@ test.describe("machines", () => {
       .getByRole("dialog", { name: "Update busy-box?" })
       .getByRole("button", { name: "Update", exact: true })
       .click();
+    await revealToast(page, "A run is going on this runner");
     await expect(page.getByText("A run is going on this runner")).toBeVisible();
     await page
       .getByRole("dialog", { name: "Update busy-box?" })
