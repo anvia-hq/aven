@@ -44,6 +44,7 @@ type Entry = {
   visible: boolean;
   dirty: boolean;
   follow: boolean;
+  steady: boolean;
 };
 
 type Stage = {
@@ -201,7 +202,9 @@ function ensureStage() {
 }
 
 function inputOf(entry: Entry, reduced: boolean): MotionInput {
-  if (!entry.follow || !pointer.moved) return { mood: entry.mood, pointer: null, reduced };
+  if (!entry.follow || !pointer.moved) {
+    return { mood: entry.mood, pointer: null, reduced, steady: entry.steady };
+  }
 
   const rect = entry.canvas.getBoundingClientRect();
   const dx = (pointer.x - (rect.left + rect.width / 2)) / (window.innerWidth * 0.5);
@@ -210,6 +213,7 @@ function inputOf(entry: Entry, reduced: boolean): MotionInput {
     mood: entry.mood,
     pointer: { x: Math.max(-1, Math.min(1, dx)), y: Math.max(-1, Math.min(1, dy)) },
     reduced,
+    steady: entry.steady,
   };
 }
 
@@ -310,6 +314,7 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
     visible: current.observer === null,
     dirty: true,
     follow: look.follow === true,
+    steady: look.steady === true,
   };
   current.entries.add(entry);
   current.observer?.observe(canvas);

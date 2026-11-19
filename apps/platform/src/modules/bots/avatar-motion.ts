@@ -176,8 +176,9 @@ export function advanceMotion(
   const float = (Math.sin(time * 1.7 + motion.seed) * 0.5 + 0.5) * 0.13 * rest;
   const breathe = Math.sin(time * 2.3 + motion.seed) * 0.016 * rest;
 
-  const aimX = input.pointer?.x ?? Math.sin(time * 0.6 + motion.seed) * 0.35;
-  const aimY = input.pointer?.y ?? Math.sin(time * 0.43 + motion.seed) * 0.15;
+  const sway = input.steady ? 0 : 1;
+  const aimX = input.pointer?.x ?? Math.sin(time * 0.6 + motion.seed) * 0.35 * sway;
+  const aimY = input.pointer?.y ?? Math.sin(time * 0.43 + motion.seed) * 0.15 * sway;
   const follow = 1 - motion.work * 0.5;
   motion.rotY = approach(motion.rotY, aimX * 0.5 * follow, 5, dt);
   motion.rotX = approach(motion.rotX, aimY * 0.28 * follow, 5, dt);
