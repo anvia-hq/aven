@@ -3,7 +3,6 @@ import type { RunnerGithub, RuntimeGithubMode } from "@aven/protocol/types";
 import type { ShipGate } from "../types";
 
 type Readiness = {
-  ready: boolean;
   ship: boolean;
   machine: boolean;
   githubMode: RuntimeGithubMode;
@@ -39,13 +38,7 @@ export function useShipReadiness(threadId: string, running: boolean): Shipping {
       runnerGithub: null,
     };
 
-  const { ready, ship, machine, githubMode, runnerGithub } = answer.data;
+  const { ship, machine, githubMode, runnerGithub } = answer.data;
 
-  if (ready) return { gate: { kind: "ready" }, machine, githubMode, runnerGithub };
-
-  const commands: string[] = [];
-
-  if (!ship) commands.push("/setup-ship");
-
-  return { gate: { kind: "missing", commands }, machine, githubMode, runnerGithub };
+  return { gate: { kind: "ready", custom: ship }, machine, githubMode, runnerGithub };
 }

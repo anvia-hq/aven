@@ -126,9 +126,8 @@ export type StoredDraftFile = { key: string; threadId: string; id: string; at: n
 
 export type ShipGate =
   | { kind: "checking" }
-  | { kind: "ready" }
-  | { kind: "unknown" }
-  | { kind: "missing"; commands: string[] };
+  | { kind: "ready"; custom: boolean }
+  | { kind: "unknown" };
 
 export type ShipConnectionFacts = {
   machine: boolean;
@@ -140,7 +139,6 @@ export type ShipLabel = "Open PR" | `Update PR #${number}` | "Open new PR";
 export type ShipAct =
   | { kind: "loading" }
   | { kind: "failed"; reason: string }
-  | { kind: "set-up"; command: string; skill: string; disabled: boolean }
   | { kind: "connect" }
   | { kind: "blocked"; label: ShipLabel }
   | {
@@ -150,8 +148,9 @@ export type ShipAct =
       disabled: boolean;
       shipping: boolean;
       canOpenNew: boolean;
+      custom: boolean;
     }
-  | { kind: "open"; disabled: boolean }
+  | { kind: "open"; disabled: boolean; custom: boolean }
   | { kind: "none" };
 
 export type ShipChanges = {

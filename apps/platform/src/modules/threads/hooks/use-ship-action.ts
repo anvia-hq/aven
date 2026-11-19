@@ -12,6 +12,9 @@ import { useThreads } from "./use-threads";
 
 type Send = (message: OutgoingMessage, selection?: RunSelection) => Promise<boolean>;
 
+const SETUP_SKILL = "setup-ship";
+const SETUP_COMMAND = `/${SETUP_SKILL}`;
+
 export function useShipAction(
   thread: Thread,
   unshipped: ReturnType<typeof useThreadDiff>,
@@ -73,17 +76,15 @@ export function useShipAction(
   });
 
   const setUp = useCallback(() => {
-    if (action.kind !== "set-up") return;
-
     void send(
       {
-        prompt: action.command,
+        prompt: SETUP_COMMAND,
         attachments: [],
-        mentions: [{ type: "skill", name: action.skill, from: 0, to: action.command.length }],
+        mentions: [{ type: "skill", name: SETUP_SKILL, from: 0, to: SETUP_COMMAND.length }],
       },
       selection,
     );
-  }, [action, send, selection]);
+  }, [send, selection]);
 
   return { action, ship, setUp };
 }

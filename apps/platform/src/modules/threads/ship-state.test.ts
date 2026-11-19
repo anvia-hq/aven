@@ -8,7 +8,7 @@ const pull = { number: 658, url: "u", branch: "b", title: "t", state: "open" as 
 const facts = (over: Partial<ShipFacts> = {}): ShipFacts => ({
   running: false,
   shipping: false,
-  gate: { kind: "ready" },
+  gate: { kind: "ready", custom: true },
   connected: true,
   changes: { loaded: true, available: true, problem: null, any: false },
   branch: { loaded: true, available: true, problem: null, any: true },
@@ -34,7 +34,11 @@ describe("Open a PR", () => {
   });
 
   test("is held back while the agent works", () => {
-    expect(shipActionOf(facts({ running: true }))).toEqual({ kind: "open", disabled: true });
+    expect(shipActionOf(facts({ running: true }))).toEqual({
+      kind: "open",
+      disabled: true,
+      custom: true,
+    });
   });
 
   test("does not wait for a branch read that is not made while the agent works", () => {
@@ -76,5 +80,24 @@ describe("the ship button says what it will do", () => {
         shipActionOf(facts({ ...unshipped, pullRequests: [{ ...pull, state }] })),
       ).toMatchObject({ label: "Open new PR", primary: false, canOpenNew: false });
     }
+  });
+});
+
+describe("a repository without .aven/ship.md", () => {
+  const plain = { kind: "ready", custom: false } as const;
+
+  test("can still be shipped, with Aven's default, and says it is not set up", () => {
+    const changes = { loaded: true, available: true, problem: null, any: true };
+    expect(shipActionOf(facts({ gate: plain, changes }))).toMatchObject({
+      kind: "ship",
+      primary: true,
+      custom: false,
+    });
+    expect(shipActionOf(facts({ gate: plain }))).toMatchObject({ kind: "open", custom: false });
+  });
+
+  test("offers nothing when there is nothing to ship", () => {
+    const branch = { loaded: true, available: true, problem: null, any: false };
+    expect(shipActionOf(facts({ gate: plain, branch }))).toEqual({ kind: "none" });
   });
 });

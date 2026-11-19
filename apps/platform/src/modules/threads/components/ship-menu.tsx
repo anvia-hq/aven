@@ -1,4 +1,4 @@
-import { IconChevronDown, IconPlus } from "@tabler/icons-react";
+import { IconChevronDown, IconPlus, IconSparkles } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { FLOATING_BUTTON } from "@/lib/floating-button";
@@ -9,9 +9,15 @@ import {
   DropdownMenuTrigger,
 } from "@aven/ui/dropdown-menu";
 
-type Props = { disabled: boolean; onNew: () => void };
+type Props = {
+  disabled: boolean;
+  custom: boolean;
+  canOpenNew: boolean;
+  onNew: () => void;
+  onSetUp: () => void;
+};
 
-export function ShipMenu({ disabled, onNew }: Props) {
+export function ShipMenu({ disabled, custom, canOpenNew, onNew, onSetUp }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -27,8 +33,13 @@ export function ShipMenu({ disabled, onNew }: Props) {
         <IconChevronDown />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem disabled={disabled} onClick={onNew}>
-          <IconPlus /> Ship as a new PR
+        {canOpenNew && (
+          <DropdownMenuItem disabled={disabled} onClick={onNew}>
+            <IconPlus /> Ship as a new PR
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem disabled={disabled} onClick={onSetUp}>
+          <IconSparkles /> {custom ? "Change how Ship works" : "Set up shipping"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
