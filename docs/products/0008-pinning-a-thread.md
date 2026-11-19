@@ -1,6 +1,6 @@
 # A pinned thread belongs to one person and stays above Today
 
-Status: accepted. Built by decision 0359. It follows decision 0293 (thread recency) and the sidebar's thread list in `apps/platform/src/modules/threads/components/sidebar-threads.tsx`.
+Status: accepted. Built by decision 0363. It follows decision 0293 (thread recency) and the sidebar's thread list in `apps/platform/src/modules/threads/components/sidebar-threads.tsx`.
 
 ## What a person sees
 
@@ -97,8 +97,8 @@ The archive sweep in `apps/control-plane/src/modules/threads/retention.ts` gains
 - `apps/platform/src/modules/threads/hooks/use-threads.ts`: `setPinned(threadId, pinnedAt)`, beside `setMarkColor`.
 - `apps/platform/src/modules/threads/hooks/use-pin-thread.ts`: optimistic like `use-rename-thread.ts`. Set the local value, call `PUT` or `DELETE /threads/:id/pin`, and on failure put the old value back and toast "Could not pin the thread" / "Could not unpin the thread". No success toast; the row moving is the feedback. No refresh is needed because no other field changed.
 - `apps/platform/src/modules/threads/pinned-threads.ts`: pure `splitPinned(threads)` returning `{ pinned, pinnedIds }`. A thread is pinned when it or any ancestor is pinned. `pinned` holds each pinned family once, root first; families are ordered by the newest `pinnedAt` among their pinned members, so pinning any member raises the family and unpinning the root keeps the newest remaining pin. `pinnedIds` is every thread drawn in the section, forks included. A thread whose parent is not in the list is its own root, the same rule `recencyGroups` uses. Tested beside it.
-- `sidebar-threads.tsx`: `const { pinned, pinnedIds } = splitPinned(threads)`; `recencyGroups(threads)` is still computed over the full open list, and each resulting group drops the ids in `pinnedIds`, so a pinned fork's activity still decides its parent's group (decision 0293). The Pinned section renders above the groups through the same row renderer. The current `RecencyGroupSection` becomes a generic `ThreadGroupSection` taking `id`, `label` and children, so Pinned uses `aven.sidebar-group.pinned` for its open state and looks like the other groups while reusing its animation and accessibility.
-- `thread-actions-menu.tsx`: props gain `pinned` and `onTogglePin`; the dropdown gets a Pin or Unpin item with `PinIcon` above Archive. The row itself gets no pin icon: the section already says why it is there.
+- `sidebar-threads.tsx`: `const { pinned, pinnedIds } = splitPinned(threads)`; `recencyGroups(threads)` is still computed over the full open list, and each resulting group drops the ids in `pinnedIds`, so a pinned fork's activity still decides its parent's group (decision 0293). The Pinned section renders above the groups through the same row renderer and the existing `SidebarSection` (`components/sidebar-section.tsx`), with `id="pinned"`, so it uses `aven.sidebar-group.pinned` for its open state and looks like the other groups while reusing their animation and accessibility.
+- `thread-actions-menu.tsx`: props gain `pinned` and `onTogglePin`; the dropdown gets a Pin or Unpin item with the Tabler pin icon above Archive. The row itself gets no pin icon: the section already says why it is there.
 
 ### Edge cases
 
@@ -117,8 +117,8 @@ The archive sweep in `apps/control-plane/src/modules/threads/retention.ts` gains
 - `packages/db/src/schema/thread-pins.ts` and the generated migration.
 - `apps/control-plane/src/modules/threads/pins.ts` and its test.
 - `apps/control-plane/src/modules/threads/service.ts`, `router.ts`, `retention.ts`.
-- `apps/platform/src/modules/threads/{types.ts,hooks/use-threads.ts,hooks/use-pin-thread.ts,pinned-threads.ts,components/sidebar-threads.tsx,components/thread-actions-menu.tsx,components/thread-group-section.tsx}` and their tests.
-- `docs/decision/0359-a-thread-pin-belongs-to-one-person.md`, and the thread recency bullet in `docs/products/0007-system-reference.md`.
+- `apps/platform/src/modules/threads/{types.ts,hooks/use-threads.ts,hooks/use-pin-thread.ts,pinned-threads.ts,components/sidebar-threads.tsx,components/thread-actions-menu.tsx}` and their tests.
+- `docs/decision/0363-a-thread-pin-belongs-to-one-person.md`, and the thread recency bullet in `docs/products/0007-system-reference.md`.
 
 ## Testing
 
