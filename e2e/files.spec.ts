@@ -28,7 +28,12 @@ test.describe("a thread's files", () => {
     await expect(panel.getByText('return "hello, world";')).toBeVisible();
     await expect(panel.locator('[style*="--shiki-dark"]').first()).toBeVisible();
     await tree.getByRole("button", { name: "README.md" }).click();
+    await expect(panel.getByRole("heading", { name: "Notes" })).toBeVisible();
+    await expect(panel.getByText("# Notes")).toHaveCount(0);
+    await panel.getByRole("button", { name: "Show the source" }).click();
     await expect(panel.getByText("# Notes")).toBeVisible();
+    await panel.getByRole("button", { name: "Show the rendered file" }).click();
+    await expect(panel.getByRole("heading", { name: "Notes" })).toBeVisible();
 
     await page.reload();
     await expect(tree.getByRole("button", { name: "greeting.ts" })).toBeVisible();
