@@ -15,6 +15,7 @@ import { PendingAttachments } from "@/modules/threads/components/pending-attachm
 import { useAttachmentDrop } from "@/modules/threads/hooks/use-attachment-drop";
 import { useAttachments } from "@/modules/threads/hooks/use-attachments";
 import { useComposerChat } from "@/modules/threads/hooks/use-composer-chat";
+import { useComposerDraft } from "@/modules/threads/hooks/use-composer-draft";
 import type { AttachmentUpload } from "@/modules/threads/types";
 import { toast } from "@aven/ui/toast";
 
@@ -123,11 +124,12 @@ export function BotComposer({ botId, ...props }: Props) {
   return (
     <ChatProvider controller={chat}>
       <ComposerPrimitive.Root
+        key={botId}
         triggers={triggers}
         className="contents"
         onSubmit={(event) => event.preventDefault()}
       >
-        <Composer {...props} color={color} />
+        <Composer {...props} color={color} draftId={`bot-${botId}`} />
       </ComposerPrimitive.Root>
     </ChatProvider>
   );
@@ -140,10 +142,12 @@ function Composer({
   quoteAuthor,
   onClearQuote,
   color,
-}: Omit<Props, "botId"> & { color?: string }) {
+  draftId,
+}: Omit<Props, "botId"> & { color?: string; draftId: string }) {
   const composer = useComposer();
   const entity = useCallback((found: ComposerInputEntity) => renderEntity(found, color), [color]);
-  const attachments = useAttachments();
+  const attachments = useAttachments(draftId);
+  useComposerDraft(draftId, composer, attachments);
   const drop = useAttachmentDrop(attachments);
   const [sending, setSending] = useState(false);
   const editor = useRef<HTMLDivElement>(null);
