@@ -1,21 +1,16 @@
 import type { ComposerTriggerItem } from "@anvia/react-ui/chat";
 
-import { ProjectTile } from "@/modules/projects/components/project-tile";
-import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
-
 import { BotAvatar } from "./bot-avatar";
+import { ThreadMentionMark } from "./thread-mention-mark";
 
 export function MentionIcon({ item }: { item: ComposerTriggerItem }) {
-  const palettes = useProjectPalettes();
-  const data = item.data as { kind?: string; avatar?: string; projectId?: string } | undefined;
+  const data = item.data as { kind?: string; avatar?: string } | undefined;
 
   if (data?.kind === "bot") {
     return <BotAvatar bot={{ id: item.id, avatar: data.avatar ?? "" }} className="size-5" />;
   }
 
-  if (data?.kind === "thread" && data.projectId) {
-    return <ProjectTile projectId={data.projectId} palette={palettes.get(data.projectId)} />;
-  }
+  if (data?.kind === "thread") return <ThreadMentionMark id={item.id} className="size-4" />;
 
   return null;
 }
