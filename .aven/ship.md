@@ -2,31 +2,36 @@
 
 Ship this thread's work.
 
-1. **Commit what belongs to the work, and nothing else.** Commit messages are one short imperative
-   sentence in this repository's style — "Put the machine rows in a card, with a rule under it" —
-   with no `feat:`/`fix:` prefix and no ticket number; add a body only when the reason is not
-   obvious. Never commit `.env`, `dist/`, `node_modules/` or `.aven/runtime`, and never edit
+1. **Commit what belongs to the work, and nothing else.** Sign off every commit, because the `dco`
+   check on every pull request fails without it: `git commit -s -m "<subject>"`. Commit messages are
+   one short imperative sentence in this repository's style — "Put the machine rows in a card, with a
+   rule under it" — with no `feat:`/`fix:` prefix and no ticket number; add a body only when the reason
+   is not obvious. Never commit `.env`, `dist/`, `node_modules/` or `.aven/runtime`, and never edit
    `bun.lock` by hand.
 
 2. **Update from the default branch.** `git fetch origin main && git rebase origin/main`. Resolve
    conflicts in code you touched; if one is in a place you cannot judge, stop and tell me.
 
-3. **Bring the database up.** If `DATABASE_URL` already points at a running PostgreSQL 17 (a sandbox
-   without Docker), use it and skip `.aven/stack`. Otherwise `bash .aven/stack` starts (in Docker, or the local install when Docker is missing) the PostgreSQL 17 this repository uses in
-   Docker and writes its `DATABASE_URL` to `.env.local`, which Bun loads. It is safe to repeat; run
-   it if connecting fails. Then apply the schema from the repository root, which is also safe to
-   repeat: `set -a && { [ ! -f .env.local ] || . ./.env.local; } && set +a && bun packages/db/src/migrate.ts`
-   (with an existing database there is no `.env.local`; `DATABASE_URL` comes from the environment). Do not run
-   `db:migrate` through `--cwd packages/db`: it reads `.env`, whose `DATABASE_URL` is not this thread's.
+3. **Bring the database up.** `bash .aven/stack` starts the PostgreSQL 17 this repository uses
+   (in Docker, or the local install when Docker is missing) on this thread's port and writes
+   `DATABASE_URL` and `E2E_DATABASE_BASE_URL` to `.env.local`. It is safe to repeat; run it if
+   connecting fails. Bun loads `.env.local` by itself; a command that does not (the Playwright
+   runner) gets it exported first: `set -a && . ./.env.local && set +a`. Then apply the schema from
+   the repository root, which is also safe to repeat: `bun packages/db/src/migrate.ts`. Do not run
+   `db:migrate` through `--cwd packages/db`: it reads `.env`, whose `DATABASE_URL` is not this
+   thread's.
 
 4. **Run the checks, and fix what your change broke:**
-   `bun run format && bun run typecheck && bun run lint && bun run format:check && bun test apps packages`.
-   `bun test apps packages` and not a plain `bun test`, which also picks up the Playwright specs and
-   fails on them. Do not push while one fails. If a failure is not yours, say so with its output and
-   stop.
+   `bun run format && bun run typecheck && bun run lint && bun run format:check && bun test apps packages sandbox tooling`.
+   That is CI's set, and `bun test apps packages sandbox tooling` rather than a plain `bun test`, which
+   also picks up the Playwright specs and fails on them. Do not push while one fails. If a failure is
+   not yours, say so with its output and stop.
 
-5. **Run the e2e suite when a screen (`apps/platform`) or an API changed:** `bun run test:e2e`. It
-   needs no Docker; it starts its own servers and its own `aven_e2e` database.
+5. **Run the e2e suite when a screen (`apps/platform`) or an API changed:**
+   `set -a && . ./.env.local && set +a && bun run test:e2e`. The Playwright runner is a node script
+   and does not read `.env.local` itself, so export it first. The suite starts its own servers on
+   8100/8101/8102/5174, its own throwaway `*_e2e` database on `E2E_DATABASE_BASE_URL`, and a
+   production build of the platform.
 
 6. **Record proof for anything that changes what a screen shows.** Screenshot the changed screen —
    from the Playwright spec that covers it, or with `bun run dev` (web on :5173, API on :8000) and
@@ -40,7 +45,8 @@ Ship this thread's work.
    and Consequences, as `AGENTS.md` asks. Take the number after step 2's rebase: another change
    on `main` may have used the one you had in mind.
 
-8. **Push the branch:** `git push -u origin HEAD`. Never force-push, and never push to `main`; the one exception is step 11's `--force-with-lease` after a rebase of this branch.
+8. **Push the branch:** `git push -u origin HEAD`. Never force-push, and never push to `main`; the one
+   exception is step 11's `--force-with-lease` after a rebase of this branch.
 
 9. **Open the pull request against `main`, ready for review — not a draft.** Write the body to
    `.aven/pr.md` in this shape, then run
@@ -58,7 +64,7 @@ Ship this thread's work.
 
    ## How it was tested
 
-   - `bun run typecheck`, `bun run lint`, `bun run format:check` and `bun test apps packages` pass.
+   - `bun run typecheck`, `bun run lint`, `bun run format:check` and `bun test apps packages sandbox tooling` pass.
    - `bun run test:e2e` passes (when it was run).
    - ![after](.aven/proof/<topic>/after.png)
    ```

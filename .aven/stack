@@ -7,6 +7,15 @@ export PATH="$HOME/.local/bin:$HOME/.bun/bin:/usr/local/bin:/opt/homebrew/bin:$P
 offset=$(( $(pwd | cksum | cut -d' ' -f1) % 100 ))
 port=$((55400 + offset))
 
+write_env_local() {
+  printf 'DATABASE_URL=postgres://postgres:postgres@localhost:%s/aven\n' "$port" > .env.local
+  printf 'E2E_DATABASE_BASE_URL=postgres://postgres:postgres@localhost:%s\n' "$port" >> .env.local
+  if [ -f .env ]; then
+    sed -i.bak "s|^DATABASE_URL=.*|DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven|" .env
+    rm -f .env.bak
+  fi
+}
+
 if ! command -v docker > /dev/null && [ -x /usr/lib/postgresql/17/bin/postgres ]; then
   sudo pg_ctlcluster 17 main stop > /dev/null 2>&1 || true
   sudo pg_conftool 17 main set port "$port" > /dev/null
@@ -18,7 +27,7 @@ if ! command -v docker > /dev/null && [ -x /usr/lib/postgresql/17/bin/postgres ]
   sudo -u postgres psql -p "$port" -qc "ALTER USER postgres PASSWORD 'postgres'" > /dev/null
   sudo -u postgres psql -p "$port" -tc "SELECT 1 FROM pg_database WHERE datname='aven'" | grep -q 1 \
     || sudo -u postgres createdb -p "$port" aven
-  echo "DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven" > .env.local
+  write_env_local
   echo "ready    postgres 17 (local) on localhost:$port (DATABASE_URL in .env.local)"
   echo "next     start the dev server as a process: bun run dev (control-plane 8000, platform 5173)"
   exit 0
@@ -36,6 +45,6 @@ for _ in $(seq 1 30); do
 done
 docker exec "$name" pg_isready -h localhost -p 5432 -U postgres -d aven
 
-echo "DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven" > .env.local
+write_env_local
 echo "ready    postgres 17 on localhost:$port (DATABASE_URL in .env.local)"
 echo "next     start the dev server as a process: bun run dev (control-plane 8000, platform 5173)"
