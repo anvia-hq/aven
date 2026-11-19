@@ -403,7 +403,8 @@ const WORKSPACE: Record<string, { name: string; type: "file" | "directory" }[]> 
   src: [{ name: "greeting.ts", type: "file" }],
 };
 const WORKSPACE_FILES: Record<string, string> = {
-  "README.md": "# Notes\n",
+  "README.md":
+    '# Notes\n\n<p align="center"><strong>Centered</strong></p>\n\n<script>window.hacked = true</script>\n',
   "src/greeting.ts": 'export function greet() {\n  return "hello, world";\n}\n',
 };
 

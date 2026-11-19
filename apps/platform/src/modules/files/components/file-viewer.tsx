@@ -1,7 +1,7 @@
 import { IconCode, IconEye } from "@tabler/icons-react";
 import { useState } from "react";
 
-import { Markdown } from "@/components/markdown";
+import { MarkdownDocument } from "@/components/markdown-document";
 import { PanelNotice } from "@/components/panel-notice";
 import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
@@ -56,7 +56,7 @@ function Document({ path, text, truncated }: { path: string; text: string; trunc
     <div className="relative size-full overflow-auto">
       <ViewToggle source={false} onToggle={() => setSource(true)} />
       <div className="px-6 py-4">
-        <Markdown>{text}</Markdown>
+        <MarkdownDocument>{text}</MarkdownDocument>
         {truncated && (
           <p className="mt-4 text-xs text-muted-foreground">
             The file is too large to show in full; the end of it is left out.
