@@ -128,14 +128,14 @@ test.describe("the agent's question", () => {
     await page.getByRole("button", { name: "Send" }).click();
 
     const form = page.getByRole("form", { name: "Answer the agent" });
-    await expect(form).toContainText("1 of 2");
+    await expect(form.getByRole("img", { name: "Question 1 of 2" })).toBeVisible();
     await expect(form).toContainText("How big is it?");
     await expect(form).not.toContainText("Which color should it be?");
     await expect(form.getByRole("button", { name: "Next" })).toBeDisabled();
     await form.getByRole("radio", { name: "Large" }).click();
     await form.getByRole("button", { name: "Next" }).click();
 
-    await expect(form).toContainText("2 of 2");
+    await expect(form.getByRole("img", { name: "Question 2 of 2" })).toBeVisible();
     await expect(form).toContainText("Which color should it be?");
     await form.getByRole("button", { name: "Back" }).click();
     await expect(form.getByRole("radio", { name: "Large" })).toBeChecked();

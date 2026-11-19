@@ -44,23 +44,25 @@ export function BotQuestionForm({
     <Form
       aria-label={`Answer ${botName}`}
       onFormSubmit={() => (last ? void submit() : answered && setStep(step + 1))}
-      className="flex w-full max-w-md flex-col gap-4 rounded-xl border bg-card p-4 shadow-xs"
+      className="flex w-full max-w-md flex-col gap-5 rounded-3xl border border-border/50 bg-card p-5"
     >
-      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground/80">
         <span>{botName} needs your answer</span>
         {questions.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span>
-              {step + 1} of {questions.length}
-            </span>
-            <div className="flex gap-1" aria-hidden>
-              {questions.map((item, index) => (
-                <span
-                  key={item.id}
-                  className={cn("h-1 w-5 rounded-full", index <= step ? "bg-primary" : "bg-border")}
-                />
-              ))}
-            </div>
+          <div
+            role="img"
+            aria-label={`Question ${step + 1} of ${questions.length}`}
+            className="flex gap-1"
+          >
+            {questions.map((item, index) => (
+              <span
+                key={item.id}
+                className={cn(
+                  "h-1 w-4 rounded-full",
+                  index <= step ? "bg-foreground/70" : "bg-foreground/10",
+                )}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -74,7 +76,13 @@ export function BotQuestionForm({
 
       <div className="flex items-center justify-between">
         {step > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="rounded-full px-4"
+            onClick={() => setStep(step - 1)}
+          >
             <IconArrowLeft />
             Back
           </Button>
@@ -82,12 +90,17 @@ export function BotQuestionForm({
           <span />
         )}
         {last ? (
-          <Button type="submit" size="sm" disabled={!answered || sending}>
+          <Button
+            type="submit"
+            size="sm"
+            className="rounded-full px-4"
+            disabled={!answered || sending}
+          >
             <IconArrowUp />
             Send answer
           </Button>
         ) : (
-          <Button type="submit" size="sm" disabled={!answered}>
+          <Button type="submit" size="sm" className="rounded-full px-4" disabled={!answered}>
             Next
             <IconArrowRight />
           </Button>
