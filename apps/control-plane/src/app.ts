@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import {
   botApi,
   botChats,
+  botDefaultRuntime,
   botRuntimeId,
   previews,
   runsService,
@@ -71,7 +72,7 @@ export const app = new Elysia()
   .use(authRouter)
   .use(botsRouter(botChats))
   .use(webhooksRouter(webhooks))
-  .use(botComputerRouter(runtimeHub, botRuntimeId))
+  .use(botComputerRouter(runtimeHub, botRuntimeId, botDefaultRuntime))
   .use(cockpitRouter)
   .use(computerRouter(runtimeHub))
   .use(diffRouter(runtimeHub))

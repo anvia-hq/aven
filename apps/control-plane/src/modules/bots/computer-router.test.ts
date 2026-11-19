@@ -26,7 +26,7 @@ run("a bot's computer (real postgres, real WebSockets)", async () => {
   const server = new Elysia()
     .use(errorsRouter)
     .use(connectRouter(hub))
-    .use(botComputerRouter(hub, runtime.id))
+    .use(botComputerRouter(hub, runtime.id, async () => null))
     .listen({ port: 0 });
   const base = `localhost:${server.server?.port}`;
   const sockets: WebSocket[] = [];

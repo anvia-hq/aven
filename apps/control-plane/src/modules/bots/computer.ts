@@ -5,7 +5,11 @@ import { reachRunner } from "../runtimes/providers";
 import { NO_COMPUTER } from "./talk-replier";
 import { botsService } from "./service";
 
-export const botRunnerFor = (hub: RuntimeHub, defaultRuntimeId: string) =>
+export const botRunnerFor = (
+  hub: RuntimeHub,
+  defaultRuntimeId: string,
+  defaultRuntime: (userId: string) => Promise<string | null>,
+) =>
   runnerVia(
     async (userId, botId) => {
       const bot = await requireOwnBot(userId, botId);
@@ -14,7 +18,7 @@ export const botRunnerFor = (hub: RuntimeHub, defaultRuntimeId: string) =>
 
       return reachRunner(
         hub,
-        { runtimeId: bot.runtimeId ?? defaultRuntimeId },
+        { runtimeId: bot.runtimeId ?? (await defaultRuntime(userId)) ?? defaultRuntimeId },
         "The bot's computer is offline",
       );
     },

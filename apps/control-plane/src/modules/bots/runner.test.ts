@@ -117,6 +117,24 @@ const stopped = (events: BotEvent[]) =>
   events.some((event) => event.type === "typing" && !event.typing);
 
 describe("BotRunner", () => {
+  test("a bot on the default computer is answered on the person's registered one, and one with its own keeps it", async () => {
+    const seen: (string | null)[] = [];
+    const replier: BotReplier = {
+      ready: (_choice, placed) => void seen.push(placed.runtimeId ?? null),
+      answer: async () => undefined,
+    };
+    const runner = new BotRunner({
+      store: fakeStore(),
+      replier,
+      defaultRuntime: async (userId) => (userId === USER ? "mine" : null),
+    });
+    await runner.send(bot, USER, "hello", choice);
+    await runner.send({ ...bot, runtimeId: "chosen" }, USER, "hello", choice);
+    await runner.send({ ...bot, hasComputer: false }, USER, "hello", choice);
+    await runner.send(bot, "u2", "hello", choice);
+    expect(seen).toEqual(["mine", "chosen", null, null]);
+  });
+
   test("forgetting a bot clears its chat, and is refused while it is at work", async () => {
     const store = fakeStore();
     const release = Promise.withResolvers<void>();
