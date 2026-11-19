@@ -36,7 +36,7 @@ test.describe("mentions in the composer", () => {
     await expect(prompt.locator('[data-mention="skill"]')).toHaveText("writing-skills");
 
     await page.keyboard.type("/nothing");
-    await expect(menu.getByText("No skill matches")).toBeVisible();
+    await expect(menu.getByText("No command or skill matches")).toBeVisible();
     await page.keyboard.press("Enter");
 
     await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
