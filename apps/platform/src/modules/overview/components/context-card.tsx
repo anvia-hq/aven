@@ -61,7 +61,7 @@ export function ContextCard({
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(percent)}
-        className="h-2 w-full overflow-hidden rounded-full bg-muted"
+        className="h-2 w-full overflow-hidden rounded-full bg-foreground/10"
       >
         {split ? (
           <div className="flex h-full gap-px">
