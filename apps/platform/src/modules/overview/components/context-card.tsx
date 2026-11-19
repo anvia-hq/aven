@@ -1,6 +1,7 @@
 import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
+import { contextBars } from "../context-bars";
 
 import { OverviewCard } from "./overview-card";
 import type { ContextUsage } from "@aven/protocol/types";
@@ -51,6 +52,7 @@ export function ContextCard({
   }
 
   const percent = Math.min(100, (context.usedTokens / context.contextWindow) * 100);
+  const split = contextBars(context);
   return (
     <OverviewCard title="Context">
       <div
@@ -61,7 +63,19 @@ export function ContextCard({
         aria-valuenow={Math.round(percent)}
         className="h-2 w-full overflow-hidden rounded-full bg-muted"
       >
-        <div className="h-full rounded-full bg-foreground" style={{ width: `${percent}%` }} />
+        {split ? (
+          <div className="flex h-full gap-px">
+            {split.bars.map((bar) => (
+              <span
+                key={bar.id}
+                className={bar.tone}
+                style={{ width: `${bar.percent}%`, minWidth: 2 }}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="h-full rounded-full bg-foreground" style={{ width: `${percent}%` }} />
+        )}
       </div>
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -82,6 +96,29 @@ export function ContextCard({
           </Button>
         )}
       </div>
+      {split && (
+        <dl className="flex flex-col gap-1 text-xs">
+          {split.bars.map((bar) => (
+            <div key={bar.id} className="flex justify-between">
+              <dt className="flex items-center gap-2 text-muted-foreground">
+                <span aria-hidden className={`size-2 shrink-0 rounded-full ${bar.tone}`} />
+                {bar.label}
+              </dt>
+              <dd className="tabular-nums">{compactNumber(bar.tokens)}</dd>
+            </div>
+          ))}
+          <div className="flex justify-between">
+            <dt className="flex items-center gap-2 text-muted-foreground">
+              <span
+                aria-hidden
+                className="size-2 shrink-0 rounded-full border border-foreground/30"
+              />
+              Free space
+            </dt>
+            <dd className="tabular-nums">{compactNumber(split.free)}</dd>
+          </div>
+        </dl>
+      )}
     </OverviewCard>
   );
 }
