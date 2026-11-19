@@ -294,6 +294,19 @@ run("a bot's threads (postgres)", async () => {
     await expect(
       bot.answer(noted, one.id, { answers: [{ questionId: "q1", value: "Draft" }] }),
     ).rejects.toThrow("person's own word");
+    for (const wrong of [
+      [{ questionId: "q1", value: "Whatever I like" }],
+      [{ questionId: "other", value: "Draft" }],
+      [
+        { questionId: "q1", value: "Draft" },
+        { questionId: "q1", value: "Ready" },
+      ],
+    ]) {
+      await expect(bot.answer(person, one.id, { answers: wrong })).rejects.toThrow(
+        "one of the choices",
+      );
+    }
+    expect(answered).toHaveLength(0);
     await bot.answer(person, one.id, { answers: [{ questionId: "q1", value: "Draft" }] });
     expect(answered.at(-1)).toEqual({
       thread: one.id,
