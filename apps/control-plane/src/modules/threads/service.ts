@@ -3,6 +3,7 @@ import { members } from "@aven/db/schema/members";
 import { threadPlanLimits } from "@aven/db/schema/thread-plan-limits";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
+import { threadPins } from "@aven/db/schema/thread-pins";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
 import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
@@ -48,8 +49,13 @@ export class ThreadNotFoundError extends NotFoundError {
 }
 
 const { pendingContinuation: _held, ...publicColumns } = getTableColumns(threads);
-const columns = {
+const columnsFor = (userId?: string) => ({
   ...publicColumns,
+  pinnedAt: userId
+    ? sql<
+        string | null
+      >`(select to_char(${threadPins.pinnedAt} at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') from ${threadPins} where ${threadPins.threadId} = ${threads.id} and ${threadPins.userId} = ${userId})`
+    : sql<string | null>`null`,
   createdByName: sql<string>`(select ${users.name} from ${users} where ${users.id} = "threads"."created_by")`,
   createdByImage: sql<
     string | null
@@ -76,7 +82,7 @@ const columns = {
     from ${threadPullRequests}
     where ${threadPullRequests.threadId} = "threads"."id"
   ), '[]'::json)`,
-};
+});
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -122,11 +128,15 @@ function archivedFilter(archived: boolean | undefined) {
 
 export const threadsService = {
   list: (viewer: Viewer) =>
-    db.select(columns).from(threads).where(seenBy(viewer)).orderBy(desc(threads.updatedAt)),
+    db
+      .select(columnsFor(viewer.userId))
+      .from(threads)
+      .where(seenBy(viewer))
+      .orderBy(desc(threads.updatedAt)),
 
   async readable(viewer: Viewer, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor(viewer.userId))
       .from(threads)
       .where(and(seenBy(viewer), eq(threads.id, id)));
 
@@ -137,7 +147,7 @@ export const threadsService = {
 
   async owned({ organizationId, userId }: Viewer, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor(userId))
       .from(threads)
       .where(
         and(
@@ -158,7 +168,7 @@ export const threadsService = {
     narrow: { archived?: boolean; projectId?: string } = {},
   ) =>
     db
-      .select(columns)
+      .select(columnsFor(userId))
       .from(threads)
       .where(
         and(
@@ -173,7 +183,7 @@ export const threadsService = {
 
   async readableForPerson(userId: string, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor(userId))
       .from(threads)
       .where(
         and(
@@ -190,7 +200,7 @@ export const threadsService = {
 
   async ownedForPerson(userId: string, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor(userId))
       .from(threads)
       .where(and(eq(threads.id, id), eq(threads.createdBy, userId), inPersonsWorkspaces(userId)));
 
@@ -201,7 +211,7 @@ export const threadsService = {
 
   async get(organizationId: string, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor())
       .from(threads)
       .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
     return thread ?? null;
@@ -216,7 +226,7 @@ export const threadsService = {
   },
 
   async byId(id: string) {
-    const [thread] = await db.select(columns).from(threads).where(eq(threads.id, id));
+    const [thread] = await db.select(columnsFor()).from(threads).where(eq(threads.id, id));
     return thread ?? null;
   },
 
@@ -287,13 +297,13 @@ export const threadsService = {
         parentThreadId: placement?.parentThreadId,
         title: body.title ?? project.name,
       })
-      .returning(columns);
+      .returning(columnsFor(userId));
     return thread!;
   },
 
   async drivable({ organizationId, userId }: Viewer, id: string) {
     const [thread] = await db
-      .select(columns)
+      .select(columnsFor(userId))
       .from(threads)
       .where(and(eq(threads.organizationId, organizationId), eq(threads.id, id)));
 
@@ -353,7 +363,7 @@ export const threadsService = {
           eq(threads.id, id),
         ),
       )
-      .returning(columns);
+      .returning(columnsFor(userId));
     return thread ?? null;
   },
 
