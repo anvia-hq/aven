@@ -59,7 +59,7 @@ export function createSendMessageTool(send: SendMessage) {
   return createTool({
     name: SEND_MESSAGE_TOOL_NAME,
     description:
-      "Send a message to the person or to one of their other bots. It is the only way anyone hears from you: nothing you write outside this tool is seen. Call it again for another message; they arrive in order, those to the person each after a short pause as if typed. A bot you write to answers in a message of its own, later, not as the result of this call. Quote the message you are answering by its id, and do not repeat what it said.",
+      "Send a message to the person or to one of their other bots. It is the only way anyone hears from you: nothing you write outside this tool is seen, so use it for every reply, even a greeting or one word. Call it again for another message; they arrive in order, those to the person each after a short pause as if typed. A bot you write to answers in a message of its own, later, not as the result of this call. Quote the message you are answering by its id, and do not repeat what it said.",
     inputSchema: sendMessageSchema,
     async handler(input, context) {
       return send(input, { abortSignal: context?.abortSignal });

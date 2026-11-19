@@ -32,6 +32,16 @@ function fakeStore(): MemoryStore {
   };
 }
 
+describe("botInstructions on how a bot speaks", () => {
+  test("every reply goes through send_message, and plain text counts as never sent", () => {
+    const text = botInstructions({ ...pip, instruction: "" });
+
+    expect(text).toContain("Everything you say goes through send_message, every time");
+    expect(text).toContain("an answer written as plain text is an answer that was never sent");
+    expect(text).toContain("Before you stop, check that what you meant to say was sent");
+  });
+});
+
 describe("botInstructions with the person's work", () => {
   const projects = [
     {
