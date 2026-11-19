@@ -74,6 +74,7 @@ export class RunBusyError extends ConflictError {
 }
 
 const PING_MS = 5_000;
+const DRAIN_POLL_MS = 250;
 
 export class RunManager {
   #channels = new Map<string, Channel>();
@@ -85,6 +86,7 @@ export class RunManager {
   #workedTimes: WorkedTimeStore;
   #senders: SenderStore;
   #limits: LimitStore;
+  #draining = false;
 
   constructor(deps: {
     store: ConversationStore;
@@ -104,6 +106,23 @@ export class RunManager {
     this.#workedTimes = deps.workedTimes;
     this.#senders = deps.senders;
     this.#limits = deps.limits;
+  }
+
+  runningCount() {
+    let count = 0;
+
+    for (const channel of this.#channels.values()) if (channel.run) count += 1;
+
+    return count;
+  }
+
+  async drain(timeoutMs: number) {
+    this.#draining = true;
+    const deadline = Date.now() + timeoutMs;
+
+    while (this.runningCount() > 0 && Date.now() < deadline) await Bun.sleep(DRAIN_POLL_MS);
+
+    return this.runningCount();
   }
 
   isRunning(threadId: string) {
@@ -241,6 +260,8 @@ export class RunManager {
   }
 
   async #reserved(channel: Channel, work: (channel: Channel) => Promise<void>) {
+    if (this.#draining) throw new UnavailableError("The server is restarting; try again shortly");
+
     if (channel.run || channel.starting) throw new RunBusyError();
 
     channel.starting = true;
