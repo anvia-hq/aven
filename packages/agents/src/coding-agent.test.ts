@@ -27,11 +27,12 @@ describe("createCodingAgent", () => {
     },
   );
 
-  test("gives the agent ask_user and request_secret unless turned off", () => {
+  test("gives the agent ask_user, request_secret and open_browser unless turned off", () => {
     const base = { provider: "openai", apiKey: "test-key", tools: [] } as const;
     expect(createCodingAgent(base).agent.tools.map((tool) => tool.name)).toEqual([
       "ask_user",
       "request_secret",
+      "open_browser",
     ]);
     expect(createCodingAgent({ ...base, questions: false }).agent.tools).toEqual([]);
   });

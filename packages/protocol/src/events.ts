@@ -17,6 +17,8 @@ export const QUESTION_TOOL_NAME = "ask_user";
 
 export const SECRET_TOOL_NAME = "request_secret";
 
+export const OPEN_BROWSER_TOOL_NAME = "open_browser";
+
 export const SHOW_ARTIFACT_TOOL_NAME = "show_artifact";
 
 export const SHOW_IMAGE_TOOL_NAME = "show_image";

@@ -2,6 +2,7 @@ import type { ToolCallPart, ToolResultOutput } from "@anvia/core";
 
 import {
   QUESTION_TOOL_NAME,
+  OPEN_BROWSER_TOOL_NAME,
   SECRET_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,
   SHOW_IMAGE_TOOL_NAME,
@@ -88,6 +89,10 @@ export function toolTarget(name: string, input: unknown) {
 
   if (PROCESS_TOOLS.has(name) || name === WAIT_FOR_PROCESS_TOOL_NAME) {
     return asString(args.processId);
+  }
+
+  if (name === OPEN_BROWSER_TOOL_NAME) {
+    return typeof args.port === "number" ? `localhost:${args.port}` : "";
   }
 
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);
