@@ -12,7 +12,7 @@ The Context card showed one number, the tokens in the window, as a ring. It coul
 
 - `ContextUsage` gains an optional `segments` list of `{ id, tokens }`, validated on the wire. It is optional, so `WIRE_VERSION` stays and an older control plane drops the field.
 - The runner's event mapper (`durable-events.ts`) keeps the request of a `model_started` event and, on the `model_completed` of the same operation, splits it and scales it to the tokens the bar shows (`context-segments.ts`). It works from the journal, so a replayed run reports the same split. A request it cannot estimate reports no split rather than failing the usage event.
-- The card draws the bar as the segments, each sized against the whole window, with a legend of tokens per segment and the free space. A thread with no split, which is every Claude or Codex run and any thread read back from its history, keeps the single filled bar.
+- The card draws the bar as the segments, each sized against the whole window, with a legend of tokens per segment and the free space. A thread with no split, which is every Claude or Codex run and a thread whose last split no longer matches its history, keeps the single filled bar.
 
 ## Consequences
 
