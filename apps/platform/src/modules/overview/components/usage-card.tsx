@@ -18,7 +18,7 @@ export function UsageCard({
         <div className="flex flex-col gap-2">
           <Skeleton className="h-2 w-full rounded-full" />
           <div className="flex flex-col gap-1">
-            {Array.from({ length: 4 }, (_, index) => (
+            {Array.from({ length: 6 }, (_, index) => (
               <Skeleton key={index} className="h-4 w-full" />
             ))}
           </div>
@@ -54,6 +54,12 @@ export function UsageCard({
       hint: `${totals.cacheReadTokens.toLocaleString("en")} input tokens served from the provider's cache, added up over every request.`,
     },
     {
+      label: "Cache write",
+      value: compactNumber(totals.cacheWriteTokens),
+      tone: "bg-usage-cache-write",
+      hint: `${totals.cacheWriteTokens.toLocaleString("en")} input tokens written to the provider's cache, added up over every request.`,
+    },
+    {
       label: "Uncached",
       value: compactNumber(uncached),
       tone: "bg-usage-uncached",
@@ -66,14 +72,6 @@ export function UsageCard({
       hint: "Cache read divided by input: the share of all input tokens that came from the cache.",
     },
   ];
-
-  if (totals.cacheWriteTokens > 0)
-    rows.splice(3, 0, {
-      label: "Cache write",
-      value: compactNumber(totals.cacheWriteTokens),
-      tone: "bg-usage-cache-write",
-      hint: `${totals.cacheWriteTokens.toLocaleString("en")} input tokens written to the provider's cache, added up over every request.`,
-    });
 
   const segments = [
     { label: "Output", value: totals.outputTokens, tone: "bg-usage-output" },
