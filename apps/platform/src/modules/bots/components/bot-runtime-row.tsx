@@ -21,7 +21,7 @@ export function BotRuntimeRow({ bot }: { bot: Bot }) {
   return (
     <SettingsRow
       title="Computer"
-      description="Where this bot's commands and files live, in a folder of its own under the runner's home (bots/<id>). Default is the server's built-in runner. No computer: the bot only talks, and its model still runs on the server."
+      description="Where this bot's commands and files live, in a folder of its own under the runner's home (bots/<id>). Default is the server's built-in runner. No computer: everything that needs no machine still works, and the bot answers on the server."
     >
       <Select
         value={bot.hasComputer ? (bot.runtimeId ?? DEFAULT) : NONE}

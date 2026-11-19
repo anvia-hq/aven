@@ -115,15 +115,17 @@ describe("botInstructions", () => {
     expect(botInstructions({ ...pip, instruction: "  " })).not.toContain("<persona>");
   });
 
-  test("says it only talks, until it has a computer, and then says what the computer is", () => {
+  test("says it has no computer, tells where one is given, and then says what the computer is", () => {
     const talking = botInstructions({ ...pip, instruction: "" });
-    expect(talking).toContain("you have no files, commands or internet");
+    expect(talking).toContain("You have no computer");
+    expect(talking).toContain("\n<no-computer>\n");
+    expect(talking).toContain("Settings > Bots");
     expect(talking).not.toContain("<computer>");
 
     const working = botInstructions({ ...pip, instruction: "", computer: true });
     expect(working).toContain("You have a computer of your own");
     expect(working).toContain("<computer>");
-    expect(working).not.toContain("no files, commands or internet");
+    expect(working).not.toContain("<no-computer>");
   });
 
   test("tells a bot with a computer where the files the person attaches are, and a bot without one nothing of them", () => {
