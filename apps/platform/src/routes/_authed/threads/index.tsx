@@ -14,7 +14,7 @@ import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
 
-export const Route = createFileRoute("/_authed/_shell/threads/")({
+export const Route = createFileRoute("/_authed/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
     project:
       typeof search.project === "string" && search.project !== "" ? search.project : undefined,

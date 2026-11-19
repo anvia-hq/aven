@@ -20,9 +20,7 @@ export function BotAttentionCell({
   working: boolean;
   onCycle?: () => void;
 }) {
-  const pathname = useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname,
-  });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const cycles = useRef(0);
   const reason =
     (bot.attention ? ATTENTION_LABEL[bot.attention.reason] : null) ??

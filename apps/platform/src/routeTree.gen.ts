@@ -13,10 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
-import { Route as AuthedShellRouteImport } from './routes/_authed/_shell'
-import { Route as AuthedBotRouteImport } from './routes/_authed/bot'
-import { Route as AuthedCockpitRouteImport } from './routes/_authed/cockpit'
-import { Route as AuthedSettingsRouteImport } from './routes/_authed/settings'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
 import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
@@ -25,6 +21,8 @@ import { Route as AuthedCockpitInboxRouteImport } from './routes/_authed/cockpit
 import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit/notes'
 import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/tags'
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
+import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
+import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
 import { Route as AuthedSettingsAnnouncementsRouteImport } from './routes/_authed/settings/announcements'
 import { Route as AuthedSettingsBotsRouteImport } from './routes/_authed/settings/bots'
@@ -45,10 +43,8 @@ import { Route as AuthedSettingsSandboxRouteImport } from './routes/_authed/sett
 import { Route as AuthedSettingsSkillsRouteImport } from './routes/_authed/settings/skills'
 import { Route as AuthedSettingsWebhooksRouteImport } from './routes/_authed/settings/webhooks'
 import { Route as AuthedSettingsWorkspaceVariablesRouteImport } from './routes/_authed/settings/workspace-variables'
-import { Route as AuthedShellProjectsIndexRouteImport } from './routes/_authed/_shell/projects/index'
-import { Route as AuthedShellProjectsProjectIdRouteImport } from './routes/_authed/_shell/projects/$projectId'
-import { Route as AuthedShellThreadsIndexRouteImport } from './routes/_authed/_shell/threads/index'
-import { Route as AuthedShellThreadsThreadIdRouteImport } from './routes/_authed/_shell/threads/$threadId'
+import { Route as AuthedThreadsIndexRouteImport } from './routes/_authed/threads/index'
+import { Route as AuthedThreadsThreadIdRouteImport } from './routes/_authed/threads/$threadId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -69,25 +65,6 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedShellRoute = AuthedShellRouteImport.update({
-  id: '/_shell',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedBotRoute = AuthedBotRouteImport.update({
-  id: '/bot',
-  path: '/bot',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedCockpitRoute = AuthedCockpitRouteImport.update({
-  id: '/cockpit',
-  path: '/cockpit',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedSettingsRoute = AuthedSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AcceptInvitationInvitationIdRoute =
   AcceptInvitationInvitationIdRouteImport.update({
     id: '/accept-invitation/$invitationId',
@@ -95,181 +72,176 @@ const AcceptInvitationInvitationIdRoute =
     getParentRoute: () => rootRouteImport,
   } as any)
 const AuthedBotIndexRoute = AuthedBotIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedBotRoute,
+  id: '/bot/',
+  path: '/bot/',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedBotBotIdRoute = AuthedBotBotIdRouteImport.update({
-  id: '/$botId',
-  path: '/$botId',
-  getParentRoute: () => AuthedBotRoute,
+  id: '/bot/$botId',
+  path: '/bot/$botId',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitIndexRoute = AuthedCockpitIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedCockpitRoute,
+  id: '/cockpit/',
+  path: '/cockpit/',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitInboxRoute = AuthedCockpitInboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => AuthedCockpitRoute,
+  id: '/cockpit/inbox',
+  path: '/cockpit/inbox',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitNotesRoute = AuthedCockpitNotesRouteImport.update({
-  id: '/notes',
-  path: '/notes',
-  getParentRoute: () => AuthedCockpitRoute,
+  id: '/cockpit/notes',
+  path: '/cockpit/notes',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitTagsRoute = AuthedCockpitTagsRouteImport.update({
-  id: '/tags',
-  path: '/tags',
-  getParentRoute: () => AuthedCockpitRoute,
+  id: '/cockpit/tags',
+  path: '/cockpit/tags',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitTasksRoute = AuthedCockpitTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => AuthedCockpitRoute,
+  id: '/cockpit/tasks',
+  path: '/cockpit/tasks',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedProjectsProjectIdRoute = AuthedProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsIndexRoute = AuthedSettingsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsAnnouncementsRoute =
   AuthedSettingsAnnouncementsRouteImport.update({
-    id: '/announcements',
-    path: '/announcements',
-    getParentRoute: () => AuthedSettingsRoute,
+    id: '/settings/announcements',
+    path: '/settings/announcements',
+    getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedSettingsBotsRoute = AuthedSettingsBotsRouteImport.update({
-  id: '/bots',
-  path: '/bots',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/bots',
+  path: '/settings/bots',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsDecisionModelRoute =
   AuthedSettingsDecisionModelRouteImport.update({
-    id: '/decision-model',
-    path: '/decision-model',
-    getParentRoute: () => AuthedSettingsRoute,
+    id: '/settings/decision-model',
+    path: '/settings/decision-model',
+    getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedSettingsEnvironmentVariablesRoute =
   AuthedSettingsEnvironmentVariablesRouteImport.update({
-    id: '/environment-variables',
-    path: '/environment-variables',
-    getParentRoute: () => AuthedSettingsRoute,
+    id: '/settings/environment-variables',
+    path: '/settings/environment-variables',
+    getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedSettingsGeneralRoute = AuthedSettingsGeneralRouteImport.update({
-  id: '/general',
-  path: '/general',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/general',
+  path: '/settings/general',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsGithubRoute = AuthedSettingsGithubRouteImport.update({
-  id: '/github',
-  path: '/github',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/github',
+  path: '/settings/github',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsMcpRoute = AuthedSettingsMcpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/mcp',
+  path: '/settings/mcp',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsMcpAccessRoute = AuthedSettingsMcpAccessRouteImport.update({
-  id: '/mcp-access',
-  path: '/mcp-access',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/mcp-access',
+  path: '/settings/mcp-access',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsMembersRoute = AuthedSettingsMembersRouteImport.update({
-  id: '/members',
-  path: '/members',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/members',
+  path: '/settings/members',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsMemoryRoute = AuthedSettingsMemoryRouteImport.update({
-  id: '/memory',
-  path: '/memory',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/memory',
+  path: '/settings/memory',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsPeopleRoute = AuthedSettingsPeopleRouteImport.update({
-  id: '/people',
-  path: '/people',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/people',
+  path: '/settings/people',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsPlatformRoute = AuthedSettingsPlatformRouteImport.update({
-  id: '/platform',
-  path: '/platform',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/platform',
+  path: '/settings/platform',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsProfileRoute = AuthedSettingsProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/profile',
+  path: '/settings/profile',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsProvidersRoute = AuthedSettingsProvidersRouteImport.update({
-  id: '/providers',
-  path: '/providers',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/providers',
+  path: '/settings/providers',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsRuntimesRoute = AuthedSettingsRuntimesRouteImport.update({
-  id: '/runtimes',
-  path: '/runtimes',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/runtimes',
+  path: '/settings/runtimes',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsSandboxRoute = AuthedSettingsSandboxRouteImport.update({
-  id: '/sandbox',
-  path: '/sandbox',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/sandbox',
+  path: '/settings/sandbox',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsSkillsRoute = AuthedSettingsSkillsRouteImport.update({
-  id: '/skills',
-  path: '/skills',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/skills',
+  path: '/settings/skills',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsWebhooksRoute = AuthedSettingsWebhooksRouteImport.update({
-  id: '/webhooks',
-  path: '/webhooks',
-  getParentRoute: () => AuthedSettingsRoute,
+  id: '/settings/webhooks',
+  path: '/settings/webhooks',
+  getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedSettingsWorkspaceVariablesRoute =
   AuthedSettingsWorkspaceVariablesRouteImport.update({
-    id: '/workspace-variables',
-    path: '/workspace-variables',
-    getParentRoute: () => AuthedSettingsRoute,
+    id: '/settings/workspace-variables',
+    path: '/settings/workspace-variables',
+    getParentRoute: () => AuthedRoute,
   } as any)
-const AuthedShellProjectsIndexRoute =
-  AuthedShellProjectsIndexRouteImport.update({
-    id: '/projects/',
-    path: '/projects/',
-    getParentRoute: () => AuthedShellRoute,
-  } as any)
-const AuthedShellProjectsProjectIdRoute =
-  AuthedShellProjectsProjectIdRouteImport.update({
-    id: '/projects/$projectId',
-    path: '/projects/$projectId',
-    getParentRoute: () => AuthedShellRoute,
-  } as any)
-const AuthedShellThreadsIndexRoute = AuthedShellThreadsIndexRouteImport.update({
+const AuthedThreadsIndexRoute = AuthedThreadsIndexRouteImport.update({
   id: '/threads/',
   path: '/threads/',
-  getParentRoute: () => AuthedShellRoute,
+  getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedShellThreadsThreadIdRoute =
-  AuthedShellThreadsThreadIdRouteImport.update({
-    id: '/threads/$threadId',
-    path: '/threads/$threadId',
-    getParentRoute: () => AuthedShellRoute,
-  } as any)
+const AuthedThreadsThreadIdRoute = AuthedThreadsThreadIdRouteImport.update({
+  id: '/threads/$threadId',
+  path: '/threads/$threadId',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/bot': typeof AuthedBotRouteWithChildren
-  '/cockpit': typeof AuthedCockpitRouteWithChildren
-  '/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/bot/$botId': typeof AuthedBotBotIdRoute
   '/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -289,13 +261,12 @@ export interface FileRoutesByFullPath {
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/bot/': typeof AuthedBotIndexRoute
   '/cockpit/': typeof AuthedCockpitIndexRoute
+  '/projects/': typeof AuthedProjectsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
-  '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
-  '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
-  '/projects/': typeof AuthedShellProjectsIndexRoute
-  '/threads/': typeof AuthedShellThreadsIndexRoute
+  '/threads/': typeof AuthedThreadsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -307,6 +278,7 @@ export interface FileRoutesByTo {
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
   '/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -326,13 +298,12 @@ export interface FileRoutesByTo {
   '/settings/skills': typeof AuthedSettingsSkillsRoute
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/bot': typeof AuthedBotIndexRoute
   '/cockpit': typeof AuthedCockpitIndexRoute
+  '/projects': typeof AuthedProjectsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
-  '/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
-  '/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
-  '/projects': typeof AuthedShellProjectsIndexRoute
-  '/threads': typeof AuthedShellThreadsIndexRoute
+  '/threads': typeof AuthedThreadsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -340,16 +311,13 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
-  '/_authed/_shell': typeof AuthedShellRouteWithChildren
-  '/_authed/bot': typeof AuthedBotRouteWithChildren
-  '/_authed/cockpit': typeof AuthedCockpitRouteWithChildren
-  '/_authed/settings': typeof AuthedSettingsRouteWithChildren
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_authed/bot/$botId': typeof AuthedBotBotIdRoute
   '/_authed/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
   '/_authed/settings/decision-model': typeof AuthedSettingsDecisionModelRoute
@@ -369,13 +337,12 @@ export interface FileRoutesById {
   '/_authed/settings/skills': typeof AuthedSettingsSkillsRoute
   '/_authed/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
+  '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/_authed/bot/': typeof AuthedBotIndexRoute
   '/_authed/cockpit/': typeof AuthedCockpitIndexRoute
+  '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
-  '/_authed/_shell/projects/$projectId': typeof AuthedShellProjectsProjectIdRoute
-  '/_authed/_shell/threads/$threadId': typeof AuthedShellThreadsThreadIdRoute
-  '/_authed/_shell/projects/': typeof AuthedShellProjectsIndexRoute
-  '/_authed/_shell/threads/': typeof AuthedShellThreadsIndexRoute
+  '/_authed/threads/': typeof AuthedThreadsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -383,15 +350,13 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
-    | '/bot'
-    | '/cockpit'
-    | '/settings'
     | '/accept-invitation/$invitationId'
     | '/bot/$botId'
     | '/cockpit/inbox'
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/projects/$projectId'
     | '/settings/announcements'
     | '/settings/bots'
     | '/settings/decision-model'
@@ -411,12 +376,11 @@ export interface FileRouteTypes {
     | '/settings/skills'
     | '/settings/webhooks'
     | '/settings/workspace-variables'
+    | '/threads/$threadId'
     | '/bot/'
     | '/cockpit/'
-    | '/settings/'
-    | '/projects/$projectId'
-    | '/threads/$threadId'
     | '/projects/'
+    | '/settings/'
     | '/threads/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -429,6 +393,7 @@ export interface FileRouteTypes {
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/projects/$projectId'
     | '/settings/announcements'
     | '/settings/bots'
     | '/settings/decision-model'
@@ -448,12 +413,11 @@ export interface FileRouteTypes {
     | '/settings/skills'
     | '/settings/webhooks'
     | '/settings/workspace-variables'
+    | '/threads/$threadId'
     | '/bot'
     | '/cockpit'
-    | '/settings'
-    | '/projects/$projectId'
-    | '/threads/$threadId'
     | '/projects'
+    | '/settings'
     | '/threads'
   id:
     | '__root__'
@@ -461,16 +425,13 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/login'
     | '/register'
-    | '/_authed/_shell'
-    | '/_authed/bot'
-    | '/_authed/cockpit'
-    | '/_authed/settings'
     | '/accept-invitation/$invitationId'
     | '/_authed/bot/$botId'
     | '/_authed/cockpit/inbox'
     | '/_authed/cockpit/notes'
     | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
+    | '/_authed/projects/$projectId'
     | '/_authed/settings/announcements'
     | '/_authed/settings/bots'
     | '/_authed/settings/decision-model'
@@ -490,13 +451,12 @@ export interface FileRouteTypes {
     | '/_authed/settings/skills'
     | '/_authed/settings/webhooks'
     | '/_authed/settings/workspace-variables'
+    | '/_authed/threads/$threadId'
     | '/_authed/bot/'
     | '/_authed/cockpit/'
+    | '/_authed/projects/'
     | '/_authed/settings/'
-    | '/_authed/_shell/projects/$projectId'
-    | '/_authed/_shell/threads/$threadId'
-    | '/_authed/_shell/projects/'
-    | '/_authed/_shell/threads/'
+    | '/_authed/threads/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -537,34 +497,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/_shell': {
-      id: '/_authed/_shell'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthedShellRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/bot': {
-      id: '/_authed/bot'
-      path: '/bot'
-      fullPath: '/bot'
-      preLoaderRoute: typeof AuthedBotRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/cockpit': {
-      id: '/_authed/cockpit'
-      path: '/cockpit'
-      fullPath: '/cockpit'
-      preLoaderRoute: typeof AuthedCockpitRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/settings': {
-      id: '/_authed/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AuthedSettingsRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/accept-invitation/$invitationId': {
       id: '/accept-invitation/$invitationId'
       path: '/accept-invitation/$invitationId'
@@ -574,277 +506,231 @@ declare module '@tanstack/react-router' {
     }
     '/_authed/bot/': {
       id: '/_authed/bot/'
-      path: '/'
+      path: '/bot'
       fullPath: '/bot/'
       preLoaderRoute: typeof AuthedBotIndexRouteImport
-      parentRoute: typeof AuthedBotRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/bot/$botId': {
       id: '/_authed/bot/$botId'
-      path: '/$botId'
+      path: '/bot/$botId'
       fullPath: '/bot/$botId'
       preLoaderRoute: typeof AuthedBotBotIdRouteImport
-      parentRoute: typeof AuthedBotRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/': {
       id: '/_authed/cockpit/'
-      path: '/'
+      path: '/cockpit'
       fullPath: '/cockpit/'
       preLoaderRoute: typeof AuthedCockpitIndexRouteImport
-      parentRoute: typeof AuthedCockpitRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/inbox': {
       id: '/_authed/cockpit/inbox'
-      path: '/inbox'
+      path: '/cockpit/inbox'
       fullPath: '/cockpit/inbox'
       preLoaderRoute: typeof AuthedCockpitInboxRouteImport
-      parentRoute: typeof AuthedCockpitRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/notes': {
       id: '/_authed/cockpit/notes'
-      path: '/notes'
+      path: '/cockpit/notes'
       fullPath: '/cockpit/notes'
       preLoaderRoute: typeof AuthedCockpitNotesRouteImport
-      parentRoute: typeof AuthedCockpitRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/tags': {
       id: '/_authed/cockpit/tags'
-      path: '/tags'
+      path: '/cockpit/tags'
       fullPath: '/cockpit/tags'
       preLoaderRoute: typeof AuthedCockpitTagsRouteImport
-      parentRoute: typeof AuthedCockpitRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/tasks': {
       id: '/_authed/cockpit/tasks'
-      path: '/tasks'
+      path: '/cockpit/tasks'
       fullPath: '/cockpit/tasks'
       preLoaderRoute: typeof AuthedCockpitTasksRouteImport
-      parentRoute: typeof AuthedCockpitRoute
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/': {
+      id: '/_authed/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof AuthedProjectsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/projects/$projectId': {
+      id: '/_authed/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof AuthedProjectsProjectIdRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/': {
       id: '/_authed/settings/'
-      path: '/'
+      path: '/settings'
       fullPath: '/settings/'
       preLoaderRoute: typeof AuthedSettingsIndexRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/announcements': {
       id: '/_authed/settings/announcements'
-      path: '/announcements'
+      path: '/settings/announcements'
       fullPath: '/settings/announcements'
       preLoaderRoute: typeof AuthedSettingsAnnouncementsRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/bots': {
       id: '/_authed/settings/bots'
-      path: '/bots'
+      path: '/settings/bots'
       fullPath: '/settings/bots'
       preLoaderRoute: typeof AuthedSettingsBotsRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/decision-model': {
       id: '/_authed/settings/decision-model'
-      path: '/decision-model'
+      path: '/settings/decision-model'
       fullPath: '/settings/decision-model'
       preLoaderRoute: typeof AuthedSettingsDecisionModelRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/environment-variables': {
       id: '/_authed/settings/environment-variables'
-      path: '/environment-variables'
+      path: '/settings/environment-variables'
       fullPath: '/settings/environment-variables'
       preLoaderRoute: typeof AuthedSettingsEnvironmentVariablesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/general': {
       id: '/_authed/settings/general'
-      path: '/general'
+      path: '/settings/general'
       fullPath: '/settings/general'
       preLoaderRoute: typeof AuthedSettingsGeneralRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/github': {
       id: '/_authed/settings/github'
-      path: '/github'
+      path: '/settings/github'
       fullPath: '/settings/github'
       preLoaderRoute: typeof AuthedSettingsGithubRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/mcp': {
       id: '/_authed/settings/mcp'
-      path: '/mcp'
+      path: '/settings/mcp'
       fullPath: '/settings/mcp'
       preLoaderRoute: typeof AuthedSettingsMcpRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/mcp-access': {
       id: '/_authed/settings/mcp-access'
-      path: '/mcp-access'
+      path: '/settings/mcp-access'
       fullPath: '/settings/mcp-access'
       preLoaderRoute: typeof AuthedSettingsMcpAccessRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/members': {
       id: '/_authed/settings/members'
-      path: '/members'
+      path: '/settings/members'
       fullPath: '/settings/members'
       preLoaderRoute: typeof AuthedSettingsMembersRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/memory': {
       id: '/_authed/settings/memory'
-      path: '/memory'
+      path: '/settings/memory'
       fullPath: '/settings/memory'
       preLoaderRoute: typeof AuthedSettingsMemoryRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/people': {
       id: '/_authed/settings/people'
-      path: '/people'
+      path: '/settings/people'
       fullPath: '/settings/people'
       preLoaderRoute: typeof AuthedSettingsPeopleRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/platform': {
       id: '/_authed/settings/platform'
-      path: '/platform'
+      path: '/settings/platform'
       fullPath: '/settings/platform'
       preLoaderRoute: typeof AuthedSettingsPlatformRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/profile': {
       id: '/_authed/settings/profile'
-      path: '/profile'
+      path: '/settings/profile'
       fullPath: '/settings/profile'
       preLoaderRoute: typeof AuthedSettingsProfileRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/providers': {
       id: '/_authed/settings/providers'
-      path: '/providers'
+      path: '/settings/providers'
       fullPath: '/settings/providers'
       preLoaderRoute: typeof AuthedSettingsProvidersRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/runtimes': {
       id: '/_authed/settings/runtimes'
-      path: '/runtimes'
+      path: '/settings/runtimes'
       fullPath: '/settings/runtimes'
       preLoaderRoute: typeof AuthedSettingsRuntimesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/sandbox': {
       id: '/_authed/settings/sandbox'
-      path: '/sandbox'
+      path: '/settings/sandbox'
       fullPath: '/settings/sandbox'
       preLoaderRoute: typeof AuthedSettingsSandboxRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/skills': {
       id: '/_authed/settings/skills'
-      path: '/skills'
+      path: '/settings/skills'
       fullPath: '/settings/skills'
       preLoaderRoute: typeof AuthedSettingsSkillsRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/webhooks': {
       id: '/_authed/settings/webhooks'
-      path: '/webhooks'
+      path: '/settings/webhooks'
       fullPath: '/settings/webhooks'
       preLoaderRoute: typeof AuthedSettingsWebhooksRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/settings/workspace-variables': {
       id: '/_authed/settings/workspace-variables'
-      path: '/workspace-variables'
+      path: '/settings/workspace-variables'
       fullPath: '/settings/workspace-variables'
       preLoaderRoute: typeof AuthedSettingsWorkspaceVariablesRouteImport
-      parentRoute: typeof AuthedSettingsRoute
+      parentRoute: typeof AuthedRoute
     }
-    '/_authed/_shell/projects/': {
-      id: '/_authed/_shell/projects/'
-      path: '/projects'
-      fullPath: '/projects/'
-      preLoaderRoute: typeof AuthedShellProjectsIndexRouteImport
-      parentRoute: typeof AuthedShellRoute
-    }
-    '/_authed/_shell/projects/$projectId': {
-      id: '/_authed/_shell/projects/$projectId'
-      path: '/projects/$projectId'
-      fullPath: '/projects/$projectId'
-      preLoaderRoute: typeof AuthedShellProjectsProjectIdRouteImport
-      parentRoute: typeof AuthedShellRoute
-    }
-    '/_authed/_shell/threads/': {
-      id: '/_authed/_shell/threads/'
+    '/_authed/threads/': {
+      id: '/_authed/threads/'
       path: '/threads'
       fullPath: '/threads/'
-      preLoaderRoute: typeof AuthedShellThreadsIndexRouteImport
-      parentRoute: typeof AuthedShellRoute
+      preLoaderRoute: typeof AuthedThreadsIndexRouteImport
+      parentRoute: typeof AuthedRoute
     }
-    '/_authed/_shell/threads/$threadId': {
-      id: '/_authed/_shell/threads/$threadId'
+    '/_authed/threads/$threadId': {
+      id: '/_authed/threads/$threadId'
       path: '/threads/$threadId'
       fullPath: '/threads/$threadId'
-      preLoaderRoute: typeof AuthedShellThreadsThreadIdRouteImport
-      parentRoute: typeof AuthedShellRoute
+      preLoaderRoute: typeof AuthedThreadsThreadIdRouteImport
+      parentRoute: typeof AuthedRoute
     }
   }
 }
 
-interface AuthedShellRouteChildren {
-  AuthedShellProjectsProjectIdRoute: typeof AuthedShellProjectsProjectIdRoute
-  AuthedShellThreadsThreadIdRoute: typeof AuthedShellThreadsThreadIdRoute
-  AuthedShellProjectsIndexRoute: typeof AuthedShellProjectsIndexRoute
-  AuthedShellThreadsIndexRoute: typeof AuthedShellThreadsIndexRoute
-}
-
-const AuthedShellRouteChildren: AuthedShellRouteChildren = {
-  AuthedShellProjectsProjectIdRoute: AuthedShellProjectsProjectIdRoute,
-  AuthedShellThreadsThreadIdRoute: AuthedShellThreadsThreadIdRoute,
-  AuthedShellProjectsIndexRoute: AuthedShellProjectsIndexRoute,
-  AuthedShellThreadsIndexRoute: AuthedShellThreadsIndexRoute,
-}
-
-const AuthedShellRouteWithChildren = AuthedShellRoute._addFileChildren(
-  AuthedShellRouteChildren,
-)
-
-interface AuthedBotRouteChildren {
+interface AuthedRouteChildren {
   AuthedBotBotIdRoute: typeof AuthedBotBotIdRoute
-  AuthedBotIndexRoute: typeof AuthedBotIndexRoute
-}
-
-const AuthedBotRouteChildren: AuthedBotRouteChildren = {
-  AuthedBotBotIdRoute: AuthedBotBotIdRoute,
-  AuthedBotIndexRoute: AuthedBotIndexRoute,
-}
-
-const AuthedBotRouteWithChildren = AuthedBotRoute._addFileChildren(
-  AuthedBotRouteChildren,
-)
-
-interface AuthedCockpitRouteChildren {
   AuthedCockpitInboxRoute: typeof AuthedCockpitInboxRoute
   AuthedCockpitNotesRoute: typeof AuthedCockpitNotesRoute
   AuthedCockpitTagsRoute: typeof AuthedCockpitTagsRoute
   AuthedCockpitTasksRoute: typeof AuthedCockpitTasksRoute
-  AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
-}
-
-const AuthedCockpitRouteChildren: AuthedCockpitRouteChildren = {
-  AuthedCockpitInboxRoute: AuthedCockpitInboxRoute,
-  AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
-  AuthedCockpitTagsRoute: AuthedCockpitTagsRoute,
-  AuthedCockpitTasksRoute: AuthedCockpitTasksRoute,
-  AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
-}
-
-const AuthedCockpitRouteWithChildren = AuthedCockpitRoute._addFileChildren(
-  AuthedCockpitRouteChildren,
-)
-
-interface AuthedSettingsRouteChildren {
+  AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
   AuthedSettingsAnnouncementsRoute: typeof AuthedSettingsAnnouncementsRoute
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
   AuthedSettingsDecisionModelRoute: typeof AuthedSettingsDecisionModelRoute
@@ -864,10 +750,21 @@ interface AuthedSettingsRouteChildren {
   AuthedSettingsSkillsRoute: typeof AuthedSettingsSkillsRoute
   AuthedSettingsWebhooksRoute: typeof AuthedSettingsWebhooksRoute
   AuthedSettingsWorkspaceVariablesRoute: typeof AuthedSettingsWorkspaceVariablesRoute
+  AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
+  AuthedBotIndexRoute: typeof AuthedBotIndexRoute
+  AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
+  AuthedProjectsIndexRoute: typeof AuthedProjectsIndexRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
+  AuthedThreadsIndexRoute: typeof AuthedThreadsIndexRoute
 }
 
-const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
+const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedBotBotIdRoute: AuthedBotBotIdRoute,
+  AuthedCockpitInboxRoute: AuthedCockpitInboxRoute,
+  AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
+  AuthedCockpitTagsRoute: AuthedCockpitTagsRoute,
+  AuthedCockpitTasksRoute: AuthedCockpitTasksRoute,
+  AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
   AuthedSettingsAnnouncementsRoute: AuthedSettingsAnnouncementsRoute,
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
   AuthedSettingsDecisionModelRoute: AuthedSettingsDecisionModelRoute,
@@ -888,25 +785,12 @@ const AuthedSettingsRouteChildren: AuthedSettingsRouteChildren = {
   AuthedSettingsSkillsRoute: AuthedSettingsSkillsRoute,
   AuthedSettingsWebhooksRoute: AuthedSettingsWebhooksRoute,
   AuthedSettingsWorkspaceVariablesRoute: AuthedSettingsWorkspaceVariablesRoute,
+  AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
+  AuthedBotIndexRoute: AuthedBotIndexRoute,
+  AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
+  AuthedProjectsIndexRoute: AuthedProjectsIndexRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
-}
-
-const AuthedSettingsRouteWithChildren = AuthedSettingsRoute._addFileChildren(
-  AuthedSettingsRouteChildren,
-)
-
-interface AuthedRouteChildren {
-  AuthedShellRoute: typeof AuthedShellRouteWithChildren
-  AuthedBotRoute: typeof AuthedBotRouteWithChildren
-  AuthedCockpitRoute: typeof AuthedCockpitRouteWithChildren
-  AuthedSettingsRoute: typeof AuthedSettingsRouteWithChildren
-}
-
-const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedShellRoute: AuthedShellRouteWithChildren,
-  AuthedBotRoute: AuthedBotRouteWithChildren,
-  AuthedCockpitRoute: AuthedCockpitRouteWithChildren,
-  AuthedSettingsRoute: AuthedSettingsRouteWithChildren,
+  AuthedThreadsIndexRoute: AuthedThreadsIndexRoute,
 }
 
 const AuthedRouteWithChildren =

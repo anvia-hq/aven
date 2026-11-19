@@ -23,7 +23,7 @@ import { ProjectsBoard } from "./projects-board";
 const ARCHIVED_SHOWN = 50;
 
 export function ProjectsPage() {
-  const search = useSearch({ from: "/_authed/_shell/projects/" });
+  const search = useSearch({ from: "/_authed/projects/" });
   const navigate = useNavigate();
   const { projects, loaded } = useProjects();
   const { all: threads } = useThreads();

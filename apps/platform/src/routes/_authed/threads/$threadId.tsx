@@ -5,7 +5,7 @@ import { SplitDropZone } from "@/modules/threads/components/split-drop-zone";
 import { SplitThreads } from "@/modules/threads/components/split-threads";
 import { ThreadPane } from "@/modules/threads/components/thread-pane";
 
-export const Route = createFileRoute("/_authed/_shell/threads/$threadId")({
+export const Route = createFileRoute("/_authed/threads/$threadId")({
   validateSearch: (search: Record<string, unknown>): { split?: string } => ({
     split: typeof search.split === "string" && search.split !== "" ? search.split : undefined,
   }),
