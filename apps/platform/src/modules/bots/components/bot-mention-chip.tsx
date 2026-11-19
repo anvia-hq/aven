@@ -1,18 +1,22 @@
-import type { CSSProperties } from "react";
+import { cn } from "cn";
 
+import { bubbleInk, bubbleStyle } from "../bubble-tint";
 import { BotAvatar } from "./bot-avatar";
 
 export function BotMentionChip({
   bot,
-  tint,
+  color,
 }: {
   bot: { id: string; name: string; avatar: string };
-  tint?: CSSProperties;
+  color?: string;
 }) {
   return (
     <span
-      className="inline-flex h-fit items-center gap-1 rounded-full bg-muted py-0.5 pr-2 pl-0.5 align-middle leading-none font-medium text-[0.9em] text-foreground"
-      style={tint}
+      className={cn(
+        "inline-flex h-fit items-center gap-1 rounded-full py-0.5 pr-2 pl-0.5 align-middle leading-none font-medium text-[0.9em]",
+        color ? bubbleInk(color) : "bg-muted text-foreground",
+      )}
+      style={bubbleStyle(color)}
       title={`@${bot.name}`}
       data-mention="bot"
     >

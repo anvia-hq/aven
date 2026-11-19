@@ -1,7 +1,5 @@
 import { IconArrowBackUp } from "@tabler/icons-react";
 
-import type { CSSProperties } from "react";
-
 import { Bubble, BubbleContent } from "@aven/ui/bubble";
 import { Button } from "@aven/ui/button";
 import { ExternalLink, Markdown } from "@/components/markdown";
@@ -11,7 +9,8 @@ import { SentAttachments } from "@/modules/threads/components/sent-attachments";
 import { cn } from "cn";
 
 import { titleOf } from "../artifacts";
-import { avatarFor, isLightTint, parseAvatarSetting } from "../avatar";
+import { avatarFor, parseAvatarSetting } from "../avatar";
+import { bubbleInk, bubbleStyle } from "../bubble-tint";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
 import type { Bot, BotChatMessage, BotChatQuote, MessageAttachment } from "../types";
@@ -20,21 +19,6 @@ import { ArtifactCard } from "./artifact-card";
 import { MentionedText } from "./mentioned-text";
 
 export const isPersons = (message: BotChatMessage) => message.role === "user";
-
-function bubbleInk(tint: string | undefined) {
-  if (tint === undefined) return "";
-
-  return isLightTint(tint) ? "text-avatar-face" : "text-avatar-eye";
-}
-
-function bubbleStyle(tint: string | undefined): CSSProperties | undefined {
-  if (tint === undefined) return undefined;
-
-  return {
-    backgroundColor: tint,
-    backgroundImage: `linear-gradient(to bottom, color-mix(in oklch, ${tint}, white 10%), color-mix(in oklch, ${tint}, black 6%))`,
-  };
-}
 
 export function BotChatBubble({
   botId,
