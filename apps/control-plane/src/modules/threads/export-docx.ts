@@ -54,7 +54,10 @@ function entryParagraph(entry: TranscriptEntry) {
   return paragraph("Normal", `${runs("• ", false)}${code}${text}`);
 }
 
-export function threadDocx(title: string, messages: readonly ChatMessage[]): Uint8Array {
+export function threadDocx(
+  title: string,
+  messages: readonly ChatMessage[],
+): Uint8Array<ArrayBuffer> {
   const body = [
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
     '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>',
