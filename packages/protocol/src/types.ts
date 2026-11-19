@@ -204,7 +204,23 @@ export type SubagentEvent =
   | { type: "tool_end"; id: string; status: "done" | "error" }
   | { type: "end"; status: "done" | "error"; output?: string };
 
-export type ContextUsage = { usedTokens: number; contextWindow?: number };
+export type ContextSegmentId =
+  | "instructions"
+  | "messages"
+  | "toolResults"
+  | "documents"
+  | "tools"
+  | "mcpTools"
+  | "providerTools"
+  | "outputSchema";
+
+export type ContextSegment = { id: ContextSegmentId; tokens: number };
+
+export type ContextUsage = {
+  usedTokens: number;
+  contextWindow?: number;
+  segments?: ContextSegment[];
+};
 
 export type TokenUsage = {
   inputTokens: number;

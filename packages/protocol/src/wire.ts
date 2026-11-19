@@ -191,7 +191,27 @@ const runEvent = z.discriminatedUnion("type", [
       cacheReadTokens: tokenCount,
     }),
     context: z
-      .object({ usedTokens: tokenCount, contextWindow: z.number().int().positive().optional() })
+      .object({
+        usedTokens: tokenCount,
+        contextWindow: z.number().int().positive().optional(),
+        segments: z
+          .array(
+            z.object({
+              id: z.enum([
+                "instructions",
+                "messages",
+                "toolResults",
+                "documents",
+                "tools",
+                "mcpTools",
+                "providerTools",
+                "outputSchema",
+              ]),
+              tokens: tokenCount,
+            }),
+          )
+          .optional(),
+      })
       .optional(),
   }),
   z.object({
