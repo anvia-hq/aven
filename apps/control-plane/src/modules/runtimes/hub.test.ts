@@ -1477,10 +1477,10 @@ run("runtime connection (real postgres, real WebSocket)", async () => {
 
       hub.closeAll();
 
-      expect(away.lost.map((entry) => entry.message)).toEqual(["The control plane shut down"]);
+      expect(away.lost.map((entry) => entry.message)).toEqual(["The control plane restarted"]);
       expect(elsewhere.lost.map((entry) => entry.message)).toEqual([
-        "The control plane shut down",
-        "The control plane shut down",
+        "The control plane restarted",
+        "The control plane restarted",
       ]);
 
       await Bun.sleep(50);
