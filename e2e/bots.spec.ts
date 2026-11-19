@@ -495,9 +495,10 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
-    const scout = page.getByRole("link", { name: /Scout/ });
+    const scout = page
+      .getByRole("link", { name: /Scout/ })
+      .filter({ hasText: "Researches what you ask." });
     await expect(scout).toBeVisible();
-    await expect(scout).toContainText("Researches what you ask.");
     await scout.click();
     await expect(page).toHaveURL(/\/bot\/[0-9a-f-]{36}$/);
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
@@ -548,7 +549,7 @@ test.describe("bots", () => {
     await message.press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
 
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await page.getByRole("link", { name: /Scout/ }).first().click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(page.getByRole("status", { name: /typing/ })).toBeHidden();
@@ -588,7 +589,7 @@ test.describe("bots", () => {
     await expect(activity).toContainText("Aven → Scout A, B and C");
     await expect(activity).toContainText("Scout → Aven You said: [from main] A, B and C");
 
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await page.getByRole("link", { name: /Scout/ }).first().click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     await expect(activity).toContainText("2 messages with");
@@ -832,7 +833,7 @@ test.describe("bots", () => {
     await page.getByRole("textbox", { name: "Message" }).fill("make a bot for research");
     await page.getByRole("textbox", { name: "Message" }).press("Enter");
     await expect(bubble(page, "Scout is ready")).toBeVisible();
-    await page.getByRole("link", { name: /Scout/ }).click();
+    await page.getByRole("link", { name: /Scout/ }).first().click();
     await expect(page.getByRole("heading", { name: "Scout" })).toBeVisible();
     await expect(bubble(page, "Hello, I am your new bot")).toBeVisible();
     const scoutId = new URL(page.url()).pathname.split("/").pop()!;
