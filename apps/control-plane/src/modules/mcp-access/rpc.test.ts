@@ -2,13 +2,13 @@ import { describe, expect, test } from "bun:test";
 
 import { createMcpServer } from "./rpc";
 import type { McpApi, McpCaller } from "./types";
-import type { BotApiParams } from "@aven/protocol/types";
+import type { BotApiRequest } from "@aven/protocol/types";
 
 const THREAD = "3b0f6d2e-4c1a-4f7e-9a53-0d2f6a9b1c11";
 
 const PROJECT = "7a1c2d3e-5f60-4a71-8b92-0c3d4e5f6a70";
 
-const calls: BotApiParams[] = [];
+const calls: BotApiRequest[] = [];
 
 const api: McpApi = {
   async answer({ params }) {

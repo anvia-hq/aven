@@ -75,7 +75,7 @@ describe("bot api", () => {
     const { botApi } = api();
     const result = (await botApi.answer({
       userId: "u",
-      params: { replyId: "r", op: "search" },
+      params: { op: "search" },
       onPersonsWord: false,
     })) as { routes: { method: string; path: string; tier: string }[]; organizations: unknown[] };
     expect(result.routes.map((route) => `${route.method} ${route.path} ${route.tier}`)).toEqual([
