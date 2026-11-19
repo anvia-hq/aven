@@ -17,7 +17,10 @@ type Props = {
   threadId: string;
   backend?: AgentBackendKind;
   onSubmit: (answers: QuestionAnswer[], selection: RunSelection) => boolean | Promise<boolean>;
+  onCancel?: () => unknown;
 };
+
+const DECLINED = "declined";
 
 export const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
 
@@ -77,7 +80,7 @@ export function Question({
   );
 }
 
-export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
+export function QuestionForm({ tool, threadId, backend, onSubmit, onCancel }: Props) {
   const model = useModelSelection(threadId, backend);
   const prompts = tool.questions ?? [];
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -96,6 +99,20 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
       prompts.map((item) => ({ questionId: item.id, value: valueOf(drafts[item.id]) })),
       model.selection,
     );
+    setSending(false);
+  }
+
+  async function decline() {
+    if (sending) return;
+
+    setSending(true);
+    const sent = await onSubmit(
+      prompts.map((item) => ({ questionId: item.id, value: DECLINED })),
+      model.selection,
+    );
+
+    if (sent) await onCancel?.();
+
     setSending(false);
   }
 
@@ -137,20 +154,31 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
       />
 
       <div className="flex items-center justify-between">
-        {step > 0 ? (
+        <div className="flex items-center gap-1">
+          {step > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-full px-4"
+              disabled={sending}
+              onClick={() => setStep(step - 1)}
+            >
+              <IconArrowLeft />
+              Back
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="rounded-full px-4"
-            onClick={() => setStep(step - 1)}
+            className="rounded-full px-4 text-muted-foreground"
+            disabled={sending}
+            onClick={() => void decline()}
           >
-            <IconArrowLeft />
-            Back
+            Decline
           </Button>
-        ) : (
-          <span />
-        )}
+        </div>
         {last ? (
           <Button
             type="submit"
