@@ -42,6 +42,7 @@ export function ModelChoiceList({ providers, choices, loading, selected, onSelec
                 ? [
                     <CommandItem
                       key={choice.modelId}
+                      className="data-[selected=true]:bg-accent"
                       value={`${choice.label} ${choice.modelId} ${item.name} ${item.id}`}
                       data-checked={
                         item.id === selected?.providerId && choice.modelId === selected.modelId
