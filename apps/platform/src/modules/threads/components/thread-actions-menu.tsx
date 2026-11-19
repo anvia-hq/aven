@@ -1,4 +1,4 @@
-import { IconArchive, IconDots } from "@tabler/icons-react";
+import { IconArchive, IconDots, IconRestore } from "@tabler/icons-react";
 
 import {
   DropdownMenu,
@@ -8,9 +8,9 @@ import {
 } from "@aven/ui/dropdown-menu";
 import { SidebarMenuAction } from "@aven/ui/sidebar";
 
-type Props = { title: string; onArchive: () => void };
+type Props = { title: string; onArchive?: () => void; onRestore?: () => void };
 
-export function ThreadActionsMenu({ title, onArchive }: Props) {
+export function ThreadActionsMenu({ title, onArchive, onRestore }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -25,10 +25,18 @@ export function ThreadActionsMenu({ title, onArchive }: Props) {
         <IconDots />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
-        <DropdownMenuItem onClick={onArchive}>
-          <IconArchive />
-          Archive
-        </DropdownMenuItem>
+        {onRestore && (
+          <DropdownMenuItem onClick={onRestore}>
+            <IconRestore />
+            Restore
+          </DropdownMenuItem>
+        )}
+        {onArchive && (
+          <DropdownMenuItem onClick={onArchive}>
+            <IconArchive />
+            Archive
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
