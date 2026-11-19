@@ -15,7 +15,7 @@ const threadColor = z
 
 export const messagesBeforeQuery = z.object({ before: z.coerce.number().int().min(0) });
 
-export const exportQuery = z.object({ format: z.string().max(10).optional() });
+export const exportQuery = z.object({ format: z.string().optional() });
 
 export const createThreadBody = z.object({
   projectId: z.uuid(),

@@ -18,8 +18,25 @@ const STYLES = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 const MONO = '<w:rFonts w:ascii="Consolas" w:hAnsi="Consolas"/>';
 
+function isXmlChar(code: number) {
+  return (
+    code === 0x9 ||
+    code === 0xa ||
+    code === 0xd ||
+    (code >= 0x20 && code <= 0xd7ff) ||
+    (code >= 0xe000 && code <= 0xfffd) ||
+    (code >= 0x10000 && code <= 0x10ffff)
+  );
+}
+
+function xmlSafe(text: string) {
+  return Array.from(text)
+    .filter((character) => isXmlChar(character.codePointAt(0) ?? 0))
+    .join("");
+}
+
 function escapeXml(text: string) {
-  return text
+  return xmlSafe(text)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")

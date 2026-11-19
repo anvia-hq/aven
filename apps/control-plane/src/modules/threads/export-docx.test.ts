@@ -60,4 +60,16 @@ describe("threadDocx", () => {
     expect(document).toContain("Empty");
     expect(document).toContain("<w:body>");
   });
+
+  test("drops characters XML forbids", () => {
+    const messages: ChatMessage[] = [
+      { id: "m-1", role: "user", parts: [{ type: "text", text: "a\u000bb\u0001c" }] },
+    ];
+
+    const { document } = parts(threadDocx("Control", messages));
+
+    expect(document).toContain("abc");
+    expect(document).not.toContain("\u000b");
+    expect(document).not.toContain("\u0001");
+  });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { answerQuestionBody, sendMessageBody, updateThreadBody } from "./schema";
+import { answerQuestionBody, exportQuery, sendMessageBody, updateThreadBody } from "./schema";
 
 const prompt = "fix @src/app.ts with /writing-skills";
 const file = { type: "file", name: "src/app.ts", from: 4, to: 15 };
@@ -74,5 +74,12 @@ describe("updateThreadBody's mark color", () => {
 
   test("a body that names no field updates nothing", () => {
     expect(updateThreadBody.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("exportQuery", () => {
+  test("takes a format name of any length, so unknown ones fall back to markdown", () => {
+    expect(exportQuery.parse({ format: "application/pdf" })).toEqual({ format: "application/pdf" });
+    expect(exportQuery.parse({})).toEqual({});
   });
 });
