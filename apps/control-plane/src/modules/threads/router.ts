@@ -15,6 +15,7 @@ import {
   updateThreadBody,
 } from "./schema";
 import { threadMentionsService } from "./mentions";
+import { threadPinsService } from "./pins";
 import { threadsService } from "./service";
 import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
@@ -116,6 +117,14 @@ export const threadsRouter = (
       },
       { thread: "own", params: threadParams, body: updateThreadBody },
     )
+    .put("/:id/pin", ({ params, user }) => threadPinsService.pin(user.id, params.id), {
+      thread: "own",
+      params: threadParams,
+    })
+    .delete("/:id/pin", ({ params, user }) => threadPinsService.unpin(user.id, params.id), {
+      thread: "own",
+      params: threadParams,
+    })
     .post(
       "/:id/messages",
       async ({ params, body, organizationId, user }) => {

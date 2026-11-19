@@ -55,6 +55,22 @@ run("threadPinsService (postgres)", async () => {
     expect((await owned(thread.id)).updatedAt).toEqual(before);
   });
 
+  test("the thread list carries the viewer's pin and not a teammate's", async () => {
+    const thread = await threadsService.create(orgA, userId, { projectId: project.id });
+    await threadsService.update({ organizationId: orgA, userId }, thread.id, {
+      visibility: "workspace",
+    });
+    const { pinnedAt } = await threadPinsService.pin(userId, thread.id);
+    const mine = (await threadsService.list({ organizationId: orgA, userId })).find(
+      (row) => row.id === thread.id,
+    );
+    const mate = (await threadsService.list({ organizationId: orgA, userId: mateId })).find(
+      (row) => row.id === thread.id,
+    );
+    expect(mine?.pinnedAt).toEqual(pinnedAt);
+    expect(mate?.pinnedAt).toBeNull();
+  });
+
   test("a pin survives the thread being archived and reopened", async () => {
     const thread = await threadsService.create(orgA, userId, { projectId: project.id });
     const { pinnedAt } = await threadPinsService.pin(userId, thread.id);
