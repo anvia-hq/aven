@@ -17,3 +17,4 @@ playwright-report
 !.aven/skills/
 .tanstack/
 .env.local
+.pi/
