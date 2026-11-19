@@ -98,6 +98,52 @@ test("a model whose window is unknown still reports what is in its context", () 
   expect(known[0]).toMatchObject({ context: { usedTokens: 100, contextWindow: 1000 } });
 });
 
+test("a turn's usage says how its request spends the context, scaled to what the model reported", () => {
+  const { map } = createDurableEventMapper({ contextWindow: 1000 });
+  map(
+    event("model_started", {
+      operationId: "model:1",
+      input: {
+        request: {
+          instructions: "You are a careful coding agent. ".repeat(30),
+          chatHistory: [{ role: "user", content: [{ type: "text", text: "Fix the bug." }] }],
+          tools: [
+            {
+              name: "read_file",
+              description: "Reads a file from the workspace.",
+              inputSchema: { type: "object", properties: { path: { type: "string" } } },
+            },
+          ],
+        },
+      },
+    }),
+  );
+  const [usage] = map(
+    event("model_completed", {
+      operationId: "model:1",
+      result: { choice: [], usage: { inputTokens: 400, outputTokens: 10, totalTokens: 410 } },
+    }),
+  ).events;
+
+  const context = usage?.type === "usage" ? usage.context : undefined;
+  const segments = context?.segments ?? [];
+  expect(segments.map((segment) => segment.id)).toEqual(["instructions", "messages", "tools"]);
+  expect(segments.reduce((sum, segment) => sum + segment.tokens, 0)).toBe(400);
+  expect(Math.max(...segments.map((segment) => segment.tokens))).toBe(
+    segments.find((segment) => segment.id === "instructions")?.tokens ?? 0,
+  );
+});
+
+test("a turn whose request was never seen reports its usage without a split", () => {
+  const { map } = createDurableEventMapper();
+  const [usage] = map(turnEnd([])).events;
+  expect(usage).toEqual({
+    type: "usage",
+    turn: expect.objectContaining({ inputTokens: 100 }),
+    context: { usedTokens: 100 },
+  });
+});
+
 test("a compaction of a model with no known window reports no context, as its call is not the thread's", () => {
   const { map } = createDurableEventMapper({ compacting: true });
   expect(map(turnEnd([])).events).toEqual([
