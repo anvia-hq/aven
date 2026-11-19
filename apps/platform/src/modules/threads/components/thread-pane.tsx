@@ -56,6 +56,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     showShip,
     answer,
     cancel,
+    decline,
   } = useThread(threadId);
   useFirstPrompt(threadId, send);
   const followUps = useFollowUps(threadId, loaded && synced, running, messages, viewer);
@@ -190,7 +191,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                           threadId={thread.id}
                           backend={thread.agentBackend}
                           onSubmit={answer}
-                          onCancel={cancel}
+                          onDecline={decline}
                         />
                       ) : (
                         <>

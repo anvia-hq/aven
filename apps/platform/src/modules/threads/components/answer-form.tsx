@@ -14,10 +14,10 @@ type Props = {
     selection: RunSelection,
     secret?: SecretChoice,
   ) => boolean | Promise<boolean>;
-  onCancel?: () => unknown;
+  onDecline?: (selection: RunSelection) => boolean | Promise<boolean>;
 };
 
-export function AnswerForm({ tool, threadId, backend, onSubmit, onCancel }: Props) {
+export function AnswerForm({ tool, threadId, backend, onSubmit, onDecline }: Props) {
   if (tool.name === SECRET_TOOL_NAME) {
     return <SecretForm tool={tool} threadId={threadId} backend={backend} onSubmit={onSubmit} />;
   }
@@ -28,7 +28,7 @@ export function AnswerForm({ tool, threadId, backend, onSubmit, onCancel }: Prop
       threadId={threadId}
       backend={backend}
       onSubmit={onSubmit}
-      onCancel={onCancel}
+      onDecline={onDecline}
     />
   );
 }

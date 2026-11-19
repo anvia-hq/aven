@@ -26,6 +26,7 @@ import { decisionModelService } from "../decision-model/service";
 import { addressingDecider, jevModel } from "../decision-model/jev";
 import { threadMentionsService } from "./mentions";
 import { createAddressingGate, recentOf, recentSenders } from "./addressing-gate";
+import { declinedAnswer } from "./declined-question";
 import { asksForSecret, keepSecretAnswers } from "./secret-answers";
 import type { QueuedSteer } from "@aven/protocol/types";
 import type { AnswerQuestionBody, CompactBody, SendMessageBody } from "./schema";
@@ -322,12 +323,20 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       userId: string,
       threadId: string,
       { answers, secretScope, skipSecrets, ...selection }: AnswerQuestionBody,
+      { decline = false }: { decline?: boolean } = {},
     ) {
       const { thread, ownerId, driverId } = await acting(organizationId, userId, threadId);
       await requireLiveProject(organizationId, thread.projectId);
-      const continuation = await threadsService.continuation(thread.id);
+      const stored = await threadsService.continuation(thread.id);
 
-      if (!continuation) throw new ConflictError("The agent is not waiting for an answer");
+      if (!stored) throw new ConflictError("The agent is not waiting for an answer");
+
+      if (decline && asksForSecret(stored)) {
+        throw new ConflictError("A request for a secret is declined with its own button");
+      }
+
+      const declined = decline ? declinedAnswer(stored) : undefined;
+      const continuation = declined?.continuation ?? stored;
 
       if (driverId !== undefined && asksForSecret(continuation)) {
         throw new ConflictError("Only the thread's creator can answer a request for a secret");
@@ -343,7 +352,7 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
         userId: ownerId,
         projectId: thread.projectId,
         continuation,
-        answers,
+        answers: declined?.answers ?? answers,
         scope: secretScope,
         skip: skipSecrets,
       });
@@ -355,6 +364,8 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
       });
       await threadsService.rememberModel(thread, chosen, selection);
       await threadsService.reopen(thread);
+
+      if (decline) runs.cancel(thread.id);
     },
   };
 };

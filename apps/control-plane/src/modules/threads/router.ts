@@ -6,6 +6,7 @@ import { exportContentType, exportFormat, renderExport } from "./export";
 import type { RunManager } from "../runs/service";
 import {
   answerQuestionBody,
+  declineQuestionBody,
   compactBody,
   continueBody,
   createThreadBody,
@@ -171,6 +172,20 @@ export const threadsRouter = (
         return status(202, { ok: true });
       },
       { thread: "drive", params: threadParams, body: answerQuestionBody },
+    )
+    .post(
+      "/:id/decline",
+      async ({ params, body, organizationId, user }) => {
+        await messages.answer(
+          organizationId,
+          user.id,
+          params.id,
+          { answers: [], secretScope: "project", ...body },
+          { decline: true },
+        );
+        return status(202, { ok: true });
+      },
+      { thread: "drive", params: threadParams, body: declineQuestionBody },
     )
     .post("/:id/cancel", ({ params }) => ({ cancelled: runs.cancel(params.id) }), {
       thread: "drive",

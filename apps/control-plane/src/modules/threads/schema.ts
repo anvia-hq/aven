@@ -56,6 +56,8 @@ export const shipBody = z
 
 export const compactBody = z.object(modelSelection).optional();
 
+export const declineQuestionBody = z.object(modelSelection).optional();
+
 const workspacePath = z
   .string()
   .min(1)
@@ -124,3 +126,4 @@ export const continueBody = z.object({ runtimeId: z.uuid(), ...modelSelection })
 export type SendMessageBody = z.infer<typeof sendMessageBody>;
 export type AnswerQuestionBody = z.infer<typeof answerQuestionBody>;
 export type CompactBody = z.infer<typeof compactBody>;
+export type DeclineQuestionBody = z.infer<typeof declineQuestionBody>;
