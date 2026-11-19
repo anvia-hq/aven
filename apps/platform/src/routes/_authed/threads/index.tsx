@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { ProjectMenu } from "@/modules/projects/components/project-menu";
 import { projectFits } from "@/modules/projects/project-fits";
@@ -13,6 +14,8 @@ import { useNewThreadComputer } from "@/modules/threads/hooks/use-new-thread-com
 import { useStartThread } from "@/modules/threads/hooks/use-start-thread";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 import type { OutgoingMessage, RunSelection } from "@/modules/threads/types";
+
+const PROJECT_KEY = "aven.new-thread.project";
 
 export const Route = createFileRoute("/_authed/threads/")({
   validateSearch: (search: Record<string, unknown>): { project?: string } => ({
@@ -33,12 +36,18 @@ function NewThread() {
   const recent = wide ? open.slice(0, 3) : open;
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
   const asked = Route.useSearch().project;
-  const [chosen, setProjectId] = useState<string | undefined>(undefined);
-  const picked = projects.find((project) => project.id === (chosen ?? asked));
+  const [chosen, setChosen] = useState<string | undefined>(undefined);
+  const [remembered, setRemembered] = useLocalStorage<string | null>(PROJECT_KEY, null);
+  const picked = projects.find((project) => project.id === (chosen ?? asked ?? remembered));
   const fitting = projects.filter((project) => projectFits(project, computer.runtime));
   const fallback = recentProjects(fitting, all)[0] ?? fitting[0];
   const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : fallback?.id;
   const [adding, setAdding] = useState(false);
+
+  function setProjectId(id: string) {
+    setChosen(id);
+    setRemembered(id);
+  }
 
   const start = (message: OutgoingMessage, selection: RunSelection) =>
     startThread(projectId, message, selection, computer.runtimeId);
