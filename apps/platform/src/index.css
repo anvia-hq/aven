@@ -30,19 +30,19 @@
 /* Semantic color tokens (shadcn/ui structure; Aven's light neutrals are a cool gray like its dark ones, decision 0305). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.99 0.004 240);
-  --foreground: oklch(0.2 0.006 240);
-  --card: oklch(0.995 0.003 240);
-  --card-foreground: oklch(0.2 0.006 240);
-  --popover: oklch(0.995 0.003 240);
-  --popover-foreground: oklch(0.2 0.006 240);
-  --primary: oklch(0.22 0.008 240);
-  --primary-foreground: oklch(0.98 0.003 240);
-  --secondary: oklch(0.955 0.008 240);
-  --secondary-foreground: oklch(0.25 0.01 240);
-  --muted: oklch(0.955 0.008 240);
-  --muted-foreground: oklch(0.5 0.01 240);
-  --accent: oklch(0.945 0.012 240);
+  --background: oklch(0.92 0 0);
+  --foreground: oklch(0.2 0 0);
+  --card: oklch(0.995 0 0);
+  --card-foreground: oklch(0.2 0 0);
+  --popover: oklch(0.995 0 0);
+  --popover-foreground: oklch(0.2 0 0);
+  --primary: oklch(0.22 0 0);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.955 0 0);
+  --secondary-foreground: oklch(0.25 0 0);
+  --muted: oklch(0.955 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.945 0 0);
   --accent-foreground: oklch(0.25 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -57,36 +57,36 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.45 0.08 125);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.955 0.008 240);
-  --border: oklch(0.89 0.008 240);
-  --input: oklch(0.89 0.008 240);
-  --ring: oklch(0.7 0.03 240);
+  --frame: oklch(0.955 0 0);
+  --border: oklch(0.89 0 0);
+  --input: oklch(0.89 0 0);
+  --ring: oklch(0.7 0 0);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.2 0.006 240);
-  --sidebar-primary: oklch(0.22 0.008 240);
-  --sidebar-primary-foreground: oklch(0.98 0.003 240);
-  --sidebar-accent: oklch(0.935 0.012 240);
+  --sidebar-foreground: oklch(0.2 0 0);
+  --sidebar-primary: oklch(0.22 0 0);
+  --sidebar-primary-foreground: oklch(0.98 0 0);
+  --sidebar-accent: oklch(0.935 0 0);
   --sidebar-accent-foreground: oklch(0.25 0 0);
-  --sidebar-border: oklch(0.91 0.008 240);
-  --sidebar-ring: oklch(0.7 0.03 240);
+  --sidebar-border: oklch(0.91 0 0);
+  --sidebar-ring: oklch(0.7 0 0);
 }
 
 /* Aven, the default dark theme: Mint lifted and turned to a blue-green gray. */
 .dark {
-  --background: oklch(0.18 0.012 205);
-  --foreground: oklch(0.9 0.004 240);
-  --card: oklch(0.21 0.012 205);
-  --card-foreground: oklch(0.9 0.004 240);
-  --popover: oklch(0.23 0.024 205);
-  --popover-foreground: oklch(0.9 0.004 240);
-  --primary: oklch(0.93 0.004 240);
-  --primary-foreground: oklch(0.18 0.004 240);
-  --secondary: oklch(0.25 0.024 205);
-  --secondary-foreground: oklch(0.9 0.004 240);
-  --muted: oklch(0.23 0.024 205);
-  --muted-foreground: oklch(0.62 0.004 240);
-  --accent: oklch(0.265 0.024 205);
-  --accent-foreground: oklch(0.92 0.004 240);
+  --background: oklch(0.22 0 0);
+  --foreground: oklch(0.9 0 0);
+  --card: oklch(0.21 0 0);
+  --card-foreground: oklch(0.9 0 0);
+  --popover: oklch(0.23 0 0);
+  --popover-foreground: oklch(0.9 0 0);
+  --primary: oklch(0.93 0 0);
+  --primary-foreground: oklch(0.18 0 0);
+  --secondary: oklch(0.25 0 0);
+  --secondary-foreground: oklch(0.9 0 0);
+  --muted: oklch(0.23 0 0);
+  --muted-foreground: oklch(0.62 0 0);
+  --accent: oklch(0.265 0 0);
+  --accent-foreground: oklch(0.92 0 0);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
   --info: oklch(0.72 0.15 250);
@@ -100,18 +100,18 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.84 0.08 115);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.225 0.024 205);
+  --frame: oklch(0.225 0 0);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.5 0.012 240);
+  --ring: oklch(0.5 0 0);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.86 0.004 240);
-  --sidebar-primary: oklch(0.93 0.004 240);
-  --sidebar-primary-foreground: oklch(0.18 0.004 240);
-  --sidebar-accent: oklch(0.24 0.024 205);
-  --sidebar-accent-foreground: oklch(0.92 0.004 240);
+  --sidebar-foreground: oklch(0.86 0 0);
+  --sidebar-primary: oklch(0.93 0 0);
+  --sidebar-primary-foreground: oklch(0.18 0 0);
+  --sidebar-accent: oklch(0.24 0 0);
+  --sidebar-accent-foreground: oklch(0.92 0 0);
   --sidebar-border: oklch(1 0 0 / 3%);
-  --sidebar-ring: oklch(0.5 0.012 240);
+  --sidebar-ring: oklch(0.5 0 0);
 }
 
 /* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Aven, the default, is :root and .dark above; Mint is the palette it was made from (decision 0292). */
@@ -1724,8 +1724,12 @@
   --chrome: color-mix(in oklch, var(--frame), black 28%);
 }
 
+:root:not([data-theme]) {
+  --chrome: oklch(0.9 0 0);
+}
+
 .dark:not([data-theme]) {
-  --chrome: color-mix(in oklch, var(--frame), black 48%);
+  --chrome: oklch(0.2 0 0);
 }
 
 /* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
@@ -1956,7 +1960,7 @@
     color-scheme: dark;
   }
   html {
-    font-size: calc(87.5% * var(--interface-scale, 1));
+    font-size: calc(100% * var(--interface-scale, 1));
   }
   * {
     @apply border-border outline-ring/50;

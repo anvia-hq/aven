@@ -58,7 +58,7 @@ export function AppShell({ user }: Props) {
       <TooltipProvider delay={300}>
         <nav
           aria-label="Aven"
-          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center py-2.5 md:flex"
+          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center bg-[color-mix(in_oklch,var(--chrome),black_6%)] py-2.5 md:flex"
         >
           <RailLink
             to="/threads"

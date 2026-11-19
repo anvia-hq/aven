@@ -70,9 +70,11 @@ export function CockpitSidebar() {
   ] as const;
 
   return (
-    <nav aria-label="Cockpit">
+    <nav aria-label="Cockpit" className="pt-4">
       <SidebarGroup className="py-1">
-        <SidebarGroupLabel>Cockpit</SidebarGroupLabel>
+        <SidebarGroupLabel className="h-6 font-normal text-muted-foreground">
+          Cockpit
+        </SidebarGroupLabel>
         <SidebarMenu>
           {pages.map((item) => (
             <SidebarMenuItem key={item.to}>
@@ -91,7 +93,9 @@ export function CockpitSidebar() {
       </SidebarGroup>
       {pinned.length > 0 && (
         <SidebarGroup className="py-1">
-          <SidebarGroupLabel>Pinned</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-6 font-normal text-muted-foreground">
+            Pinned
+          </SidebarGroupLabel>
           <SidebarMenu aria-label="Pinned notes">
             {pinned.map((note) => (
               <SidebarMenuItem key={note.id}>
@@ -110,7 +114,9 @@ export function CockpitSidebar() {
       )}
       {tags.length > 0 && (
         <SidebarGroup className="py-1">
-          <SidebarGroupLabel>Tags</SidebarGroupLabel>
+          <SidebarGroupLabel className="h-6 font-normal text-muted-foreground">
+            Tags
+          </SidebarGroupLabel>
           <SidebarMenu aria-label="Tags">
             {tags.map((tag) => {
               const here = countOn(filtered, tag);
