@@ -11,8 +11,12 @@ write_env_local() {
   printf 'DATABASE_URL=postgres://postgres:postgres@localhost:%s/aven\n' "$port" > .env.local
   printf 'E2E_DATABASE_BASE_URL=postgres://postgres:postgres@localhost:%s\n' "$port" >> .env.local
   if [ -f .env ]; then
-    sed -i.bak "s|^DATABASE_URL=.*|DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven|" .env
-    rm -f .env.bak
+    if grep -q '^DATABASE_URL=' .env; then
+      sed -i.bak "s|^DATABASE_URL=.*|DATABASE_URL=postgres://postgres:postgres@localhost:$port/aven|" .env
+      rm -f .env.bak
+    else
+      printf 'DATABASE_URL=postgres://postgres:postgres@localhost:%s/aven\n' "$port" >> .env
+    fi
   fi
 }
 
