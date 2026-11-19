@@ -43,6 +43,7 @@ type Entry = {
   mood: BotMood;
   visible: boolean;
   dirty: boolean;
+  follow: boolean;
 };
 
 type Stage = {
@@ -200,7 +201,7 @@ function ensureStage() {
 }
 
 function inputOf(entry: Entry, reduced: boolean): MotionInput {
-  if (!pointer.moved) return { mood: entry.mood, pointer: null, reduced };
+  if (!entry.follow || !pointer.moved) return { mood: entry.mood, pointer: null, reduced };
 
   const rect = entry.canvas.getBoundingClientRect();
   const dx = (pointer.x - (rect.left + rect.width / 2)) / (window.innerWidth * 0.5);
@@ -308,6 +309,7 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
     mood: look.mood,
     visible: current.observer === null,
     dirty: true,
+    follow: look.follow === true,
   };
   current.entries.add(entry);
   current.observer?.observe(canvas);

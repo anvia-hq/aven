@@ -12,7 +12,12 @@ function BotPill({ bot }: { bot: Bot }) {
 
   return (
     <>
-      <BotAvatar bot={bot} mood={online ? "working" : "idle"} className="size-7 shrink-0 text-sm" />
+      <BotAvatar
+        bot={bot}
+        mood={online ? "working" : "idle"}
+        className="size-7 shrink-0 text-sm"
+        follow
+      />
       <span className="truncate text-sm font-semibold">{bot.name}</span>
     </>
   );

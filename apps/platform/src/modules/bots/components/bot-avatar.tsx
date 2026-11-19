@@ -12,12 +12,14 @@ export function BotAvatar({
   className,
   children,
   delayMs,
+  follow = false,
 }: {
   bot: Pick<Bot, "id" | "avatar">;
   mood?: BotMood;
   className?: string;
   children?: ReactNode;
   delayMs?: number;
+  follow?: boolean;
 }) {
   const setting = parseAvatarSetting(bot.avatar);
   const text = setting === null && bot.avatar !== "" && !bot.avatar.startsWith("{");
@@ -28,6 +30,7 @@ export function BotAvatar({
     color: look.color,
     mood,
     delayMs: delayMs ?? look.delay,
+    follow,
   });
 
   return (
