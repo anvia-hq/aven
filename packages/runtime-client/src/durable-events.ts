@@ -1,6 +1,7 @@
 import type {
   AgentOutcome,
   AgentStreamEvent,
+  ContextBreakdownSource,
   ToolCallPart,
   ToolResultOutput,
   Usage,
@@ -13,6 +14,8 @@ import { asRecord } from "@aven/agents/values";
 import type { ContextUsage, RunEvent } from "@aven/protocol/types";
 import type { DurableEnd } from "@aven/agent-backend/types";
 
+import { segmentsOf } from "./context-segments";
+
 const DELTAS = new Set(["text_delta", "reasoning_delta", "tool_call"]);
 
 export function createDurableEventMapper(
@@ -20,6 +23,7 @@ export function createDurableEventMapper(
 ) {
   const calls = new Map<string, { id: string; name?: string }>();
   const announced = new Set<string>();
+  const requests = new Map<string, ContextBreakdownSource>();
 
   function map(event: DurableEvent): { events: RunEvent[]; end?: DurableEnd } {
     const data = asRecord(event.data);
@@ -35,6 +39,14 @@ export function createDurableEventMapper(
 
         return { events: projected ? [projected] : [] };
       }
+      case "model_started": {
+        const request = asRecord(asRecord(data.input).request);
+
+        if (typeof data.operationId === "string" && Object.keys(request).length > 0)
+          requests.set(data.operationId, request as ContextBreakdownSource);
+
+        return { events: [] };
+      }
       case "model_completed": {
         const result = asRecord(data.result);
         const events: RunEvent[] = toolCallsOf(result.choice).flatMap((call) => {
@@ -48,12 +60,20 @@ export function createDurableEventMapper(
         if (typeof usage.inputTokens === "number") {
           const { contextWindow } = options;
           const used = asRecord(result.contextUsage).usedTokens;
+          const usedTokens = typeof used === "number" ? used : usage.inputTokens;
+          const request =
+            typeof data.operationId === "string" ? requests.get(data.operationId) : undefined;
+
+          if (typeof data.operationId === "string") requests.delete(data.operationId);
+
           const context: ContextUsage | undefined =
-            options.compacting && !contextWindow
-              ? undefined
-              : { usedTokens: typeof used === "number" ? used : usage.inputTokens };
+            options.compacting && !contextWindow ? undefined : { usedTokens };
 
           if (context && contextWindow) context.contextWindow = contextWindow;
+
+          const segments = context && request && segmentsOf(request, usedTokens);
+
+          if (context && segments) context.segments = segments;
 
           events.push({ type: "usage", turn: tokenUsageOf(usage), context });
         }
