@@ -48,6 +48,8 @@ test.describe("a thread's files", () => {
     await expect(tree.getByRole("button", { name: "README.md" })).toHaveCount(0);
 
     await panel.getByLabel("Filter files").fill("");
+    await panel.getByTitle("src/greeting.ts").click({ button: "middle" });
+    await expect(panel.getByRole("button", { name: "Close src/greeting.ts" })).toHaveCount(0);
     await panel.getByRole("button", { name: "Close README.md" }).click();
     await expect(panel.getByRole("button", { name: "Close README.md" })).toHaveCount(0);
   });
