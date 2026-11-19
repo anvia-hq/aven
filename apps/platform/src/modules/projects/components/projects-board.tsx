@@ -22,7 +22,10 @@ const SHOWN = 4;
 export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
-      <ul aria-label="Projects" className="columns-1 gap-4 lg:columns-2 2xl:columns-3">
+      <ul
+        aria-label="Projects"
+        className="columns-1 gap-4 lg:columns-2 2xl:columns-3 min-[120rem]:columns-4"
+      >
         {entries.map(({ project, threads, working }) => (
           <li
             key={project.id}

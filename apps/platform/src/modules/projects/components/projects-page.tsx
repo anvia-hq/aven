@@ -64,7 +64,7 @@ export function ProjectsPage() {
 
   if (!loaded) {
     board = (
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3 min-[120rem]:grid-cols-4">
         {[0, 1, 2, 3].map((card) => (
           <Skeleton key={card} className="h-36 w-full" />
         ))}
