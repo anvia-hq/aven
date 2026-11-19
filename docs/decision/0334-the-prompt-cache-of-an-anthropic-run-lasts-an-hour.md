@@ -12,10 +12,10 @@ One production thread of 353 model calls showed it: 28 calls rewrote the whole p
 
 - **The cache lasts one hour** (`ttl: "1h"` as `promptCache` in `createModel`, `packages/agents/src/model.ts`). A write costs 2 times the base input price instead of 1.25, a read is unchanged.
 - **The breakpoints are the adapter's** (`@anvia/anthropic` 1.3): one on the last tool definition, one on the system prompt, one on the last cacheable block of the conversation, instead of the request-level `cache_control` that asked the API to cache and move a breakpoint on its own. The two cover the same prefix; the four-breakpoint cap is the API's.
-- It applies to the `anthropic` provider only, for the native coding agent and for bots. Other providers are unchanged.
+- It applies to the `anthropic` provider only. Every model `createModel` builds for it carries the setting, so the control plane's follow-ups and small-model check get the breakpoints too, on prompts far below the model's minimum cacheable length: they are ignored and cost nothing. Other providers are unchanged.
 
 ## Consequences
 
 - A pause between 5 minutes and 1 hour no longer costs a full rewrite. A pause longer than an hour still does.
 - The first write of a thread and each incremental write cost more, so a thread that never pauses for more than 5 minutes pays slightly more than before.
-- The compaction summary still misses the cache: `@anvia/core` sends the history as one text prompt with its own instructions, a different prefix from the run's. Not changed here.
+- The compaction summary still misses the cache: `@anvia/core` sends the history as one text prompt with its own instructions, a different prefix from the run's. Not changed here. The summarizer model does carry the breakpoints (`summarizerFor` over the same model), which costs nothing and cannot help one prompt.

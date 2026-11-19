@@ -12,10 +12,10 @@ The cost is the other half of the same fact. Nothing notices when the agent's mo
 
 ## Decision
 
-- `DurableRuns` registers each agent with `await agentVersion(agent)` instead of the constant. The constant is gone.
+- `DurableRuns` registers each agent with `await agentVersion(agent)` instead of the constant. The constant is gone. The hash covers what the runtime can read of the agent: its id, model, instructions, temperature and max tokens, provider options, controls, tool choice, turn limit, tool definitions with their approval, provider tools and output schema. Prompt caching is no longer one of them, because it lives on the model rather than in the agent's `providerOptions`, so changing the cache does not refuse a run.
 - Because the version is now computed, `#register`, `#registerOrKeep` and the goal journal's `registerOrKeep` return promises; the call sites (a run's start, a question's answer, a rejoin, a goal's first registration) await them.
 - A run whose agent's declared configuration changed under it now ends `needs_attention`, with durable's own message ("The saved agent version is not registered: the agent's declared configuration (model, instructions, tools, or settings) changed since this run started. Restore it before retrying."), instead of continuing against the new configuration.
-- What the version does not cover stays uncovered: tool implementations, guardrails, middlewares and lifecycle hooks are code durable cannot read. MCP servers, tool indexes and context have fingerprints of their own; aven's MCP servers reach the agent as ordinary local tools, so their definitions do land in the version.
+- What the version does not cover stays uncovered: tool implementations, guardrails, middlewares and lifecycle hooks are code durable cannot read. MCP servers, tool indexes and context have fingerprints of their own; aven's MCP servers reach the agent as ordinary local tools, so their definitions do land in the version. The agent's id is in the hash, so an agent built under a new id is a different agent to durable even with identical instructions.
 
 ## Consequences
 
