@@ -10,13 +10,13 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 const NOTHING_MATCHES: Record<string, string> = {
   file: "No file matches",
-  skill: "No skill matches",
+  skill: "No command or skill matches",
   bot: "No bot or thread matches",
 };
 
 const HEADINGS: Record<string, string> = {
   file: "Files",
-  skill: "Skills",
+  skill: "Commands and skills",
   bot: "Bots and threads",
 };
 
