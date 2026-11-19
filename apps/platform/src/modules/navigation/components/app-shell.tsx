@@ -5,7 +5,7 @@ import {
   SettingsIcon,
 } from "@solar-icons/react/linear";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties } from "react";
 
 import { cn } from "cn";
 
@@ -33,22 +33,20 @@ import { useSidebarWidth } from "../hooks/use-sidebar-width";
 import { CommandMenu } from "./command-menu";
 import { MobileAppBar, MobileSidebarClose } from "./mobile-app-bar";
 import { MobileTabBar } from "./mobile-tab-bar";
+import { ShellSidebar } from "./shell-sidebar";
 import { SidebarResizer } from "./sidebar-resizer";
 
 type Props = {
   user: { name: string; email?: string | null; image?: string | null };
-  sidebar: ReactNode;
 };
 
-export function AppShell({ user, sidebar }: Props) {
+export function AppShell({ user }: Props) {
   const navigate = useNavigate();
   const { setOpen: setCommandOpen } = useCommandMenu();
 
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
-  const pathname = useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname,
-  });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const drawsOwnCards = /^\/(threads\/[^/]+|bot)(\/|$)/.test(pathname);
 
   return (
@@ -79,8 +77,8 @@ export function AppShell({ user, sidebar }: Props) {
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
               <FolderIcon className="size-[17px]" />
             </RailLink>
-            <CockpitRailLink />
-            <BotRailLink />
+            <CockpitRailLink active={pathname.startsWith("/cockpit")} />
+            <BotRailLink active={pathname.startsWith("/bot")} />
           </div>
           <div className="mt-auto flex flex-col items-center gap-1.5">
             <RailLink
@@ -132,7 +130,9 @@ export function AppShell({ user, sidebar }: Props) {
               </div>
             </div>
           </SidebarHeader>
-          <SidebarContent>{sidebar}</SidebarContent>
+          <SidebarContent>
+            <ShellSidebar />
+          </SidebarContent>
           <SidebarFooter>
             <AnnouncementBanner />
             <div className="flex items-center gap-1 md:hidden">

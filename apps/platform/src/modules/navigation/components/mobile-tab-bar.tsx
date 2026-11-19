@@ -50,9 +50,7 @@ function Tab({
 export function MobileTabBar() {
   const { main } = useBots();
   const working = useBotsWorking();
-  const pathname = useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname,
-  });
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
     <nav

@@ -1,4 +1,3 @@
-import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import { RailLink } from "@/components/rail-link";
@@ -12,7 +11,7 @@ import { BotAttentionCell } from "./bot-attention-cell";
 import { BotAvatar } from "./bot-avatar";
 import { BotSwapParticles } from "./bot-swap-particles";
 
-export function BotRailLink() {
+export function BotRailLink({ active }: { active: boolean }) {
   const { bots, main } = useBots();
   const working = useBotsWorking();
   const [paused, setPaused] = useState(false);
@@ -20,9 +19,6 @@ export function BotRailLink() {
   const queue = attentionQueue(bots, working);
   const rotation = useAttentionRotation(queue.length, paused, reduced);
   const shown = queue[rotation.index];
-  const active = useRouterState({
-    select: (state) => (state.resolvedLocation ?? state.location).pathname.startsWith("/bot"),
-  });
 
   const busy = working.size > 0;
   const workingKey = [...working].sort().join(",");
