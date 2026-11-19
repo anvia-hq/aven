@@ -1,6 +1,7 @@
 import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
 
+import { HintedRow } from "./hinted-row";
 import { OverviewCard } from "./overview-card";
 import type { TokenUsage } from "@aven/protocol/types";
 
@@ -34,15 +35,46 @@ export function UsageCard({
   );
   const hitRate = totals.inputTokens > 0 ? (totals.cacheReadTokens / totals.inputTokens) * 100 : 0;
   const rows = [
-    { label: "Input", value: compactNumber(totals.inputTokens), tone: null },
-    { label: "Output", value: compactNumber(totals.outputTokens), tone: "bg-usage-output" },
+    {
+      label: "Input",
+      value: compactNumber(totals.inputTokens),
+      tone: null,
+      hint: `${totals.inputTokens.toLocaleString("en")} input tokens added up over every request in this thread. The system prompt and tools are sent again each time, so this is larger than the context.`,
+    },
+    {
+      label: "Output",
+      value: compactNumber(totals.outputTokens),
+      tone: "bg-usage-output",
+      hint: `${totals.outputTokens.toLocaleString("en")} tokens the model wrote, added up over every request.`,
+    },
     {
       label: "Cache read",
       value: compactNumber(totals.cacheReadTokens),
       tone: "bg-usage-cache-read",
+      hint: `${totals.cacheReadTokens.toLocaleString("en")} input tokens served from the provider's cache, added up over every request.`,
     },
-    { label: "Cache hit rate", value: `${hitRate.toFixed(1)}%`, tone: null },
-  ] as const;
+    {
+      label: "Uncached",
+      value: compactNumber(uncached),
+      tone: "bg-usage-uncached",
+      hint: `${uncached.toLocaleString("en")} input tokens that were neither read from nor written to the cache.`,
+    },
+    {
+      label: "Cache hit rate",
+      value: `${hitRate.toFixed(1)}%`,
+      tone: null,
+      hint: "Cache read divided by input: the share of all input tokens that came from the cache.",
+    },
+  ];
+
+  if (totals.cacheWriteTokens > 0)
+    rows.splice(3, 0, {
+      label: "Cache write",
+      value: compactNumber(totals.cacheWriteTokens),
+      tone: "bg-usage-cache-write",
+      hint: `${totals.cacheWriteTokens.toLocaleString("en")} input tokens written to the provider's cache, added up over every request.`,
+    });
+
   const segments = [
     { label: "Output", value: totals.outputTokens, tone: "bg-usage-output" },
     { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-usage-cache-write" },
@@ -65,17 +97,19 @@ export function UsageCard({
         )}
       </div>
       <dl className="flex flex-col gap-1 text-xs">
-        {rows.map(({ label, value, tone }) => (
-          <div key={label} className="flex justify-between">
-            <dt className="flex items-center gap-2 text-muted-foreground">
+        {rows.map(({ label, value, tone, hint }) => (
+          <HintedRow
+            key={label}
+            label={label}
+            value={value}
+            hint={hint}
+            marker={
               <span
                 aria-hidden
                 className={`size-2 shrink-0 rounded-full ${tone ?? "border border-foreground/30"}`}
               />
-              {label}
-            </dt>
-            <dd className="tabular-nums">{value}</dd>
-          </div>
+            }
+          />
         ))}
       </dl>
     </OverviewCard>

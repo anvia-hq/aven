@@ -1,7 +1,9 @@
 import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import { compactNumber } from "@/lib/format";
-import { contextBars } from "../context-bars";
+import { ESTIMATE_HINT, FREE_SPACE_HINT, contextBars } from "../context-bars";
+import { HintedRow } from "./hinted-row";
 
 import { OverviewCard } from "./overview-card";
 import type { ContextUsage } from "@aven/protocol/types";
@@ -80,9 +82,16 @@ export function ContextCard({
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>
-          <span className="text-xs text-muted-foreground">
-            {compactNumber(context.usedTokens)} / {compactNumber(context.contextWindow)}
-          </span>
+          <Tooltip>
+            <TooltipTrigger
+              render={<span className="w-fit cursor-default text-xs text-muted-foreground" />}
+            >
+              {compactNumber(context.usedTokens)} / {compactNumber(context.contextWindow)}
+            </TooltipTrigger>
+            <TooltipContent side="left" className="max-w-64">
+              {`${context.usedTokens.toLocaleString("en")} of ${context.contextWindow.toLocaleString("en")} tokens: the size of the last request, which holds the whole conversation so far. It is not a total across runs.`}
+            </TooltipContent>
+          </Tooltip>
         </div>
         {onCompact && percent >= COMPACT_FROM_PERCENT && (
           <Button
@@ -99,24 +108,25 @@ export function ContextCard({
       {split && (
         <dl className="flex flex-col gap-1 text-xs">
           {split.bars.map((bar) => (
-            <div key={bar.id} className="flex justify-between">
-              <dt className="flex items-center gap-2 text-muted-foreground">
-                <span aria-hidden className={`size-2 shrink-0 rounded-full ${bar.tone}`} />
-                {bar.label}
-              </dt>
-              <dd className="tabular-nums">{compactNumber(bar.tokens)}</dd>
-            </div>
+            <HintedRow
+              key={bar.id}
+              label={bar.label}
+              value={compactNumber(bar.tokens)}
+              hint={`${bar.hint} ${bar.tokens.toLocaleString("en")} tokens. ${ESTIMATE_HINT}`}
+              marker={<span aria-hidden className={`size-2 shrink-0 rounded-full ${bar.tone}`} />}
+            />
           ))}
-          <div className="flex justify-between">
-            <dt className="flex items-center gap-2 text-muted-foreground">
+          <HintedRow
+            label="Free space"
+            value={compactNumber(split.free)}
+            hint={`${FREE_SPACE_HINT} ${split.free.toLocaleString("en")} tokens.`}
+            marker={
               <span
                 aria-hidden
                 className="size-2 shrink-0 rounded-full border border-foreground/30"
               />
-              Free space
-            </dt>
-            <dd className="tabular-nums">{compactNumber(split.free)}</dd>
-          </div>
+            }
+          />
         </dl>
       )}
     </OverviewCard>
