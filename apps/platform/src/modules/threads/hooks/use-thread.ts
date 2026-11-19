@@ -274,6 +274,18 @@ export function useThread(threadId: string) {
     [threadId, wasArchived, refresh],
   );
 
+  const decline = useCallback(
+    async (selection: RunSelection = {}) => {
+      const sent = await attempt("Could not decline the question", async () => {
+        await postJson(`/threads/${threadId}/decline`, selection);
+        return true;
+      });
+
+      return sent ?? false;
+    },
+    [threadId],
+  );
+
   const cancel = useCallback(async () => {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
@@ -305,5 +317,6 @@ export function useThread(threadId: string) {
     showShip,
     answer,
     cancel,
+    decline,
   };
 }

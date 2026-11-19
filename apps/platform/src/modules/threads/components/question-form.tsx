@@ -17,10 +17,8 @@ type Props = {
   threadId: string;
   backend?: AgentBackendKind;
   onSubmit: (answers: QuestionAnswer[], selection: RunSelection) => boolean | Promise<boolean>;
-  onCancel?: () => unknown;
+  onDecline?: (selection: RunSelection) => boolean | Promise<boolean>;
 };
-
-const DECLINED = "declined";
 
 export const valueOf = (draft: Draft | undefined) => draft?.custom.trim() || draft?.choice || "";
 
@@ -80,7 +78,7 @@ export function Question({
   );
 }
 
-export function QuestionForm({ tool, threadId, backend, onSubmit, onCancel }: Props) {
+export function QuestionForm({ tool, threadId, backend, onSubmit, onDecline }: Props) {
   const model = useModelSelection(threadId, backend);
   const prompts = tool.questions ?? [];
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -106,13 +104,7 @@ export function QuestionForm({ tool, threadId, backend, onSubmit, onCancel }: Pr
     if (sending) return;
 
     setSending(true);
-    const sent = await onSubmit(
-      prompts.map((item) => ({ questionId: item.id, value: DECLINED })),
-      model.selection,
-    );
-
-    if (sent) await onCancel?.();
-
+    await onDecline?.(model.selection);
     setSending(false);
   }
 
