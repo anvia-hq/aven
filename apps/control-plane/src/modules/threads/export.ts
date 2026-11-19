@@ -1,7 +1,8 @@
 import type { ChatMessage } from "@aven/protocol/types";
 
+import { threadDocx } from "./export-docx";
 import { transcriptOf } from "./transcript";
-import type { TranscriptEntry } from "./types";
+import type { ExportFormat, TranscriptEntry } from "./types";
 
 function joinEntries(
   entries: readonly TranscriptEntry[],
@@ -129,4 +130,35 @@ export function threadHtml(title: string, messages: readonly ChatMessage[]) {
     "</html>",
     "",
   ].join("\n");
+}
+
+const CONTENT_TYPES: Record<ExportFormat, string> = {
+  md: "text/markdown; charset=utf-8",
+  txt: "text/plain; charset=utf-8",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  html: "text/html; charset=utf-8",
+};
+
+export function exportFormat(value: string | undefined): ExportFormat {
+  if (value === "txt" || value === "docx" || value === "html") return value;
+
+  return "md";
+}
+
+export function exportContentType(format: ExportFormat) {
+  return CONTENT_TYPES[format];
+}
+
+export function renderExport(
+  format: ExportFormat,
+  title: string,
+  messages: readonly ChatMessage[],
+): string | Uint8Array<ArrayBuffer> {
+  if (format === "docx") return threadDocx(title, messages);
+
+  if (format === "txt") return threadText(title, messages);
+
+  if (format === "html") return threadHtml(title, messages);
+
+  return threadMarkdown(title, messages);
 }

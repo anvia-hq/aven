@@ -2,7 +2,14 @@ import { describe, expect, test } from "bun:test";
 
 import type { ChatMessage } from "@aven/protocol/types";
 
-import { threadHtml, threadMarkdown, threadText } from "./export";
+import {
+  exportContentType,
+  exportFormat,
+  renderExport,
+  threadHtml,
+  threadMarkdown,
+  threadText,
+} from "./export";
 
 describe("threadMarkdown", () => {
   test("writes just the title when the thread has no messages", () => {
@@ -126,5 +133,36 @@ describe("threadHtml", () => {
 
     expect(html).toContain("<h1>Empty</h1>");
     expect(html).toContain("@page");
+  });
+});
+
+describe("exportFormat", () => {
+  test("takes the four formats and falls back to markdown", () => {
+    expect(exportFormat("md")).toBe("md");
+    expect(exportFormat("txt")).toBe("txt");
+    expect(exportFormat("docx")).toBe("docx");
+    expect(exportFormat("html")).toBe("html");
+    expect(exportFormat(undefined)).toBe("md");
+    expect(exportFormat("doc")).toBe("md");
+  });
+});
+
+describe("exportContentType", () => {
+  test("names each format's content type", () => {
+    expect(exportContentType("md")).toBe("text/markdown; charset=utf-8");
+    expect(exportContentType("txt")).toBe("text/plain; charset=utf-8");
+    expect(exportContentType("html")).toBe("text/html; charset=utf-8");
+    expect(exportContentType("docx")).toBe(
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    );
+  });
+});
+
+describe("renderExport", () => {
+  test("returns bytes for docx and text for the rest", () => {
+    expect(renderExport("docx", "Title", [])).toBeInstanceOf(Uint8Array);
+    expect(renderExport("md", "Title", [])).toBe("# Title\n");
+    expect(renderExport("txt", "Title", [])).toBe("Title\n");
+    expect(renderExport("html", "Title", [])).toContain("<!doctype html>");
   });
 });

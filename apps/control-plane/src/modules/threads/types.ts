@@ -20,6 +20,8 @@ export type TranscriptEntry =
   | { kind: "reasoning"; text: string }
   | { kind: "bullet"; text: string; code?: string };
 
+export type ExportFormat = "md" | "txt" | "docx" | "html";
+
 export type BotActor = { userId: string; botId: string; via: "person" | "note" };
 
 export type BotThreads = {
