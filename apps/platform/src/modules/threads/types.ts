@@ -32,6 +32,8 @@ export type {
 
 export type AttachmentUpload = { name: string; mediaType?: string; data: string };
 
+export type ThreadExportFormat = "md" | "pdf" | "docx" | "txt";
+
 export type OutgoingMessage = {
   prompt: string;
   attachments: AttachmentUpload[];
