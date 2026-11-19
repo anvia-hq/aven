@@ -206,13 +206,13 @@ export function ThreadOptionsMenu({
         </DropdownMenuItem>
         {canRun && (
           <>
-            <DropdownMenuSeparator className="mx-1.5 my-1.5 bg-border/70" />
+            <DropdownMenuSeparator className="my-1.5 bg-border/70" />
             <ThreadRunChoices thread={thread} />
           </>
         )}
         {(canColor || onRename) && (
           <>
-            <DropdownMenuSeparator className="mx-1.5 my-1.5 bg-border/70" />
+            <DropdownMenuSeparator className="my-1.5 bg-border/70" />
             {canColor && <ThreadColor thread={thread} />}
             {onRename && (
               <DropdownMenuItem
