@@ -2,11 +2,7 @@ import * as React from "react";
 import { cn } from "cn";
 
 import { Button } from "./button";
-import {
-  AltArrowLeftIcon as ChevronLeftIcon,
-  AltArrowRightIcon as ChevronRightIcon,
-  MenuDotsIcon as MoreHorizontalIcon,
-} from "@solar-icons/react/linear";
+import { IconChevronLeft, IconChevronRight, IconDots } from "@tabler/icons-react";
 
 function Pagination({ className, ...props }: React.ComponentProps<"nav">) {
   return (
@@ -70,7 +66,7 @@ function PaginationPrevious({
       className={cn("pl-1.5!", className)}
       {...props}
     >
-      <ChevronLeftIcon data-icon="inline-start" />
+      <IconChevronLeft data-icon="inline-start" />
       <span className="hidden sm:block">{text}</span>
     </PaginationLink>
   );
@@ -89,7 +85,7 @@ function PaginationNext({
       {...props}
     >
       <span className="hidden sm:block">{text}</span>
-      <ChevronRightIcon data-icon="inline-end" />
+      <IconChevronRight data-icon="inline-end" />
     </PaginationLink>
   );
 }
@@ -105,7 +101,7 @@ function PaginationEllipsis({ className, ...props }: React.ComponentProps<"span"
       )}
       {...props}
     >
-      <MoreHorizontalIcon />
+      <IconDots />
       <span className="sr-only">More pages</span>
     </span>
   );

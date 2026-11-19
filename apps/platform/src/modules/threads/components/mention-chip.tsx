@@ -1,4 +1,4 @@
-import { FileIcon, CodeSquareIcon } from "@solar-icons/react/linear";
+import { IconCodeblock, IconFile } from "@tabler/icons-react";
 import type { Mentionable } from "../types";
 
 export function MentionChip({ type, name }: Mentionable) {
@@ -8,7 +8,7 @@ export function MentionChip({ type, name }: Mentionable) {
       title={type === "file" ? `File ${name}` : `Skill ${name}`}
       data-mention={type}
     >
-      {type === "file" && <FileIcon className="size-3.5" />}
+      {type === "file" && <IconFile className="size-3.5" />}
       {name}
     </span>
   );
@@ -21,7 +21,7 @@ export function CommandChip({ name }: { name: string }) {
       title={`Command /${name}`}
       data-mention="command"
     >
-      <CodeSquareIcon className="size-3.5" />/{name}
+      <IconCodeblock className="size-3.5" />/{name}
     </span>
   );
 }

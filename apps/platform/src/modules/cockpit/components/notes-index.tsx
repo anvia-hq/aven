@@ -1,4 +1,4 @@
-import { FileTextIcon, PinIcon, AddIcon, MagnifierIcon } from "@solar-icons/react/linear";
+import { IconFileText, IconPin, IconPlus, IconSearch } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -18,7 +18,7 @@ function NoteRow({ note, onOpen }: { note: CockpitNote; onOpen: () => void }) {
         onClick={onOpen}
         className="h-auto w-full justify-start gap-3 rounded-md px-2 py-2 text-left font-normal whitespace-normal hover:bg-muted/60"
       >
-        <FileTextIcon className="size-4 shrink-0 text-muted-foreground" />
+        <IconFileText className="size-4 shrink-0 text-muted-foreground" />
         <span className="flex min-w-0 flex-1 items-baseline gap-3">
           <span className="shrink-0 truncate text-sm font-medium sm:max-w-[50%]">{note.title}</span>
           <span className="hidden min-w-0 flex-1 truncate text-sm text-muted-foreground sm:block">
@@ -26,7 +26,7 @@ function NoteRow({ note, onOpen }: { note: CockpitNote; onOpen: () => void }) {
           </span>
         </span>
         {note.pinned && (
-          <PinIcon
+          <IconPin
             role="img"
             aria-label="Pinned"
             className="size-3.5 shrink-0 text-muted-foreground"
@@ -80,7 +80,7 @@ export function NotesIndex({
         {tag && ` tagged ${tag}`}
       </p>
       <div className="mt-8 flex items-center gap-2 border-b border-border/60 pb-2">
-        <MagnifierIcon className="size-4 shrink-0 text-muted-foreground" />
+        <IconSearch className="size-4 shrink-0 text-muted-foreground" />
         <Input
           aria-label="Search notes"
           placeholder="Search"
@@ -89,7 +89,7 @@ export function NotesIndex({
           className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
         <Button size="sm" onClick={() => void startNote()}>
-          <AddIcon /> New note
+          <IconPlus /> New note
         </Button>
       </div>
       {found.length === 0 ? (

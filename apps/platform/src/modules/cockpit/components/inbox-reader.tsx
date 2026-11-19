@@ -1,11 +1,11 @@
 import {
-  CalendarIcon,
-  CheckCircleIcon,
-  CircleDashedIcon,
-  InboxOutIcon,
-  TagIcon,
-  TrashBinMinimalisticIcon,
-} from "@solar-icons/react/linear";
+  IconCalendar,
+  IconCircleCheck,
+  IconCircleDashed,
+  IconInbox,
+  IconTag,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -60,11 +60,11 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
           >
             {item.done ? (
               <>
-                <InboxOutIcon /> Move to inbox
+                <IconInbox /> Move to inbox
               </>
             ) : (
               <>
-                <CheckCircleIcon /> Done
+                <IconCircleCheck /> Done
               </>
             )}
           </Button>
@@ -78,7 +78,7 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
                 if (await remove(item)) onClose();
               }}
             >
-              <TrashBinMinimalisticIcon /> Delete
+              <IconTrash /> Delete
             </DropdownMenuItem>
           </MoreMenu>
         </>
@@ -97,13 +97,13 @@ export function InboxReader({ item, onClose }: { item: InboxItem; onClose: () =>
         }}
       />
       <Properties>
-        <Property icon={item.done ? CheckCircleIcon : CircleDashedIcon} label="Status">
+        <Property icon={item.done ? IconCircleCheck : IconCircleDashed} label="Status">
           <span className="px-1">{item.done ? "Done" : "Open"}</span>
         </Property>
-        <Property icon={CalendarIcon} label="Captured">
+        <Property icon={IconCalendar} label="Captured">
           <span className="px-1">{timeAgo(item.createdAt, true)}</span>
         </Property>
-        <Property icon={TagIcon} label="Tags">
+        <Property icon={IconTag} label="Tags">
           <TagInput bare value={item.tags} onChange={(tags) => void update(item, { tags })} />
         </Property>
       </Properties>

@@ -1,4 +1,4 @@
-import { GitPullRequestIcon, RocketIcon, SparklesIcon } from "@solar-icons/react/linear";
+import { IconGitPullRequest, IconRocket, IconSparkles } from "@tabler/icons-react";
 import { GithubMark } from "@/components/brand-icons";
 
 import { Button } from "@aven/ui/button";
@@ -33,7 +33,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
         disabled={action.disabled}
         onClick={onSetUp}
       >
-        <SparklesIcon />
+        <IconSparkles />
         Set up shipping
       </Button>
     );
@@ -59,7 +59,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
       <Tooltip>
         <TooltipTrigger render={<span tabIndex={0} className="inline-flex" />}>
           <Button variant="outline" size="sm" className={FLOATING_BUTTON} disabled>
-            <RocketIcon />
+            <IconRocket />
             {action.label}
           </Button>
         </TooltipTrigger>
@@ -77,7 +77,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
         disabled={action.disabled}
         onClick={() => onShip()}
       >
-        <GitPullRequestIcon />
+        <IconGitPullRequest />
         Open a PR
       </Button>
     );
@@ -98,7 +98,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
         disabled={action.disabled}
         onClick={() => onShip()}
       >
-        <RocketIcon />
+        <IconRocket />
         {action.shipping ? "Shipping…" : action.label}
       </Button>
       {action.canOpenNew && <ShipMenu disabled={action.disabled} onNew={() => onShip("new")} />}

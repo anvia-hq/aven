@@ -3,7 +3,7 @@ import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
 
 import { Button } from "./button";
-import { CloseIcon as XIcon } from "@solar-icons/react/linear";
+import { IconX } from "@tabler/icons-react";
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />;
@@ -62,7 +62,7 @@ function SheetContent({
             data-slot="sheet-close"
             render={<Button variant="ghost" className="absolute top-3 right-3" size="icon-sm" />}
           >
-            <XIcon />
+            <IconX />
             <span className="sr-only">Close</span>
           </SheetPrimitive.Close>
         )}

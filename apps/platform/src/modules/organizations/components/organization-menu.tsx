@@ -1,4 +1,4 @@
-import { CheckIcon, SettingsIcon } from "@solar-icons/react/linear";
+import { IconCheck, IconSettings } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback } from "@aven/ui/avatar";
@@ -31,7 +31,7 @@ export function OrganizationMenu() {
             {memberCount} {memberCount === 1 ? "member" : "members"}
           </span>
         </div>
-        <SettingsIcon className="size-4 text-muted-foreground" />
+        <IconSettings className="size-4 text-muted-foreground" />
       </DropdownMenuItem>
       {organizations.length > 1 && (
         <>
@@ -39,7 +39,7 @@ export function OrganizationMenu() {
           {organizations.map((organization) => (
             <DropdownMenuItem key={organization.id} onClick={() => switchTo(organization.id)}>
               <span className="flex-1 truncate">{organization.name}</span>
-              {organization.id === activeOrganization?.id && <CheckIcon />}
+              {organization.id === activeOrganization?.id && <IconCheck />}
             </DropdownMenuItem>
           ))}
         </>

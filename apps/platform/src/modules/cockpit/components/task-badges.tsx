@@ -1,4 +1,4 @@
-import { CalendarCheckIcon, FlagIcon } from "@solar-icons/react/linear";
+import { IconCalendarCheck, IconFlag } from "@tabler/icons-react";
 
 import { cn } from "cn";
 
@@ -28,7 +28,7 @@ export function StatusDot({ status, className }: { status: TaskStatus; className
 
 export function PriorityFlag({ priority }: { priority: TaskPriority }) {
   return (
-    <FlagIcon
+    <IconFlag
       role="img"
       aria-label={PRIORITY_LABELS[priority]}
       className={cn("size-3.5 shrink-0", PRIORITY_TONE[priority])}
@@ -46,7 +46,7 @@ export function DueDate({ task }: { task: Pick<CockpitTask, "dueDate" | "status"
         isOverdue(task.dueDate, task.status) ? "text-destructive" : "text-muted-foreground",
       )}
     >
-      <CalendarCheckIcon className="size-3.5" />
+      <IconCalendarCheck className="size-3.5" />
       {shortDay(task.dueDate)}
     </span>
   );

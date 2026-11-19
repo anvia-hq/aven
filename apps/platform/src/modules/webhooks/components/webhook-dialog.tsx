@@ -1,4 +1,4 @@
-import { CheckIcon, CopyIcon, AddIcon } from "@solar-icons/react/linear";
+import { IconCheck, IconCopy, IconPlus } from "@tabler/icons-react";
 import { WEBHOOK_NAME_MAX } from "@aven/protocol/webhooks";
 import { useState, type FormEvent } from "react";
 
@@ -43,7 +43,7 @@ function Created({ created, onDone }: { created: WebhookCreated; onDone: () => v
       </pre>
       <div>
         <Button type="button" variant="outline" onClick={() => void copy(address)}>
-          {copied ? <CheckIcon /> : <CopyIcon />} {copied ? "Copied" : "Copy address"}
+          {copied ? <IconCheck /> : <IconCopy />} {copied ? "Copied" : "Copy address"}
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
@@ -114,7 +114,7 @@ export function WebhookDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger render={<Button size="sm" />}>
-        <AddIcon /> New webhook
+        <IconPlus /> New webhook
       </DialogTrigger>
       <DialogContent>
         {created ? (

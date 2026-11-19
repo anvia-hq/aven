@@ -3,10 +3,7 @@ import { cn } from "cn";
 import useEmblaCarousel, { type UseEmblaCarouselType } from "embla-carousel-react";
 
 import { Button } from "./button";
-import {
-  AltArrowLeftIcon as ChevronLeftIcon,
-  AltArrowRightIcon as ChevronRightIcon,
-} from "@solar-icons/react/linear";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 type CarouselApi = UseEmblaCarouselType[1];
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>;
@@ -185,7 +182,7 @@ function CarouselPrevious({
       onClick={scrollPrev}
       {...props}
     >
-      <ChevronLeftIcon />
+      <IconChevronLeft />
       <span className="sr-only">Previous slide</span>
     </Button>
   );
@@ -215,7 +212,7 @@ function CarouselNext({
       onClick={scrollNext}
       {...props}
     >
-      <ChevronRightIcon />
+      <IconChevronRight />
       <span className="sr-only">Next slide</span>
     </Button>
   );

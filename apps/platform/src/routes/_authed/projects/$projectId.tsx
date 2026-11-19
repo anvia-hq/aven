@@ -1,4 +1,4 @@
-import { AddIcon } from "@solar-icons/react/linear";
+import { IconPlus } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
@@ -48,7 +48,7 @@ function ProjectPage() {
             className="shrink-0"
             onClick={() => navigate({ to: "/threads", search: { project: project.id } })}
           >
-            <AddIcon />
+            <IconPlus />
             Start thread
           </Button>
         </div>

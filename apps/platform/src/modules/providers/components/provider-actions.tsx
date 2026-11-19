@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconTrash } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -37,7 +37,7 @@ export function ProviderActions({ provider, edit }: Props) {
         aria-label={`Remove ${provider.name}`}
         onClick={() => remove(provider)}
       >
-        <TrashBinMinimalisticIcon />
+        <IconTrash />
       </Button>
     </>
   );

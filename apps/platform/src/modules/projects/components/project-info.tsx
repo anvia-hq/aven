@@ -1,4 +1,4 @@
-import { FolderIcon } from "@solar-icons/react/linear";
+import { IconFolder } from "@tabler/icons-react";
 
 import { useProjects } from "../hooks/use-projects";
 
@@ -13,7 +13,7 @@ export function ProjectInfo({ projectId }: { projectId: string }) {
       title="The project of this thread"
       className="flex h-7 max-w-48 min-w-0 items-center gap-1.5 rounded-full bg-muted/40 px-3 text-[0.8rem] text-muted-foreground select-none"
     >
-      <FolderIcon className="size-4 shrink-0" />
+      <IconFolder className="size-4 shrink-0" />
       <span className="truncate">
         <span className="sr-only">Project: </span>
         {project.name}

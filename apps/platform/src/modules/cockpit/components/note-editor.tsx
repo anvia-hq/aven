@@ -1,9 +1,4 @@
-import {
-  CalendarIcon,
-  PinIcon,
-  TagIcon,
-  TrashBinMinimalisticIcon,
-} from "@solar-icons/react/linear";
+import { IconCalendar, IconPin, IconPinFilled, IconTag, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { cn } from "cn";
@@ -67,7 +62,7 @@ export function NoteEditor({
             className={cn(note.pinned ? "text-foreground" : "text-muted-foreground")}
             onClick={() => void update(note, { pinned: !note.pinned })}
           >
-            <PinIcon className={cn(note.pinned && "fill-current")} />
+            {note.pinned ? <IconPinFilled /> : <IconPin />}
           </Button>
           <MoreMenu>
             <DropdownMenuItem
@@ -79,7 +74,7 @@ export function NoteEditor({
                 if (await remove(note)) onClose();
               }}
             >
-              <TrashBinMinimalisticIcon /> Delete note
+              <IconTrash /> Delete note
             </DropdownMenuItem>
           </MoreMenu>
         </>
@@ -99,10 +94,10 @@ export function NoteEditor({
         }}
       />
       <Properties>
-        <Property icon={TagIcon} label="Tags">
+        <Property icon={IconTag} label="Tags">
           <TagInput bare value={note.tags} onChange={(tags) => void update(note, { tags })} />
         </Property>
-        <Property icon={CalendarIcon} label="Created">
+        <Property icon={IconCalendar} label="Created">
           <span className="px-1">{new Date(note.createdAt).toLocaleDateString()}</span>
         </Property>
       </Properties>

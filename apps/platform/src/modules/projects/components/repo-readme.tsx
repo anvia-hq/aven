@@ -1,4 +1,4 @@
-import { BookIcon } from "@solar-icons/react/linear";
+import { IconBook } from "@tabler/icons-react";
 
 import { Markdown } from "@/components/markdown";
 import { SectionCard } from "@/components/section-card";
@@ -21,7 +21,7 @@ export function RepoReadme({ project }: { project: Project }) {
       label="README"
       title={
         <>
-          <BookIcon className="size-4 text-muted-foreground" />
+          <IconBook className="size-4 text-muted-foreground" />
           {readme?.name ?? "README"}
         </>
       }

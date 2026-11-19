@@ -1,10 +1,10 @@
 import {
-  ClipboardIcon,
-  FileTextIcon,
-  InboxIcon,
-  KanbanIcon,
-  TagIcon,
-} from "@solar-icons/react/linear";
+  IconClipboard,
+  IconFileText,
+  IconInbox,
+  IconLayoutKanban,
+  IconTag,
+} from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import {
@@ -63,10 +63,10 @@ export function CockpitSidebar() {
   ).length;
 
   const pages = [
-    { to: "/cockpit/inbox", label: "Inbox", icon: InboxIcon, count: open },
-    { to: "/cockpit/tasks", label: "Tasks", icon: KanbanIcon, count: active },
-    { to: "/cockpit/notes", label: "Notes", icon: ClipboardIcon, count: 0 },
-    { to: "/cockpit/tags", label: "Tags", icon: TagIcon, count: 0 },
+    { to: "/cockpit/inbox", label: "Inbox", icon: IconInbox, count: open },
+    { to: "/cockpit/tasks", label: "Tasks", icon: IconLayoutKanban, count: active },
+    { to: "/cockpit/notes", label: "Notes", icon: IconClipboard, count: 0 },
+    { to: "/cockpit/tags", label: "Tags", icon: IconTag, count: 0 },
   ] as const;
 
   return (
@@ -100,7 +100,7 @@ export function CockpitSidebar() {
                   tooltip={note.title}
                   render={<Link to="/cockpit/notes" search={{ note: note.id }} />}
                 >
-                  <FileTextIcon />
+                  <IconFileText />
                   <span>{note.title}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -130,7 +130,7 @@ export function CockpitSidebar() {
                       />
                     }
                   >
-                    <TagIcon
+                    <IconTag
                       style={tagStyle(colorOf(tag.name))}
                       className="fill-(--tag) text-(--tag)"
                     />

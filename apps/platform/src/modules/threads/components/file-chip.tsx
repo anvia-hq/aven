@@ -1,4 +1,4 @@
-import { FileIcon, CloseIcon } from "@solar-icons/react/linear";
+import { IconFile, IconX } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { fileSize } from "@/lib/format";
@@ -14,7 +14,7 @@ export function FileChip({
 }) {
   return (
     <div className="flex h-14 max-w-56 items-center gap-2 rounded-lg border bg-card px-2.5 text-xs">
-      <FileIcon className="size-4 shrink-0 text-muted-foreground" />
+      <IconFile className="size-4 shrink-0 text-muted-foreground" />
       <div className="flex min-w-0 flex-col">
         <span className="truncate font-medium" title={name}>
           {name}
@@ -23,7 +23,7 @@ export function FileChip({
       </div>
       {onRemove && (
         <Button variant="ghost" size="icon-xs" aria-label={`Remove ${name}`} onClick={onRemove}>
-          <CloseIcon />
+          <IconX />
         </Button>
       )}
     </div>

@@ -1,5 +1,4 @@
-import { CheckIcon, DangerCircleIcon } from "@solar-icons/react/linear";
-import { StopIcon } from "@solar-icons/react/bold";
+import { IconAlertCircle, IconCheck, IconPlayerStopFilled } from "@tabler/icons-react";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -41,14 +40,14 @@ function StatusMark({ process }: { process: ProcessView }) {
   }
 
   if (process.status === "exited" && process.exitCode) {
-    return <DangerCircleIcon className="size-4 text-destructive" aria-hidden />;
+    return <IconAlertCircle className="size-4 text-destructive" aria-hidden />;
   }
 
   if (process.status === "stopped") {
-    return <StopIcon className="size-3 text-muted-foreground" aria-hidden />;
+    return <IconPlayerStopFilled className="size-3 text-muted-foreground" aria-hidden />;
   }
 
-  return <CheckIcon className="size-4 text-muted-foreground" aria-hidden />;
+  return <IconCheck className="size-4 text-muted-foreground" aria-hidden />;
 }
 
 function StateChip({ process }: { process: ProcessView }) {

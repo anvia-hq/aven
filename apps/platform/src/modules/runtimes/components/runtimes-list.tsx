@@ -1,4 +1,4 @@
-import { ServerIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconServer, IconTrash } from "@tabler/icons-react";
 import { cn } from "cn";
 
 import { Badge } from "@aven/ui/badge";
@@ -155,7 +155,7 @@ function RuntimeCard({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
-            <ServerIcon className="size-4 text-muted-foreground" />
+            <IconServer className="size-4 text-muted-foreground" />
           </span>
           <span className="min-w-0">
             <span className="block truncate font-medium">{runtime.name}</span>
@@ -193,7 +193,7 @@ function RuntimeCard({
             title="Built in: the runner of the control plane"
             className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
           >
-            <ServerIcon className="size-3.5" />
+            <IconServer className="size-3.5" />
             Built in
           </span>
         )}
@@ -228,7 +228,7 @@ function RuntimeCard({
               aria-label={`Revoke ${runtime.name}`}
               onClick={onRevoke}
             >
-              <TrashBinMinimalisticIcon />
+              <IconTrash />
             </Button>
           </>
         )}

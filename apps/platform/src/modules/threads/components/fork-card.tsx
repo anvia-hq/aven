@@ -1,4 +1,4 @@
-import { GitForkIcon } from "@solar-icons/react/linear";
+import { IconGitFork } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
@@ -35,7 +35,7 @@ export function ForkCard({ tool, forkId }: { tool: ToolPart; forkId: string }) {
             className="size-8"
           />
         ) : (
-          <GitForkIcon className="size-5 text-primary" />
+          <IconGitFork className="size-5 text-primary" />
         )}
       </span>
       <span className="flex min-w-0 flex-1 flex-col">

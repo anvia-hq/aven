@@ -1,13 +1,13 @@
 import {
-  BoltIcon,
-  CheckIcon,
-  CopyIcon,
-  CpuIcon,
-  DownloadIcon,
-  MenuDotsIcon,
-  PenIcon,
-  ShareIcon,
-} from "@solar-icons/react/linear";
+  IconBolt,
+  IconCheck,
+  IconCopy,
+  IconCpu,
+  IconDots,
+  IconDownload,
+  IconPencil,
+  IconShare,
+} from "@tabler/icons-react";
 import type { ReactElement } from "react";
 import { useRef } from "react";
 
@@ -52,7 +52,7 @@ function ThreadRunChoices({ thread }: { thread: Thread }) {
     <>
       <DropdownMenuSub>
         <DropdownMenuSubTrigger className="[&>svg:last-child]:ml-0">
-          <CpuIcon />
+          <IconCpu />
           Model
           <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
             {model.modelLabel ?? model.provider?.name ?? ""}
@@ -81,7 +81,7 @@ function ThreadRunChoices({ thread }: { thread: Thread }) {
                         onClick={() => model.selectModel(choice)}
                       >
                         <span className="min-w-0 flex-1 truncate">{choice.label}</span>
-                        {chosen && <CheckIcon />}
+                        {chosen && <IconCheck />}
                       </DropdownMenuItem>
                     );
                   })}
@@ -94,7 +94,7 @@ function ThreadRunChoices({ thread }: { thread: Thread }) {
       {model.levels.length > 1 && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger className="[&>svg:last-child]:ml-0">
-            <BoltIcon />
+            <IconBolt />
             Reasoning
             <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
               {effortName(model.effort)}
@@ -104,7 +104,7 @@ function ThreadRunChoices({ thread }: { thread: Thread }) {
             {model.levels.map((level) => (
               <DropdownMenuItem key={level} onClick={() => model.selectEffort(level)}>
                 {effortName(level)}
-                {level === model.effort && <CheckIcon className="ml-auto" />}
+                {level === model.effort && <IconCheck className="ml-auto" />}
               </DropdownMenuItem>
             ))}
           </DropdownMenuSubContent>
@@ -136,13 +136,13 @@ function ThreadColor({ thread }: { thread: Thread }) {
         <DropdownMenuItem onClick={() => void colors.setMarkColor(thread, null)}>
           <span className="size-3 shrink-0 rounded-full border border-muted-foreground/50" />
           Default
-          {thread.markColor === null && <CheckIcon className="ml-auto" />}
+          {thread.markColor === null && <IconCheck className="ml-auto" />}
         </DropdownMenuItem>
         {THREAD_COLORS.map(({ name, value }) => (
           <DropdownMenuItem key={value} onClick={() => void colors.setMarkColor(thread, value)}>
             <span className="size-3 shrink-0 rounded-full" style={{ backgroundColor: value }} />
             {name}
-            {thread.markColor === value && <CheckIcon className="ml-auto" />}
+            {thread.markColor === value && <IconCheck className="ml-auto" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuSubContent>
@@ -178,7 +178,7 @@ export function ThreadOptionsMenu({
   return (
     <DropdownMenu onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger render={trigger}>
-        <MenuDotsIcon />
+        <IconDots />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
@@ -186,7 +186,7 @@ export function ThreadOptionsMenu({
         finalFocus={() => !handingOff.current}
       >
         <DropdownMenuItem onClick={() => void copyThreadUrl()}>
-          <CopyIcon />
+          <IconCopy />
           Copy Thread URL
         </DropdownMenuItem>
         {onShare && (
@@ -196,12 +196,12 @@ export function ThreadOptionsMenu({
               onShare();
             }}
           >
-            <ShareIcon />
+            <IconShare />
             Manage Sharing
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onClick={() => void exportThread(thread)}>
-          <DownloadIcon />
+          <IconDownload />
           Export
         </DropdownMenuItem>
         {canRun && <ThreadRunChoices thread={thread} />}
@@ -213,7 +213,7 @@ export function ThreadOptionsMenu({
               onRename();
             }}
           >
-            <PenIcon />
+            <IconPencil />
             Rename
           </DropdownMenuItem>
         )}

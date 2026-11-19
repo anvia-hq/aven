@@ -20,6 +20,13 @@
   --mobile-chrome: calc(var(--mobile-app-bar) + var(--mobile-tab-bar));
 }
 
+/* Tabler draws every icon at a stroke of its own attribute; this rule weighs the whole interface in
+   one place. An icon that needs another weight sets it inline, which beats this rule
+   (decision 0360). */
+.tabler-icon {
+  stroke-width: 1.75;
+}
+
 /* Semantic color tokens (shadcn/ui structure; Aven's light neutrals are a cool gray like its dark ones, decision 0305). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;

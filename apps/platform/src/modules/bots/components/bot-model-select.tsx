@@ -1,4 +1,4 @@
-import { CheckIcon, AltArrowDownIcon } from "@solar-icons/react/linear";
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -48,7 +48,7 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
       >
         {provider && <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />}
         <span className="truncate">{shown}</span>
-        <AltArrowDownIcon />
+        <IconChevronDown />
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-2xl p-0">
         <div className="border-b p-2">
@@ -59,7 +59,7 @@ export function BotModelSelect({ bot }: { bot: Bot }) {
             onClick={() => void choose({ providerId: null })}
           >
             Use my default model
-            {!provider && <CheckIcon />}
+            {!provider && <IconCheck />}
           </Button>
         </div>
         <div className="p-3">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { RefreshIcon } from "@solar-icons/react/linear";
+import { IconRefresh } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { Markdown } from "@/components/markdown";
@@ -19,7 +19,7 @@ function Unavailable({ onRetry }: { onRetry: () => void }) {
         This file is unavailable. The runner that keeps it may be offline.
       </span>
       <Button variant="ghost" size="sm" onClick={onRetry}>
-        <RefreshIcon className="size-4" />
+        <IconRefresh className="size-4" />
         Retry
       </Button>
     </div>

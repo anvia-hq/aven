@@ -1,11 +1,11 @@
 import {
-  AltArrowLeftIcon,
-  AltArrowRightIcon,
-  CircleIcon,
-  GitMergeIcon,
-  GitPullRequestIcon,
-  ChatSquareIcon,
-} from "@solar-icons/react/linear";
+  IconChevronLeft,
+  IconChevronRight,
+  IconCircle,
+  IconGitMerge,
+  IconGitPullRequest,
+  IconMessage,
+} from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Badge } from "@aven/ui/badge";
@@ -32,11 +32,11 @@ export const TRACKED_STATUS = {
 } as const;
 
 function StatusIcon({ item, kind }: { item: TrackedItem; kind: TrackedKind }) {
-  if (item.status === "merged") return <GitMergeIcon className="size-4 shrink-0" />;
+  if (item.status === "merged") return <IconGitMerge className="size-4 shrink-0" />;
 
-  if (kind === "pull") return <GitPullRequestIcon className="size-4 shrink-0" />;
+  if (kind === "pull") return <IconGitPullRequest className="size-4 shrink-0" />;
 
-  return <CircleIcon className="size-4 shrink-0" />;
+  return <IconCircle className="size-4 shrink-0" />;
 }
 
 export function TrackedRow({
@@ -105,7 +105,7 @@ export function TrackedRow({
           className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground"
           aria-label={`${item.comments} comments`}
         >
-          <ChatSquareIcon className="size-3.5" />
+          <IconMessage className="size-3.5" />
           {item.comments}
         </span>
       )}
@@ -195,7 +195,7 @@ export function RepoTracked({ projectId }: { projectId: string }) {
             disabled={page === 1 || loading}
             onClick={() => setPage(page - 1)}
           >
-            <AltArrowLeftIcon />
+            <IconChevronLeft />
             Newer
           </Button>
           <span className="text-xs text-muted-foreground">
@@ -209,7 +209,7 @@ export function RepoTracked({ projectId }: { projectId: string }) {
             onClick={() => setPage(page + 1)}
           >
             Older
-            <AltArrowRightIcon />
+            <IconChevronRight />
           </Button>
         </nav>
       )}

@@ -1,4 +1,4 @@
-import { TagIcon } from "@solar-icons/react/linear";
+import { IconTag } from "@tabler/icons-react";
 import { useBlocker } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent } from "react";
 
@@ -89,7 +89,7 @@ export function InboxDraft({
       <div onKeyDown={onKeyDown}>
         <DocumentTitle value={title} autoFocus onChange={setTitle} onCommit={() => {}} />
         <Properties>
-          <Property icon={TagIcon} label="Tags">
+          <Property icon={IconTag} label="Tags">
             <TagInput bare value={tags} onChange={setTags} />
           </Property>
         </Properties>

@@ -1,4 +1,4 @@
-import { CloseIcon } from "@solar-icons/react/linear";
+import { IconX } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 
@@ -27,7 +27,7 @@ export function PendingAttachments({
               className="absolute -top-1.5 -right-1.5 rounded-full"
               onClick={() => onRemove(id)}
             >
-              <CloseIcon />
+              <IconX />
             </Button>
           </div>
         ) : (

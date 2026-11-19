@@ -1,4 +1,4 @@
-import { AltArrowRightIcon } from "@solar-icons/react/linear";
+import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -49,7 +49,7 @@ function Nodes({ folder, depth, ...rest }: NodeProps) {
               aria-expanded={open}
               onClick={() => onToggleFolder(path)}
             >
-              <AltArrowRightIcon
+              <IconChevronRight
                 className={cn("text-muted-foreground transition-transform", open && "rotate-90")}
               />
               <span className="truncate">{entry.name}</span>

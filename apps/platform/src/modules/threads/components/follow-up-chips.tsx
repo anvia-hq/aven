@@ -1,4 +1,4 @@
-import { ArrowUpIcon } from "@solar-icons/react/linear";
+import { IconArrowUp } from "@tabler/icons-react";
 import { useRef, type CSSProperties } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -40,7 +40,7 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
               }
             >
               <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                <ArrowUpIcon className="size-3" />
+                <IconArrowUp className="size-3" />
               </span>
               <span className="truncate">{text}</span>
             </TooltipTrigger>

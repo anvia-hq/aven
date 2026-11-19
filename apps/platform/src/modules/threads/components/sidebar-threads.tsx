@@ -1,4 +1,4 @@
-import { GitBranchIcon, ShareIcon } from "@solar-icons/react/linear";
+import { IconGitBranch, IconShare } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useEffect, useState } from "react";
@@ -80,14 +80,14 @@ function SharedMark({ thread }: { thread: Thread }) {
   if (thread.visibility !== "workspace" || crowdOf(thread)) return null;
 
   return (
-    <ShareIcon role="img" aria-label="Shared with workspace" className="text-muted-foreground" />
+    <IconShare role="img" aria-label="Shared with workspace" className="text-muted-foreground" />
   );
 }
 
 function ForkMark({ thread }: { thread: Thread }) {
   if (!thread.parentThreadId) return null;
 
-  return <GitBranchIcon role="img" aria-label="Fork" className="text-muted-foreground" />;
+  return <IconGitBranch role="img" aria-label="Fork" className="text-muted-foreground" />;
 }
 
 const ELBOW_RADIUS = "0.375rem";

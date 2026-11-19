@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "cn";
 import { OTPInput, OTPInputContext } from "input-otp";
-import { MinusIcon } from "@solar-icons/react/linear";
+import { IconMinus } from "@tabler/icons-react";
 
 function InputOTP({
   className,
@@ -75,7 +75,7 @@ function InputOTPSeparator({ ...props }: React.ComponentProps<"div">) {
       role="separator"
       {...props}
     >
-      <MinusIcon />
+      <IconMinus />
     </div>
   );
 }

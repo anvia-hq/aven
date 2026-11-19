@@ -1,4 +1,4 @@
-import { AltArrowRightIcon } from "@solar-icons/react/linear";
+import { IconChevronRight } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
@@ -71,7 +71,7 @@ export function SmallModelsSection() {
             <PopoverTrigger render={<Button variant="outline" size="sm" className="max-w-64" />}>
               {provider && <ProviderLogo kind={provider.kind} />}
               <span className="truncate">{modelLabel()}</span>
-              <AltArrowRightIcon />
+              <IconChevronRight />
             </PopoverTrigger>
             <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)] p-3">
               <ModelChoiceList

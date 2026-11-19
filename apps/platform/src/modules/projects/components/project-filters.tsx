@@ -1,4 +1,4 @@
-import { MagnifierIcon } from "@solar-icons/react/linear";
+import { IconSearch } from "@tabler/icons-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Input } from "@aven/ui/input";
@@ -52,7 +52,7 @@ function SearchField({
 
   return (
     <div className="relative">
-      <MagnifierIcon
+      <IconSearch
         aria-hidden
         className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground"
       />

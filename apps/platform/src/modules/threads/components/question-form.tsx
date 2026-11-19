@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, ArrowRightIcon, ArrowUpIcon } from "@solar-icons/react/linear";
+import { IconArrowLeft, IconArrowRight, IconArrowUp } from "@tabler/icons-react";
 import { cn } from "cn";
 import { useState } from "react";
 
@@ -131,7 +131,7 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
       <div className="flex items-center justify-between">
         {step > 0 ? (
           <Button type="button" variant="ghost" size="sm" onClick={() => setStep(step - 1)}>
-            <ArrowLeftIcon />
+            <IconArrowLeft />
             Back
           </Button>
         ) : (
@@ -139,13 +139,13 @@ export function QuestionForm({ tool, threadId, backend, onSubmit }: Props) {
         )}
         {last ? (
           <Button type="submit" size="sm" disabled={!answered || sending}>
-            <ArrowUpIcon />
+            <IconArrowUp />
             Send answer
           </Button>
         ) : (
           <Button type="submit" size="sm" disabled={!answered}>
             Next
-            <ArrowRightIcon />
+            <IconArrowRight />
           </Button>
         )}
       </div>

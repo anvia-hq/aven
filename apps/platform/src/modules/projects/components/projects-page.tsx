@@ -1,4 +1,4 @@
-import { AddIcon } from "@solar-icons/react/linear";
+import { IconPlus } from "@tabler/icons-react";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
@@ -109,7 +109,7 @@ export function ProjectsPage() {
         actions={
           <>
             <Link to="/threads" className={buttonVariants({ variant: "outline" })}>
-              <AddIcon />
+              <IconPlus />
               New thread
             </Link>
             <AddProjectDialog />
