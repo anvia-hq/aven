@@ -133,7 +133,6 @@ test.describe("the agent's question", () => {
     await expect(form).not.toContainText("Which color should it be?");
     await expect(form.getByRole("button", { name: "Next" })).toBeDisabled();
     await form.getByRole("radio", { name: "Large" }).click();
-    await form.getByRole("button", { name: "Next" }).click();
 
     await expect(form.getByRole("img", { name: "Question 2 of 2" })).toBeVisible();
     await expect(form).toContainText("Which color should it be?");

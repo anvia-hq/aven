@@ -72,6 +72,7 @@ export function BotQuestionForm({
         prompt={prompt}
         draft={drafts[prompt.id]}
         onChange={(draft) => setDrafts((current) => ({ ...current, [prompt.id]: draft }))}
+        onChoose={last ? undefined : () => setStep(step + 1)}
       />
 
       <div className="flex items-center justify-between">
