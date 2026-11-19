@@ -22,6 +22,7 @@ import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { SubagentCard } from "./subagent-card";
+import { BrowserOffer } from "./browser-offer";
 import { ToolGroup } from "./tool-group";
 
 function AssistantBlock({
@@ -42,6 +43,8 @@ function AssistantBlock({
   if (block.type === "artifacts") {
     return <ArtifactGrid threadId={threadId} artifacts={block.artifacts} />;
   }
+
+  if (block.type === "browser") return <BrowserOffer tool={block.tool} threadId={threadId} />;
 
   if (block.type === "fork") return <ForkCard tool={block.tool} forkId={block.forkId} />;
 

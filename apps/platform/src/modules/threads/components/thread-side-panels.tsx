@@ -8,6 +8,7 @@ import { safeStorage } from "@/hooks/use-local-storage";
 import { threadComputer } from "@/modules/computer/computer";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";
+import type { usePreviewOffer } from "@/modules/preview/hooks/use-preview-offer";
 import { PreviewPanel } from "@/modules/preview/components/preview-panel";
 import { TerminalPanel } from "@/modules/terminal/components/terminal-panel";
 import type { ThreadPanels } from "../types";
@@ -17,6 +18,7 @@ type Props = {
   runtimeId: string;
   running: boolean;
   panels: ThreadPanels;
+  previewOffer: ReturnType<typeof usePreviewOffer>;
   owned: boolean;
   handleClassName: string;
 };
@@ -26,6 +28,7 @@ export function ThreadSidePanels({
   runtimeId,
   running,
   panels,
+  previewOffer,
   owned,
   handleClassName,
 }: Props) {
@@ -64,7 +67,15 @@ export function ThreadSidePanels({
   if (owned && preview.open) {
     sidePanels.push({
       id: "preview",
-      node: <PreviewPanel key={threadId} runtimeId={runtimeId} onClose={preview.close} />,
+      node: (
+        <PreviewPanel
+          key={threadId}
+          runtimeId={runtimeId}
+          offer={previewOffer.offer}
+          onOffered={previewOffer.clear}
+          onClose={preview.close}
+        />
+      ),
     });
   }
 

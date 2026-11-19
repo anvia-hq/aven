@@ -15,9 +15,9 @@ test.describe("the Browser panel", () => {
       await page.getByRole("button", { name: "Browser", exact: true }).click();
 
       const panel = page.getByRole("region", { name: "Browser" });
-      await expect(panel.getByLabel("Port")).toBeVisible();
+      await expect(panel.getByLabel("Address")).toBeVisible();
 
-      await panel.getByLabel("Port").fill("3000");
+      await panel.getByLabel("Address").fill("3000");
       await panel.getByRole("button", { name: "Open", exact: true }).click();
 
       const confirm = page.getByRole("alertdialog");
@@ -45,7 +45,7 @@ test.describe("the Browser panel", () => {
       await page.goto(`/threads/${threadId}`);
       await page.getByRole("button", { name: "Browser", exact: true }).click();
       const panel = page.getByRole("region", { name: "Browser" });
-      await panel.getByLabel("Port").fill("3000");
+      await panel.getByLabel("Address").fill("3000");
       await panel.getByRole("button", { name: "Open", exact: true }).click();
       await page.getByRole("alertdialog").getByRole("button", { name: "Cancel" }).click();
       await expect(page.getByRole("alertdialog")).toHaveCount(0);
