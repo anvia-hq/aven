@@ -29,6 +29,8 @@ function controlsFromLevels(levels: readonly string[] | undefined) {
 
 const OPENAI_MODEL = /^(gpt-|o\d|chatgpt-|codex)/i;
 
+const ANTHROPIC_PROMPT_CACHE = { ttl: "1h" } as const;
+
 export const azureApiFor = (modelId: string) => (OPENAI_MODEL.test(modelId) ? "responses" : "chat");
 
 export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
@@ -127,6 +129,7 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
     return new AnthropicClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
       modelId: config.modelId ?? DEFAULT_MODEL_IDS.anthropic,
+      promptCache: ANTHROPIC_PROMPT_CACHE,
       controls: controlsFromLevels(config.effortLevels),
       contextLimits: contextLimitsFor(config),
     });
@@ -134,10 +137,6 @@ export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
 
   const unknownProvider: string = config.provider;
   throw new Error(`Unknown model provider "${unknownProvider}"`);
-}
-
-export function providerOptionsFor(provider: Provider) {
-  return provider === "anthropic" ? { cache_control: { type: "ephemeral", ttl: "1h" } } : undefined;
 }
 
 export function reasoningControlsFor(

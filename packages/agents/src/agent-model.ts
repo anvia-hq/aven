@@ -1,6 +1,6 @@
 import { createSummaryMemoryCompactor, type CompletionModel } from "@anvia/core";
 
-import { azureApiFor, createModel, providerOptionsFor } from "./model";
+import { azureApiFor, createModel } from "./model";
 import {
   ownedByResponsesApi,
   withAnthropicReasoning,
@@ -32,10 +32,9 @@ export function summarizerFor(source: ModelSource, model: CompletionModel) {
 }
 
 export function resolveAgentModel(source: ModelSource) {
-  const { model, providerOptions, controls } = resolveModel(source);
+  const { model, controls } = resolveModel(source);
   return {
     model,
-    providerOptions,
     controls,
     maxTokens: outputLimitFor(source),
     retries: { maxAttempts: MODEL_REQUEST_ATTEMPTS },
@@ -74,14 +73,12 @@ function withHistoryItOwns(model: CompletionModel, config: ModelConfig) {
 }
 
 function resolveModel(source: ModelSource) {
-  if ("model" in source)
-    return { model: source.model, providerOptions: undefined, controls: undefined };
+  if ("model" in source) return { model: source.model, controls: undefined };
 
   return {
     model: withUniqueToolCallIds(
       withoutEmptyAssistantText(withHistoryItOwns(createModel(source, source.apiKey), source)),
     ),
-    providerOptions: providerOptionsFor(source.provider),
     controls: source.reasoningEffort ? { reasoningEffort: source.reasoningEffort } : undefined,
   };
 }

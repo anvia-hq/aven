@@ -9,21 +9,18 @@ import { scriptedModel } from "./testing/scripted-model";
 const model = scriptedModel([]);
 
 describe("resolveAgentModel", () => {
-  test("a ready model comes as it is, with no provider settings", () => {
+  test("a ready model comes as it is, with no reasoning control", () => {
     const resolved = resolveAgentModel({ model });
     expect(resolved.model).toBe(model);
-    expect(resolved.providerOptions).toBeUndefined();
     expect(resolved.controls).toBeUndefined();
     expect(resolved.retries).toEqual({ maxAttempts: 5 });
   });
 
-  test("a provider's config brings its options and the reasoning effort chosen", () => {
+  test("a provider's config brings the reasoning effort chosen", () => {
     const anthropic = resolveAgentModel({ provider: "anthropic", apiKey: "k" });
-    expect(anthropic.providerOptions).toEqual({ cache_control: { type: "ephemeral", ttl: "1h" } });
     expect(anthropic.controls).toBeUndefined();
 
     const openai = resolveAgentModel({ provider: "openai", apiKey: "k", reasoningEffort: "high" });
-    expect(openai.providerOptions).toBeUndefined();
     expect(openai.controls).toEqual({ reasoningEffort: "high" });
   });
 });
