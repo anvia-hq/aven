@@ -131,7 +131,13 @@ export type AvatarPose = {
   wobble: number;
 };
 
-export type AvatarLook = { family: string; color: string; mood: BotMood; delayMs: number };
+export type AvatarLook = {
+  family: string;
+  color: string;
+  mood: BotMood;
+  delayMs: number;
+  follow?: boolean;
+};
 
 export type AvatarHandle = { setMood(mood: BotMood): void; dispose(): void };
 
