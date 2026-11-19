@@ -61,6 +61,8 @@ type Run = {
 type RunEnd = Extract<RuntimeToControlPlane, { type: "run.end" }>;
 
 export const DEFAULT_GRACE_MS = 60_000;
+const RUNTIME_DISCONNECTED = "The runtime disconnected";
+const CONTROL_PLANE_RESTARTED = "The control plane restarted";
 
 const BEFORE_BACKENDS: readonly AgentBackendKind[] = ["native"];
 
@@ -389,7 +391,7 @@ export class RuntimeConnection {
     for (const reply of replies) reply.lost(new Error("The runtime disconnected"));
   }
 
-  close(code?: number, reason?: string, endRuns = false) {
+  close(code?: number, reason?: string, endRuns = false, lostMessage = RUNTIME_DISCONNECTED) {
     if (this.#closed) return;
 
     this.#closed = true;
@@ -400,15 +402,21 @@ export class RuntimeConnection {
     if (endRuns) {
       for (const [, run] of runs) {
         void this.hub.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
-        run.sink.lost(new Error("The runtime disconnected"));
+        run.sink.lost(new Error(lostMessage));
       }
     } else if (runs.length > 0) {
       this.hub.hold(this.runtimeId, runs);
     }
 
+    if (runs.length > 0) {
+      console.warn(
+        `Runtime ${this.runtimeId} closed (${reason ?? code ?? "no reason given"}) with ${runs.length} run(s) open: ${endRuns ? "ended" : "held"}`,
+      );
+    }
+
     this.#loseBotReplies();
-    this.#viewers.closeAll("The runtime disconnected");
-    this.#calls.rejectAll("The runtime disconnected");
+    this.#viewers.closeAll(lostMessage);
+    this.#calls.rejectAll(lostMessage);
     this.hub.detach(this);
   }
 }
@@ -512,13 +520,15 @@ export class RuntimeHub {
     if (held) held.cancel = reason;
   }
 
-  #giveUp(runtimeId: string, message = "The runtime disconnected") {
+  #giveUp(runtimeId: string, message = RUNTIME_DISCONNECTED) {
     const held = this.#held.get(runtimeId);
 
     if (!held) return;
 
     clearTimeout(held.timer);
     this.#held.delete(runtimeId);
+    console.warn(`Gave up on ${held.runs.size} held run(s) of runtime ${runtimeId}: ${message}`);
+
     for (const run of held.runs.values()) {
       void this.machineWatches.ended(run.thread.machine, run.thread.id, "lost");
       run.sink.lost(new Error(message));
@@ -566,9 +576,8 @@ export class RuntimeHub {
   }
 
   closeAll() {
-    for (const runtimeId of this.#held.keys())
-      this.#giveUp(runtimeId, "The control plane shut down");
+    for (const runtimeId of this.#held.keys()) this.#giveUp(runtimeId, CONTROL_PLANE_RESTARTED);
     for (const connection of this.#connections.values())
-      connection.close(undefined, undefined, true);
+      connection.close(undefined, undefined, true, CONTROL_PLANE_RESTARTED);
   }
 }
