@@ -1,4 +1,5 @@
-import { IconChevronRight, IconExternalLink, IconFile, IconFolder } from "@tabler/icons-react";
+import { IconChevronRight, IconExternalLink, IconFolder } from "@tabler/icons-react";
+import { FileIcon } from "@/modules/files/components/file-icon";
 import { Link } from "@tanstack/react-router";
 
 import { SectionCard } from "@/components/section-card";
@@ -62,7 +63,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
   if (!project.repoFullName) {
     return (
       <div className={rowClass}>
-        <IconFile className="size-4 shrink-0 text-muted-foreground" />
+        <FileIcon path={entry.path} className="size-4" />
         <span className="min-w-0 flex-1 truncate">{entry.name}</span>
       </div>
     );
@@ -75,7 +76,7 @@ function Entry({ project, entry }: { project: Project; entry: RepoEntry }) {
       rel="noreferrer noopener"
       className={`${rowClass} group/file`}
     >
-      <IconFile className="size-4 shrink-0 text-muted-foreground" />
+      <FileIcon path={entry.path} className="size-4" />
       <span className="min-w-0 flex-1 truncate">{entry.name}</span>
       <IconExternalLink className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/file:opacity-100" />
     </a>

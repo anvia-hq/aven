@@ -1,8 +1,8 @@
-import { IconFile } from "@tabler/icons-react";
 import { cn } from "cn";
 import type { CSSProperties } from "react";
 
 import { Button } from "@aven/ui/button";
+import { FileIcon } from "./file-icon";
 
 type Props = {
   path: string;
@@ -23,7 +23,7 @@ export function FileButton({ path, label, active, title, style, onOpen }: Props)
       title={title}
       onClick={() => onOpen(path)}
     >
-      <IconFile className="text-muted-foreground" />
+      <FileIcon path={path} className="size-4" />
       <span className="truncate">{label}</span>
     </Button>
   );
