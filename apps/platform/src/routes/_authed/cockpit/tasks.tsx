@@ -1,4 +1,4 @@
-import { KanbanIcon, ListIcon, AddIcon } from "@solar-icons/react/linear";
+import { IconLayoutKanban, IconList, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -45,10 +45,10 @@ function TasksPage() {
           >
             <TabsList aria-label="View">
               <TabsTrigger value="board">
-                <KanbanIcon /> Board
+                <IconLayoutKanban /> Board
               </TabsTrigger>
               <TabsTrigger value="list">
-                <ListIcon /> List
+                <IconList /> List
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -56,7 +56,7 @@ function TasksPage() {
             size="sm"
             onClick={() => setOpen({ kind: "new", initial: { tags: tag ? [tag] : [] } })}
           >
-            <AddIcon /> New task
+            <IconPlus /> New task
           </Button>
         </>
       }

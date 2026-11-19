@@ -1,4 +1,4 @@
-import { SquareArrowRightUpIcon, GlobeIcon, RefreshIcon } from "@solar-icons/react/linear";
+import { IconExternalLink, IconRefresh, IconWorld } from "@tabler/icons-react";
 import { useState } from "react";
 
 import {
@@ -52,7 +52,7 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
   }
 
   return (
-    <SidePanel title="Browser" icon={GlobeIcon} onClose={onClose}>
+    <SidePanel title="Browser" icon={IconWorld} onClose={onClose}>
       <div className="flex min-h-0 flex-1 flex-col">
         <Form
           className="flex shrink-0 items-center gap-2 border-b px-3 py-2"
@@ -81,7 +81,7 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
             disabled={opening || !session}
             onClick={() => session && void open(session.port)}
           >
-            <RefreshIcon />
+            <IconRefresh />
           </Button>
           {session && (
             <Button
@@ -92,7 +92,7 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
               title="Open in a new tab"
               onClick={() => void openInTab(session.port)}
             >
-              <SquareArrowRightUpIcon />
+              <IconExternalLink />
             </Button>
           )}
         </Form>

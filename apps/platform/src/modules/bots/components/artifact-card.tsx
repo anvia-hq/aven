@@ -1,4 +1,4 @@
-import { FileIcon, FileTextIcon, GalleryIcon as ImageIcon } from "@solar-icons/react/linear";
+import { IconFile, IconFileText, IconPhoto } from "@tabler/icons-react";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -18,13 +18,13 @@ const LABELS = {
 } as const;
 
 const ICONS = {
-  pdf: FileIcon,
-  page: FileIcon,
-  image: ImageIcon,
-  video: FileIcon,
-  markdown: FileTextIcon,
-  csv: FileTextIcon,
-  text: FileTextIcon,
+  pdf: IconFile,
+  page: IconFile,
+  image: IconPhoto,
+  video: IconFile,
+  markdown: IconFileText,
+  csv: IconFileText,
+  text: IconFileText,
 } as const;
 
 export function ArtifactCard({

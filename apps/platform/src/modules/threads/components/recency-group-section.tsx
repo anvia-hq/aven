@@ -1,4 +1,4 @@
-import { AltArrowDownIcon } from "@solar-icons/react/linear";
+import { IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
@@ -20,7 +20,7 @@ export function RecencyGroupSection({ group, children }: Props) {
         <h3 className="flex min-w-0">
           <CollapsibleTrigger className="group/heading flex min-w-0 items-center gap-2 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
             <span className="shrink-0">{group.label}</span>
-            <AltArrowDownIcon className="size-3.5 shrink-0 -rotate-90 transition-transform duration-200 group-data-panel-open/heading:rotate-0 motion-reduce:transition-none" />
+            <IconChevronDown className="size-3.5 shrink-0 -rotate-90 transition-transform duration-200 group-data-panel-open/heading:rotate-0 motion-reduce:transition-none" />
           </CollapsibleTrigger>
         </h3>
       </div>

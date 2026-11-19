@@ -1,6 +1,6 @@
 # Icons come from Solar
 
-Status: accepted. Replaces the icon library of `docs/rules/0003-ui-primitives-base-ui.md`.
+Status: superseded by 0360 (icons come from Tabler). Was: accepted. Replaces the icon library of `docs/rules/0003-ui-primitives-base-ui.md`.
 
 ## Context
 

@@ -1,4 +1,4 @@
-import { MentionCircleIcon, MenuDotsVerticalIcon } from "@solar-icons/react/linear";
+import { IconAt, IconDotsVertical } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 import {
@@ -31,7 +31,7 @@ export function MentionsPanel({ mentions, unread, onMarkAllRead, onOpen }: Props
                 <Button variant="ghost" size="icon-sm" className="size-6" aria-label="More" />
               }
             >
-              <MenuDotsVerticalIcon />
+              <IconDotsVertical />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem disabled={unread === 0} onClick={onMarkAllRead}>
@@ -44,7 +44,7 @@ export function MentionsPanel({ mentions, unread, onMarkAllRead, onOpen }: Props
       {mentions.length === 0 ? (
         <div className="flex items-start gap-4 px-4 py-5">
           <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-            <MentionCircleIcon className="size-6" />
+            <IconAt className="size-6" />
           </div>
           <div>
             <p className="text-sm font-medium">No mentions yet</p>

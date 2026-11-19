@@ -1,4 +1,4 @@
-import { PaperclipIcon } from "@solar-icons/react/linear";
+import { IconPaperclip } from "@tabler/icons-react";
 import { useRef } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -36,7 +36,7 @@ export function AttachButton({
         disabled={disabled}
         onClick={() => picker.current?.click()}
       >
-        <PaperclipIcon />
+        <IconPaperclip />
       </Button>
     </>
   );

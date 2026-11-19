@@ -1,4 +1,4 @@
-import { MaximizeIcon, MinimizeIcon } from "@solar-icons/react/linear";
+import { IconMaximize, IconMinimize } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
@@ -17,7 +17,7 @@ export function MarkdownTable({
   const [natural, setNatural] = useState<number | undefined>(undefined);
   const table = useRef<HTMLTableElement>(null);
   const wideNow = useRef(wide);
-  const Icon = wide ? MinimizeIcon : MaximizeIcon;
+  const Icon = wide ? IconMinimize : IconMaximize;
 
   wideNow.current = wide;
 

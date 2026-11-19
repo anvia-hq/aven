@@ -1,21 +1,21 @@
 import {
-  BookIcon,
-  ChatRoundDotsIcon,
-  SettingsIcon,
-  FlagIcon,
-  KeyIcon,
-  LockIcon,
-  ProgrammingIcon,
-  ServerIcon,
-  SignalIcon,
-  SparklesIcon,
-  CodeSquareIcon,
-  UsersGroupRoundedIcon,
-  UsersGroupTwoRoundedIcon,
-  UserIdIcon,
-  BellIcon,
-  UserCircleIcon,
-} from "@solar-icons/react/linear";
+  IconBell,
+  IconBook,
+  IconCode,
+  IconCodeblock,
+  IconFlag,
+  IconId,
+  IconKey,
+  IconLock,
+  IconMessageDots,
+  IconServer,
+  IconSettings,
+  IconSparkles,
+  IconUserCircle,
+  IconUsers,
+  IconUsersGroup,
+  IconWebhook,
+} from "@tabler/icons-react";
 import { GithubMark } from "@/components/brand-icons";
 import { Link, useRouterState } from "@tanstack/react-router";
 
@@ -34,36 +34,36 @@ const groups = [
   {
     label: "Personal",
     items: [
-      { to: "/settings/general", label: "General", icon: SettingsIcon },
-      { to: "/settings/profile", label: "Profile", icon: UserCircleIcon },
-      { to: "/settings/environment-variables", label: "Personal variables", icon: LockIcon },
+      { to: "/settings/general", label: "General", icon: IconSettings },
+      { to: "/settings/profile", label: "Profile", icon: IconUserCircle },
+      { to: "/settings/environment-variables", label: "Personal variables", icon: IconLock },
     ],
   },
   {
     label: "AI",
     items: [
-      { to: "/settings/providers", label: "Providers", icon: SparklesIcon },
-      { to: "/settings/bots", label: "Bots", icon: ChatRoundDotsIcon },
-      { to: "/settings/memory", label: "Memory", icon: UserIdIcon },
+      { to: "/settings/providers", label: "Providers", icon: IconSparkles },
+      { to: "/settings/bots", label: "Bots", icon: IconMessageDots },
+      { to: "/settings/memory", label: "Memory", icon: IconId },
     ],
   },
   {
     label: "Agents and integrations",
     items: [
-      { to: "/settings/skills", label: "Skills", icon: BookIcon },
+      { to: "/settings/skills", label: "Skills", icon: IconBook },
       { to: "/settings/mcp", label: "MCP Integrations", icon: McpLine },
-      { to: "/settings/mcp-access", label: "MCP access", icon: ProgrammingIcon },
-      { to: "/settings/webhooks", label: "Webhooks", icon: SignalIcon },
+      { to: "/settings/mcp-access", label: "MCP access", icon: IconCode },
+      { to: "/settings/webhooks", label: "Webhooks", icon: IconWebhook },
     ],
   },
   {
     label: "Workspace",
     items: [
-      { to: "/settings/members", label: "Members", icon: UsersGroupRoundedIcon },
+      { to: "/settings/members", label: "Members", icon: IconUsers },
       { to: "/settings/github", label: "GitHub", icon: GithubMark },
-      { to: "/settings/runtimes", label: "Runtimes", icon: CodeSquareIcon },
-      { to: "/settings/workspace-variables", label: "Workspace variables", icon: KeyIcon },
-      { to: "/settings/decision-model", label: "Decision model", icon: FlagIcon },
+      { to: "/settings/runtimes", label: "Runtimes", icon: IconCodeblock },
+      { to: "/settings/workspace-variables", label: "Workspace variables", icon: IconKey },
+      { to: "/settings/decision-model", label: "Decision model", icon: IconFlag },
     ],
   },
 ] as const;
@@ -71,10 +71,10 @@ const groups = [
 const platformGroup = {
   label: "Platform",
   items: [
-    { to: "/settings/platform", label: "Installation", icon: ServerIcon },
+    { to: "/settings/platform", label: "Installation", icon: IconServer },
     { to: "/settings/sandbox", label: "Sandbox", icon: CloudLine },
-    { to: "/settings/people", label: "People", icon: UsersGroupTwoRoundedIcon },
-    { to: "/settings/announcements", label: "Announcements", icon: BellIcon },
+    { to: "/settings/people", label: "People", icon: IconUsersGroup },
+    { to: "/settings/announcements", label: "Announcements", icon: IconBell },
   ],
 } as const;
 

@@ -1,4 +1,4 @@
-import { AddIcon } from "@solar-icons/react/linear";
+import { IconPlus } from "@tabler/icons-react";
 import { Fragment, useState, type DragEvent } from "react";
 
 import { cn } from "cn";
@@ -163,7 +163,7 @@ export function TaskBoard({
                   aria-label={`New task in ${STATUS_LABELS[status]}`}
                   onClick={() => onNew({ status, tags: tag ? [tag] : [] })}
                 >
-                  <AddIcon />
+                  <IconPlus />
                 </Button>
               </header>
               <ul className="flex min-h-12 flex-col gap-2">

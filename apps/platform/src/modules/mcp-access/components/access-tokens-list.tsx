@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconTrash } from "@tabler/icons-react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
@@ -40,7 +40,7 @@ function AccessTokenRow({ token }: { token: AccessToken }) {
         aria-label={`Remove ${token.name}`}
         onClick={() => void remove(token)}
       >
-        <TrashBinMinimalisticIcon />
+        <IconTrash />
       </Button>
     </li>
   );

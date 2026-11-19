@@ -1,13 +1,13 @@
 import {
-  CheckIcon,
-  FolderIcon,
-  GitDiffIcon,
-  WindowFrameIcon,
-  SidebarMinimalisticIcon,
-  ListIcon,
-  Code2Icon,
-  CloseIcon,
-} from "@solar-icons/react/linear";
+  IconAppWindow,
+  IconCheck,
+  IconCode,
+  IconFolder,
+  IconGitCompare,
+  IconLayoutSidebar,
+  IconList,
+  IconX,
+} from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { useState } from "react";
 
@@ -48,11 +48,11 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
   const [renaming, setRenaming] = useState(false);
   const rename = useRenameThread();
   const toggles: Toggle[] = [
-    { label: "Overview", icon: ListIcon, panel: panels.overview, show: true },
-    { label: "Changes", icon: GitDiffIcon, panel: panels.diff, show: true },
-    { label: "Files", icon: FolderIcon, panel: panels.files, show: true },
-    { label: "Terminal", icon: Code2Icon, panel: panels.terminal, show: owned },
-    { label: "Browser", icon: WindowFrameIcon, panel: panels.preview, show: owned },
+    { label: "Overview", icon: IconList, panel: panels.overview, show: true },
+    { label: "Changes", icon: IconGitCompare, panel: panels.diff, show: true },
+    { label: "Files", icon: IconFolder, panel: panels.files, show: true },
+    { label: "Terminal", icon: IconCode, panel: panels.terminal, show: owned },
+    { label: "Browser", icon: IconAppWindow, panel: panels.preview, show: owned },
   ];
   const shown = toggles.filter((toggle) => toggle.show);
 
@@ -104,7 +104,7 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
           title="Close"
           onClick={onClose}
         >
-          <CloseIcon />
+          <IconX />
         </Button>
       )}
       <div
@@ -144,14 +144,14 @@ function PanelsMenu({ toggles, className }: { toggles: Toggle[]; className?: str
           />
         }
       >
-        <SidebarMinimalisticIcon />
+        <IconLayoutSidebar />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
         {toggles.map(({ label, icon: Icon, panel }) => (
           <DropdownMenuItem key={label} onClick={panel.toggle}>
             <Icon />
             <span className="flex-1">{label}</span>
-            {panel.open && <CheckIcon className="size-4 text-muted-foreground" />}
+            {panel.open && <IconCheck className="size-4 text-muted-foreground" />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

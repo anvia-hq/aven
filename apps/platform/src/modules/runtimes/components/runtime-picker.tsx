@@ -1,4 +1,4 @@
-import { MonitorIcon } from "@solar-icons/react/linear";
+import { IconDeviceDesktop } from "@tabler/icons-react";
 
 import { CloudLine } from "@/components/cloud-line";
 
@@ -45,7 +45,7 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
               {choice.runtime.isCloud ? (
                 <CloudLine className="text-muted-foreground" />
               ) : (
-                <MonitorIcon className="text-muted-foreground" />
+                <IconDeviceDesktop className="text-muted-foreground" />
               )}
               {labelOf(choice)}
             </span>

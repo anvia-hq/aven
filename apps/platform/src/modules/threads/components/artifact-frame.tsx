@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MaximizeIcon, RefreshIcon } from "@solar-icons/react/linear";
+import { IconMaximize, IconRefresh } from "@tabler/icons-react";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -19,7 +19,7 @@ function Frame({ src, label, fill }: { src: string; label: string; fill?: boolea
           Page unavailable. The runner that keeps it may be offline.
         </span>
         <Button variant="ghost" size="sm" onClick={retry}>
-          <RefreshIcon className="size-4" />
+          <IconRefresh className="size-4" />
           Retry
         </Button>
       </div>
@@ -65,7 +65,7 @@ export function ArtifactFrame({
         onClick={() => setExpanded(true)}
         className="absolute top-1 right-1 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
       >
-        <MaximizeIcon />
+        <IconMaximize />
       </Button>
       {caption && <figcaption className="text-xs text-muted-foreground">{caption}</figcaption>}
       <Dialog open={expanded} onOpenChange={setExpanded}>

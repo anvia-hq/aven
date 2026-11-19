@@ -1,5 +1,5 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
-import { CheckIcon, GlobeIcon, LinkIcon, LockIcon, ShareIcon } from "@solar-icons/react/linear";
+import { IconCheck, IconLink, IconLock, IconShare, IconWorld } from "@tabler/icons-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -27,13 +27,13 @@ import type { Thread, ThreadVisibility } from "../types";
 const CHOICES = [
   {
     value: "private",
-    icon: LockIcon,
+    icon: IconLock,
     title: "Only me",
     detail: "Nobody else can see it.",
   },
   {
     value: "workspace",
-    icon: GlobeIcon,
+    icon: IconWorld,
     title: "Everyone in the workspace",
     detail:
       "They can read it, with its files and changes. Only you send messages, unless you turn on multiplayer.",
@@ -50,7 +50,7 @@ export function ThreadShareButton({ thread, onClick }: { thread: Thread; onClick
       aria-label={shared ? "Shared to workspace" : "Share"}
       onClick={onClick}
     >
-      {shared ? <GlobeIcon /> : <ShareIcon />}
+      {shared ? <IconWorld /> : <IconShare />}
       <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
     </Button>
   );
@@ -154,7 +154,7 @@ export function ThreadShare({
           )}
           <DialogFooter className="sm:justify-between">
             <Button type="button" variant="outline" onClick={() => void copyLink()}>
-              {copied ? <CheckIcon /> : <LinkIcon />}
+              {copied ? <IconCheck /> : <IconLink />}
               {copied ? "Link copied" : "Copy link"}
             </Button>
             <DialogClose render={<Button type="button" />}>Done</DialogClose>

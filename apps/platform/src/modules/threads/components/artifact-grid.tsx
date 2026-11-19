@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GalleryIcon as ImageIcon, RefreshIcon } from "@solar-icons/react/linear";
+import { IconPhoto, IconRefresh } from "@tabler/icons-react";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
@@ -23,12 +23,12 @@ function labelOf(artifact: ToolArtifact) {
 function Unavailable({ video, onRetry }: { video: boolean; onRetry: () => void }) {
   return (
     <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">
-      <ImageIcon className="size-4 shrink-0" />
+      <IconPhoto className="size-4 shrink-0" />
       <span className="min-w-0 flex-1">
         {video ? "Video" : "Image"} unavailable. The runner that keeps it may be offline.
       </span>
       <Button variant="ghost" size="sm" onClick={onRetry}>
-        <RefreshIcon className="size-4" />
+        <IconRefresh className="size-4" />
         Retry
       </Button>
     </div>

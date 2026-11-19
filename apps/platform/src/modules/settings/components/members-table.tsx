@@ -1,4 +1,4 @@
-import { CopyIcon, TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconCopy, IconTrash } from "@tabler/icons-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { Badge } from "@aven/ui/badge";
@@ -38,7 +38,7 @@ export function MembersTable() {
                 aria-label={`Copy invite link for ${member.email}`}
                 onClick={() => copyLink(member)}
               >
-                <CopyIcon />
+                <IconCopy />
               </Button>
             )}
             {member.role !== "owner" && (
@@ -48,7 +48,7 @@ export function MembersTable() {
                 aria-label={`Remove ${member.name}`}
                 onClick={() => remove(member)}
               >
-                <TrashBinMinimalisticIcon />
+                <IconTrash />
               </Button>
             )}
           </SettingsRow>

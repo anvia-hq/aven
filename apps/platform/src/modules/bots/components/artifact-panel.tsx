@@ -1,4 +1,4 @@
-import { DownloadIcon, FileIcon, CloseIcon } from "@solar-icons/react/linear";
+import { IconDownload, IconFile, IconX } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
 import { NativeSelect } from "@aven/ui/native-select";
@@ -31,7 +31,7 @@ export function ArtifactPanel({
       className="flex size-full min-w-0 flex-col overflow-hidden bg-background md:border md:border-sidebar-border"
     >
       <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3 md:h-10">
-        <FileIcon className="size-4 shrink-0 text-muted-foreground" />
+        <IconFile className="size-4 shrink-0 text-muted-foreground" />
         <h2 className="min-w-0 flex-1 truncate text-sm font-medium">{group.title}</h2>
         {total > 1 && (
           <NativeSelect
@@ -54,10 +54,10 @@ export function ArtifactPanel({
           nativeButton={false}
           render={<a href={artifactSource(botId, version.name)} download={downloadName(version)} />}
         >
-          <DownloadIcon />
+          <IconDownload />
         </Button>
         <Button variant="ghost" size="icon-sm" aria-label="Close file" onClick={onClose}>
-          <CloseIcon />
+          <IconX />
         </Button>
       </header>
       <div className="min-h-0 flex-1">

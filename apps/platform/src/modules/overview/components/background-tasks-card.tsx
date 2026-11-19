@@ -1,4 +1,4 @@
-import { AltArrowDownIcon, AltArrowRightIcon } from "@solar-icons/react/linear";
+import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
@@ -69,9 +69,9 @@ export function BackgroundTasksCard({
             <CollapsibleTrigger className="-mx-1.5 flex items-center gap-2 self-start rounded-md px-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase outline-none hover:text-foreground focus-visible:underline">
               <span className="grid size-4 shrink-0 place-items-center">
                 {endedOpen ? (
-                  <AltArrowDownIcon className="size-3" aria-hidden />
+                  <IconChevronDown className="size-3" aria-hidden />
                 ) : (
-                  <AltArrowRightIcon className="size-3" aria-hidden />
+                  <IconChevronRight className="size-3" aria-hidden />
                 )}
               </span>
               Ended ({ended.length})

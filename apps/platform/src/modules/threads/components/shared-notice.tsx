@@ -1,9 +1,9 @@
-import { GlobeIcon, UsersGroupRoundedIcon } from "@solar-icons/react/linear";
+import { IconUsers, IconWorld } from "@tabler/icons-react";
 
 import type { Thread } from "../types";
 
 export function SharedNotice({ thread, driven }: { thread: Thread; driven: boolean }) {
-  const Icon = driven ? UsersGroupRoundedIcon : GlobeIcon;
+  const Icon = driven ? IconUsers : IconWorld;
   return (
     <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
       <Icon className="size-4 shrink-0" />

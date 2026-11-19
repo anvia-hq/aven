@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconTrash } from "@tabler/icons-react";
 
 import {
   AlertDialog,
@@ -45,7 +45,7 @@ function RemoveAccount({
           <Button variant="ghost" size="icon-sm" aria-label={`Remove account of ${person.name}`} />
         }
       >
-        <TrashBinMinimalisticIcon />
+        <IconTrash />
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>

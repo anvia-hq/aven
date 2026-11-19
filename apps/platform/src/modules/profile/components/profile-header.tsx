@@ -1,4 +1,4 @@
-import { DownloadIcon, PenIcon } from "@solar-icons/react/linear";
+import { IconDownload, IconPencil } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
@@ -43,7 +43,7 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
           disabled={exporting || stats === null}
           onClick={() => void exportProfile({ name, email, image, stats })}
         >
-          {exporting ? <Spinner /> : <DownloadIcon />}
+          {exporting ? <Spinner /> : <IconDownload />}
           {exporting ? "Downloading" : "Download PNG"}
         </Button>
         <Button
@@ -51,7 +51,7 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
           size="sm"
           onClick={() => void navigate({ to: "/settings/general" })}
         >
-          <PenIcon />
+          <IconPencil />
           Edit profile
         </Button>
       </div>

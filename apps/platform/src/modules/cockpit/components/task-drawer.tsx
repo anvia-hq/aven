@@ -1,11 +1,11 @@
 import {
-  CalendarIcon,
-  CircleDashedIcon,
-  FlagIcon,
-  TagIcon,
-  TrashBinMinimalisticIcon,
-  CloseIcon,
-} from "@solar-icons/react/linear";
+  IconCalendar,
+  IconCircleDashed,
+  IconFlag,
+  IconTag,
+  IconTrash,
+  IconX,
+} from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -75,7 +75,7 @@ function TaskProperties({
 }) {
   return (
     <Properties>
-      <Property icon={CircleDashedIcon} label="Status">
+      <Property icon={IconCircleDashed} label="Status">
         <Select
           value={value.status}
           onValueChange={(next) => onChange({ status: next as TaskStatus })}
@@ -98,7 +98,7 @@ function TaskProperties({
           </SelectContent>
         </Select>
       </Property>
-      <Property icon={FlagIcon} label="Priority">
+      <Property icon={IconFlag} label="Priority">
         <Select
           value={value.priority}
           onValueChange={(next) => onChange({ priority: next as TaskPriority })}
@@ -121,10 +121,10 @@ function TaskProperties({
           </SelectContent>
         </Select>
       </Property>
-      <Property icon={CalendarIcon} label="Due">
+      <Property icon={IconCalendar} label="Due">
         <DueInput value={value.dueDate} onChange={(dueDate) => onChange({ dueDate })} />
       </Property>
-      <Property icon={TagIcon} label="Tags">
+      <Property icon={IconTag} label="Tags">
         <TagInput bare value={value.tags} onChange={(tags) => onChange({ tags })} />
       </Property>
     </Properties>
@@ -165,7 +165,7 @@ function TaskPage({ task, onClose }: { task: CockpitTask; onClose: () => void })
                 if (await remove(task)) onClose();
               }}
             >
-              <TrashBinMinimalisticIcon /> Delete task
+              <IconTrash /> Delete task
             </DropdownMenuItem>
           </MoreMenu>
           <CloseButton />
@@ -285,7 +285,7 @@ const CloseButton = () => (
       <Button variant="ghost" size="icon-sm" aria-label="Close" className="text-muted-foreground" />
     }
   >
-    <CloseIcon />
+    <IconX />
   </DrawerClose>
 );
 

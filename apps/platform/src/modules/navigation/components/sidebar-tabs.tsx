@@ -1,11 +1,11 @@
-import { ChatRoundIcon, FolderIcon } from "@solar-icons/react/linear";
+import { IconFolder, IconMessageCircle } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 
 const tabs = [
-  { to: "/threads", label: "New thread", icon: ChatRoundIcon, exact: true },
-  { to: "/projects", label: "Projects", icon: FolderIcon, exact: false },
+  { to: "/threads", label: "New thread", icon: IconMessageCircle, exact: true },
+  { to: "/projects", label: "Projects", icon: IconFolder, exact: false },
 ] as const;
 
 export function SidebarTabs() {

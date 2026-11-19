@@ -1,5 +1,4 @@
-import { PlayIcon, StarIcon } from "@solar-icons/react/linear";
-import { StarIcon as StarBoldIcon } from "@solar-icons/react/bold";
+import { IconPlayerPlay, IconStar, IconStarFilled } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -47,7 +46,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
           disabled={disabled(action)}
           onClick={() => void start(action)}
         >
-          <PlayIcon />
+          <IconPlayerPlay />
           {starting === action.name ? `${action.name}…` : action.name}
         </Button>
       ))}
@@ -62,7 +61,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
             />
           }
         >
-          <PlayIcon />
+          <IconPlayerPlay />
         </PopoverTrigger>
         <PopoverContent align="end" side="top" className="w-64 gap-0.5 p-1.5">
           {actions.map((action) => {
@@ -82,7 +81,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
                     void start(action);
                   }}
                 >
-                  <PlayIcon />
+                  <IconPlayerPlay />
                   <span className="truncate">{action.name}</span>
                 </Button>
                 <Button
@@ -97,7 +96,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
                   }
                   onClick={() => toggleFavorite(action.name)}
                 >
-                  {favorite ? <StarBoldIcon className="text-primary" /> : <StarIcon />}
+                  {favorite ? <IconStarFilled className="text-primary" /> : <IconStar />}
                 </Button>
               </div>
             );

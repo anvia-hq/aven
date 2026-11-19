@@ -1,4 +1,4 @@
-import { AltArrowRightIcon } from "@solar-icons/react/linear";
+import { IconChevronRight } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 
@@ -83,7 +83,7 @@ export function ModelMenu({ model }: Props) {
             >
               <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />
               <span className="truncate">{modelLabel ?? "Provider default"}</span>
-              <AltArrowRightIcon />
+              <IconChevronRight />
             </Button>
             {efforts && (
               <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />

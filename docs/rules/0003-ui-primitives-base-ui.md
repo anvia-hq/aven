@@ -30,25 +30,29 @@ Our own wrappers (`text-field.tsx`, `form.tsx`) live next to them. Hooks the CLI
 
 ## Icons
 
-Icons come from `@solar-icons/react`, by style and name (`import { AltArrowDownIcon } from "@solar-icons/react/linear"`; filled ones from `@solar-icons/react/bold`). `lucide-react` is not a dependency. Solar has no brand marks: the GitHub mark is `GithubMark` in `src/components/brand-icons.tsx`. Decision 0345.
+Icons come from `@tabler/icons-react`, by name (`import { IconChevronDown } from "@tabler/icons-react"`). Outline is the default; state uses the filled variant of the same name (`IconStarFilled`, `IconPinFilled`, `IconFolderFilled`, `IconPlayerStopFilled`). `lucide-react` is not a dependency. Tabler has no brand marks: the GitHub mark is `GithubMark` in `src/components/brand-icons.tsx`. Decision 0360.
 
-The shadcn CLI only knows lucide, so `components.json` still says `iconLibrary: "lucide"` and newly added components will import `lucide-react`. After `shadcn add`, convert those imports to Solar, aliasing to keep the JSX unchanged (`import { CheckIcon } from "@solar-icons/react/linear"`, `import { LoaderIcon as Loader2Icon } from "@solar-icons/react/linear"`). Mapping used so far:
+The stroke of every icon is set once in `apps/platform/src/index.css`: `.tabler-icon { stroke-width: 1.75 }`. An icon that needs another weight sets it inline (`style={{ strokeWidth: 2.4 }}`), because a `strokeWidth` prop is an attribute and the rule beats it.
 
-| lucide                        | Solar                                |
+The shadcn CLI only knows lucide, so `components.json` still says `iconLibrary: "lucide"` and newly added components will import `lucide-react`. After `shadcn add`, convert those imports to Tabler, keeping the JSX unchanged with an alias where the names differ (`import { IconCheck } from "@tabler/icons-react"`, `import { IconLoader2 as Loader2Icon } from "@tabler/icons-react"`). Mapping used so far:
+
+| lucide                        | Tabler                               |
 | ----------------------------- | ------------------------------------ |
-| `Check`, `Minus`, `Copy`      | `CheckIcon`, `MinusIcon`, `CopyIcon` |
-| `Chevron{Up,Down,Left,Right}` | `AltArrow{Up,Down,Left,Right}Icon`   |
-| `MoreHorizontal`              | `MenuDotsIcon`                       |
-| `X`                           | `CloseIcon`                          |
-| `Search`                      | `MagnifierIcon`                      |
-| `PanelLeft`                   | `PanelLeftIcon`                      |
-| `CircleCheck`                 | `CheckCircleIcon`                    |
-| `Info`                        | `InfoCircleIcon`                     |
-| `TriangleAlert`               | `DangerTriangleIcon`                 |
-| `OctagonX`                    | `DangerIcon`                         |
-| `Loader2`                     | `LoaderIcon`                         |
-| `LogOut`                      | `LogoutIcon`                         |
-| `Plus`                        | `AddIcon`                            |
+| `Check`, `Minus`, `Copy`      | `IconCheck`, `IconMinus`, `IconCopy` |
+| `Chevron{Up,Down,Left,Right}` | `IconChevron{Up,Down,Left,Right}`    |
+| `MoreHorizontal`              | `IconDots`                           |
+| `X`                           | `IconX`                              |
+| `Search`                      | `IconSearch`                         |
+| `PanelLeft`                   | `IconLayoutSidebar`                  |
+| `CircleCheck`                 | `IconCircleCheck`                    |
+| `Info`                        | `IconInfoCircle`                     |
+| `TriangleAlert`               | `IconAlertTriangle`                  |
+| `OctagonX`                    | `IconAlertOctagon`                   |
+| `Loader2`                     | `IconLoader2`                        |
+| `LogOut`                      | `IconLogout`                         |
+| `Plus`                        | `IconPlus`                           |
+
+The same names map the Solar set this replaced: `AltArrowDownIcon` was `IconChevronDown`, `MagnifierIcon` was `IconSearch`, `CloseIcon` was `IconX`, `AddIcon` was `IconPlus`, `TrashBinMinimalisticIcon` was `IconTrash`, `DangerTriangleIcon` was `IconAlertTriangle`, `MenuDotsIcon` was `IconDots`.
 
 ## Enforcement
 

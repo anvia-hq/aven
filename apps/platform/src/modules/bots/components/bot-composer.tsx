@@ -4,7 +4,7 @@ import {
   useComposer,
   type ComposerInputEntity,
 } from "@anvia/react-ui/chat";
-import { ArrowUpIcon, ReplyIcon, CloseIcon } from "@solar-icons/react/linear";
+import { IconArrowBackUp, IconArrowUp, IconX } from "@tabler/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 
@@ -82,7 +82,7 @@ function QuotePreview({
         className="h-auto min-w-0 flex-1 flex-col items-stretch justify-start gap-0 rounded-md p-0 text-left text-sm font-normal whitespace-normal hover:bg-transparent"
       >
         <span className="flex items-center gap-1.5 text-xs font-medium text-primary">
-          <ReplyIcon className="size-3.5 shrink-0" />
+          <IconArrowBackUp className="size-3.5 shrink-0" />
           Replying to {author}
         </span>
         <span
@@ -101,7 +101,7 @@ function QuotePreview({
         aria-label="Stop quoting"
         onClick={onClear}
       >
-        <CloseIcon />
+        <IconX />
       </Button>
     </div>
   );
@@ -229,7 +229,7 @@ function Composer({
             disabled={!canSend}
             onClick={() => void submit()}
           >
-            <ArrowUpIcon />
+            <IconArrowUp />
           </Button>
         </div>
       </div>

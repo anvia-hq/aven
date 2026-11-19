@@ -1,4 +1,4 @@
-import { ArrowLeftIcon, MenuDotsIcon } from "@solar-icons/react/linear";
+import { IconArrowLeft, IconDots } from "@tabler/icons-react";
 import { useRef, type ComponentType, type KeyboardEvent, type ReactNode } from "react";
 
 import { cn } from "cn";
@@ -35,7 +35,7 @@ export function DocumentPage({
           className="md:hidden"
           onClick={onBack}
         >
-          <ArrowLeftIcon />
+          <IconArrowLeft />
         </Button>
         <nav
           aria-label="Breadcrumb"
@@ -89,7 +89,7 @@ export function MoreMenu({ children }: { children: ReactNode }) {
           />
         }
       >
-        <MenuDotsIcon />
+        <IconDots />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-40">
         {children}

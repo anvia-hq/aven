@@ -1,4 +1,4 @@
-import { GitDiffIcon, Columns2Icon } from "@solar-icons/react/linear";
+import { IconColumns2, IconGitCompare } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
 import { PanelNotice } from "@/components/panel-notice";
@@ -39,7 +39,7 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
   return (
     <SidePanel
       title="Changes"
-      icon={GitDiffIcon}
+      icon={IconGitCompare}
       onClose={onClose}
       actions={
         <>
@@ -53,10 +53,10 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           <Tabs value={layout} onValueChange={(next) => isDiffLayout(next) && setLayout(next)}>
             <TabsList aria-label="Layout">
               <TabsTrigger value="unified" aria-label="Unified">
-                <Columns2Icon className="rotate-90" />
+                <IconColumns2 className="rotate-90" />
               </TabsTrigger>
               <TabsTrigger value="split" aria-label="Split">
-                <Columns2Icon />
+                <IconColumns2 />
               </TabsTrigger>
             </TabsList>
           </Tabs>

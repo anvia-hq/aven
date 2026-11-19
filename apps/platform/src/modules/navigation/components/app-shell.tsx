@@ -1,9 +1,4 @@
-import {
-  FolderIcon,
-  MagnifierIcon,
-  PenNewSquareIcon,
-  SettingsIcon,
-} from "@solar-icons/react/linear";
+import { IconEdit, IconFolder, IconSearch, IconSettings } from "@tabler/icons-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 
@@ -75,7 +70,7 @@ export function AppShell({ user }: Props) {
           </RailLink>
           <div className="mt-[0.45rem] flex flex-col items-center gap-[0.45rem]">
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
-              <FolderIcon className="size-[17px]" />
+              <IconFolder className="size-[17px]" />
             </RailLink>
             <CockpitRailLink active={pathname.startsWith("/cockpit")} />
             <BotRailLink active={pathname.startsWith("/bot")} />
@@ -86,7 +81,7 @@ export function AppShell({ user }: Props) {
               label="Settings"
               active={pathname.startsWith("/settings")}
             >
-              <SettingsIcon className="size-[17px]" />
+              <IconSettings className="size-[17px]" />
             </RailLink>
           </div>
         </nav>
@@ -116,7 +111,7 @@ export function AppShell({ user }: Props) {
                   className="size-9 md:size-7"
                   onClick={() => setCommandOpen(true)}
                 >
-                  <MagnifierIcon />
+                  <IconSearch />
                 </Button>
                 <Button
                   size="icon-sm"
@@ -124,7 +119,7 @@ export function AppShell({ user }: Props) {
                   className="size-9 rounded-full md:size-7"
                   onClick={() => navigate({ to: "/threads" })}
                 >
-                  <PenNewSquareIcon />
+                  <IconEdit />
                 </Button>
                 <MobileSidebarClose />
               </div>
@@ -143,7 +138,7 @@ export function AppShell({ user }: Props) {
                 className="h-9 min-w-0 flex-1 justify-start"
                 onClick={() => navigate({ to: "/settings/general" })}
               >
-                <SettingsIcon />
+                <IconSettings />
                 <span>Settings</span>
               </Button>
             </div>

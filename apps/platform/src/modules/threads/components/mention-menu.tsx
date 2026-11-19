@@ -3,7 +3,7 @@ import {
   type ComposerTriggerItem,
   type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
-import { CommandIcon, FileIcon } from "@solar-icons/react/linear";
+import { IconCommand, IconFile } from "@tabler/icons-react";
 import { cn } from "cn";
 import { useEffect, useRef, type ReactNode } from "react";
 
@@ -20,8 +20,8 @@ const HEADINGS: Record<string, string> = {
 };
 
 const FALLBACK_ICONS: Record<string, ReactNode> = {
-  file: <FileIcon />,
-  skill: <CommandIcon />,
+  file: <IconFile />,
+  skill: <IconCommand />,
 };
 
 function splitPath(path: string) {

@@ -6,13 +6,13 @@ import { cn } from "cn";
 
 import { Button } from "./button";
 import {
-  CloseIcon as XIcon,
-  CheckCircleIcon as CircleCheckIcon,
-  InfoCircleIcon as InfoIcon,
-  DangerTriangleIcon as TriangleAlertIcon,
-  DangerIcon as OctagonXIcon,
-  LoaderIcon as Loader2Icon,
-} from "@solar-icons/react/linear";
+  IconAlertOctagon,
+  IconAlertTriangle,
+  IconCircleCheck,
+  IconInfoCircle,
+  IconLoader2,
+  IconX,
+} from "@tabler/icons-react";
 
 const toast = ToastPrimitive.createToastManager();
 
@@ -129,7 +129,7 @@ function ToastClose({
       )}
       {...props}
     >
-      {children ?? <XIcon aria-hidden="true" />}
+      {children ?? <IconX aria-hidden="true" />}
     </ToastPrimitive.Close>
   );
 }
@@ -138,23 +138,23 @@ function ToastIcon({ type }: { type: string | undefined }) {
   let icon: React.ReactNode = null;
 
   if (type === "success") {
-    icon = <CircleCheckIcon aria-hidden="true" />;
+    icon = <IconCircleCheck aria-hidden="true" />;
   }
 
   if (type === "info") {
-    icon = <InfoIcon aria-hidden="true" />;
+    icon = <IconInfoCircle aria-hidden="true" />;
   }
 
   if (type === "warning") {
-    icon = <TriangleAlertIcon aria-hidden="true" />;
+    icon = <IconAlertTriangle aria-hidden="true" />;
   }
 
   if (type === "error") {
-    icon = <OctagonXIcon className="text-destructive" aria-hidden="true" />;
+    icon = <IconAlertOctagon className="text-destructive" aria-hidden="true" />;
   }
 
   if (type === "loading") {
-    icon = <Loader2Icon className="animate-spin" aria-hidden="true" />;
+    icon = <IconLoader2 className="animate-spin" aria-hidden="true" />;
   }
 
   if (!icon) {

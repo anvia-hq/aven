@@ -1,4 +1,4 @@
-import { TrashBinMinimalisticIcon } from "@solar-icons/react/linear";
+import { IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { cn } from "cn";
@@ -174,7 +174,7 @@ export function AnnouncementsSection() {
                     aria-label={`Delete ${announcement.title}`}
                     onClick={() => void remove(announcement)}
                   >
-                    <TrashBinMinimalisticIcon />
+                    <IconTrash />
                   </Button>
                 </SettingsRow>
               </div>

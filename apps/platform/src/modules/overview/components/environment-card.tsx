@@ -1,4 +1,4 @@
-import { FolderIcon, GitBranchIcon, MonitorIcon } from "@solar-icons/react/linear";
+import { IconDeviceDesktop, IconFolder, IconGitBranch } from "@tabler/icons-react";
 import { GithubMark } from "@/components/brand-icons";
 import type { ReactNode } from "react";
 import { threadBranch } from "@aven/protocol/thread-branch";
@@ -38,7 +38,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
             sandbox ? (
               <CloudLine aria-label={starting ? "Starting" : "Cloud computer"} />
             ) : (
-              <MonitorIcon aria-label={runtime?.online ? "Online" : "Offline"} />
+              <IconDeviceDesktop aria-label={runtime?.online ? "Online" : "Offline"} />
             )
           }
           action={
@@ -49,11 +49,11 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
           {starting && <span className="text-muted-foreground"> · starting</span>}
         </Row>
         {project && (
-          <Row icon={<FolderIcon />}>
+          <Row icon={<IconFolder />}>
             {project.name} <span className="text-muted-foreground">· {projectPlace(project)}</span>
           </Row>
         )}
-        <Row icon={<GitBranchIcon />}>{threadBranch(thread.id)}</Row>
+        <Row icon={<IconGitBranch />}>{threadBranch(thread.id)}</Row>
         {github && (
           <Row icon={<GithubMark />}>
             <span title={github.detail}>{github.label}</span>

@@ -1,11 +1,11 @@
 import { layoutGraph } from "@aven/protocol/commit-graph";
 import {
-  AltArrowLeftIcon,
-  AltArrowRightIcon,
-  GitBranchIcon,
-  GitCommitIcon,
-  TagIcon,
-} from "@solar-icons/react/linear";
+  IconChevronLeft,
+  IconChevronRight,
+  IconGitBranch,
+  IconGitCommit,
+  IconTag,
+} from "@tabler/icons-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { Badge } from "@aven/ui/badge";
@@ -38,7 +38,7 @@ function Branches({ refs, defaultBranch }: { refs: string[]; defaultBranch: stri
           title={name}
           className="max-w-32"
         >
-          <GitBranchIcon />
+          <IconGitBranch />
           <span className="truncate">{name}</span>
         </Badge>
       ))}
@@ -92,7 +92,7 @@ function Commit({
           <Branches refs={commit.refs} defaultBranch={project.defaultBranch ?? ""} />
           {commit.tags.slice(0, 2).map((name) => (
             <Badge key={name} variant="default" title={`Tag ${name}`} className="max-w-28">
-              <TagIcon />
+              <IconTag />
               <span className="truncate">{name}</span>
             </Badge>
           ))}
@@ -161,7 +161,7 @@ export function RepoCommits({
       label="Commits"
       title={
         <>
-          <GitCommitIcon className="size-4 text-muted-foreground" />
+          <IconGitCommit className="size-4 text-muted-foreground" />
           Commits
         </>
       }
@@ -211,7 +211,7 @@ export function RepoCommits({
             disabled={page === 1 || loading}
             onClick={() => setPage(page - 1)}
           >
-            <AltArrowLeftIcon />
+            <IconChevronLeft />
             Newer
           </Button>
           <span className="text-xs text-muted-foreground">Page {page}</span>
@@ -222,7 +222,7 @@ export function RepoCommits({
             onClick={() => setPage(page + 1)}
           >
             Older
-            <AltArrowRightIcon />
+            <IconChevronRight />
           </Button>
         </nav>
       )}

@@ -1,4 +1,4 @@
-import { AddIcon } from "@solar-icons/react/linear";
+import { IconPlus } from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -40,7 +40,7 @@ export function AddProjectDialog({ onAdded, variant, size, open, onOpenChange }:
     <Dialog open={state.open} onOpenChange={state.handleOpenChange}>
       {open === undefined && (
         <DialogTrigger render={<Button variant={variant} size={size} />}>
-          <AddIcon /> Add project
+          <IconPlus /> Add project
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-lg">
