@@ -66,7 +66,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 Before non-trivial work, check `docs/` (format `xxxx-name.md`, numbers per folder, see `docs/README.md`):
 
 - `docs/rules/`: conventions you must follow. These override defaults here.
-- `docs/decision/`: past decisions. Do not reverse one silently; write a new one that supersedes it.
+- `docs/decision/`: past decisions. Do not reverse one silently; write a new one that supersedes it. `docs/decision/README.md` names the ones whose own `Status:` line says a later decision superseded them, whole or in part, so you do not follow a superseded one.
 - `docs/products/`: what the product does, including the system reference.
 - `docs/bugs/`: known **library** bugs and workarounds.
 
@@ -78,4 +78,4 @@ Before non-trivial work, check `docs/` (format `xxxx-name.md`, numbers per folde
 - Run `bun run typecheck`, `bun run lint`, `bun run format` and the tests for what you changed before every commit. Husky runs typecheck, lint and `format:check` on every commit (decision 0316); the unit tests and the e2e suite stay in CI. Do not skip the hooks with `--no-verify`. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
 - Record a significant choice as a decision doc in the same pull request. When a change alters how a part works, update its section of `docs/products/0007-system-reference.md`.
 - Do not commit, push, merge or release unless asked. Before merging, read every review comment, including the ones a reviewer filtered out.
-- Docs and migrations numbered in two open pull requests collide: renumber the second when it merges.
+- Docs and migrations numbered in two open pull requests collide: the second takes the next number at the end of its folder at merge time, and every reference to it moves in the same change (0387).

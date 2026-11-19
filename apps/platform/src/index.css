@@ -1441,7 +1441,7 @@
   --sidebar-ring: #ff7edb;
 }
 
-/* The themes of other coding tools, drawn from their own design tokens (decision 0257): Codex
+/* The themes of other coding tools, drawn from their own design tokens (decision 0377): Codex
    (ChatGPT's grays and the Codex terminal's green), Claude (bone paper, clay and a serif
    heading), Devin (its page and wash grays and its blue) and T3 (near-black zinc and violet). */
 
@@ -1755,7 +1755,7 @@
 }
 
 /* What a heading is set in: a color theme may lend the page a heading face of its own (decision
-   0257), and the interface font choice stays the body's. */
+   0377), and the interface font choice stays the body's. */
 :root {
   --heading-font: var(
     --palette-heading-font,
