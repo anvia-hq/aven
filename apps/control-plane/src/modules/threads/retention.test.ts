@@ -5,6 +5,7 @@ import { threads } from "@aven/db/schema/threads";
 import { eq, inArray } from "drizzle-orm";
 
 import { runtimesService } from "../runtimes/service";
+import { threadPinsService } from "./pins";
 import { createThreadRetention } from "./retention";
 import { threadsService } from "./service";
 import type { StaleThread } from "./types";
@@ -95,5 +96,18 @@ run("createThreadRetention (postgres)", async () => {
     expect(again.putAway).toEqual([`${stuck}@${runner.id}`]);
 
     await db.delete(threads).where(inArray(threads.id, [stuck, fine]));
+  });
+
+  test("leaves a pinned thread alone however old, and sweeps it once the pin is gone", async () => {
+    const pinned = await threadAged(60);
+    const { job } = retention([pinned]);
+    await threadPinsService.pin(userId, pinned);
+
+    await job.sweep(NOW);
+    expect(await stateOf(pinned)).toBe("open");
+
+    await threadPinsService.unpin(userId, pinned);
+    await job.sweep(NOW);
+    expect(await stateOf(pinned)).toBe("archived");
   });
 });
