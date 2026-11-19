@@ -30,7 +30,7 @@ Our own wrappers (`text-field.tsx`, `form.tsx`) live next to them. Hooks the CLI
 
 ## Icons
 
-Icons come from `@tabler/icons-react`, by name (`import { IconChevronDown } from "@tabler/icons-react"`). Outline is the default; state uses the filled variant of the same name (`IconStarFilled`, `IconPinFilled`, `IconFolderFilled`, `IconPlayerStopFilled`). `lucide-react` is not a dependency. Tabler has no brand marks: the GitHub mark is `GithubMark` in `src/components/brand-icons.tsx`. Decision 0360.
+Icons come from `@tabler/icons-react`, by name (`import { IconChevronDown } from "@tabler/icons-react"`). Outline is the default; state uses the filled variant of the same name (`IconStarFilled`, `IconPinFilled`, `IconFolderFilled`, `IconPlayerStopFilled`). `lucide-react` is not a dependency. Brand marks stay our own (`GithubMark` in `src/components/brand-icons.tsx`, not Tabler's `IconBrandGithub`). Decision 0360.
 
 The stroke of every icon is set once in `apps/platform/src/index.css`: `.tabler-icon { stroke-width: 1.75 }`. An icon that needs another weight sets it inline (`style={{ strokeWidth: 2.4 }}`), because a `strokeWidth` prop is an attribute and the rule beats it.
 
