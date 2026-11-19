@@ -6,12 +6,28 @@ import type { GoalInput } from "../goals/types";
 import type { MemoryCaller, MemoryOwner, MemoryPlace } from "../memory/types";
 import type { ScheduleInput, SchedulePatch } from "../schedules/types";
 import type { ModelConfig } from "@aven/agents/types";
-import type { BotRunChoice } from "../providers/types";
-import type { AskQuestion, ReactToMessage, SendMessage } from "@aven/agents/tools/types";
+import type { BotProviders, BotRunChoice } from "../providers/types";
 import type {
+  AskQuestion,
+  CreateBot,
+  DeleteBot,
+  McpServersHost,
+  MemoryHost,
+  ProjectFilesHost,
+  ProvidersHost,
+  ReactToMessage,
+  ScheduleHost,
+  SendMessage,
+  ThreadsHost,
+  UpdateSelf,
+} from "@aven/agents/tools/types";
+import type { BotMcp } from "../mcp/types";
+import type { BotThreads } from "../threads/types";
+import type {
+  BotApiRequest,
+  BotApiResult,
   ToolArtifact,
   Bot,
-  BotApiResult,
   BotCreateParams,
   BotProjectEntry,
   BotReplyProject,
@@ -43,12 +59,13 @@ export type BotChats = ReturnType<typeof createBotChats>;
 
 import type { BotApiAsk } from "../bot-api/service";
 
-export type BotKeeper = {
+export type BotReplyBots = {
   list(userId: string): Promise<Bot[]>;
   create(userId: string, bot: NewBot): Promise<Bot>;
   update(userId: string, id: string, changes: UpdateBotBody): Promise<Bot | null>;
   remove(userId: string, id: string): Promise<void>;
   deliver(letter: BotLetter): Promise<BotSent>;
+  greet(userId: string, botId: string, hops: number): Promise<void>;
   timezone(userId: string): Promise<string>;
   schedules: {
     list(userId: string): Promise<BotScheduleView[]>;
@@ -56,14 +73,16 @@ export type BotKeeper = {
     update(userId: string, id: string, patch: SchedulePatch): Promise<BotScheduleView>;
     remove(userId: string, id: string): Promise<void>;
   };
+  api: { answer(ask: BotApiAsk): Promise<BotApiResult> };
+};
+
+export type BotKeeper = BotReplyBots & {
   goals: {
     get(botId: string): Promise<BotGoalView | null>;
     start(userId: string, botId: string, input: GoalInput): Promise<BotGoalView>;
     update(botId: string, action: GoalAction, reason?: string): Promise<BotGoalView | null>;
   };
-  greet(userId: string, botId: string, hops: number): Promise<void>;
   usableRuntime(userId: string, runtimeId: string): Promise<void>;
-  api: { answer(ask: BotApiAsk): Promise<BotApiResult> };
 };
 
 export type BotMemoryNotes = {
@@ -174,6 +193,39 @@ export type BotWorldKeeper = {
   forReply(userId: string): Promise<BotWorldView>;
   folder(userId: string, projectId: string, path?: string): Promise<BotProjectEntry[]>;
   file(userId: string, projectId: string, path: string): Promise<ProjectFile>;
+};
+
+export type ReplyHostsInput = {
+  bot: Pick<Bot, "id" | "handle" | "isMain">;
+  userId: string;
+  prompt: string;
+  hops: number;
+  onPersonsWord: boolean;
+  aboutThread?: string | undefined;
+  memoryOwner: MemoryOwner;
+  ask(questions: readonly BotQuestion[]): void;
+  bots: BotReplyBots;
+  mcp: BotMcp;
+  providers: BotProviders;
+  threads: BotThreads;
+  notes: BotMemoryNotes;
+  world: BotWorldKeeper;
+};
+
+export type ReplyHosts = {
+  createBot: CreateBot;
+  deleteBot: DeleteBot;
+  updateSelf: UpdateSelf;
+  schedules: ScheduleHost;
+  mcpServers: McpServersHost;
+  providers: ProvidersHost;
+  threads: ThreadsHost;
+  api: (params: BotApiRequest) => Promise<BotApiResult>;
+  notes: MemoryHost;
+  cockpit: (command: unknown) => Promise<string>;
+  projectFiles: ProjectFilesHost;
+  asked(): boolean;
+  takeAsked(): void;
 };
 
 export type ActivityDigestInput = {

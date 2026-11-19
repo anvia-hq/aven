@@ -964,7 +964,7 @@ export type BotThreaded = BotProjectView[] | BotThreadView[] | BotThreadDetail |
 
 export type BotApiMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
-export type BotApiParams = { replyId: string } & (
+export type BotApiRequest =
   | { op: "search"; query?: string }
   | {
       op: "call";
@@ -973,8 +973,9 @@ export type BotApiParams = { replyId: string } & (
       body?: unknown;
       organizationId?: string;
       confirmed?: boolean;
-    }
-);
+    };
+
+export type BotApiParams = { replyId: string } & BotApiRequest;
 
 export type BotApiRoute = {
   method: BotApiMethod;

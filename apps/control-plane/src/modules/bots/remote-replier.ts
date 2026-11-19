@@ -1,17 +1,12 @@
 import type { MemoryStore } from "@anvia/core";
 import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, parseBotPrompt } from "@aven/protocol/bots";
-import { providerKeyQuestion } from "@aven/protocol/providers";
-import { BOT_THREAD_RUNS_PER_REPLY } from "@aven/protocol/threads";
 import { isGoalRoundNote } from "@aven/protocol/goals";
-import { isWebhookNote } from "@aven/protocol/webhooks";
-
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
-import { API_CALLS_PER_REPLY } from "../bot-api/service";
 import { answerBotMemory } from "./memory-answer";
+import { replyHosts } from "./reply-hosts";
 import { TalkBotReplier } from "./talk-replier";
-import { runCockpitCommand } from "../cockpit/commands";
 import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
 import type {
@@ -107,7 +102,7 @@ export class RemoteBotReplier implements BotReplier {
     private notes: BotMemoryNotes,
     private world: BotWorldKeeper,
     private agentOnControlPlane = true,
-    private talk = new TalkBotReplier(store, bots, world),
+    private talk = new TalkBotReplier({ store, bots, world, mcp, providers, threads, notes }),
   ) {}
 
   ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId" | "hasComputer">) {
@@ -173,12 +168,23 @@ export class RemoteBotReplier implements BotReplier {
     const ended = Promise.withResolvers<void>();
     const { from, note } = parseBotPrompt(prompt);
     const makesBotsOnTheirWord = onPersonsWord && from === undefined;
-    const onWebhook = bot.isMain && isWebhookNote(prompt);
+    const hosts = replyHosts({
+      bot,
+      userId,
+      prompt,
+      hops,
+      onPersonsWord,
+      aboutThread,
+      memoryOwner,
+      ask,
+      bots: this.bots,
+      mcp: this.mcp,
+      providers: this.providers,
+      threads: this.threads,
+      notes: this.notes,
+      world: this.world,
+    });
     let written = 0;
-    let asked = false;
-    let threadRuns = 0;
-    let apiCalls = 0;
-    const inspected = new Set<string>();
     const sendToBot = async (to: string, text: string) => {
       if (written >= BOT_MESSAGES_PER_REPLY) {
         throw new Error(
@@ -204,42 +210,20 @@ export class RemoteBotReplier implements BotReplier {
       react: async ({ messageId, emoji }: Omit<BotReactParams, "replyId">) =>
         react(messageId, emoji),
       memory: answerBotMemory(this.store, { sessionId: bot.id, userId }),
-      create: async ({ name, instruction, description }: NewBot) => {
-        if (!bot.isMain) throw new Error("Only your main bot can make bots");
-
-        if (!makesBotsOnTheirWord)
-          throw new Error("Make a bot only when the person asks you to, in their own message");
-
-        const made = await this.bots.create(userId, { name, instruction, description });
-        this.bots.greet(userId, made.id, hops).catch((error: unknown) => {
-          console.warn(`Bot ${made.id} could not greet its person:`, error);
-        });
-        return { id: made.id, name: made.name, handle: made.handle };
-      },
-      delete: async ({ handle }: Omit<BotDeleteParams, "replyId">): Promise<BotDeleted> => {
-        if (!bot.isMain) throw new Error("Only your main bot can delete bots");
-
-        if (!makesBotsOnTheirWord)
-          throw new Error("Delete a bot only when the person asks you to, in their own message");
-
-        const target = (await this.bots.list(userId)).find((each) => each.handle === handle);
-
-        if (!target) throw new Error(`No bot with the handle "${handle}". Use list_bots.`);
-
-        if (target.isMain) throw new Error("The main bot cannot be deleted");
-
-        await this.bots.remove(userId, target.id);
-        return { name: target.name, handle: target.handle };
-      },
+      create: async ({ name, instruction, description }: NewBot) =>
+        hosts.createBot({ name, instruction, description }),
+      delete: async ({ handle }: Omit<BotDeleteParams, "replyId">): Promise<BotDeleted> =>
+        hosts.deleteBot({ handle }),
       send: ({ to, text }: Omit<BotSendParams, "replyId">) => sendToBot(to, text),
       question: async ({
         questions,
       }: Omit<BotQuestionParams, "replyId">): Promise<BotQuestioned> => {
         if (note) throw new Error("Nobody is there to answer: this was not the person's message");
 
-        if (asked) throw new Error("You have already asked. Stop now and wait for the answer.");
+        if (hosts.asked())
+          throw new Error("You have already asked. Stop now and wait for the answer.");
 
-        asked = true;
+        hosts.takeAsked();
 
         if (bot.isMain || from === undefined) {
           ask(questions);
@@ -255,33 +239,28 @@ export class RemoteBotReplier implements BotReplier {
         return { relayed: { handle: sent.handle, name: sent.name, text } };
       },
       schedule: async (params: BotScheduleParams): Promise<BotScheduled> => {
-        if (params.op === "list") return this.bots.schedules.list(userId);
-
-        if (!onPersonsWord) {
-          throw new Error(
-            "Change schedules only when the person asks you to, or the main bot passes it on",
-          );
-        }
+        if (params.op === "list") return hosts.schedules.list();
 
         if (params.op === "delete") {
-          await this.bots.schedules.remove(userId, params.id);
+          await hosts.schedules.remove(params.id);
           return null;
         }
 
         if (params.op === "update") {
-          const { name, cron, prompt, timezone, enabled, bot: target } = params;
-          const patch = { name, cron, prompt, timezone, enabled, bot: target };
-          return this.bots.schedules.update(userId, params.id, patch);
+          const { name, cron, prompt: task, timezone, enabled, bot: target } = params;
+
+          return hosts.schedules.update(params.id, {
+            name,
+            cron,
+            prompt: task,
+            timezone,
+            enabled,
+            bot: target,
+          });
         }
 
-        const { name, cron, prompt, timezone, bot: target } = params;
-        return this.bots.schedules.create(userId, bot.id, {
-          name,
-          cron,
-          prompt,
-          timezone,
-          bot: target,
-        });
+        const { name, cron, prompt: task, timezone, bot: target } = params;
+        return hosts.schedules.create({ name, cron, prompt: task, timezone, bot: target });
       },
       goal: async (params: BotGoalParams): Promise<BotGoaled> => {
         if (params.op === "get") return this.bots.goals.get(bot.id);
@@ -324,149 +303,81 @@ export class RemoteBotReplier implements BotReplier {
           return null;
         }
 
-        if (!makesBotsOnTheirWord) {
-          throw new Error(
-            "Change MCP servers only when the person asks you to, in their own message",
-          );
-        }
-
         if (params.op === "remove") {
-          await this.mcp.remove(userId, params.id);
+          await hosts.mcpServers.remove(params.id);
           return null;
         }
 
         if (params.op === "update") {
-          const { id, name, url, headers, target, enabled } = params;
-          return this.mcp.update(userId, id, { name, url, headers, target, enabled });
+          const { name, url, headers, target, enabled } = params;
+
+          return hosts.mcpServers.update(params.id, { name, url, headers, target, enabled });
         }
 
         const { name, url, headers, target } = params;
-        return this.mcp.add(userId, { name, url, headers, target });
+        return hosts.mcpServers.add({ name, url, headers, target });
       },
       provider: async (params: BotProviderParams): Promise<BotProvided> => {
-        if (params.op === "list") return this.providers.list(userId);
+        if (params.op === "list") return hosts.providers.list();
 
-        if (params.op === "models") return this.providers.models(userId, params.id);
+        if (params.op === "models") return { models: await hosts.providers.models(params.id) };
 
         if (params.op === "askKey") {
-          if (note || (!bot.isMain && from !== undefined)) {
-            throw new Error("Nobody is there to type a key: this was not the person's message");
-          }
+          if (!hosts.providers.askKey) throw new Error("Nobody is there to type a key");
 
-          const providerKey = await this.providers.keyFor(userId, params.id);
-
-          if (asked) throw new Error("You have already asked. Stop now and wait for the answer.");
-
-          asked = true;
-          ask([providerKeyQuestion(providerKey)]);
-          return providerKey;
-        }
-
-        if (!makesBotsOnTheirWord) {
-          throw new Error(
-            "Change providers only when the person asks you to, in their own message",
-          );
+          return hosts.providers.askKey(params.id);
         }
 
         if (params.op === "remove") {
-          await this.providers.remove(userId, params.id);
+          await hosts.providers.remove(params.id);
           return null;
         }
 
         if (params.op === "update") {
-          const { id, name, baseUrl, modelId, isDefault } = params;
-          return this.providers.update(userId, id, { name, baseUrl, modelId, isDefault });
+          const { name, baseUrl, modelId, isDefault } = params;
+
+          return hosts.providers.update(params.id, { name, baseUrl, modelId, isDefault });
         }
 
         const { kind, name, baseUrl, modelId, isDefault } = params;
-        return this.providers.add(userId, { kind, name, baseUrl, modelId, isDefault });
+        return hosts.providers.add({ kind, name, baseUrl, modelId, isDefault });
       },
-      api: async (params: BotApiParams): Promise<BotApiResult> => {
-        if (params.op === "call") {
-          apiCalls += 1;
-
-          if (apiCalls > API_CALLS_PER_REPLY) {
-            throw new Error(
-              `You have made ${API_CALLS_PER_REPLY} API calls in this reply. Tell the person what is left.`,
-            );
-          }
-        }
-
-        return this.bots.api.answer({ userId, params, onPersonsWord: makesBotsOnTheirWord });
-      },
+      api: async (params: BotApiParams): Promise<BotApiResult> => hosts.api(params),
       thread: async (params: BotThreadParams): Promise<BotThreaded> => {
-        if (params.op === "projects") return this.threads.projects(userId);
+        if (params.op === "projects") return hosts.threads.projects();
 
-        if (params.op === "list") {
-          return this.threads.list(userId, {
+        if (params.op === "list")
+          return hosts.threads.list({
             projectId: params.projectId,
             archived: params.archived,
           });
-        }
 
-        if (params.op === "get") {
-          const seen = await this.threads.get(userId, params.id);
-          inspected.add(params.id);
-          return seen;
-        }
+        if (params.op === "get") return hosts.threads.get(params.id);
 
-        const via = makesBotsOnTheirWord ? "person" : "note";
+        if (params.op === "archive")
+          return hosts.threads.archive(params.id, params.archived ?? true);
 
-        if (via === "note") {
-          this.#mayFollowUp(params, { note, aboutThread, inspected, webhook: onWebhook });
-        }
-
-        const actor = { userId, botId: bot.id, via } as const;
-
-        if (params.op === "archive") {
-          return this.threads.archive(actor, params.id, params.archived ?? true);
-        }
-
-        if (threadRuns >= BOT_THREAD_RUNS_PER_REPLY) {
-          throw new Error(
-            `You have started, continued or stopped threads ${BOT_THREAD_RUNS_PER_REPLY} times in this reply. Tell the person what is left.`,
-          );
-        }
-
-        threadRuns += 1;
-
-        if (params.op === "stop") return this.threads.stop(actor, params.id);
+        if (params.op === "stop") return hosts.threads.stop(params.id);
 
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
 
-        if (params.op === "continue") return this.threads.continue(actor, params.id, choice);
+        if (params.op === "continue") return hosts.threads.continue(params.id, choice);
 
-        return this.threads.start(actor, {
+        return hosts.threads.start({
           ...choice,
           projectId: params.projectId,
           title: params.title,
         });
       },
-      update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) => {
-        if (!onPersonsWord) {
-          throw new Error(
-            "Change yourself only when the person asks you to, or the main bot passes it on",
-          );
-        }
-
-        const changed = await this.bots.update(userId, bot.id, { name, description, instruction });
-
-        if (!changed) throw new Error("This bot no longer exists");
-
-        return { name: changed.name, description: changed.description };
-      },
+      update: async ({ name, description, instruction }: Omit<BotUpdateParams, "replyId">) =>
+        hosts.updateSelf({ name, description, instruction }),
       project: async (params: BotProjectParams): Promise<BotProjected> =>
         params.op === "folder"
-          ? { entries: await this.world.folder(userId, params.projectId, params.path) }
-          : this.world.file(userId, params.projectId, params.path),
-      notes: ({ command }: Omit<BotNotesParams, "replyId">) =>
-        this.notes.run(
-          { owner: memoryOwner, actor: { source: "bot", botId: bot.id }, writable: keepsNotes },
-          command,
-        ),
-      cockpit: ({ command }: { command: unknown }) =>
-        runCockpitCommand({ userId, access: "write", onPersonsWord }, command),
+          ? { entries: await hosts.projectFiles.folder(params.projectId, params.path) }
+          : hosts.projectFiles.file(params.projectId, params.path),
+      notes: ({ command }: Omit<BotNotesParams, "replyId">) => hosts.notes(command),
+      cockpit: ({ command }: { command: unknown }) => hosts.cockpit(command),
     };
     const cancel = () => this.#cancel(replyId, signal, runtimeId);
     try {
@@ -504,36 +415,6 @@ export class RemoteBotReplier implements BotReplier {
     } finally {
       signal.removeEventListener("abort", cancel);
       this.gateway.revoke(replyId);
-    }
-  }
-
-  #mayFollowUp(
-    params: Exclude<BotThreadParams, { op: "projects" | "list" | "get" }>,
-    reply: {
-      note?: boolean;
-      aboutThread?: string;
-      inspected: ReadonlySet<string>;
-      webhook: boolean;
-    },
-  ) {
-    const asked = "only when the person asks you to, in their own message";
-
-    if (params.op === "start" || params.op === "archive") {
-      if (params.op === "start" && reply.webhook) return;
-
-      throw new Error(`Start or archive threads ${asked}`);
-    }
-
-    if (!reply.note) throw new Error(`Continue or stop a thread ${asked}`);
-
-    if (params.id !== reply.aboutThread) {
-      throw new Error(`This note is not about that thread: continue or stop it ${asked}`);
-    }
-
-    if (!reply.inspected.has(params.id)) {
-      throw new Error(
-        "Look at the thread with get_thread first, in this reply: act on where it is now, not on the note",
-      );
     }
   }
 

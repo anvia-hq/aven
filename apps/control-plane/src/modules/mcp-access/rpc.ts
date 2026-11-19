@@ -7,7 +7,7 @@ import type {
   McpCaller,
   McpServerOptions,
 } from "./types";
-import type { AccessPermission, BotApiMethod, BotApiParams } from "@aven/protocol/types";
+import type { AccessPermission, BotApiMethod, BotApiRequest } from "@aven/protocol/types";
 
 const SUPPORTED_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 
@@ -180,8 +180,7 @@ export function createMcpServer({ api, version }: McpServerOptions) {
       return { refusal: `This token does not have the ${needed} permission` };
     }
 
-    const call: BotApiParams = {
-      replyId: `mcp-${caller.tokenId}`,
+    const call: BotApiRequest = {
       op: "call",
       method,
       path: rawPath,
@@ -198,19 +197,17 @@ export function createMcpServer({ api, version }: McpServerOptions) {
   }
 
   async function callTool(caller: McpCaller, name: string, args: Record<string, unknown>) {
-    const replyId = `mcp-${caller.tokenId}`;
-
     if (name === "aven_workspaces") {
       const answer = await api.answer({
         userId: caller.userId,
-        params: { replyId, op: "search" },
+        params: { op: "search" },
         onPersonsWord: false,
       });
       return text("organizations" in answer ? answer.organizations : []);
     }
 
     if (name === "aven_search_api") {
-      const search: BotApiParams = { replyId, op: "search" };
+      const search: BotApiRequest = { op: "search" };
 
       if (typeof args.query === "string") search.query = args.query;
 

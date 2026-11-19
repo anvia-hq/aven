@@ -1,4 +1,4 @@
-import type { BotApiParams, BotApiResult } from "@aven/protocol/types";
+import type { BotApiRequest, BotApiResult } from "@aven/protocol/types";
 
 import { ACTING_HEADER, grantActing } from "../auth/acting";
 import { BotApiRefusal, classify, holdsSecret, normalizePath, redact } from "./gate";
@@ -9,9 +9,9 @@ export const API_TIMEOUT_MS = 30_000;
 export const API_RESPONSE_CHARACTERS = 20_000;
 export const API_CALLS_PER_REPLY = 60;
 
-type Call = Extract<BotApiParams, { op: "call" }>;
+type Call = Extract<BotApiRequest, { op: "call" }>;
 
-export type BotApiAsk = { userId: string; params: BotApiParams; onPersonsWord: boolean };
+export type BotApiAsk = { userId: string; params: BotApiRequest; onPersonsWord: boolean };
 
 function within<T>(ms: number, work: Promise<T>) {
   let timer: ReturnType<typeof setTimeout> | undefined;
