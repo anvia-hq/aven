@@ -6,7 +6,7 @@ import type { ScheduleInput, SchedulePatch } from "./schedules";
 import type { SendMessageInput } from "./send-message";
 import type { SubagentType } from "../types";
 import type { SubagentTask } from "./spawn-agent";
-import type { ContinueThreadInput, StartThreadInput } from "./threads";
+import type { AnswerThreadInput, ContinueThreadInput, StartThreadInput } from "./threads";
 import type { SelfChanges } from "./update-self";
 import type {
   BotGoalView,
@@ -171,6 +171,7 @@ export type ThreadsHost = {
   continue(id: string, input: ContinueThreadInput): Promise<BotThreadView>;
   archive(id: string, archived: boolean): Promise<BotThreadView>;
   stop(id: string): Promise<BotThreadView>;
+  answer(id: string, input: AnswerThreadInput): Promise<BotThreadView>;
 };
 
 export type UpdateSelf = (changes: SelfChanges) => Promise<{ name: string; description: string }>;

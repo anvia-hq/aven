@@ -96,6 +96,7 @@ const noThreads = {
   continue: async () => unused(),
   archive: async () => unused(),
   stop: async () => unused(),
+  answer: async () => unused(),
 };
 
 const noNotes = {

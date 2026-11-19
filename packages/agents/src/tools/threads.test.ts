@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  ANSWER_THREAD_QUESTION_TOOL_NAME,
   ARCHIVE_THREAD_TOOL_NAME,
   CONTINUE_THREAD_TOOL_NAME,
   createThreadTools,
@@ -38,6 +39,7 @@ function host() {
     continue: async (id, input) => (calls.push(["continue", id, input]), thread),
     archive: async (id, archived) => (calls.push(["archive", id, archived]), thread),
     stop: async (id) => (calls.push(["stop", id]), { ...thread, running: false }),
+    answer: async (id, input) => (calls.push(["answer", id, input]), thread),
   };
   const tools = createThreadTools(hosted);
   const by = (name: string) =>
@@ -74,6 +76,13 @@ describe("the thread tools", () => {
     const { calls, by } = host();
     await by(CONTINUE_THREAD_TOOL_NAME).call({ id: ID, prompt: "Also the lint" });
     expect(calls).toEqual([["continue", ID, { prompt: "Also the lint" }]]);
+  });
+
+  test("answering hands the host the thread's id and the answers", async () => {
+    const { calls, by } = host();
+    const answers = [{ questionId: "q1", value: "Draft" }];
+    await by(ANSWER_THREAD_QUESTION_TOOL_NAME).call({ id: ID, answers });
+    expect(calls).toEqual([["answer", ID, { answers }]]);
   });
 
   test("archiving archives unless it is told to bring a thread back", async () => {

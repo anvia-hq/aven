@@ -9,6 +9,7 @@ import type {
   BotThreadView,
   ForkView,
   ProcessEnded,
+  QuestionAnswer,
   RunThreadInfo,
 } from "@aven/protocol/types";
 
@@ -42,6 +43,7 @@ export type BotThreads = {
   ): Promise<BotThreadView>;
   archive(actor: BotActor, id: string, archived: boolean): Promise<BotThreadView>;
   stop(actor: BotActor, id: string): Promise<BotThreadView>;
+  answer(actor: BotActor, id: string, input: { answers: QuestionAnswer[] }): Promise<BotThreadView>;
 };
 
 export type ThreadForks = {

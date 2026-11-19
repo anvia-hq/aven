@@ -10,6 +10,7 @@ export const START_THREAD_TOOL_NAME = "start_thread";
 export const CONTINUE_THREAD_TOOL_NAME = "continue_thread";
 export const ARCHIVE_THREAD_TOOL_NAME = "archive_thread";
 export const STOP_THREAD_TOOL_NAME = "stop_thread";
+export const ANSWER_THREAD_QUESTION_TOOL_NAME = "answer_thread_question";
 
 const id = z.uuid().describe("The thread id from list_threads or start_thread.");
 const prompt = z
@@ -57,8 +58,28 @@ const startSchema = z.object({
 });
 const continueSchema = z.object({ id, prompt, ...model });
 
+const answerSchema = z.object({
+  id,
+  answers: z
+    .array(
+      z.object({
+        questionId: z.string().trim().min(1).max(100).describe("The id of the question."),
+        value: z
+          .string()
+          .trim()
+          .min(1)
+          .max(2000)
+          .describe("The value of one of that question's choices, exactly as get_thread gave it."),
+      }),
+    )
+    .min(1)
+    .max(4)
+    .describe("One answer for each question the thread asks."),
+});
+
 export type StartThreadInput = z.infer<typeof startSchema>;
 export type ContinueThreadInput = Omit<z.infer<typeof continueSchema>, "id">;
+export type AnswerThreadInput = Omit<z.infer<typeof answerSchema>, "id">;
 
 const WORKING =
   "The agent is working in the thread on its own and its answer takes a while. Tell the person what you started and that it is in their Threads list under this title, then stop: you get a note when its run ends, and then tell them how it went. Do not wait for it or keep checking; look at it with get_thread when they ask how it is going.";
@@ -98,7 +119,7 @@ export function createThreadTools(host: ThreadsHost) {
   const next = createTool({
     name: CONTINUE_THREAD_TOOL_NAME,
     description:
-      "Send a message to one of the person's own threads, and the thread's agent carries on from it as it would from the person typing. While its agent is working, the message reaches it at its next step and steers it; otherwise it starts a new run. It fails when the thread waits for the person's answer to a question. Returns right away.",
+      "Send a message to one of the person's own threads, and the thread's agent carries on from it as it would from the person typing. While its agent is working, the message reaches it at its next step and steers it; otherwise it starts a new run. It fails when the thread waits for the person's answer to a question: use answer_thread_question for that. Returns right away.",
     inputSchema: continueSchema,
     handler: async ({ id, ...input }) => ({
       thread: await host.continue(id, input),
@@ -122,5 +143,15 @@ export function createThreadTools(host: ThreadsHost) {
     inputSchema: z.object({ id }),
     handler: async ({ id }) => ({ thread: await host.stop(id) }),
   });
-  return [projects, list, get, start, next, archive, stop];
+  const answer = createTool({
+    name: ANSWER_THREAD_QUESTION_TOOL_NAME,
+    description:
+      'Answer the question a thread\'s agent asked the person, with one of the choices it offered, when the person\'s own message tells you to answer for them (such as "just answer" or "pick for me"). Look at the thread with get_thread first: it gives the question ids and their choices. It fails for a question that takes free text, and for a request for a secret: tell the person to answer those in the thread. The agent carries on from your answer. Returns right away.',
+    inputSchema: answerSchema,
+    handler: async ({ id, ...input }) => ({
+      thread: await host.answer(id, input),
+      note: WORKING,
+    }),
+  });
+  return [projects, list, get, start, next, archive, stop, answer];
 }

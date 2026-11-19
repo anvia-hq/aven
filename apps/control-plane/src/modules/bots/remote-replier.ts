@@ -359,6 +359,9 @@ export class RemoteBotReplier implements BotReplier {
 
         if (params.op === "stop") return hosts.threads.stop(params.id);
 
+        if (params.op === "answer")
+          return hosts.threads.answer(params.id, { answers: params.answers });
+
         const { prompt, providerId, modelId, reasoningEffort } = params;
         const choice = { prompt, providerId, modelId, reasoningEffort };
 

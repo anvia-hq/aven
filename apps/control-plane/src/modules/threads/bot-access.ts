@@ -2,6 +2,7 @@ import { pendingQuestion } from "@aven/protocol/events";
 import { BOT_THREADS_LISTED, threadTitleFrom, threadTurns } from "@aven/protocol/threads";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
+import { asksForSecret } from "./secret-answers";
 import { projectsService } from "../projects/service";
 import type { RunManager } from "../runs/service";
 import { PULL_REQUESTS_NOTE, pullRequestViews } from "./pull-request-view";
@@ -32,7 +33,7 @@ export function createBotThreads({
   pullRequests,
 }: {
   runs: Pick<RunManager, "isRunning" | "history" | "cancel" | "activity">;
-  messages: Pick<ThreadMessages, "send">;
+  messages: Pick<ThreadMessages, "send" | "answer">;
   watch: {
     watch(
       threadId: string,
@@ -117,6 +118,12 @@ export function createBotThreads({
     const history = await runs.history(thread);
     const { turns, earlier } = threadTurns(history);
     const asking = thread.awaitingAnswer ? pendingQuestion(history)?.questions : undefined;
+    const questions = asking?.map(({ id, text, choices = [], allowCustom = false }) => ({
+      id,
+      text: text.slice(0, QUESTION_MAX),
+      choices,
+      allowCustom,
+    }));
     return {
       ...(await view(userId, thread)),
       turns,
@@ -125,6 +132,7 @@ export function createBotThreads({
         ?.map((question) => question.text)
         .join("\n")
         .slice(0, QUESTION_MAX),
+      questions,
     };
   };
 
@@ -216,6 +224,44 @@ export function createBotThreads({
           { onPersonsWord: actor.via === "person" },
         ),
       );
+      await watchRun(actor, id);
+      return view(actor.userId, thread);
+    },
+
+    async answer(actor, id, { answers }) {
+      const thread = await owned(actor, id);
+
+      if (actor.via !== "person") {
+        throw new UnprocessableError("Answer a thread's question only on the person's own word.");
+      }
+
+      if (!thread.awaitingAnswer) {
+        throw new UnprocessableError("This thread asks no question. Look at it with get_thread.");
+      }
+
+      const stored = await threadsService.continuation(id);
+
+      if (stored && asksForSecret(stored)) {
+        throw new UnprocessableError(
+          "The thread asks for a secret: tell the person to give it in the thread.",
+        );
+      }
+
+      const asking = pendingQuestion(await runs.history(thread))?.questions ?? [];
+      const takesWords = asking.some(
+        (question) => question.allowCustom || !question.choices?.length,
+      );
+
+      if (takesWords) {
+        throw new UnprocessableError(
+          "The thread asks for words of the person's own, not a choice: tell the person to answer it in the thread.",
+        );
+      }
+
+      await messages.answer(thread.organizationId, actor.userId, id, {
+        answers,
+        secretScope: "project",
+      });
       await watchRun(actor, id);
       return view(actor.userId, thread);
     },

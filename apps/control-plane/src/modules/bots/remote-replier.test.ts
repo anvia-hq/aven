@@ -32,6 +32,7 @@ import type {
   RunMemory,
   RunModel,
   RunSkill,
+  BotThreadParams,
 } from "@aven/protocol/types";
 
 const bot: Bot = {
@@ -232,6 +233,9 @@ function fakeRunner(
       },
       stop: async () => {
         throw new Error("not stopped");
+      },
+      answer: async () => {
+        throw new Error("not answered");
       },
       ...options.threads,
     },
@@ -1495,6 +1499,12 @@ describe("RemoteBotReplier", () => {
     const next = { replyId: "x", op: "continue", id, prompt: "Also the lint" } as const;
     const archive = { replyId: "x", op: "archive", id } as const;
     const stop = { replyId: "x", op: "stop", id } as const;
+    const answer: BotThreadParams = {
+      replyId: "x",
+      op: "answer",
+      id,
+      answers: [{ questionId: "q1", value: "Draft" }],
+    };
 
     const keeper = (calls: string[]): Partial<BotThreads> => ({
       projects: async () => [
@@ -1523,6 +1533,10 @@ describe("RemoteBotReplier", () => {
         calls.push(`stop ${actor.via} ${actor.userId} ${threadId}`),
         thread
       ),
+      answer: async (actor, threadId, input) => (
+        calls.push(`answer ${actor.via} ${actor.userId} ${threadId} ${input.answers[0]?.value}`),
+        thread
+      ),
     });
 
     test("the person's own message may look, start, continue, stop and archive, and an archive without a word archives", async () => {
@@ -1539,6 +1553,7 @@ describe("RemoteBotReplier", () => {
       expect(await sink.thread(archive)).toEqual(thread);
       expect(await sink.thread({ ...archive, archived: false })).toEqual(thread);
       expect(await sink.thread(stop)).toEqual(thread);
+      expect(await sink.thread(answer)).toEqual(thread);
       sink.end();
       await answering;
       expect(calls).toEqual([
@@ -1549,6 +1564,7 @@ describe("RemoteBotReplier", () => {
         `archive u1 ${id} true`,
         `archive u1 ${id} false`,
         `stop person u1 ${id}`,
+        `answer person u1 ${id} Draft`,
       ]);
     });
 
@@ -1572,6 +1588,7 @@ describe("RemoteBotReplier", () => {
         for (const call of [start, archive]) {
           await expect(sink.thread(call)).rejects.toThrow("only when the person asks you to");
         }
+        await expect(sink.thread(answer)).rejects.toThrow("only when the person asks you to");
         for (const call of [next, stop]) {
           await expect(sink.thread(call)).rejects.toThrow(
             prompt.startsWith("[note]")
@@ -1582,7 +1599,9 @@ describe("RemoteBotReplier", () => {
         sink.end();
         await answering;
       }
-      expect(calls.filter((call) => /^(start|continue|archive|stop)/.test(call))).toEqual([]);
+      expect(calls.filter((call) => /^(start|continue|archive|stop|answer)/.test(call))).toEqual(
+        [],
+      );
     });
 
     test("a note about a thread may continue or stop that thread once the bot looked at it, as a note, and no other (decision 0101)", async () => {

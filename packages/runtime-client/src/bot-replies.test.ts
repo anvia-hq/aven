@@ -1095,6 +1095,9 @@ describe("BotReplies", () => {
           stop: async () => {
             throw new Error("not stopped");
           },
+          answer: async () => {
+            throw new Error("not answered");
+          },
         },
         createBot: canCreateBots
           ? async () => ({ id: "b2", name: "Scout", handle: "scout" })

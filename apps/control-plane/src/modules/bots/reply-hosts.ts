@@ -33,8 +33,10 @@ export function replyHosts({
   let apiCalls = 0;
   let asked = false;
 
-  const guardThread = (op: "start" | "archive" | "continue" | "stop", id = "") => {
+  const guardThread = (op: "start" | "archive" | "continue" | "stop" | "answer", id = "") => {
     if (onTheirWord) return;
+
+    if (op === "answer") throw new Error(`Answer a thread's question ${THEIR_WORD}`);
 
     if (op === "start" || op === "archive") {
       if (op === "start" && onWebhook) return;
@@ -249,6 +251,10 @@ export function replyHosts({
         guardThread("stop", id);
         const via = runThread();
         return threads.stop({ userId, botId: bot.id, via }, id);
+      },
+      answer: async (id, input) => {
+        guardThread("answer", id);
+        return threads.answer({ userId, botId: bot.id, via: "person" }, id, input);
       },
     },
 

@@ -963,6 +963,7 @@ export type BotThreadParams = { replyId: string } & (
   | ({ op: "continue"; id: string; prompt: string } & ThreadModelChoice)
   | { op: "archive"; id: string; archived?: boolean }
   | { op: "stop"; id: string }
+  | { op: "answer"; id: string; answers: QuestionAnswer[] }
 );
 
 export type BotProjectParams = { replyId: string } & (
@@ -1227,10 +1228,18 @@ export type BotPullRequestDetail = {
   omitted?: string[];
 };
 
+export type BotThreadQuestion = {
+  id: string;
+  text: string;
+  choices: QuestionChoice[];
+  allowCustom: boolean;
+};
+
 export type BotThreadDetail = BotThreadView & {
   turns: BotThreadTurn[];
   earlier: number;
   question?: string;
+  questions?: BotThreadQuestion[];
   pullRequestDetails?: BotPullRequestDetail[];
   pullRequestsNote?: string;
 };
