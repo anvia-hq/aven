@@ -1,5 +1,6 @@
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
+import { threadContextSplits } from "@aven/db/schema/thread-context-splits";
 import { threadPlanLimits } from "@aven/db/schema/thread-plan-limits";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
@@ -9,7 +10,14 @@ import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { isDriving } from "@aven/protocol/drivers";
-import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
+import { CONTEXT_SEGMENT_IDS } from "@aven/protocol/context-segments";
+import type {
+  ContextSegment,
+  ContextSegmentId,
+  PlanLimit,
+  PlanLimitStatus,
+  PlanLimitWindow,
+} from "@aven/protocol/types";
 import {
   and,
   desc,
@@ -436,6 +444,36 @@ export const threadsService = {
       .from(threadRunTimes)
       .where(eq(threadRunTimes.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.ms]));
+  },
+
+  async saveContextSplit(
+    threadId: string,
+    split: { usedTokens: number; segments: ContextSegment[] },
+  ) {
+    await db
+      .insert(threadContextSplits)
+      .values({ threadId, ...split })
+      .onConflictDoUpdate({
+        target: threadContextSplits.threadId,
+        set: { ...split, updatedAt: new Date() },
+      });
+  },
+
+  async contextSplit(threadId: string) {
+    const [row] = await db
+      .select()
+      .from(threadContextSplits)
+      .where(eq(threadContextSplits.threadId, threadId));
+
+    if (!row) return null;
+
+    const known: readonly string[] = CONTEXT_SEGMENT_IDS;
+    const segments = row.segments.flatMap((segment) =>
+      known.includes(segment.id)
+        ? [{ id: segment.id as ContextSegmentId, tokens: segment.tokens }]
+        : [],
+    );
+    return { usedTokens: row.usedTokens, segments };
   },
 
   async savePlanLimits(threadId: string, limits: readonly PlanLimit[]) {

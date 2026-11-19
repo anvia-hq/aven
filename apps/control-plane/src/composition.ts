@@ -130,6 +130,10 @@ export const runsService = new RunManager({
     record: (threadId, limits) => threadsService.savePlanLimits(threadId, limits),
     read: (threadId) => threadsService.planLimits(threadId),
   },
+  splits: {
+    record: (threadId, split) => threadsService.saveContextSplit(threadId, split),
+    read: (threadId) => threadsService.contextSplit(threadId),
+  },
   senders: {
     record: (threadId, index, senderId) => threadsService.saveSender(threadId, index, senderId),
     read: (threadId) => threadsService.senders(threadId),

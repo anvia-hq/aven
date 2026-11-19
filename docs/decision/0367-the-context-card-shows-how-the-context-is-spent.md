@@ -17,5 +17,5 @@ The Context card showed one number, the tokens in the window, as a ring. It coul
 ## Consequences
 
 - The split is an estimate, proportional to the serialized size of each part, scaled to the provider's count; the total is the provider's, the proportions are not.
-- The split lives only on the usage event of the live run. `usageFromHistory` reads a stored message's metadata, which has none, so a reloaded thread shows the plain bar until its next turn. Keeping it means storing it with the thread, which this does not do.
+- The control plane keeps the last split of each thread (`thread_context_splits`, `ThreadsService.saveContextSplit`) when a usage event carries one, and `withContextSplit` puts it back on the context that `usageFromHistory` rebuilds, for a snapshot and for a run's opening state. It is shown only while its `usedTokens` equals the history's, so a split made for another turn, or left behind by a compaction, is dropped instead of drawn against the wrong total.
 - A tool from an MCP server reaches the agent as an ordinary local tool, so it counts under tool definitions, not under MCP tools.
