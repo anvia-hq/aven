@@ -19,6 +19,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -119,17 +120,16 @@ function ThreadColor({ thread }: { thread: Thread }) {
 
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger
-        className="[&>svg:last-child]:ml-0"
-        title="The thread's mark and title color"
-      >
-        <span
-          className={cn(
-            "size-3 shrink-0 rounded-full border",
-            thread.markColor ? "border-transparent" : "border-muted-foreground/50",
-          )}
-          style={thread.markColor ? { backgroundColor: thread.markColor } : undefined}
-        />
+      <DropdownMenuSubTrigger title="The thread's mark and title color">
+        <span className="flex size-4 shrink-0 items-center justify-center">
+          <span
+            className={cn(
+              "size-3 rounded-full border",
+              thread.markColor ? "border-transparent" : "border-muted-foreground/50",
+            )}
+            style={thread.markColor ? { backgroundColor: thread.markColor } : undefined}
+          />
+        </span>
         Color
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-44">
@@ -204,18 +204,28 @@ export function ThreadOptionsMenu({
           <IconDownload />
           Export
         </DropdownMenuItem>
-        {canRun && <ThreadRunChoices thread={thread} />}
-        {canColor && <ThreadColor thread={thread} />}
-        {onRename && (
-          <DropdownMenuItem
-            onClick={() => {
-              handingOff.current = true;
-              onRename();
-            }}
-          >
-            <IconPencil />
-            Rename
-          </DropdownMenuItem>
+        {canRun && (
+          <>
+            <DropdownMenuSeparator className="mx-1.5 my-1.5 bg-border/70" />
+            <ThreadRunChoices thread={thread} />
+          </>
+        )}
+        {(canColor || onRename) && (
+          <>
+            <DropdownMenuSeparator className="mx-1.5 my-1.5 bg-border/70" />
+            {canColor && <ThreadColor thread={thread} />}
+            {onRename && (
+              <DropdownMenuItem
+                onClick={() => {
+                  handingOff.current = true;
+                  onRename();
+                }}
+              >
+                <IconPencil />
+                Rename
+              </DropdownMenuItem>
+            )}
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

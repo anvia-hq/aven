@@ -8,7 +8,7 @@ What you can do to a thread was spread over four places. Archive sat in the side
 
 ## Decision
 
-- The open thread's header carries a three-dots menu beside its title, holding Copy Thread URL, Manage Sharing, Export, Model, Reasoning, Color and Rename, in that order (`components/thread-options-menu.tsx`).
+- The open thread's header carries a three-dots menu beside its title, holding Copy Thread URL, Manage Sharing, Export, Model, Reasoning, Color and Rename, in that order, as three groups parted by separators: what leaves the thread, how it runs, and its identity (`components/thread-options-menu.tsx`). A group whose items are all gated away takes its separator with it.
 - Color sets the thread's color, for the thread's owner: one of eight presets plus Default, which puts the project's own palette back (`thread-colors.ts`). It is stored on the thread (`threads.mark_color`, nullable, a six-digit hex the `PATCH /threads/:id` body checks) rather than on the device, so a shared thread keeps it for everyone who reads it, and `useThreadColors` changes the list before the server answers.
 - One color serves both the thread's title — in the open thread's header and in its sidebar row (`components/thread-header.tsx`, `components/sidebar-threads.tsx`) — and its mark, so the row reads as one thing. The mark takes three colors from it: that color, a lighter blend and a darker one (`markColors` in `projects/orb-art.ts`), handed to the tiles through a `colors` prop, so the orb and the box still own how they paint.
 - The Share button stays where it was, right-aligned in the header, and the sidebar row keeps its Archive menu. The menu's Manage Sharing opens the same dialog the Share button does.
