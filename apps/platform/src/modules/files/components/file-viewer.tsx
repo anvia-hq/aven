@@ -1,6 +1,12 @@
+import { IconCode, IconEye } from "@tabler/icons-react";
+import { useState } from "react";
+
+import { Markdown } from "@/components/markdown";
 import { PanelNotice } from "@/components/panel-notice";
+import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
 
+import { isMarkdownPath } from "../paths";
 import { useHighlightedLines } from "../hooks/use-highlighted-lines";
 import { useWorkspaceFile } from "../hooks/use-workspace-file";
 
@@ -27,7 +33,53 @@ export function FileViewer({ threadId, path, running }: Props) {
     );
   }
 
+  if (isMarkdownPath(path)) {
+    return <Document key={path} path={path} text={file.text} truncated={file.truncated} />;
+  }
+
   return <Lines key={path} path={path} text={file.text} truncated={file.truncated} />;
+}
+
+function Document({ path, text, truncated }: { path: string; text: string; truncated: boolean }) {
+  const [source, setSource] = useState(false);
+
+  if (source) {
+    return (
+      <div className="relative size-full">
+        <ViewToggle source onToggle={() => setSource(false)} />
+        <Lines path={path} text={text} truncated={truncated} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative size-full overflow-auto">
+      <ViewToggle source={false} onToggle={() => setSource(true)} />
+      <div className="px-6 py-4">
+        <Markdown>{text}</Markdown>
+        {truncated && (
+          <p className="mt-4 text-xs text-muted-foreground">
+            The file is too large to show in full; the end of it is left out.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ViewToggle({ source, onToggle }: { source: boolean; onToggle: () => void }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="absolute top-2 right-3 z-10 bg-background/80 backdrop-blur"
+      aria-label={source ? "Show the rendered file" : "Show the source"}
+      title={source ? "Show the rendered file" : "Show the source"}
+      onClick={onToggle}
+    >
+      {source ? <IconEye /> : <IconCode />}
+    </Button>
+  );
 }
 
 function Lines({ path, text, truncated }: { path: string; text: string; truncated: boolean }) {
