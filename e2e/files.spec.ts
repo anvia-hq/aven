@@ -30,6 +30,9 @@ test.describe("a thread's files", () => {
     await tree.getByRole("button", { name: "README.md" }).click();
     await expect(panel.getByRole("heading", { name: "Notes" })).toBeVisible();
     await expect(panel.getByText("# Notes")).toHaveCount(0);
+    await expect(panel.locator("strong", { hasText: "Centered" })).toBeVisible();
+    await expect(panel.getByText("<p align")).toHaveCount(0);
+    expect(await page.evaluate(() => "hacked" in window)).toBe(false);
     await panel.getByRole("button", { name: "Show the source" }).click();
     await expect(panel.getByText("# Notes")).toBeVisible();
     await panel.getByRole("button", { name: "Show the rendered file" }).click();
