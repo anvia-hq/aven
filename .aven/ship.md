@@ -13,13 +13,11 @@ Ship this thread's work.
    conflicts in code you touched; if one is in a place you cannot judge, stop and tell me.
 
 3. **Bring the database up.** `bash .aven/stack` starts the PostgreSQL 17 this repository uses
-   (in Docker, or the local install when Docker is missing) on this thread's port and writes
-   `DATABASE_URL` and `E2E_DATABASE_BASE_URL` to `.env.local`. It is safe to repeat; run it if
-   connecting fails. Bun loads `.env.local` by itself; a command that does not (the Playwright
-   runner) gets it exported first: `set -a && . ./.env.local && set +a`. Then apply the schema from
-   the repository root, which is also safe to repeat: `bun packages/db/src/migrate.ts`. Do not run
-   `db:migrate` through `--cwd packages/db`: it reads `.env`, whose `DATABASE_URL` is not this
-   thread's.
+   (in Docker, or the local install when Docker is missing) on this thread's port and points
+   `DATABASE_URL` at it in `.env` and `.env.local`. It is safe to repeat; run it if connecting fails.
+   `.env` holds it because `bun test` skips `.env.local`, which Bun otherwise loads. The Playwright
+   runner reads neither, so export first: `set -a && . ./.env.local && set +a`. Then apply the schema
+   from the repository root, which is also safe to repeat: `bun packages/db/src/migrate.ts`.
 
 4. **Run the checks, and fix what your change broke:**
    `bun run format && bun run typecheck && bun run lint && bun run format:check && bun test apps packages sandbox tooling`.
