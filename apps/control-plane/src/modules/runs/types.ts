@@ -5,6 +5,7 @@ import type { ModelConfig } from "@aven/agents/types";
 import type { RuntimeConnection } from "../runtimes/hub";
 import type {
   AgentBackendKind,
+  ContextSegment,
   MessageMention,
   PlanLimit,
   QueuedSteer,
@@ -140,6 +141,13 @@ export type WorkedTimeStore = {
 export type LimitStore = {
   record(threadId: string, limits: readonly PlanLimit[]): Promise<void>;
   read(threadId: string): Promise<PlanLimit[]>;
+};
+
+export type StoredContextSplit = { usedTokens: number; segments: ContextSegment[] };
+
+export type ContextSplitStore = {
+  record(threadId: string, split: StoredContextSplit): Promise<void>;
+  read(threadId: string): Promise<StoredContextSplit | null>;
 };
 
 export type SenderStore = {

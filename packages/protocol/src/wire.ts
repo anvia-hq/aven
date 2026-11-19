@@ -1,4 +1,5 @@
 import type { Message } from "@anvia/core";
+import { CONTEXT_SEGMENT_IDS } from "./context-segments";
 import { botQuestionsSchema, toQuestions } from "./ask-question";
 import {
   GOAL_CHECK_MAX,
@@ -197,16 +198,7 @@ const runEvent = z.discriminatedUnion("type", [
         segments: z
           .array(
             z.object({
-              id: z.enum([
-                "instructions",
-                "messages",
-                "toolResults",
-                "documents",
-                "tools",
-                "mcpTools",
-                "providerTools",
-                "outputSchema",
-              ]),
+              id: z.enum(CONTEXT_SEGMENT_IDS),
               tokens: tokenCount,
             }),
           )

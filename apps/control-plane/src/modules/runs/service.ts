@@ -17,11 +17,13 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
+import { withContextSplit } from "./context-split";
 import { parseSaved } from "./continuation";
 import type { ConversationStore } from "../../types";
 import type {
   ContinuationStore,
   FailureStore,
+  ContextSplitStore,
   LimitStore,
   SenderStore,
   WorkedTimeStore,
@@ -86,6 +88,7 @@ export class RunManager {
   #workedTimes: WorkedTimeStore;
   #senders: SenderStore;
   #limits: LimitStore;
+  #splits: ContextSplitStore | undefined;
   #draining = false;
 
   constructor(deps: {
@@ -97,6 +100,7 @@ export class RunManager {
     workedTimes: WorkedTimeStore;
     senders: SenderStore;
     limits: LimitStore;
+    splits?: ContextSplitStore;
   }) {
     this.#store = deps.store;
     this.#onRunFinished = deps.onRunFinished;
@@ -106,6 +110,7 @@ export class RunManager {
     this.#workedTimes = deps.workedTimes;
     this.#senders = deps.senders;
     this.#limits = deps.limits;
+    this.#splits = deps.splits;
   }
 
   runningCount() {
@@ -299,11 +304,12 @@ export class RunManager {
       this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
       this.#senders.read(thread.id).catch(() => new Map<number, string>()),
       this.#storedLimits(thread.id),
+      this.#storedSplit(thread.id),
     ])
-      .then(([history, times, senders, stored]) => {
+      .then(([history, times, senders, stored, split]) => {
         run.messages = withSenders(withWorkedTimes(messagesToChat(history), times), senders);
         const base = {
-          ...usageFromHistory(history),
+          ...withContextSplit(usageFromHistory(history), split),
           limits: stored.length > 0 ? stored : undefined,
         };
         run.usage = run.usage.limits ? applyLimits(base, run.usage.limits) : base;
@@ -466,6 +472,10 @@ export class RunManager {
     this.#runtime.dispose();
   }
 
+  async #storedSplit(threadId: string) {
+    return (await this.#splits?.read(threadId).catch(() => null)) ?? null;
+  }
+
   async #storedLimits(threadId: string) {
     const stored = await this.#limits.read(threadId).catch(() => []);
     const now = Date.now();
@@ -516,12 +526,13 @@ export class RunManager {
         };
       }
 
-      const [history, times, senders, failure, stored] = await Promise.all([
+      const [history, times, senders, failure, stored, split] = await Promise.all([
         this.#store.load({ scope: this.#scope(channel.thread) }),
         this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
         this.#senders.read(channel.thread.id).catch(() => new Map<number, string>()),
         this.#failure(channel),
         this.#storedLimits(channel.thread.id),
+        this.#storedSplit(channel.thread.id),
       ]);
 
       if (channel.run) continue;
@@ -534,7 +545,10 @@ export class RunManager {
         messages: shown.messages,
         hidden: shown.hidden,
         running: false,
-        usage: { ...usageFromHistory(history), limits: stored.length > 0 ? stored : undefined },
+        usage: {
+          ...withContextSplit(usageFromHistory(history), split),
+          limits: stored.length > 0 ? stored : undefined,
+        },
       };
 
       if (failure) snapshot.error = failure;
@@ -552,6 +566,14 @@ export class RunManager {
     }
 
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
+
+    if (event.type === "usage" && event.context?.segments)
+      void this.#splits
+        ?.record(channel.thread.id, {
+          usedTokens: event.context.usedTokens,
+          segments: event.context.segments,
+        })
+        .catch(() => undefined);
 
     if (event.type === "limits" && run) run.usage = applyLimits(run.usage, event.limits);
 
