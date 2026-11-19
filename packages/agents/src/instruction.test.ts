@@ -155,3 +155,8 @@ test("the agent is told to search with its own search tools, read pages with web
     expect(workflow).toContain("todo_write");
   }
 });
+
+test("the offer to open the browser is in the instructions of a run that can ask the user, and not of one that cannot", () => {
+  expect(codingInstructions(200, true)).toContain("offer it with open_browser");
+  expect(codingInstructions(200, false)).not.toContain("offer it with open_browser");
+});
