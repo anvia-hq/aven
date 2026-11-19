@@ -1,3 +1,5 @@
+import { OPEN_BROWSER_TOOL_NAME } from "@aven/protocol/events";
+
 import { forkIdOf } from "./fork-id";
 import type { Block, MessagePart, ToolGroupEntry } from "./types";
 
@@ -18,6 +20,8 @@ export function messageBlocks(parts: MessagePart[]) {
       result.push({ type: "artifacts", artifacts: part.tool.artifacts });
     else if (forkIdOf(part.tool))
       result.push({ type: "fork", tool: part.tool, forkId: forkIdOf(part.tool)! });
+    else if (part.tool.name === OPEN_BROWSER_TOOL_NAME)
+      result.push({ type: "browser", tool: part.tool });
     else if (part.tool.subagents) result.push({ type: "subagents", tool: part.tool });
     else group({ type: "tool", tool: part.tool });
   }
@@ -31,7 +35,10 @@ export function foldedSteps(blocks: Block[]) {
 
   const before = blocks.slice(0, -1);
   const stays = (block: Block) =>
-    block.type === "question" || block.type === "artifacts" || block.type === "fork";
+    block.type === "question" ||
+    block.type === "artifacts" ||
+    block.type === "fork" ||
+    block.type === "browser";
   const kept = before.filter(stays);
   const steps = before.filter((block) => !stays(block));
 

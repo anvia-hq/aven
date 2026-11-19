@@ -27,6 +27,7 @@ import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
 import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
 import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
 import { useThread } from "@/modules/threads/hooks/use-thread";
+import { usePreviewOffer } from "@/modules/preview/hooks/use-preview-offer";
 import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
@@ -67,6 +68,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const wide = useMediaQuery("(min-width: 1024px)");
   const panels = useThreadPanels(threadId);
   const { overview, diff, files, terminal, preview } = panels;
+  const previewOffer = usePreviewOffer(threadId, preview.show);
   const sideWanted =
     !split && (diff.open || files.open || (owned && (terminal.open || preview.open)));
   const sideOpen = useHeldValue(sideWanted || null, PANEL_EXIT_MS).shown !== null;
@@ -223,6 +225,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   runtimeId={thread.runtimeId}
                   running={running}
                   panels={panels}
+                  previewOffer={previewOffer}
                   owned={owned}
                   handleClassName={GAP_HANDLE}
                 />

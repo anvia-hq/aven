@@ -1,5 +1,5 @@
 import { IconExternalLink, IconRefresh, IconWorld } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   AlertDialog,
@@ -18,26 +18,37 @@ import { PanelNotice } from "@/components/panel-notice";
 import { SidePanel } from "@/components/side-panel";
 import { toast } from "@aven/ui/toast";
 
+import type { PreviewOffer } from "../types";
 import { usePreview } from "../hooks/use-preview";
-import { parsePort } from "../port";
+import { addressOf, parsePort } from "../port";
 
 type Props = {
   runtimeId: string;
+  offer?: PreviewOffer | null;
+  onOffered?: () => void;
   onClose: () => void;
 };
 
 const SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads";
 
-export function PreviewPanel({ runtimeId, onClose }: Props) {
+export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
   const { port, setPort, session, problem, opening, open, openInTab } = usePreview(runtimeId);
   const [asking, setAsking] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!offer) return;
+
+    setPort(addressOf(offer.port));
+    setAsking(offer.port);
+    onOffered?.();
+  }, [offer]);
 
   function ask() {
     const parsed = parsePort(port);
 
     if (parsed === null) {
-      toast.add({ title: "Enter a port between 1 and 65535", type: "error" });
+      toast.add({ title: "Enter an address such as localhost:3000", type: "error" });
       return;
     }
 
@@ -48,7 +59,10 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
     const target = asking;
     setAsking(null);
 
-    if (target !== null) void open(target);
+    if (target === null) return;
+
+    setPort(addressOf(target));
+    void open(target);
   }
 
   return (
@@ -62,9 +76,8 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
           }}
         >
           <Input
-            aria-label="Port"
-            inputMode="numeric"
-            placeholder="Port, such as 3000"
+            aria-label="Address"
+            placeholder="localhost:3000"
             value={port}
             onChange={(event) => setPort(event.target.value)}
             className="h-7 flex-1"
@@ -108,7 +121,8 @@ export function PreviewPanel({ runtimeId, onClose }: Props) {
             />
           ) : (
             <PanelNotice>
-              {problem || "Open a page the runner is serving: type the port its server listens on."}
+              {problem ||
+                "Open a page the runner is serving: type its address, such as localhost:3000."}
             </PanelNotice>
           )}
         </div>

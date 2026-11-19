@@ -30,6 +30,21 @@ describe("a message's blocks", () => {
   });
 });
 
+describe("an offer to open the browser", () => {
+  const offer = { type: "tool", tool: { id: "b", name: "open_browser", target: "localhost:3000" } };
+
+  test("stands as a block of its own, out of the tool group", () => {
+    const blocks = messageBlocks([tool("1"), offer, tool("2")] as MessagePart[]);
+    expect(blocks.map((block) => block.type)).toEqual(["tools", "browser", "tools"]);
+  });
+
+  test("stays in view under the folded steps", () => {
+    const folded = foldedSteps(messageBlocks([tool("1"), offer, text("Ready.")] as MessagePart[]));
+    expect(folded?.kept.map((block) => block.type)).toEqual(["browser"]);
+    expect(folded?.steps.map((block) => block.type)).toEqual(["tools"]);
+  });
+});
+
 describe("the steps folded under a final answer", () => {
   test("everything before the closing words folds, and the words stay out", () => {
     const folded = foldedSteps(
