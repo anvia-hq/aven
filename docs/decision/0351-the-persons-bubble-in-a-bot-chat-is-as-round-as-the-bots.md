@@ -1,6 +1,6 @@
 # The person's bubble in a bot chat is as round as the bot's
 
-Status: accepted. Adds to 0350 (the overview cards are as round as the composer).
+Status: accepted. Adds to 0384 (the overview cards are as round as the composer).
 
 ## Context
 

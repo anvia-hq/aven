@@ -1,8 +1,6 @@
-# 0302: e2e runs on the pull request that stages into main, and main takes only staging
+# e2e runs on the pull request that stages into main, and main takes only staging
 
-Date: 2026-11-15
-
-Status: superseded by 0314 (there is no `staging` branch; e2e runs on every pull request).
+Status: superseded by 0314 (there is no `staging` branch; e2e runs on every pull request). Decided 2026-11-15.
 
 ## Decision
 

@@ -1,8 +1,6 @@
-# 0295: CI and Hammer are back on GitHub-hosted runners
+# CI and Hammer are back on GitHub-hosted runners
 
-Date: 2026-11-15
-
-Supersedes 0294.
+Status: accepted. Supersedes 0294. Decided 2026-11-15.
 
 ## Decision
 

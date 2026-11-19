@@ -1,10 +1,10 @@
-# 0321. The Codex agent runs on a ChatGPT device sign-in
+# The Codex agent runs on a ChatGPT device sign-in
 
-Status: accepted. Supersedes the credential of 0298 (an OpenAI API key).
+Status: accepted. Supersedes the credential of 0379 (an OpenAI API key).
 
 ## Context
 
-0298 ran the Codex agent on an OpenAI API key, which bills the API and never uses the person's Codex plan. The goal of the `codex-subscription` provider is the plan, so its credential has to be a ChatGPT sign-in.
+0379 ran the Codex agent on an OpenAI API key, which bills the API and never uses the person's Codex plan. The goal of the `codex-subscription` provider is the plan, so its credential has to be a ChatGPT sign-in.
 
 ## Decision
 

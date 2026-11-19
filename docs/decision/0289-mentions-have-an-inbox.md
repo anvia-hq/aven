@@ -1,4 +1,4 @@
-# 0289. Mentions have an inbox
+# Mentions have an inbox
 
 Status: accepted. Extends 0205.
 

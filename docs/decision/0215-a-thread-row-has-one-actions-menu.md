@@ -1,6 +1,6 @@
 # A thread row has one actions menu
 
-Status: accepted.
+Status: accepted. Superseded in part by 0224: the time at the end of a thread's row in the sidebar.
 
 ## Context
 

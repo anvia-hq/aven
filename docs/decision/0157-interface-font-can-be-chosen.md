@@ -1,4 +1,4 @@
-# 0157: The interface font can be chosen
+# The interface font can be chosen
 
 Status: accepted. Builds on 0155 (themes).
 

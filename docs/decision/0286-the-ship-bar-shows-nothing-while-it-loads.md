@@ -1,4 +1,4 @@
-# 0286. The ship bar shows nothing while it loads
+# The ship bar shows nothing while it loads
 
 Status: accepted. Supersedes 0214's pulsing placeholders.
 

@@ -1,6 +1,6 @@
 # Center shows every project's pull requests and commits on one screen
 
-Status: accepted. Builds on 0090 (the commit graph), 0092 (pull requests and issues of a project) and 0104 (the cockpit's own place in the rail).
+Status: superseded by 0291 (Center is removed). Was: accepted. Builds on 0090 (the commit graph), 0092 (pull requests and issues of a project) and 0104 (the cockpit's own place in the rail).
 
 ## Context
 

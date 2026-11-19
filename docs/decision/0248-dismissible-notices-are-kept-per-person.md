@@ -1,6 +1,6 @@
 # Dismissible notices are kept per person in the database
 
-Status: accepted.
+Status: accepted. Superseded in part by 0288: the hardcoded beta card.
 
 ## Context
 

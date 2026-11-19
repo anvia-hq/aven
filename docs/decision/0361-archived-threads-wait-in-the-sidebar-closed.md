@@ -1,4 +1,4 @@
-# 0361. Archived threads wait in the sidebar, closed
+# Archived threads wait in the sidebar, closed
 
 Status: accepted. Adds to 0293 (thread recency) and 0118 (archiving stops a run and frees the sandbox).
 

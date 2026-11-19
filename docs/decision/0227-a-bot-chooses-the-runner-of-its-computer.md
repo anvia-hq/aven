@@ -1,6 +1,6 @@
 # A bot chooses the runner of its computer
 
-Status: accepted. Replaces the part of 0059 that says a per-bot choice of runner is not built, and moves the folder 0059 and 0219 give a bot.
+Status: accepted. Superseded in part by 0324: the part that gives every bot a computer. Replaces the part of 0059 that says a per-bot choice of runner is not built, and moves the folder 0059 and 0219 give a bot.
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0307. Sandbox providers are their own package
+# Sandbox providers are their own package
 
 Status: accepted. Adds to 0220 (runtime providers) and 0299, 0306 (Aven Cloud is a list of providers).
 

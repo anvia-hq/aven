@@ -1,11 +1,11 @@
-# 0328: The cloud computer is named after its sandbox provider
+# The cloud computer is named after its sandbox provider
 
-Status: accepted. Supersedes the naming in 0299 and 0324.
+Status: accepted. Supersedes the naming in 0299 and 0381.
 
 ## Context
 
-0299 and 0324 named the built-in cloud computer "Aven Cloud". An installation has one sandbox
-platform (0324), so the name told a person nothing about where a thread runs.
+0299 and 0381 named the built-in cloud computer "Aven Cloud". An installation has one sandbox
+platform (0381), so the name told a person nothing about where a thread runs.
 
 ## Decision
 

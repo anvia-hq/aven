@@ -1,8 +1,6 @@
-# 0313. Bots that need attention take over the rail's bot slot
+# Bots that need attention take over the rail's bot slot
 
-Date: 2026-11-16
-
-Status: accepted.
+Status: accepted. Decided 2026-11-16.
 
 ## Decision
 

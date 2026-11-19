@@ -1,8 +1,6 @@
-# 0319: A new thread picks its computer before its project
+# A new thread picks its computer before its project
 
-Date: 2026-11-16
-
-Status: accepted. Follows 0218 and 0299, which made a project either a folder on one computer or a repository any computer can run.
+Status: accepted. Follows 0218 and 0299, which made a project either a folder on one computer or a repository any computer can run. Decided 2026-11-16.
 
 ## Context
 

@@ -1,4 +1,4 @@
-# 0287. A message sent is not dimmed
+# A message sent is not dimmed
 
 Status: accepted. Supersedes the dimming in 0098 and 0117.
 

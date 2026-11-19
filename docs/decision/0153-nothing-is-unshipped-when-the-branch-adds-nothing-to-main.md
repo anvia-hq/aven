@@ -1,6 +1,6 @@
-# 0153: Nothing is unshipped when the branch adds nothing to the default branch
+# Nothing is unshipped when the branch adds nothing to the default branch
 
-Status: accepted. Refines the unshipped scope of the thread diff.
+Status: accepted. Superseded in part by 0232: its rule that an empty whole-branch diff empties the unshipped one.
 
 ## Context
 

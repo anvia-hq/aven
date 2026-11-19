@@ -1,6 +1,6 @@
 # Invite links and a registration toggle
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

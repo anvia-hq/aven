@@ -1,4 +1,4 @@
-# 0269: The Context card shows the tokens in context when the model's window is unknown
+# The Context card shows the tokens in context when the model's window is unknown
 
 Status: accepted. Builds on 0117 (the Context card) and the gateway model info of the providers.
 

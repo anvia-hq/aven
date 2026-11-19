@@ -1,7 +1,6 @@
-# 0324 — The installation's one sandbox platform is chosen in Settings > Sandbox
+# — The installation's one sandbox platform is chosen in Settings > Sandbox
 
-- **Status:** accepted
-- **Date:** 2026-11-17
+Status: accepted. Superseded in part by 0328: the name of the built-in computer. Decided 2026-11-17.
 
 ## Context
 

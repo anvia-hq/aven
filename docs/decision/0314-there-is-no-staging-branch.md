@@ -1,8 +1,6 @@
-# 0314: There is no staging branch
+# There is no staging branch
 
-Date: 2026-11-16
-
-Status: accepted. Supersedes 0302 (e2e on the staging to main pull request, `staging-only`) and 0312 (Hammer skips that pull request).
+Status: accepted. Supersedes 0302 (e2e on the staging to main pull request, `staging-only`) and 0312 (Hammer skips that pull request). Decided 2026-11-16.
 
 ## Decision
 

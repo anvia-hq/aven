@@ -1,6 +1,6 @@
 # The projects route is two columns, with the threads beside the projects
 
-Status: accepted.
+Status: accepted. Superseded in part by 0196 (the choice of a project) and by 0275 (the two columns).
 
 ## Context
 

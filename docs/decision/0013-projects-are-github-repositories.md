@@ -1,6 +1,6 @@
 # Projects are imported GitHub repositories
 
-Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Supersedes the part of 0010 that made a project only a name and a runner; builds on 0011 and 0012. Its "Clone only" bullet is superseded by 0040.
+Status: partly superseded by 0218 (a project is a folder a runner serves, and a repository is cloned into it) and by 0219 (a repository is no longer imported in the app, and 0354 makes one a project from the Clone tab); the read-only installation token it gives a project, and its repository access, are as they are here. Was: accepted. Supersedes the part of 0010 that made a project only a name and a runner; builds on 0011 and 0012. Its "Clone only" bullet is superseded by 0040.
 
 ## Context
 

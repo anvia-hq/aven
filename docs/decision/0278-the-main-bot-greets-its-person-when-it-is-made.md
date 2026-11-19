@@ -1,4 +1,4 @@
-# 0278: The main bot greets its person when it is made
+# The main bot greets its person when it is made
 
 Status: accepted. Builds on 0059 (a bot has a computer) and the greeting a bot made by the main bot already gets.
 

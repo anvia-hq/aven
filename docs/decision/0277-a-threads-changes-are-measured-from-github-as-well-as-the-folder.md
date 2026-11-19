@@ -1,4 +1,4 @@
-# 0277: A thread's changes are measured from GitHub's main as well as the folder's
+# A thread's changes are measured from GitHub's main as well as the folder's
 
 Status: accepted. Builds on 0218 and 0231 (a thread is a clone of the project folder), 0273 (a pull in a thread fetches GitHub through the folder) and 0276 (the runner's own GitHub login).
 

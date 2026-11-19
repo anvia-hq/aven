@@ -1,6 +1,6 @@
 # Personal organization per user
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

@@ -1,6 +1,6 @@
 # The portal shows a thread's files, read-only
 
-Status: accepted. Builds on 0010 (per-thread workspaces), 0015 (the call path to the runner) and 0030 (the Changes panel, whose column it shares).
+Status: accepted. Superseded in part by 0032: the "No syntax colours" point. Builds on 0010 (per-thread workspaces), 0015 (the call path to the runner) and 0030 (the Changes panel, whose column it shares).
 
 ## Context
 

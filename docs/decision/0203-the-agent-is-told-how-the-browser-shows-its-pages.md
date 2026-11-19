@@ -1,4 +1,4 @@
-# 0203: The agent is told how the Browser shows its pages
+# The agent is told how the Browser shows its pages
 
 Status: superseded by 0219 (the container sandbox, Desktop, Browser and snapshots are retired). Was: accepted. Builds on 0199 (the Browser shows a port of the sandbox).
 

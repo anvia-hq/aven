@@ -1,4 +1,4 @@
-# 0281: More lint rules of our own
+# More lint rules of our own
 
 Status: accepted.
 

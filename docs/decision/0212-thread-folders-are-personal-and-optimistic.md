@@ -1,6 +1,6 @@
 # Thread folders are personal, kept on the server and drawn before the server answers
 
-Status: accepted.
+Status: superseded by 0293 (thread folders are removed).
 
 ## Context
 

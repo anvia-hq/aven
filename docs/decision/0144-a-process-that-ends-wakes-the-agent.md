@@ -1,4 +1,4 @@
-# 0144: A process that ends wakes the agent
+# A process that ends wakes the agent
 
 Status: accepted, widened by decision 0147. Changes one rule of decision 0012 (a finished process does not restart a run) and builds on 0137.
 

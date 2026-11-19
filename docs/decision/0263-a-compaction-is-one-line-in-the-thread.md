@@ -1,4 +1,6 @@
-# 0263. A compaction is one line in the thread
+# A compaction is one line in the thread
+
+Status: accepted.
 
 Compacting a thread stores a `/compact` message from the person and a reply from the agent, so the thread showed a command bubble and a sentence the person had not written or asked for.
 

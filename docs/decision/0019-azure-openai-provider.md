@@ -1,6 +1,6 @@
 # Azure OpenAI is a provider kind
 
-Status: accepted.
+Status: accepted. Superseded in part by 0025: the "No model list" point.
 
 ## Context
 

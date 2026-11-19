@@ -1,6 +1,6 @@
 # A persistent runner ships with its own GitHub login
 
-Status: accepted. Refines 0044 and 0192 for a project that has no GitHub app, and gives runners a lifetime.
+Status: accepted. Superseded in part by 0276: its identity parts. Refines 0044 and 0192 for a project that has no GitHub app, and gives runners a lifetime.
 
 ## Context
 

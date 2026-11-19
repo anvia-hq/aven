@@ -1,4 +1,6 @@
-# 0264. Follow-ups are for the person who sent the prompt
+# Follow-ups are for the person who sent the prompt
+
+Status: accepted.
 
 On a thread several people have open, every one of them with follow-ups turned on asked the small model for suggestions when the agent finished, so one reply cost one call per viewer and the chips were suggestions for a prompt someone else wrote.
 

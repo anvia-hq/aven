@@ -1,4 +1,4 @@
-# 0309. A subscription is a provider
+# A subscription is a provider
 
 Status: accepted. Supersedes the settings split of 0300 (the Claude agent behind a flag) and 0301
 (the Codex agent behind a flag) in the platform, and the storage of their tokens.

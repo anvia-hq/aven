@@ -1,4 +1,4 @@
-# 0156: The Aven mark keeps one color in every theme
+# The Aven mark keeps one color in every theme
 
 Status: accepted. Builds on 0155 (color themes).
 

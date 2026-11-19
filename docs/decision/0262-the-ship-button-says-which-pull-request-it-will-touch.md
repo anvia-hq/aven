@@ -1,4 +1,4 @@
-# 0262. The ship button says which pull request it will touch
+# The ship button says which pull request it will touch
 
 Status: accepted. Refines the labels of decision 0184.
 

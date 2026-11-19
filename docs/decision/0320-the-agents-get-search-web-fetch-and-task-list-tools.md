@@ -1,8 +1,6 @@
-# 0320: The agents get grep, find, glob, web_fetch and todo_write
+# The agents get grep, find, glob, web_fetch and todo_write
 
-Date: 2026-11-16
-
-Status: accepted. Follows the comparison of Aven's system prompt with oh-my-pi's.
+Status: accepted. Follows the comparison of Aven's system prompt with oh-my-pi's. Decided 2026-11-16.
 
 ## Context
 

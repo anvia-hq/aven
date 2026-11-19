@@ -1,4 +1,4 @@
-# 0318. A bot on an agent backend keeps its session and files its turn
+# A bot on an agent backend keeps its session and files its turn
 
 Status: accepted. Adds to 0310 (a bot runs on the agent its provider names), 0059 (a bot's computer
 and conversation) and 0242 (the Claude backend).

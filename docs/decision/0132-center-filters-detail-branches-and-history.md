@@ -1,6 +1,6 @@
 # Center filters, opens, and lists branches and history
 
-Status: accepted. Builds on 0131 (Center), 0090 (the commit graph) and 0092 (pull requests and issues).
+Status: superseded by 0291 (Center is removed). Was: accepted. Builds on 0131 (Center), 0090 (the commit graph) and 0092 (pull requests and issues).
 
 ## Context
 

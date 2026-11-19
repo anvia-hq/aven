@@ -1,8 +1,6 @@
-# 0296: `@anvia/durable` 0.17 has `toolConcurrency`, so the patch is gone
+# `@anvia/durable` 0.17 has `toolConcurrency`, so the patch is gone
 
-Date: 2026-11-15
-
-Supersedes 0070.
+Status: accepted. Supersedes 0070. Decided 2026-11-15.
 
 ## Decision
 

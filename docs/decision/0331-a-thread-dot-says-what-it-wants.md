@@ -1,4 +1,4 @@
-# 0331: A thread's dot says what it wants, at the row's end
+# A thread's dot says what it wants, at the row's end
 
 Status: accepted. Supersedes 0159 and 0205 in part: the dot moves from the row's start to its end, finished is blue, and a thread waiting on an answer asks for attention in red.
 

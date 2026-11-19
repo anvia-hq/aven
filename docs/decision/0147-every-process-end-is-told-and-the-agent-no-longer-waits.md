@@ -1,4 +1,4 @@
-# 0147: Every process end is told, and the agent no longer waits for one
+# Every process end is told, and the agent no longer waits for one
 
 Status: accepted. Supersedes decision 0137 (the `wait_for_process` tool, removed) and widens decision 0144, which only told of a process that ended while the thread was idle.
 

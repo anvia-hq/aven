@@ -1,4 +1,4 @@
-# 0265. A working bot hops and turns instead of giving off a ring
+# A working bot hops and turns instead of giving off a ring
 
 Status: accepted. Replaces the ring and the orbiting dot of decision 0062.
 

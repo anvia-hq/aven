@@ -1,4 +1,4 @@
-# 0366. The Aven theme is neutral gray
+# The Aven theme is neutral gray
 
 Status: accepted. Supersedes the hue 240 and 205 neutrals of [0305](0305-the-aven-light-theme-is-cool.md).
 

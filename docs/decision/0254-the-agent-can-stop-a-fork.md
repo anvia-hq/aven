@@ -1,4 +1,4 @@
-# 0254: The agent can stop a fork
+# The agent can stop a fork
 
 Status: accepted. Adds to 0135 (a thread can fork itself) and 0143 (waiting for forks).
 

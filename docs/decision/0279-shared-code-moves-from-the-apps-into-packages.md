@@ -1,4 +1,4 @@
-# 0279: Shared code moves from the apps into packages
+# Shared code moves from the apps into packages
 
 Status: accepted.
 

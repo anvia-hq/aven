@@ -1,4 +1,4 @@
-# 0257: Themes of other coding tools, with a heading face of their own
+# Themes of other coding tools, with a heading face of their own
 
 Status: accepted. Builds on 0155 (color themes, each with light and dark) and 0157 (the interface font can be chosen).
 

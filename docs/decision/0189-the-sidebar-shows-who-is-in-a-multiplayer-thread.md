@@ -1,4 +1,4 @@
-# 0189: The sidebar shows who is in a multiplayer thread
+# The sidebar shows who is in a multiplayer thread
 
 Status: accepted. Builds on 0179 and 0188.
 

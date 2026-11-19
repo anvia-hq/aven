@@ -1,6 +1,6 @@
 # A Claude turn files its usage with its reply
 
-Status: accepted
+Status: accepted.
 
 ## Context
 

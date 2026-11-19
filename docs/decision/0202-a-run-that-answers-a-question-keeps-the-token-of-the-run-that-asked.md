@@ -1,4 +1,4 @@
-# 0202: A run that answers a question keeps the token of the run that asked
+# A run that answers a question keeps the token of the run that asked
 
 Status: accepted. Refines the per-run gateway tokens of commit 4dcd51a8 (0.5.17) and builds on 0021 (runs go through anvia-durable).
 

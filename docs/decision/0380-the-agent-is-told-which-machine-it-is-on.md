@@ -1,8 +1,6 @@
-# 0320: The agent is told which machine it is on
+# The agent is told which machine it is on
 
-Date: 2026-11-17
-
-Status: accepted. Follows 0218 (a runner is the person's computer) and 0299 and 0306 (Aven Cloud is a sandbox per thread, one provider each).
+Status: accepted. Follows 0218 (a runner is the person's computer) and 0299 and 0306 (Aven Cloud is a sandbox per thread, one provider each). Decided 2026-11-17.
 
 ## Context
 

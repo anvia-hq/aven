@@ -1,4 +1,4 @@
-# 0274: The plan limits are kept with the thread
+# The plan limits are kept with the thread
 
 Status: accepted. Refines 0251 and 0255, which kept the limits only for the run in memory.
 

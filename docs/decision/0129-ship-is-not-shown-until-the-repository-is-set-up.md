@@ -1,6 +1,6 @@
 # Ship is not shown until the repository is set up
 
-Status: accepted. Supersedes the disabled button of decision 0083.
+Status: superseded by 0184 (the ship button is not shown until the repository is set up). Was: accepted. Supersedes the disabled button of decision 0083.
 
 ## Context
 

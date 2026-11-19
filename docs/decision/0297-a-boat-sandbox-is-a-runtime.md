@@ -1,8 +1,6 @@
-# 0297: A boat.dev sandbox is a runtime
+# A boat.dev sandbox is a runtime
 
-Date: 2026-11-14
-
-Status: accepted. Adds to 0220.
+Status: accepted. Superseded in part by 0299: the persistent, one-sandbox-per-runtime parts. Adds to 0220. Decided 2026-11-14.
 
 ## Decision
 

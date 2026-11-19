@@ -1,6 +1,6 @@
 # The agent has skills
 
-Status: accepted. Builds on 0006 (user-scoped providers), 0010 (per-thread workspaces), 0012 (the agent's tools are the sandbox's), 0021 (durable runs) and 0034 (attachments mounted at /uploads).
+Status: accepted. Superseded in part by 0365: the hand-kept registration constant. Builds on 0006 (user-scoped providers), 0010 (per-thread workspaces), 0012 (the agent's tools are the sandbox's), 0021 (durable runs) and 0034 (attachments mounted at /uploads).
 
 ## Context
 

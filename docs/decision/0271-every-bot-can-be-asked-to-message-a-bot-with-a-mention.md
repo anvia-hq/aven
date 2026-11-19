@@ -1,4 +1,4 @@
-# 0271: Every bot's chat offers the `@` mention of a bot
+# Every bot's chat offers the `@` mention of a bot
 
 Status: accepted. Supersedes the line of 0065 that says the `@` mention "still offers the person's other bots from the main bot's chat" and the sentence of 0063 that says only the main bot's composer has it.
 

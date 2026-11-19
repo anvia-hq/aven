@@ -1,4 +1,4 @@
-# 0272: A bot sends files and the chat shows them in a side panel
+# A bot sends files and the chat shows them in a side panel
 
 Status: accepted. Builds on 0033 and 0136 (the agent shows images and videos), 0181 (interactive pages in a sandboxed frame) and 0059 (a runner answers for a bot).
 

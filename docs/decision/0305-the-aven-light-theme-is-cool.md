@@ -1,4 +1,4 @@
-# 0305. The Aven light theme is cool
+# The Aven light theme is cool
 
 Status: accepted. Corrects the light mode of 0292.
 

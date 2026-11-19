@@ -1,6 +1,6 @@
-# 0290: The runtimes list is a card with load tiles and a trend
+# The runtimes list is a card with load tiles and a trend
 
-Status: accepted. Superseded by 0363: the card keeps its header and actions but shows each metric as a number and a thin ring, with no sparkline and no trend.
+Status: superseded by 0363: the card keeps its header and actions but shows each metric as a number and a thin ring, with no sparkline and no trend. Was: accepted.
 
 ## Context
 
