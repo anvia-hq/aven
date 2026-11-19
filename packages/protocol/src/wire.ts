@@ -641,6 +641,20 @@ const botThreadParams = z.discriminatedUnion("op", [
     archived: z.boolean().optional(),
   }),
   z.object({ replyId, op: z.literal("stop"), id: z.uuid() }),
+  z.object({
+    replyId,
+    op: z.literal("answer"),
+    id: z.uuid(),
+    answers: z
+      .array(
+        z.object({
+          questionId: z.string().min(1).max(100),
+          value: z.string().trim().min(1).max(2000),
+        }),
+      )
+      .min(1)
+      .max(4),
+  }),
 ]);
 
 const botSkillParams = z.object({ replyId, digest: z.string().regex(SKILL_DIGEST) });

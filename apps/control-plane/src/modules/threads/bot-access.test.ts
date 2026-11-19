@@ -55,6 +55,8 @@ run("a bot's threads (postgres)", async () => {
       ],
     },
   ];
+  let current: ChatMessage[] = transcript;
+  const answered: { thread: string; body: unknown }[] = [];
   const sent: { org: string; userId: string; thread: string; body: unknown }[] = [];
   const onWord: (boolean | undefined)[] = [];
   let failSend: Error | undefined;
@@ -70,7 +72,7 @@ run("a bot's threads (postgres)", async () => {
   const bot = createBotThreads({
     runs: {
       isRunning: (id) => running.has(id),
-      history: async () => transcript,
+      history: async () => current,
       cancel: (id) => running.delete(id),
       activity: (id) => (running.has(id) ? { startedAt: 7, lastEventAt: QUIET_AT } : undefined),
     },
@@ -94,6 +96,7 @@ run("a bot's threads (postgres)", async () => {
 
         return { steered: false };
       },
+      answer: async (_org, _user, thread, body) => void answered.push({ thread, body }),
     },
     putAway: (thread) => void putAway.push(thread.id),
     pullRequests: async () => null,
@@ -230,6 +233,88 @@ run("a bot's threads (postgres)", async () => {
       "waits for the answer",
     );
     expect((await bot.get(userId, one.id)).awaitingAnswer).toBe(true);
+  });
+
+  const asked = (toolName: string, choices: unknown, allowCustom = false) => ({
+    version: 1,
+    agentId: "coding",
+    sourceRunId: "run-1",
+    interaction: {
+      type: "tool-question",
+      id: "i1",
+      toolName,
+      toolCallId: "c1",
+      internalCallId: "ic1",
+      questions: [{ id: "q1", text: "Draft or ready?", choices, allowCustom }],
+    },
+    state: {},
+  });
+  const asking = (allowCustom = false): ChatMessage[] => [
+    ...transcript,
+    {
+      id: "3",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: {
+            id: "q",
+            name: "ask_user",
+            target: "",
+            status: "running",
+            questions: [
+              {
+                id: "q1",
+                text: "Draft or ready?",
+                choices: [
+                  { label: "Draft", value: "Draft" },
+                  { label: "Ready", value: "Ready" },
+                ],
+                allowCustom,
+              },
+            ],
+          },
+        },
+      ],
+    },
+  ];
+  const choices = [
+    { label: "Draft", value: "Draft" },
+    { label: "Ready", value: "Ready" },
+  ];
+
+  test("answering gives a thread's question a choice on the person's word, and shows the choices to pick from", async () => {
+    const one = await bot.start(person, { projectId: projectA.id, prompt: "Ask me" });
+    await threadsService.saveContinuation(one.id, asked("ask_user", choices));
+    current = asking();
+    const seen = await bot.get(userId, one.id);
+    expect(seen.questions).toEqual([
+      { id: "q1", text: "Draft or ready?", choices, allowCustom: false },
+    ]);
+    await expect(
+      bot.answer(noted, one.id, { answers: [{ questionId: "q1", value: "Draft" }] }),
+    ).rejects.toThrow("person's own word");
+    await bot.answer(person, one.id, { answers: [{ questionId: "q1", value: "Draft" }] });
+    expect(answered.at(-1)).toEqual({
+      thread: one.id,
+      body: { answers: [{ questionId: "q1", value: "Draft" }], secretScope: "project" },
+    });
+    current = transcript;
+  });
+
+  test("answering refuses a thread that asks nothing, a secret and a question that takes words", async () => {
+    const one = await bot.start(person, { projectId: projectA.id, prompt: "Ask me more" });
+    const answers = [{ questionId: "q1", value: "Draft" }];
+    await expect(bot.answer(person, one.id, { answers })).rejects.toThrow("asks no question");
+
+    await threadsService.saveContinuation(one.id, asked("request_secret", choices));
+    current = asking();
+    await expect(bot.answer(person, one.id, { answers })).rejects.toThrow("asks for a secret");
+
+    await threadsService.saveContinuation(one.id, asked("ask_user", choices, true));
+    current = asking(true);
+    await expect(bot.answer(person, one.id, { answers })).rejects.toThrow("words of the person's");
+    current = transcript;
   });
 
   test("a thread that a teammate shared can be read and not driven, and a private one is not found", async () => {

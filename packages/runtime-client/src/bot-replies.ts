@@ -470,6 +470,8 @@ export class BotReplies {
           (await call("bot.thread", { replyId, op: "archive", id, archived })) as BotThreadView,
         stop: async (id) =>
           (await call("bot.thread", { replyId, op: "stop", id })) as BotThreadView,
+        answer: async (id, input) =>
+          (await call("bot.thread", { replyId, op: "answer", id, ...input })) as BotThreadView,
       },
       notes: memory && {
         memory,

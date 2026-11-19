@@ -31,6 +31,7 @@ const LABELS: Record<string, string> = {
   continue_thread: "Continuing a thread",
   archive_thread: "Archiving a thread",
   stop_thread: "Stopping a thread",
+  answer_thread_question: "Answering a thread's question",
   fork_thread: "Forking a thread",
   fork_status: "Checking a fork",
   stop_fork: "Stopping a fork",

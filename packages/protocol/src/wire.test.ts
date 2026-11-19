@@ -493,6 +493,17 @@ describe("a bot's threads", () => {
   const projectId = "66666666-7777-4888-8999-000000000000";
   const base = { replyId: "r1" };
 
+  test("an answer names the thread and gives one to four answers", () => {
+    const answers = [{ questionId: "q1", value: "Draft" }];
+    expect(parseBotThreadParams({ ...base, op: "answer", id, answers })).toEqual({
+      ...base,
+      op: "answer",
+      id,
+      answers,
+    });
+    expect(() => parseBotThreadParams({ ...base, op: "answer", id, answers: [] })).toThrow();
+  });
+
   test("each operation is shaped, and a thread is started in a project with a prompt", () => {
     expect(parseBotThreadParams({ ...base, op: "projects" })).toEqual({ ...base, op: "projects" });
     expect(parseBotThreadParams({ ...base, op: "list", projectId, archived: true })).toEqual({
