@@ -258,6 +258,24 @@ export function createBotThreads({
         );
       }
 
+      const offered = new Map(
+        asking.map((question) => [
+          question.id,
+          new Set((question.choices ?? []).map((choice) => choice.value)),
+        ]),
+      );
+      const answered = new Set(answers.map((answer) => answer.questionId));
+
+      if (
+        answers.length !== asking.length ||
+        answered.size !== asking.length ||
+        answers.some((answer) => !offered.get(answer.questionId)?.has(answer.value))
+      ) {
+        throw new UnprocessableError(
+          "Give one answer to each question, and each one of the choices get_thread showed.",
+        );
+      }
+
       await messages.answer(thread.organizationId, actor.userId, id, {
         answers,
         secretScope: "project",
