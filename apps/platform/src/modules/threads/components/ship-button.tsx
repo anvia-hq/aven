@@ -92,6 +92,7 @@ export function ShipButton({ action, threadId, onShip, onSetUp }: Props) {
       <ShipMenu
         disabled={disabled}
         custom={custom}
+        primary={primary}
         canOpenNew={canOpenNew}
         onNew={() => onShip("new")}
         onSetUp={onSetUp}

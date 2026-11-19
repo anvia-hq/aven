@@ -12,27 +12,32 @@ import {
 type Props = {
   disabled: boolean;
   custom: boolean;
+  primary: boolean;
   canOpenNew: boolean;
   onNew: () => void;
   onSetUp: () => void;
 };
 
-export function ShipMenu({ disabled, custom, canOpenNew, onNew, onSetUp }: Props) {
+export function ShipMenu({ disabled, custom, primary, canOpenNew, onNew, onSetUp }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
           <Button
-            variant="outline"
+            variant={primary ? "default" : "outline"}
             size="icon-sm"
-            className={FLOATING_BUTTON}
+            className={
+              primary
+                ? "rounded-full in-data-[slot=button-group]:rounded-full shadow-md"
+                : FLOATING_BUTTON
+            }
             aria-label="More ways to ship"
           />
         }
       >
         <IconChevronDown />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="min-w-48 whitespace-nowrap">
         {canOpenNew && (
           <DropdownMenuItem disabled={disabled} onClick={onNew}>
             <IconPlus /> Ship as a new PR
