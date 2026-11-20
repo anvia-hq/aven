@@ -15,6 +15,7 @@ import { ASK_QUESTION_TOOL_NAME, askQuestionSchema } from "./tools/ask-question"
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { REACT_TO_MESSAGE_TOOL_NAME, reactToMessageSchema } from "./tools/react-to-message";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
+import { asRecord } from "./values";
 import type {
   BotChatMessage,
   BotChatQuote,
@@ -37,14 +38,16 @@ function resultsAfter(messages: readonly Message[], at: number) {
 }
 
 const failed = (output: ToolResultOutput | undefined) =>
-  output?.type === "error-text" || output?.type === "error-json";
+  output?.type === "error-text" ||
+  output?.type === "error-json" ||
+  output?.type === "execution-denied";
 
 function relayedBy(output: ToolResultOutput | undefined) {
   if (output?.type !== "json") return undefined;
 
-  const { relayed } = output.value as { relayed?: { handle?: unknown; text?: unknown } };
+  const relayed = asRecord(asRecord(output.value).relayed);
 
-  if (typeof relayed?.handle !== "string" || typeof relayed.text !== "string") return undefined;
+  if (typeof relayed.handle !== "string" || typeof relayed.text !== "string") return undefined;
 
   return { handle: relayed.handle, text: relayed.text };
 }
@@ -52,12 +55,12 @@ function relayedBy(output: ToolResultOutput | undefined) {
 function artifactsSentIn(output: ToolResultOutput | undefined): ToolArtifact[] | undefined {
   if (output?.type !== "json") return undefined;
 
-  const { artifacts } = output.value as { artifacts?: unknown };
+  const { artifacts } = asRecord(output.value);
 
   if (!Array.isArray(artifacts)) return undefined;
 
   const kept = artifacts.flatMap((item): ToolArtifact[] => {
-    const { name, mediaType, title, size } = (item ?? {}) as Record<string, unknown>;
+    const { name, mediaType, title, size } = asRecord(item);
 
     if (typeof name !== "string" || typeof mediaType !== "string") return [];
 
@@ -75,9 +78,9 @@ function artifactsSentIn(output: ToolResultOutput | undefined): ToolArtifact[] |
 function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | undefined {
   if (output?.type !== "json") return undefined;
 
-  const { provider } = output.value as { provider?: { providerId?: unknown; name?: unknown } };
+  const provider = asRecord(asRecord(output.value).provider);
 
-  if (typeof provider?.providerId !== "string" || typeof provider.name !== "string") {
+  if (typeof provider.providerId !== "string" || typeof provider.name !== "string") {
     return undefined;
   }
 
@@ -86,6 +89,9 @@ function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | und
 
 export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[] {
   const chat: BotChatMessage[] = [];
+  const byId = new Map<string, BotChatMessage>();
+  let userCount = 0;
+  let botCount = 0;
   const add = (
     role: BotChatMessage["role"],
     text: string,
@@ -105,12 +111,13 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
       id?: string;
     } = {},
   ) => {
+    const fallbackId = role === "user" ? incomingMessageId(userCount) : sentMessageId(botCount);
+
+    if (role === "user") userCount += 1;
+    else botCount += 1;
+
     const message: BotChatMessage = {
-      id:
-        id ??
-        (role === "user"
-          ? incomingMessageId(chat.filter((each) => each.role === "user").length)
-          : sentMessageId(chat.filter((each) => each.role === "bot").length)),
+      id: id ?? fallbackId,
       role,
       text,
     };
@@ -126,11 +133,13 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
     if (quote) message.quote = quote;
 
     chat.push(message);
+
+    if (!byId.has(message.id)) byId.set(message.id, message);
   };
   const quoteOf = (id: string | undefined): BotChatQuote | undefined => {
     if (!id) return undefined;
 
-    const quoted = chat.find((message) => message.id === id);
+    const quoted = byId.get(id);
 
     if (!quoted) return undefined;
 
@@ -139,7 +148,7 @@ export function botMessagesToChat(messages: readonly Message[]): BotChatMessage[
       : { id: quoted.id, role: quoted.role, text: quoted.text };
   };
   const react = (id: string, emoji: string) => {
-    const target = chat.find((message) => message.id === id);
+    const target = byId.get(id);
     const reactions = target?.reactions ?? [];
 
     if (!target || reactions.includes(emoji) || reactions.length >= BOT_REACTIONS_MAX) return;

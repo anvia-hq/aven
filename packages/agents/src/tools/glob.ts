@@ -1,7 +1,13 @@
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
-import { DEFAULT_RESULTS, listing, listPaths, MAX_RESULTS, searchRoot } from "./search-paths";
+import {
+  DEFAULT_RESULTS,
+  listing,
+  listPaths,
+  MAX_RESULTS,
+  searchRoot,
+} from "../internal/search-paths";
 import type { SearchableFiles } from "./types";
 
 export const GLOB_TOOL_NAME = "glob";

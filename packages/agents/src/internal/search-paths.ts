@@ -1,6 +1,6 @@
 import { posix } from "node:path";
 
-import type { SearchableFiles } from "./types";
+import type { SearchableFiles } from "../tools/types";
 
 export const SEARCH_TIMEOUT_MS = 30_000;
 
@@ -18,6 +18,10 @@ export const searchRoot = (workdir: string, path: string | undefined) => {
   const inside = posix.isAbsolute(normalized)
     ? posix.relative(workdir, normalized) || "."
     : normalized;
+
+  if (inside === ".." || inside.startsWith("../")) {
+    throw new Error(`Path is outside the workspace: ${path}`);
+  }
 
   return inside.startsWith("-") ? `./${inside}` : inside;
 };

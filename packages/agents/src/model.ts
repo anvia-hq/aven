@@ -8,9 +8,6 @@ import { GoogleGenAI } from "@google/genai";
 import { DEFAULT_MODEL_IDS } from "./model-defaults";
 import { nullFreeStream } from "./null-free-stream";
 import type { ModelApiKey, ModelConfig, ReasoningControls } from "./types";
-import type { Provider } from "@aven/protocol/types";
-
-export type { Provider };
 
 const contextLimitsFor = (config: ModelConfig) =>
   config.contextWindow ? { contextWindow: config.contextWindow } : undefined;
@@ -31,53 +28,56 @@ const OPENAI_MODEL = /^(gpt-|o\d|chatgpt-|codex)/i;
 
 const ANTHROPIC_PROMPT_CACHE = { ttl: "1h" } as const;
 
+const CHAT_PROVIDERS = {
+  "openai-compatible": {
+    label: "An OpenAI-compatible provider",
+    url: "a base URL",
+  },
+  bedrock: {
+    label: "A Bedrock provider",
+    url: "its regional endpoint",
+    key: "an API key",
+  },
+  vertex: {
+    label: "A Vertex AI provider",
+    url: "its project endpoint",
+    key: "a credential",
+  },
+} as const satisfies Record<string, { label: string; url: string; key?: string }>;
+
+type ChatProvider = keyof typeof CHAT_PROVIDERS;
+
+function isChatProvider(provider: ModelConfig["provider"]): provider is ChatProvider {
+  return provider in CHAT_PROVIDERS;
+}
+
+function createChatModel(
+  config: ModelConfig,
+  apiKey: ModelApiKey,
+  spec: { label: string; url: string; key?: string },
+) {
+  if (!config.baseUrl) throw new Error(`${spec.label} needs ${spec.url}`);
+
+  if (!config.modelId) throw new Error(`${spec.label} needs a model id`);
+
+  if (spec.key && !apiKey) throw new Error(`${spec.label} needs ${spec.key}`);
+
+  return new OpenAIClient({
+    apiKey: apiKey || "not-needed",
+    baseUrl: config.baseUrl,
+  }).completionModel({
+    modelId: config.modelId,
+    api: "chat",
+    controls: controlsFromLevels(config.effortLevels),
+    contextLimits: contextLimitsFor(config),
+  });
+}
+
 export const azureApiFor = (modelId: string) => (OPENAI_MODEL.test(modelId) ? "responses" : "chat");
 
 export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
-  if (config.provider === "openai-compatible") {
-    if (!config.baseUrl) throw new Error("An OpenAI-compatible provider needs a base URL");
-
-    if (!config.modelId) throw new Error("An OpenAI-compatible provider needs a model id");
-
-    return new OpenAIClient({
-      apiKey: apiKey || "not-needed",
-      baseUrl: config.baseUrl,
-    }).completionModel({
-      modelId: config.modelId,
-      api: "chat",
-      controls: controlsFromLevels(config.effortLevels),
-      contextLimits: contextLimitsFor(config),
-    });
-  }
-
-  if (config.provider === "bedrock") {
-    if (!config.baseUrl) throw new Error("A Bedrock provider needs its regional endpoint");
-
-    if (!config.modelId) throw new Error("A Bedrock provider needs a model id");
-
-    if (!apiKey) throw new Error("A Bedrock provider needs an API key");
-
-    return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
-      modelId: config.modelId,
-      api: "chat",
-      controls: controlsFromLevels(config.effortLevels),
-      contextLimits: contextLimitsFor(config),
-    });
-  }
-
-  if (config.provider === "vertex") {
-    if (!config.baseUrl) throw new Error("A Vertex AI provider needs its project endpoint");
-
-    if (!config.modelId) throw new Error("A Vertex AI provider needs a model id");
-
-    if (!apiKey) throw new Error("A Vertex AI provider needs a credential");
-
-    return new OpenAIClient({ apiKey, baseUrl: config.baseUrl }).completionModel({
-      modelId: config.modelId,
-      api: "chat",
-      controls: controlsFromLevels(config.effortLevels),
-      contextLimits: contextLimitsFor(config),
-    });
+  if (isChatProvider(config.provider)) {
+    return createChatModel(config, apiKey, CHAT_PROVIDERS[config.provider]);
   }
 
   if (config.provider === "azure") {
@@ -143,12 +143,7 @@ export function reasoningControlsFor(
   config: Pick<ModelConfig, "provider" | "modelId" | "effortLevels">,
   defaultEffort?: string | null,
 ): ReasoningControls | null {
-  if (
-    (config.provider === "openai-compatible" ||
-      config.provider === "bedrock" ||
-      config.provider === "vertex") &&
-    (!config.effortLevels?.length || !config.modelId)
-  ) {
+  if (isChatProvider(config.provider) && (!config.effortLevels?.length || !config.modelId)) {
     return null;
   }
 

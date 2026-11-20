@@ -1,6 +1,7 @@
 import { getAssistantGenerationMetadata, type Message, type Usage } from "@anvia/core";
 
 import { addUsage, NO_USAGE } from "@aven/protocol/events";
+import { COMPACTION_MODEL_ID } from "./compaction-agent";
 import type { ContextUsage, ThreadUsage, TokenUsage } from "@aven/protocol/types";
 
 export function tokenUsageOf(usage: Usage): TokenUsage {
@@ -19,8 +20,6 @@ type ModelContextUsage = {
 
 export const contextOf = (usage: ModelContextUsage | undefined): ContextUsage | undefined =>
   usage && { usedTokens: usage.usedTokens, contextWindow: usage.model.context.contextWindow };
-
-const COMPACTION_MODEL_ID = "compaction";
 
 function contextOfGeneration(generation: {
   modelId?: string;

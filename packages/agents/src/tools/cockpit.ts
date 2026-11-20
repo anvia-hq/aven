@@ -6,6 +6,8 @@ import {
   TASK_STATUSES,
 } from "@aven/protocol/cockpit";
 import { z } from "zod";
+
+import { required } from "../internal/required";
 import type { CockpitHost } from "./types";
 import type { CockpitAccess, CockpitCommand, CockpitFields } from "@aven/protocol/types";
 
@@ -84,14 +86,6 @@ type CockpitInput = {
   due_date?: string | null;
   pinned?: boolean;
 };
-
-function required<K extends keyof CockpitInput>(input: CockpitInput, key: K) {
-  const value = input[key];
-
-  if (value === undefined) throw new Error(`${input.command} needs ${key}`);
-
-  return value as NonNullable<CockpitInput[K]>;
-}
 
 function fieldsOf(input: CockpitInput): CockpitFields {
   const fields: CockpitFields = {

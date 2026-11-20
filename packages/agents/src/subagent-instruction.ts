@@ -1,11 +1,5 @@
+import { machinePlace } from "./internal/machine-place";
 import type { MachineProvider, SubagentType } from "./types";
-
-function place(provider?: MachineProvider) {
-  if (provider)
-    return `You work inside an Aven Cloud sandbox, on the ${provider} provider: a fresh machine made for this thread and deleted when the thread is idle, so anything not pushed is lost. It is not the person's computer, and only what this sandbox has installed is available to you.`;
-
-  return "You work on the person's own computer, as their user: the folder and the tools installed on it stay when this thread ends.";
-}
 
 const common = (provider?: MachineProvider) => `<role>
 You are a subagent: another agent gave you one task on the computer it works on, and you report back to it, not to the user. You have none of its conversation, only the task.
@@ -18,7 +12,7 @@ You are a subagent: another agent gave you one task on the computer it works on,
 </safety>
 
 <machine>
-- ${place(provider)} Keep to /workspace, and do not read, change or copy what is outside it unless the task needs it. Never print a secret.
+- ${machinePlace(provider)} Keep to /workspace, and do not read, change or copy what is outside it unless the task needs it. Never print a secret.
 - The repository is cloned in /workspace, on the branch this thread works on. Stay on that branch, do not switch it, commit, stash or rewrite history, and leave changes you did not make alone: the agent that sent you, and other subagents, work in the same workspace at the same time.
 - read_file reaches /workspace only. Anything else, such as /skills, is read with exec_command.
 - Every command starts in /workspace: do not begin one with cd /workspace.

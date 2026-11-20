@@ -1,5 +1,7 @@
 import type { CompletionModel, CompletionRequest, Message, ReasoningPart } from "@anvia/core";
 
+import { proxyCompletionModel } from "./internal/model-proxy";
+
 type ReasoningOwnership = (id: string | undefined) => boolean;
 
 export const ownedByResponsesApi: ReasoningOwnership = (id) => id?.startsWith("rs_") ?? false;
@@ -29,18 +31,12 @@ function withRequest<T extends CompletionModel>(
   model: T,
   clean: (request: CompletionRequest) => CompletionRequest,
 ): T {
-  return new Proxy(model, {
-    get(target, key) {
-      const value: unknown = target[key as keyof typeof target];
-
-      if (typeof value !== "function") return value;
-
-      if (key === "completion" || key === "streamCompletion" || key === "traceRequest")
-        return (request: CompletionRequest, ...rest: unknown[]) =>
-          (value as (...args: unknown[]) => unknown).call(target, clean(request), ...rest);
-
-      return value.bind(target);
-    },
+  const wrap = (call: (...args: unknown[]) => unknown, ...args: unknown[]) =>
+    call(clean(args[0] as CompletionRequest), ...args.slice(1));
+  return proxyCompletionModel(model, {
+    completion: wrap,
+    streamCompletion: wrap,
+    traceRequest: wrap,
   });
 }
 

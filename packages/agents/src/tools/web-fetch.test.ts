@@ -2,9 +2,11 @@ import { describe, expect, test } from "bun:test";
 
 import { createServer } from "node:http";
 
-import { pinnedRequest } from "./pinned-request";
+import { htmlToText } from "../internal/html-to-text";
+import { pinnedRequest } from "../internal/pinned-request";
+import { isPrivateAddress } from "../internal/public-address";
 import type { PinnedTarget } from "./types";
-import { createWebFetchTool, htmlToText, isPrivateAddress } from "./web-fetch";
+import { createWebFetchTool, MAX_FETCH_BYTES } from "./web-fetch";
 
 const publicHost = async () => ["93.184.216.34"];
 
@@ -128,6 +130,31 @@ describe("web_fetch", () => {
       }),
     ).rejects.toThrow("failed with 404");
   });
+
+  test("marks sourceCut false at exact MAX_FETCH_BYTES and true when one byte larger", async () => {
+    const exact = new Uint8Array(MAX_FETCH_BYTES).fill(97);
+    const over = new Uint8Array(MAX_FETCH_BYTES + 1).fill(98);
+    const { impl } = serve(
+      (url) =>
+        new Response(url.endsWith("/exact") ? exact : over, {
+          headers: { "content-type": "text/plain" },
+        }),
+    );
+    const tool = createWebFetchTool({ request: impl, resolve: publicHost });
+
+    const exactResult = await tool.call({ url: "https://example.com/exact", maxChars: 1000 });
+    expect(exactResult.sourceCut).toBe(false);
+    expect(exactResult.content).toBe("a".repeat(1000));
+
+    const overResult = await tool.call({
+      url: "https://example.com/over",
+      offset: MAX_FETCH_BYTES - 10,
+      maxChars: 1000,
+    });
+    expect(overResult.sourceCut).toBe(true);
+    expect(overResult.content).toBe("b".repeat(10));
+    expect(overResult.next).toBeNull();
+  });
 });
 
 describe("isPrivateAddress", () => {
@@ -171,6 +198,14 @@ describe("isPrivateAddress", () => {
 describe("htmlToText", () => {
   test("keeps text order and drops comments", () => {
     expect(htmlToText("<div>a<!-- x --></div><div>b</div>")).toBe("a\nb");
+  });
+
+  test("ignores commented titles and decodes named and numeric entities in title and body", () => {
+    expect(
+      htmlToText(
+        "<!-- <title>Ignored</title> --><html><head><title>A &amp; B&apos;s &#8212; Docs</title></head><body><p>It&apos;s &#x2014; &amp;lt;ok&#33; &#x1F600;</p></body></html>",
+      ),
+    ).toBe("A & B's — Docs\n\nIt's — &lt;ok! 😀");
   });
 });
 

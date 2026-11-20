@@ -51,16 +51,13 @@ import type {
 
 export const BOT_MAX_TURNS = 200;
 
-type BotAgentOptions = ModelSource & {
+type BotPartsOptions = {
   paths?: SandboxPaths;
-  id: string;
   name: string;
   handle: string;
   instruction: string;
   send: SendMessage;
   react?: ReactToMessage;
-  memory: AgentMemoryOptions;
-  compactAfterTokens?: number;
   computer?: readonly AnyTool[];
   createBot?: CreateBot;
   deleteBot?: DeleteBot;
@@ -83,24 +80,16 @@ type BotAgentOptions = ModelSource & {
   projects?: readonly BotReplyProject[];
   projectFiles?: ProjectFilesHost;
   webSearch?: RunWebSearch;
-  lens?: RunLens;
-  onActivity?: (label: string | null) => void;
 };
 
-type BotPartsOptions = Omit<
-  BotAgentOptions,
-  | "id"
-  | "memory"
-  | "compactAfterTokens"
-  | "onActivity"
-  | "provider"
-  | "modelId"
-  | "apiKey"
-  | "baseUrl"
-  | "reasoningEffort"
-  | "effortLevels"
-  | "contextWindow"
->;
+type BotAgentOptions = ModelSource &
+  BotPartsOptions & {
+    id: string;
+    memory: AgentMemoryOptions;
+    compactAfterTokens?: number;
+    lens?: RunLens;
+    onActivity?: (label: string | null) => void;
+  };
 
 export function botAgentParts(options: BotPartsOptions) {
   const {
@@ -170,7 +159,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...computer,
       ...asking(askQuestion),
       ...working(goals),
-      ...scheduling(schedules),
+      ...scheduling(schedules && timezone ? schedules : undefined),
       ...makingBots(createBot),
       ...deletingBots(deleteBot),
       ...changingSelf(updateSelf),
