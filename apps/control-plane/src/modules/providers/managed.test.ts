@@ -8,6 +8,7 @@ import { eq } from "drizzle-orm";
 import { communityEdition } from "../../edition/community";
 import { editionInUse } from "../../edition/current";
 import type { GrantedProvider } from "../../edition/types";
+import { botsService } from "../bots/service";
 import { resolveModel } from "./resolve-model";
 import { providersService } from "./service";
 
@@ -77,5 +78,26 @@ run("edition-managed providers (postgres)", () => {
     await expect(
       resolveModel(alice, { providerId: managedId, modelId: "gpt-4.1" }),
     ).rejects.toThrow("is not enabled");
+  });
+
+  test("allows bots to select a managed provider and clears it if revoked", async () => {
+    const [main] = await botsService.list(alice);
+    const updated = await botsService.update(alice, main!.id, {
+      providerId: managedId,
+      modelId: "gpt-4.1-mini",
+    });
+    expect(updated).toMatchObject({ providerId: managedId, modelId: "gpt-4.1-mini" });
+
+    const previous = editionInUse.current;
+    editionInUse.current = communityEdition;
+
+    try {
+      expect(await botsService.get(alice, main!.id)).toMatchObject({
+        providerId: null,
+        modelId: null,
+      });
+    } finally {
+      editionInUse.current = previous;
+    }
   });
 });
