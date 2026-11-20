@@ -78,7 +78,7 @@ export function UpdateRuntimeDialog({ runtime }: { runtime: Runtime }) {
             <DialogDescription>
               {withServer
                 ? `It goes from ${from} to ${runtime.updateTo}, and the server on that machine updates too: Aven is unavailable for a few seconds while it restarts.`
-                : `It goes from ${from} to the server's release, ${runtime.updateTo}, and restarts for a moment.`}{" "}
+                : `It goes from ${from} to ${runtime.updateTo}, and restarts for a moment.`}{" "}
               It will not update while a run is going on it.
             </DialogDescription>
           </DialogHeader>
