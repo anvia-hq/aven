@@ -57,5 +57,14 @@ function lazyCallable<T extends (...args: never[]) => unknown>(resolve: () => T)
   });
 }
 
+export async function closeDefaultDatabase(): Promise<void> {
+  const current = cached;
+
+  if (!current) return;
+
+  cached = null;
+  await current.sql.end();
+}
+
 export const sql: Database["sql"] = lazyCallable(() => defaultDatabase().sql);
 export const db: Database["db"] = lazyObject(() => defaultDatabase().db);

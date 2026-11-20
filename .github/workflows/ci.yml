@@ -61,10 +61,15 @@ jobs:
           fi
 
   test:
-    name: unit tests
+    name: unit tests ${{ matrix.shard }}/2
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
-      DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_template
+      AVEN_TEST_DB_TEMPLATE: aven_template
       BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
       BETTER_AUTH_URL: http://localhost:5173
       PROVIDER_ENCRYPTION_KEY: ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
@@ -87,16 +92,66 @@ jobs:
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
         if: steps.deps.outputs.cache-hit != 'true'
+      - uses: actions/cache/restore@v4
+        with:
+          path: .ci-timings/unit-timings.json
+          key: unit-timings-${{ github.sha }}
+          restore-keys: unit-timings-
       - name: Start Postgres
         run: |
           PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
-          printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' | sudo tee -a "$PG_CONF" >/dev/null
+          printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\nmax_connections = 300\n' | sudo tee -a "$PG_CONF" >/dev/null
           sudo systemctl start postgresql
           sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-          sudo -u postgres createdb -O postgres aven
+          sudo -u postgres createdb -O postgres aven_template
       - run: git config --global user.name ci && git config --global user.email ci@example.com
       - run: bun packages/db/src/migrate.ts
-      - run: bun test apps packages sandbox tooling
+      - name: Run unit tests shard ${{ matrix.shard }}/2
+        run: |
+          mkdir -p .ci-timings
+          if [ ! -f .ci-timings/unit-timings.json ]; then
+            printf '{"version":1,"files":{}}\n' > .ci-timings/unit-timings.json
+          fi
+          bun test \
+            --parallel=4 \
+            --isolate \
+            --randomize \
+            --preload ./tooling/ci/test-db-preload.ts \
+            --shard=${{ matrix.shard }}/2 \
+            --timings=.ci-timings/unit-timings.json \
+            --update-timings \
+            apps packages sandbox tooling
+          cp .ci-timings/unit-timings.json .ci-timings/unit-timings-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-timings-${{ matrix.shard }}
+          path: .ci-timings/unit-timings-${{ matrix.shard }}.json
+          retention-days: 1
+
+  unit-shards-verify:
+    name: unit shards completeness
+    needs: test
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: ./.github/actions/setup-bun-pinned
+        with:
+          version: ${{ env.BUN_VERSION }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: unit-timings-*
+          path: .ci-timings
+          merge-multiple: true
+      - name: Prove shards ran every unit test file
+        run: bun tooling/ci/verify-unit-shards.ts --out=.ci-timings/unit-timings.json .ci-timings/unit-timings-*.json
+      - uses: actions/cache/save@v4
+        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group'
+        with:
+          path: .ci-timings/unit-timings.json
+          key: unit-timings-${{ github.sha }}
 
   e2e:
     name: e2e ${{ matrix.shard }}/3
