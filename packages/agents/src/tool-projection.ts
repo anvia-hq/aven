@@ -11,6 +11,7 @@ import {
 } from "@aven/protocol/events";
 
 import { DEFINE_GOAL_TOOL_NAME } from "./tools/define-goal";
+import { DEFAULT_SUBAGENT_TYPE } from "./subagents";
 import { COMPUTER_STATUS_TOOL_NAME, COMPUTER_WAKE_TOOL_NAME } from "./tools/computer";
 import { EDIT_TOOL_NAME } from "./tools/edit";
 import { FORK_THREAD_TOOL_NAME } from "./tools/forks";
@@ -173,7 +174,7 @@ function subagentsOf(input: unknown): SubagentPart[] {
     return {
       index,
       description: asString(task.description),
-      type: asString(task.type),
+      type: asString(task.type) || DEFAULT_SUBAGENT_TYPE,
       status: "running",
       tools: [],
     };
