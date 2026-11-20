@@ -31,6 +31,8 @@ export const SPAWN_AGENT_TOOL_NAME = "spawn_agent";
 
 export const SUBAGENT_TOOLS_KEPT = 50;
 
+export const TOOL_DID_NOT_RUN = "The call did not run: it ended without a result.";
+
 export const NO_USAGE: TokenUsage = {
   inputTokens: 0,
   outputTokens: 0,
@@ -139,6 +141,33 @@ export function isRunning(previous: boolean, event: RunEvent) {
   }
 }
 
+function endedTool(tool: ToolPart, status: "done" | "error", output?: string): ToolPart {
+  const ended: ToolPart = { ...tool, status, output };
+
+  if (ended.subagents)
+    ended.subagents = ended.subagents.map((subagent) =>
+      subagent.status === "running" ? { ...subagent, status } : subagent,
+    );
+
+  return ended;
+}
+
+function endRunningTools(messages: ChatMessage[]): ChatMessage[] {
+  const ended = messages.map((message) => {
+    if (message.role !== "assistant") return message;
+
+    const parts = message.parts.map((part) =>
+      part.type === "tool" && part.tool.status === "running"
+        ? { type: "tool" as const, tool: endedTool(part.tool, "error", TOOL_DID_NOT_RUN) }
+        : part,
+    );
+
+    return parts.some((part, at) => part !== message.parts[at]) ? { ...message, parts } : message;
+  });
+
+  return ended.some((message, at) => message !== messages[at]) ? ended : messages;
+}
+
 function applySubagentEvent(subagent: SubagentPart, event: SubagentEvent): SubagentPart {
   switch (event.type) {
     case "tool_start":
@@ -220,14 +249,9 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         parts.map((part) => {
           if (part.type !== "tool" || part.tool.id !== event.id) return part;
 
-          const tool: ToolPart = { ...part.tool, status: event.status, output: event.output };
+          const tool = endedTool(part.tool, event.status, event.output);
 
           if (event.artifacts) tool.artifacts = event.artifacts;
-
-          if (tool.subagents)
-            tool.subagents = tool.subagents.map((subagent) =>
-              subagent.status === "running" ? { ...subagent, status: event.status } : subagent,
-            );
 
           return { type: "tool", tool };
         }),
@@ -250,25 +274,27 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         });
       });
     case "done": {
+      const closed = endRunningTools(messages);
       const { workedMs } = event;
 
-      if (workedMs === undefined) return messages;
+      if (workedMs === undefined) return closed;
 
-      const index = messages.findLastIndex((message) => message.role === "assistant");
+      const index = closed.findLastIndex((message) => message.role === "assistant");
 
-      if (index === -1) return messages;
+      if (index === -1) return closed;
 
-      return messages.map((message, at) =>
+      return closed.map((message, at) =>
         at === index ? { ...message, workedMs: (message.workedMs ?? 0) + workedMs } : message,
       );
     }
+    case "error":
+      return endRunningTools(messages);
     case "run_resume":
     case "steer_queued":
     case "steer_applied":
     case "steer_rejected":
     case "usage":
     case "limits":
-    case "error":
       return messages;
     default:
       event satisfies never;

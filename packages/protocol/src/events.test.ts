@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import {
   NO_USAGE,
   SUBAGENT_TOOLS_KEPT,
+  TOOL_DID_NOT_RUN,
   addUsage,
   answerableQuestion,
   applyEvent,
@@ -216,6 +217,33 @@ describe("applyEvent with subagents", () => {
       { type: "tool_end", id: "s1", status: "error", output: "cancelled" },
     );
     expect(subagents(part)?.map(({ status }) => status)).toEqual(["done", "error"]);
+  });
+
+  test("a run that ends ends the calls still running, and says they did not run", () => {
+    const part = run({ type: "run_start", prompt: "go" }, spawn(), { type: "done" });
+    expect(part?.type === "tool" && part.tool.status).toBe("error");
+    expect(part?.type === "tool" && part.tool.output).toBe(TOOL_DID_NOT_RUN);
+    expect(subagents(part)?.map(({ status }) => status)).toEqual(["error", "error"]);
+  });
+
+  test("a run that fails ends them too", () => {
+    const part = run({ type: "run_start", prompt: "go" }, spawn(), {
+      type: "error",
+      message: "the model refused",
+    });
+    expect(part?.type === "tool" && part.tool.status).toBe("error");
+    expect(subagents(part)?.map(({ status }) => status)).toEqual(["error", "error"]);
+  });
+
+  test("a call that finished before the run ended keeps what it said", () => {
+    const part = run(
+      { type: "run_start", prompt: "go" },
+      spawn(),
+      { type: "tool_end", id: "s1", status: "done" },
+      { type: "done" },
+    );
+    expect(part?.type === "tool" && part.tool.status).toBe("done");
+    expect(subagents(part)?.map(({ status }) => status)).toEqual(["done", "done"]);
   });
 
   test("an event for a call that is not running changes nothing", () => {

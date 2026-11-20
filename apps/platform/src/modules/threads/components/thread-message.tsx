@@ -51,6 +51,9 @@ function AssistantBlock({
   if (block.type === "subagents") {
     return (
       <div className="flex min-w-0 flex-col">
+        {block.tool.status === "error" && block.tool.output && (
+          <p className="mb-1 text-xs text-destructive">{block.tool.output}</p>
+        )}
         {block.tool.subagents?.map((subagent) => (
           <SubagentCard key={subagent.index} subagent={subagent} />
         ))}
