@@ -4,6 +4,8 @@ import type { botGoals } from "./bot-goals";
 import type { botSchedules } from "./bot-schedules";
 import type { botWebhooks } from "./bot-webhooks";
 import type { bots } from "./bots";
+import type { cloudProviderConfigs } from "./cloud-provider-configs";
+import type { cloudSandboxes } from "./cloud-sandboxes";
 import type { cockpitInboxItems } from "./cockpit-inbox-items";
 import type { cockpitNotes } from "./cockpit-notes";
 import type { cockpitTasks } from "./cockpit-tasks";
@@ -36,6 +38,10 @@ export type BotScheduleRow = typeof botSchedules.$inferSelect;
 export type BotWebhookRow = typeof botWebhooks.$inferSelect;
 
 export type BotRow = typeof bots.$inferSelect;
+
+export type CloudProviderConfigRow = typeof cloudProviderConfigs.$inferSelect;
+
+export type CloudSandboxRow = typeof cloudSandboxes.$inferSelect;
 
 export type CockpitInboxItemRow = typeof cockpitInboxItems.$inferSelect;
 

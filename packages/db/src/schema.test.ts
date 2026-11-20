@@ -8,17 +8,23 @@ import { MEMORY_SCOPES } from "@aven/protocol/memory";
 import {
   AGENT_BACKENDS,
   BOAT_MACHINE_TYPES,
+  CLOUD_PROVIDER_CONFIG_STATUSES,
+  CLOUD_SANDBOX_STATES,
+  ENVIRONMENT_STATUSES,
   PROVIDERS,
   RUNTIME_GITHUB_MODES,
   RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
 } from "@aven/protocol/runtime-wire";
 
+import { cloudProviderConfigs } from "./schema/cloud-provider-configs";
+import { cloudSandboxes } from "./schema/cloud-sandboxes";
 import { cockpitTasks } from "./schema/cockpit-tasks";
 import { githubInstallations } from "./schema/github-installations";
 import { mcpServers } from "./schema/mcp-servers";
 import { memoryEvents } from "./schema/memory-events";
 import { memoryNotes } from "./schema/memory-notes";
+import { projectEnvironments } from "./schema/project-environments";
 import { providers } from "./schema/providers";
 import { runtimes } from "./schema/runtimes";
 import { skills } from "./schema/skills";
@@ -43,6 +49,12 @@ describe("schema definitions", () => {
     expect(runtimes.githubMode.enumValues).toEqual([...RUNTIME_GITHUB_MODES]);
     expect(runtimes.boatMachineType.enumValues).toEqual([...BOAT_MACHINE_TYPES]);
     expect(threads.agentBackend.enumValues).toEqual([...AGENT_BACKENDS]);
+    expect(cloudProviderConfigs.provider.enumValues).toEqual([...RUNTIME_PROVIDERS]);
+    expect(cloudProviderConfigs.status.enumValues).toEqual([...CLOUD_PROVIDER_CONFIG_STATUSES]);
+    expect(cloudSandboxes.provider.enumValues).toEqual([...RUNTIME_PROVIDERS]);
+    expect(cloudSandboxes.state.enumValues).toEqual([...CLOUD_SANDBOX_STATES]);
+    expect(cloudSandboxes.machineType.enumValues).toEqual([...BOAT_MACHINE_TYPES]);
+    expect(projectEnvironments.status.enumValues).toEqual([...ENVIRONMENT_STATUSES]);
   });
 
   test("bytea columns use the shared bytea custom type", () => {

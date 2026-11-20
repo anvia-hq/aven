@@ -4,11 +4,14 @@ import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
 import type {
   AGENT_BACKENDS,
+  CLOUD_PROVIDER_CONFIG_STATUSES,
+  CLOUD_SANDBOX_STATES,
   DIFF_SCOPES,
   ENVIRONMENT_STATUSES,
   MACHINE_OPS,
   PROVIDERS,
   BOAT_MACHINE_TYPES,
+  RUN_DRAIN_REASONS,
   RUNTIME_GITHUB_MODES,
   RUNTIME_PROVIDERS,
   MODEL_APIS,
@@ -455,6 +458,12 @@ export type AgentBackendCapabilities = Readonly<Record<AgentBackendCapability, b
 
 export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
 
+export type CloudSandboxState = (typeof CLOUD_SANDBOX_STATES)[number];
+
+export type CloudProviderConfigStatus = (typeof CLOUD_PROVIDER_CONFIG_STATUSES)[number];
+
+export type RunDrainReason = (typeof RUN_DRAIN_REASONS)[number];
+
 export type BoatMachineType = (typeof BOAT_MACHINE_TYPES)[number];
 
 export type RuntimeGithubMode = (typeof RUNTIME_GITHUB_MODES)[number];
@@ -741,6 +750,7 @@ export type ControlPlaneToRuntime =
       response: unknown;
     } & RunExecutionOptions)
   | { type: "run.cancel"; runId: string; reason: string }
+  | { type: "run.drain"; runId: string; reason: RunDrainReason }
   | ({
       type: "bot.reply";
       replyId: string;
