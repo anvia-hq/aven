@@ -10,7 +10,9 @@ export const Route = createFileRoute("/_authed/settings/sandbox")({
   beforeLoad: async () => {
     const config = await api<PlatformConfig>("/platform/config");
 
-    if (!config.isOwner) throw redirect({ to: "/settings/general" });
+    if (!config.isOwner || config.platformSettings === false) {
+      throw redirect({ to: "/settings/general" });
+    }
   },
   component: Sandbox,
 });

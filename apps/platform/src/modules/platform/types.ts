@@ -10,6 +10,7 @@ export type PlatformConfig = {
   codexBackend: boolean;
   lens: boolean;
   isOwner: boolean;
+  platformSettings: boolean;
 };
 
 export type PlatformPerson = {
