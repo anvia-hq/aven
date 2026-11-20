@@ -11,6 +11,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { TASK_PRIORITIES, TASK_STATUSES } from "@aven/protocol/cockpit";
+
 import { users } from "./users";
 
 export const cockpitTasks = pgTable(
@@ -23,14 +25,8 @@ export const cockpitTasks = pgTable(
     number: integer("number").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull().default(""),
-    status: text("status", {
-      enum: ["backlog", "todo", "in_progress", "in_review", "done", "cancelled"],
-    })
-      .notNull()
-      .default("todo"),
-    priority: text("priority", { enum: ["urgent", "high", "medium", "low", "none"] })
-      .notNull()
-      .default("none"),
+    status: text("status", { enum: TASK_STATUSES }).notNull().default("todo"),
+    priority: text("priority", { enum: TASK_PRIORITIES }).notNull().default("none"),
     dueDate: date("due_date", { mode: "string" }),
     tags: text("tags")
       .array()

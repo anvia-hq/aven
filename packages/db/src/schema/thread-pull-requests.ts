@@ -1,4 +1,4 @@
-import { index, integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import { integer, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
 import { threads } from "./threads";
 
@@ -20,8 +20,5 @@ export const threadPullRequests = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    unique("thread_pull_requests_thread_number_unique").on(table.threadId, table.number),
-    index("thread_pull_requests_thread_idx").on(table.threadId),
-  ],
+  (table) => [unique("thread_pull_requests_thread_number_unique").on(table.threadId, table.number)],
 );

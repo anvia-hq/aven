@@ -1,6 +1,5 @@
 import {
   boolean,
-  customType,
   index,
   integer,
   pgTable,
@@ -10,12 +9,8 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
+import { bytea } from "./columns";
 import { users } from "./users";
-
-const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
-  dataType: () => "bytea",
-  fromDriver: (value) => new Uint8Array(value),
-});
 
 export const skills = pgTable(
   "skills",

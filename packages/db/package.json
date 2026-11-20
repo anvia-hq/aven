@@ -16,7 +16,6 @@
     "db:studio": "bun --bun --env-file=../../.env run drizzle-kit studio"
   },
   "dependencies": {
-    "@anvia/core": "^1.21.0",
     "@anvia/memory-drizzle": "^1.2.1",
     "@aven/protocol": "workspace:*",
     "drizzle-orm": "^0.45.4",

@@ -1,7 +1,7 @@
-import { pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-import { users } from "./users";
 import { threads } from "./threads";
+import { users } from "./users";
 
 export const threadMentions = pgTable(
   "thread_mentions",
@@ -17,5 +17,8 @@ export const threadMentions = pgTable(
     readAt: timestamp("read_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.threadId, table.userId] })],
+  (table) => [
+    primaryKey({ columns: [table.threadId, table.userId] }),
+    index("thread_mentions_user_idx").on(table.userId),
+  ],
 );

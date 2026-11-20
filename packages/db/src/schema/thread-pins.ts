@@ -1,4 +1,4 @@
-import { pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 import { threads } from "./threads";
 import { users } from "./users";
@@ -14,5 +14,8 @@ export const threadPins = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     pinnedAt: timestamp("pinned_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [primaryKey({ columns: [table.threadId, table.userId] })],
+  (table) => [
+    primaryKey({ columns: [table.threadId, table.userId] }),
+    index("thread_pins_user_idx").on(table.userId),
+  ],
 );

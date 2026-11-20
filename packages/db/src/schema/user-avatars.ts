@@ -1,11 +1,7 @@
-import { customType, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
+import { bytea } from "./columns";
 import { users } from "./users";
-
-const bytea = customType<{ data: Uint8Array; driverData: Uint8Array }>({
-  dataType: () => "bytea",
-  fromDriver: (value) => new Uint8Array(value),
-});
 
 export const userAvatars = pgTable("user_avatars", {
   userId: text("user_id")
