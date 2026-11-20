@@ -6,9 +6,14 @@ export async function updateTarget(
   server: string | undefined,
   latest: LatestRelease,
 ): Promise<string | null> {
-  if (isBehind(runner.build, server)) return server ?? null;
+  if (!server) {
+    const newest = await latest.get();
+    return isBehind(runner.build, newest) ? (newest ?? null) : null;
+  }
 
-  if (!runner.isControlPlane || !server) return null;
+  if (isBehind(runner.build, server)) return server;
+
+  if (!runner.isControlPlane) return null;
 
   const newest = await latest.get();
   return isBehind(server, newest) ? (newest ?? null) : null;
