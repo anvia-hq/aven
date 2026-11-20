@@ -14,6 +14,7 @@ What a person saw was a row that spun forever, and a transcript that kept spinni
 
 - The runner closes what it opened. When the durable run reaches its status, `durable-events.ts` sends a `tool_end` with `status: "error"` and `TOOL_DID_NOT_RUN` for every call it announced and never completed. A run that is `waiting` for an answer closes nothing: its call is suspended, not finished.
 - The reducer is the safety net (`protocol/events.ts`). On `done` and on `error`, `endRunningTools` ends every tool still `running`, with the same message, and ends its subagents with it. A transcript saved before this loads right, and a client that missed the run's end is left with no spinner. The array is returned as it was when nothing was running, so an event that changes nothing is still no change.
+- A tool that asks a question is left alone (`tool.questions`). A run that stops for an answer ends its turn and sends `done`, and `pendingQuestion` reads that tool's `running` status to know the agent is waiting: ending it would take the question away, which is what the first version of this did to `ask_user` and `request_secret`. A suspended run is not an ended one, in the runner's mapping either, where an `interaction` closes nothing.
 - The platform shows why the call failed. A `spawn_agent` part whose status is `error` draws the tool's own output above its cards (`thread-message.tsx`), because the tool's own result has nowhere else to go once the part is drawn as subagents.
 
 ## Consequences
@@ -21,3 +22,4 @@ What a person saw was a row that spun forever, and a transcript that kept spinni
 - A call still running when the run is cancelled or fails now reads as an error, which it is: nothing will report on it again.
 - The message is the same wherever it comes from, so a client need not tell a rejected input from a run that ended under a call.
 - A model that omits a required field is still told so by the tool, before any of this; this only makes sure the person is told too.
+- A question or a secret that was never answered keeps its card after the run ends, as it did before: the person may still answer it, or leave it, and only `tool_end` closes it.

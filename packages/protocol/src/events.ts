@@ -157,7 +157,7 @@ function endRunningTools(messages: ChatMessage[]): ChatMessage[] {
     if (message.role !== "assistant") return message;
 
     const parts = message.parts.map((part) =>
-      part.type === "tool" && part.tool.status === "running"
+      part.type === "tool" && part.tool.status === "running" && !part.tool.questions
         ? { type: "tool" as const, tool: endedTool(part.tool, "error", TOOL_DID_NOT_RUN) }
         : part,
     );

@@ -12,6 +12,7 @@ import {
   isRunning,
   mentionToken,
   mergeLimits,
+  pendingQuestion,
   questionAnswers,
   withSenders,
   withWorkedTimes,
@@ -355,6 +356,12 @@ describe("answerableQuestion", () => {
   test("a question is not shown while the agent runs, nor after the run failed", () => {
     expect(answerableQuestion(asking, true, false)).toBeUndefined();
     expect(answerableQuestion(asking, false, true)).toBeUndefined();
+  });
+
+  test("a run that ends leaves the question it is waiting on answerable", () => {
+    const ended = applyEvent(asking, { type: "done" });
+    expect(pendingQuestion(ended)?.name).toBe("ask_user");
+    expect(answerableQuestion(ended, false, false)?.name).toBe("ask_user");
   });
 });
 
