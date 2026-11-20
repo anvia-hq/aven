@@ -1,4 +1,4 @@
-export const SANDBOX_PROVIDERS = ["boat", "spaces"] as const;
+export const SANDBOX_PROVIDERS = ["boat", "spaces", "lizard"] as const;
 
 export type SandboxProviderName = (typeof SANDBOX_PROVIDERS)[number];
 
@@ -7,6 +7,7 @@ export type SandboxSettings = {
   base: string;
   apiKey: string;
   runnerUrl: string;
+  project?: string;
 };
 
 let saved: SandboxSettings | null = null;
