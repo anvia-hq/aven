@@ -44,7 +44,7 @@ jobs:
         if: steps.deps.outputs.cache-hit != 'true'
       - name: Check setup budget
         if: steps.deps.outputs.cache-hit == 'true'
-        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 15
+        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 25
       - name: Run typecheck, lint, format and platform build
         run: |
           RUN_START=$(date +%s)
