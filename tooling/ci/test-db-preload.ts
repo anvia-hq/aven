@@ -3,8 +3,9 @@ import { existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { closeDefaultDatabase } from "@aven/db/client";
 import { SQL } from "bun";
+
+import { closeDefaultDatabase } from "../../packages/db/src/client";
 
 const DB_NAME_PATTERN = /^[a-z0-9_]+$/;
 
