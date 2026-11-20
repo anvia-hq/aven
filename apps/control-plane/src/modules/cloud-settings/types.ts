@@ -7,12 +7,3 @@ export type CloudSettingsView = {
   runnerUrl: string;
   keyHint: string;
 };
-
-export type StoredCloudSettings = {
-  provider: SandboxProviderName;
-  base: string;
-  project: string;
-  runnerUrl: string;
-  apiKeyEncrypted: string;
-  keyHint: string;
-};

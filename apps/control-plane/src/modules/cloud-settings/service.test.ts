@@ -1,20 +1,58 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
-import { platformSettings } from "@aven/db/schema/platform-settings";
+import { cloudProviderConfigs } from "@aven/db/schema/cloud-provider-configs";
 import { enabledCloudProviders } from "@aven/sandbox/cloud-config";
 import { setSandboxSettings } from "@aven/sandbox/settings";
 import { boatApiBase, boatApiKey } from "@aven/sandbox/boat/client";
 import { lizardApiBase, lizardApiKey, lizardProject } from "@aven/sandbox/lizard/config";
 import { spacesApiBase, spacesApiKey, spacesRunnerUrl } from "@aven/sandbox/spaces/config";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
-import { keepPlatformSettings } from "../../testing/kept-platform-settings";
 import { cloudSettingsService } from "./service";
 
-keepPlatformSettings(["spaces_settings"], { cleared: true });
+const insertedBefore = new Set<string>();
+const priorActiveIds: string[] = [];
 
-afterAll(() => setSandboxSettings(null));
+beforeAll(async () => {
+  const existing = await db
+    .select({ id: cloudProviderConfigs.id, status: cloudProviderConfigs.status })
+    .from(cloudProviderConfigs);
+
+  for (const row of existing) {
+    insertedBefore.add(row.id);
+
+    if (row.status === "active") priorActiveIds.push(row.id);
+  }
+
+  if (priorActiveIds.length > 0) {
+    await db
+      .update(cloudProviderConfigs)
+      .set({ status: "draining" })
+      .where(inArray(cloudProviderConfigs.id, priorActiveIds));
+  }
+
+  setSandboxSettings(null);
+});
+
+afterAll(async () => {
+  setSandboxSettings(null);
+  const current = await db.select({ id: cloudProviderConfigs.id }).from(cloudProviderConfigs);
+  const created = current.flatMap((row) => (insertedBefore.has(row.id) ? [] : [row.id]));
+
+  if (created.length > 0) {
+    await db.delete(cloudProviderConfigs).where(inArray(cloudProviderConfigs.id, created));
+  }
+
+  if (priorActiveIds.length > 0) {
+    await db
+      .update(cloudProviderConfigs)
+      .set({ status: "active" })
+      .where(inArray(cloudProviderConfigs.id, priorActiveIds));
+  }
+
+  await cloudSettingsService.apply();
+});
 
 describe("the Aven Cloud sandbox settings", () => {
   test("what is saved here is what a sandbox boot uses", async () => {
@@ -51,7 +89,11 @@ describe("the Aven Cloud sandbox settings", () => {
     expect(spacesApiBase()).toBe("https://other.example.com/api/v1");
   });
 
-  test("switching to another platform needs that platform's own key, and replaces the first", async () => {
+  test("switching to another platform needs that platform's own key, and drains the first", async () => {
+    const spacesConfigId = await cloudSettingsService.activeConfigId();
+
+    expect(spacesConfigId).not.toBeNull();
+
     await expect(
       cloudSettingsService.save({ provider: "boat", base: "", project: "", runnerUrl: "" }),
     ).rejects.toThrow("API key");
@@ -71,6 +113,10 @@ describe("the Aven Cloud sandbox settings", () => {
     expect(boatApiBase()).toBe("https://boat.dev/api/v1");
     expect(spacesApiKey()).toBeNull();
     expect(enabledCloudProviders()).toEqual(["boat"]);
+
+    const drainingCreds = await cloudSettingsService.credentialsFor(spacesConfigId!);
+
+    expect(drainingCreds?.apiKey).toBe("spk_saved_key");
 
     const lizard = await cloudSettingsService.save({
       provider: "lizard",
@@ -109,48 +155,57 @@ describe("the Aven Cloud sandbox settings", () => {
     ).rejects.toThrow("must be an http or https address");
   });
 
-  test("a row saved before there was a choice of platform is a spaces one", async () => {
-    const { encryptSecret } = await import("@aven/server-kit/crypto");
-    const value = JSON.stringify({
-      base: "https://old.example.com/api/v1",
-      runnerUrl: "",
-      apiKeyEncrypted: encryptSecret("spk_old_key"),
-      keyHint: "_key",
-    });
+  test("removing marks the active config draining and clears active settings", async () => {
+    const activeId = await cloudSettingsService.activeConfigId();
 
-    await db
-      .insert(platformSettings)
-      .values({ key: "spaces_settings", value })
-      .onConflictDoUpdate({ target: platformSettings.key, set: { value } });
-    await cloudSettingsService.apply();
+    expect(activeId).not.toBeNull();
 
-    expect(await cloudSettingsService.view()).toMatchObject({ provider: "spaces" });
-    expect(spacesApiKey()).toBe("spk_old_key");
-  });
-
-  test("removing forgets the sandbox", async () => {
     await cloudSettingsService.remove();
 
     expect(await cloudSettingsService.view()).toBeNull();
-    expect(spacesApiBase()).toBeNull();
+    expect(lizardApiKey()).toBeNull();
     expect(enabledCloudProviders()).toEqual([]);
+
+    const creds = await cloudSettingsService.credentialsFor(activeId!);
+
+    expect(creds?.apiKey).toBe("liz_saved_key");
   });
 
   test("removing what is not saved says so", () => {
     expect(cloudSettingsService.remove()).rejects.toThrow("No Aven Cloud sandbox is saved here");
   });
 
-  test("a row that cannot be read leaves the sandbox off rather than the server unstarted", async () => {
-    await db
-      .insert(platformSettings)
-      .values({ key: "spaces_settings", value: "not a value" })
-      .onConflictDoUpdate({ target: platformSettings.key, set: { value: "not a value" } });
+  test("an unreadable encrypted key leaves the sandbox off without wiping the config row", async () => {
+    const [inserted] = await db
+      .insert(cloudProviderConfigs)
+      .values({
+        provider: "spaces",
+        status: "active",
+        base: "https://broken.example.com/api/v1",
+        project: "",
+        runnerUrl: "",
+        apiKeyEncrypted: "not-valid-ciphertext",
+        keyHint: "nope",
+      })
+      .returning({ id: cloudProviderConfigs.id });
 
     await cloudSettingsService.apply();
 
     expect(spacesApiBase()).toBeNull();
-    expect(await cloudSettingsService.view()).toBeNull();
 
-    await db.delete(platformSettings).where(eq(platformSettings.key, "spaces_settings"));
+    const [stillThere] = await db
+      .select({
+        status: cloudProviderConfigs.status,
+        apiKeyEncrypted: cloudProviderConfigs.apiKeyEncrypted,
+      })
+      .from(cloudProviderConfigs)
+      .where(eq(cloudProviderConfigs.id, inserted!.id));
+
+    expect(stillThere).toEqual({
+      status: "active",
+      apiKeyEncrypted: "not-valid-ciphertext",
+    });
+
+    await db.delete(cloudProviderConfigs).where(eq(cloudProviderConfigs.id, inserted!.id));
   });
 });

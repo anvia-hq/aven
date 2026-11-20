@@ -52,7 +52,9 @@ export const cloudSandboxStore = {
       .update(cloudSandboxes)
       .set({
         externalId,
-        providerConfigId: providerConfigId ?? sql`${cloudSandboxes.providerConfigId}`,
+        providerConfigId: providerConfigId
+          ? sql`coalesce(${cloudSandboxes.providerConfigId}, ${providerConfigId})`
+          : sql`${cloudSandboxes.providerConfigId}`,
         version: sql`${cloudSandboxes.version} + 1`,
       })
       .where(eq(cloudSandboxes.runtimeId, runtimeId));
@@ -217,6 +219,7 @@ export const cloudSandboxStore = {
       .update(cloudSandboxes)
       .set({
         state: "absent",
+        providerConfigId: null,
         externalId: null,
         runtimeSnapshotName: null,
         dirty: false,
