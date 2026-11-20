@@ -7,6 +7,8 @@ import {
 } from "./cloud-config";
 import { RuntimeOfflineError } from "./offline";
 import type {
+  ExtendOptions,
+  ProviderCredentials,
   ProviderDeps,
   RunnerPlace,
   SandboxHub,
@@ -72,7 +74,11 @@ export function createSandboxRuntime<T extends SandboxRunner>(store: SandboxStor
 
     if (isCloudProvider(kind)) await store.admit?.(place.runtimeId);
 
-    return providerFor(kind, hub).start(place, offline);
+    const runner = await providerFor(kind, hub).start(place, offline);
+
+    if (isCloudProvider(kind)) await store.onStarted?.(place.runtimeId);
+
+    return runner;
   }
 
   async function releaseThread(hub: SandboxHub<T>, place: ThreadPlace) {
@@ -83,19 +89,26 @@ export function createSandboxRuntime<T extends SandboxRunner>(store: SandboxStor
     await providerFor(kind, hub).release(place, hub.get(place.runtimeId));
   }
 
-  async function stopCloudRuntime(runtimeId: string) {
+  async function stopCloudRuntime(runtimeId: string, credentials?: ProviderCredentials) {
     for (const name of cloudProviderNames()) {
       const record = await store.record({ provider: name, runtimeId, revoked: true });
 
-      if (record) await cloudProvider(name).stop(record);
+      if (record) {
+        await cloudProvider(name).stop(record, credentials);
+        await store.onStopped?.(runtimeId);
+      }
     }
   }
 
-  async function extendCloudRuntime(runtimeId: string) {
+  async function extendCloudRuntime(
+    runtimeId: string,
+    options?: ExtendOptions,
+    credentials?: ProviderCredentials,
+  ) {
     for (const name of cloudProviderNames()) {
       const record = await store.record({ provider: name, runtimeId, revoked: true });
 
-      if (record) await cloudProvider(name).extend(record);
+      if (record) await cloudProvider(name).extend(record, options, credentials);
     }
   }
 

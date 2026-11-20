@@ -145,9 +145,9 @@ export class SpacesClient {
     await this.#request("POST", `${this.#path(sandboxId)}/stop`, apiKey, {});
   }
 
-  async extend(apiKey: string, sandboxId: string) {
+  async extend(apiKey: string, sandboxId: string, ttlSeconds = spacesAutoStopSeconds()) {
     await this.#request("PATCH", this.#path(sandboxId), apiKey, {
-      ttlSeconds: spacesAutoStopSeconds(),
+      ttlSeconds,
     });
   }
 
