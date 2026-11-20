@@ -9,7 +9,7 @@
     "./schema/*": "./src/schema/*.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p .",
+    "typecheck": "bun check -p .",
     "db:generate": "bun --bun --env-file=../../.env run drizzle-kit generate",
     "db:migrate": "bun --env-file=../../.env src/migrate.ts",
     "db:push": "bun --bun --env-file=../../.env run drizzle-kit push",

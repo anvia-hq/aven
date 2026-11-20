@@ -3,7 +3,6 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
 const PLUGIN = resolve(import.meta.dir, "../aven-plugin.mjs");
-const OXLINT = resolve(import.meta.dir, "../../../node_modules/.bin/oxlint");
 
 const run = (ruleName, code, filename, fix) => {
   const dir = mkdtempSync(join(tmpdir(), "aven-oxlint-"));
@@ -21,11 +20,11 @@ const run = (ruleName, code, filename, fix) => {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, code);
 
-    const args = ["-c", ".oxlintrc.json", "--format", "json"];
+    const args = ["lint", "-c", ".oxlintrc.json", "--format", "json"];
 
     if (fix) args.push("--fix");
 
-    const result = Bun.spawnSync([OXLINT, ...args, filename], { cwd: dir });
+    const result = Bun.spawnSync([process.execPath, ...args, filename], { cwd: dir });
     const parsed = JSON.parse(result.stdout.toString());
 
     return {

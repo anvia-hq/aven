@@ -65,6 +65,6 @@ export async function cloneRepository(
     await trackPushes(dir, run);
   } catch (error) {
     await clearDirectory(dir);
-    throw new Error(`Could not clone ${access.cloneUrl}: ${errorMessage(error)}`);
+    throw new Error(`Could not clone ${access.cloneUrl}: ${errorMessage(error)}`, { cause: error });
   }
 }

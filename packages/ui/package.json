@@ -10,7 +10,7 @@
     "./*": "./src/*.tsx"
   },
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "bun check -p ."
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
