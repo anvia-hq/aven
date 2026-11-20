@@ -10,3 +10,18 @@ export interface ShardVerification {
   duplicates: string[];
   slowFiles: { file: string; ms: number }[];
 }
+
+export interface PlaywrightJsonSuite {
+  file?: string;
+  suites?: PlaywrightJsonSuite[];
+  specs?: {
+    file?: string;
+    tests?: {
+      results?: { duration?: number }[];
+    }[];
+  }[];
+}
+
+export interface PlaywrightJsonReport {
+  suites?: PlaywrightJsonSuite[];
+}
