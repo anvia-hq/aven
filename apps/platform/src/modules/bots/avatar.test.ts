@@ -39,13 +39,13 @@ describe("avatarFor", () => {
 });
 
 describe("the ink a bubble takes on a tint", () => {
-  test("keeps the dark ink on the light half of the palette, and white on the deeper half", () => {
-    const light = ["#ff6eb4", "#00b2ff", "#00d46a", "#ff9500", "#ffc400"];
-    const deep = colors.filter((color) => !light.includes(color));
+  test("keeps white ink on the one palette colour where it reads best", () => {
+    const deep = ["#0a5cff"];
+    const light = colors.filter((color) => !deep.includes(color));
 
     for (const color of light) expect(isLightTint(color)).toBe(true);
     for (const color of deep) expect(isLightTint(color)).toBe(false);
-    expect(deep).toHaveLength(colors.length - light.length);
+    expect(light).toHaveLength(colors.length - deep.length);
   });
 
   test("reads a colour set by hand by its luminance, not by the palette", () => {
