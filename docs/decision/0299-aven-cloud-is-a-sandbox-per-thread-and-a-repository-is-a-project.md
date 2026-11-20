@@ -1,6 +1,6 @@
 # Aven Cloud is a sandbox per thread, and a repository is a project
 
-Status: accepted. Superseded in part by 0308 (Aven stops a sandbox when it is idle instead of waiting for boat's auto-stop), by 0328 (the name of the built-in computer) and by 0348 (whose limits apply). Supersedes the persistent, one-sandbox-per-runtime parts of 0297 and builds the ephemeral model 0221 described. Adds to 0220, 0222, 0229 and 0276. Does not change 0218 (a folder project) or 0252 (a runner clones a repository into a folder). Decided 2026-11-15.
+Status: accepted. Superseded in part by 0308 (Aven stops a sandbox when it is idle instead of waiting for boat's auto-stop), by 0328 (the name of the built-in computer), by 0348 (whose limits apply) and by 0392 (expired sandboxes reset to absent for transparent restore). Supersedes the persistent, one-sandbox-per-runtime parts of 0297 and builds the ephemeral model 0221 described. Adds to 0220, 0222, 0229 and 0276. Does not change 0218 (a folder project) or 0252 (a runner clones a repository into a folder). Decided 2026-11-15.
 
 ## Context
 
