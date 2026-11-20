@@ -2,15 +2,19 @@ name: ci
 
 on:
   pull_request:
+  merge_group:
   push:
     branches: [main]
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
+
+env:
+  BUN_VERSION: 1.4.5
 
 jobs:
   check:
@@ -18,13 +22,23 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
         with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
+          filter: blob:none
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v4
+        id: deps
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            sandbox/node_modules
+          key: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock') }}
+          restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
+        if: steps.deps.outputs.cache-hit != 'true'
       - run: bun run typecheck
       - run: bun run lint
       - run: bun run format:check
@@ -32,16 +46,6 @@ jobs:
   test:
     name: unit tests
     runs-on: ubuntu-24.04
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: aven
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s
-          --health-retries 10
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven
       BETTER_AUTH_SECRET: ci-only-secret-of-at-least-thirty-two-characters
@@ -49,13 +53,30 @@ jobs:
       PROVIDER_ENCRYPTION_KEY: ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
         with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
+          filter: blob:none
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v4
+        id: deps
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            sandbox/node_modules
+          key: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock') }}
+          restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
+        if: steps.deps.outputs.cache-hit != 'true'
+      - name: Start Postgres
+        run: |
+          PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
+          printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' | sudo tee -a "$PG_CONF" >/dev/null
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
+          sudo -u postgres createdb -O postgres aven
       - run: git config --global user.name ci && git config --global user.email ci@example.com
       - run: bun packages/db/src/migrate.ts
       - run: bun test apps packages sandbox tooling
@@ -67,35 +88,34 @@ jobs:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_PASSWORD: postgres
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s
-          --health-retries 10
     env:
       E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_e2e
+      E2E_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
+        with:
+          filter: blob:none
       - uses: oven-sh/setup-bun@v2
-      - uses: actions/cache@v4
         with:
-          path: ~/.bun/install/cache
-          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-          restore-keys: bun-${{ runner.os }}-
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache@v4
+        id: deps
+        with:
+          path: |
+            node_modules
+            apps/*/node_modules
+            packages/*/node_modules
+            sandbox/node_modules
+          key: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock') }}
+          restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
-      - uses: actions/cache@v4
-        id: browsers
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
-      - run: bunx playwright install --with-deps chromium
-        if: steps.browsers.outputs.cache-hit != 'true'
-      - run: bunx playwright install-deps chromium
-        if: steps.browsers.outputs.cache-hit == 'true'
+        if: steps.deps.outputs.cache-hit != 'true'
+      - name: Start Postgres
+        run: |
+          PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
+          printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' | sudo tee -a "$PG_CONF" >/dev/null
+          sudo systemctl start postgresql
+          sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
       - run: bun run test:e2e --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v4
         if: failure()

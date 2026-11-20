@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          filter: blob:none
       - name: Check that every commit is signed off
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
