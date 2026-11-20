@@ -8,7 +8,7 @@ import { users } from "@aven/db/schema/users";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import { eq } from "drizzle-orm";
 
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 import { createMemoryStore } from "../../memory-store";
 import { auth, authService } from "../auth/service";
 import { RuntimeHub } from "./hub";

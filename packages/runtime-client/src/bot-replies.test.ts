@@ -13,10 +13,10 @@ import { z } from "zod";
 
 import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
 import type { Emit, RunInput } from "@aven/agent-backend/types";
-import { ArtifactStore } from "./artifacts";
+import { ArtifactStore } from "./files/artifacts";
 import { noProcesses } from "./thread-processes";
-import { SkillStore } from "./skills";
-import { UploadStore } from "./uploads";
+import { SkillStore } from "./files/skills";
+import { UploadStore } from "./files/uploads";
 import type { McpNote, SkillListing } from "@aven/agents/types";
 import type { AskQuestion, CreateBot } from "@aven/agents/tools/types";
 import type { RunAttachment, RunEvent, RuntimeToControlPlane } from "@aven/protocol/types";

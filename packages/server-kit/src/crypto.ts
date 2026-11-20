@@ -8,25 +8,33 @@ const IV_BYTES = 12;
 
 const TAG_BYTES = 16;
 
-function keyFromEnvironment() {
+let cachedRaw: string | undefined;
+let cachedKey: Buffer | undefined;
+
+function encryptionKey() {
   const raw = process.env.PROVIDER_ENCRYPTION_KEY;
+
+  if (cachedKey && raw === cachedRaw) return cachedKey;
+
   const bytes = raw ? Buffer.from(raw, "base64") : Buffer.alloc(0);
 
   if (bytes.length !== 32) throw new Error(KEY_ERROR);
 
+  cachedRaw = raw;
+  cachedKey = bytes;
   return bytes;
 }
 
-const KEY = keyFromEnvironment();
-
 export function encryptSecret(plain: string) {
+  const key = encryptionKey();
   const iv = randomBytes(IV_BYTES);
-  const cipher = createCipheriv("aes-256-gcm", KEY, iv);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
   const data = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
   return [iv, cipher.getAuthTag(), data].map((part) => part.toString("base64")).join(".");
 }
 
 export function decryptSecret(stored: string) {
+  const key = encryptionKey();
   const parts = stored.split(".").map((part) => Buffer.from(part, "base64"));
   const [iv, tag, data] = parts;
 
@@ -41,7 +49,7 @@ export function decryptSecret(stored: string) {
     throw new Error("Stored secret is malformed");
   }
 
-  const decipher = createDecipheriv("aes-256-gcm", KEY, iv);
+  const decipher = createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
 }

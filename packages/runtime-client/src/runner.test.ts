@@ -10,7 +10,7 @@ import { z } from "zod";
 import { startRuntime } from "./runner";
 import { noProcesses } from "./thread-processes";
 import { directoryWorkspaces } from "./testing/directory-workspaces";
-import { goalSessionMarker } from "./goal-report";
+import { goalSessionMarker } from "./runs/goal-report";
 import { fakeControlPlane } from "./testing/fake-control-plane";
 import { gitFixture, sh } from "./testing/git-fixture";
 import { journalPath } from "@aven/agent-backend/testing/journal-path";

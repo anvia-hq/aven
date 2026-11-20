@@ -19,4 +19,11 @@ describe("viewer frames", () => {
   test("a frame too short for a viewer id is refused", () => {
     expect(decodeViewerFrame(new Uint8Array(15))).toBeNull();
   });
+
+  test("refuses viewer ids that are not 32 hex characters", () => {
+    const payload = new Uint8Array([1, 2]);
+    for (const bad of ["", "short", "1234", `${crypto.randomUUID()}00`, "z".repeat(32)]) {
+      expect(() => encodeViewerFrame(bad, payload)).toThrow("Invalid viewer id");
+    }
+  });
 });

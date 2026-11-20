@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 
 import { directoryWorkspaces } from "./testing/directory-workspaces";
-import { secretRedactor } from "./secret-redaction";
+import { secretRedactor } from "./security/secret-redaction";
 import { processView, threadProcesses } from "./thread-processes";
 
 const info = (command: string, args: string[]) => ({

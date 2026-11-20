@@ -1,4 +1,4 @@
-import { imageType } from "@aven/agents/image-type";
+import { imageType } from "@aven/protocol/image-type";
 import { ATTACHMENT_LIMITS } from "@aven/protocol/events";
 import { ARTIFACT_EXTENSIONS } from "@aven/protocol/runtime-wire";
 

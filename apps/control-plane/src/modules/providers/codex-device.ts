@@ -1,6 +1,6 @@
 import { UnprocessableError } from "@aven/server-kit/errors";
 
-import type { CodexAuthFile } from "@aven/protocol/codex-auth";
+import type { CodexAuthFile } from "@aven/protocol/types";
 
 const ISSUER = "https://auth.openai.com";
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";

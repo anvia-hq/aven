@@ -1,10 +1,9 @@
 import { delimiter } from "node:path";
+import { errorMessage } from "@aven/agents/values";
 
 import { HostSandboxes } from "./host-sandboxes";
 import { startRuntime } from "./runner";
 import { journalPathIn } from "./runtime-home";
-
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 export const servedFolders = (value: string | undefined) =>
   (value ?? "").split(delimiter).flatMap((dir) => {

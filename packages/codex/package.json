@@ -15,7 +15,6 @@
     "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
     "@aven/protocol": "workspace:*",
-    "@openai/codex-sdk": "^0.169.0",
-    "zod": "^4.6.7"
+    "@openai/codex-sdk": "^0.169.0"
   }
 }

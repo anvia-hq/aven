@@ -1,15 +1,21 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  NO_USAGE,
   SUBAGENT_TOOLS_KEPT,
+  addUsage,
   answerableQuestion,
   applyEvent,
+  applyLimits,
+  applyUsage,
   isRunning,
   mentionToken,
+  mergeLimits,
+  questionAnswers,
   withSenders,
   withWorkedTimes,
 } from "./events";
-import type { ChatMessage, RunEvent } from "./types";
+import type { ChatMessage, PlanLimit, RunEvent, ToolPart } from "./types";
 
 type Fixture = {
   name: string;
@@ -321,5 +327,98 @@ describe("answerableQuestion", () => {
   test("a question is not shown while the agent runs, nor after the run failed", () => {
     expect(answerableQuestion(asking, true, false)).toBeUndefined();
     expect(answerableQuestion(asking, false, true)).toBeUndefined();
+  });
+});
+
+describe("usage and plan limits", () => {
+  test("addUsage sums each token counter", () => {
+    expect(
+      addUsage(
+        { inputTokens: 10, outputTokens: 20, cacheWriteTokens: 3, cacheReadTokens: 4 },
+        { inputTokens: 5, outputTokens: 6, cacheWriteTokens: 7, cacheReadTokens: 8 },
+      ),
+    ).toEqual({ inputTokens: 15, outputTokens: 26, cacheWriteTokens: 10, cacheReadTokens: 12 });
+  });
+
+  test("applyUsage accumulates totals, updates context, and preserves existing context and limits", () => {
+    const turn1 = { inputTokens: 10, outputTokens: 5, cacheWriteTokens: 1, cacheReadTokens: 2 };
+    const turn2 = { inputTokens: 20, outputTokens: 15, cacheWriteTokens: 0, cacheReadTokens: 4 };
+    const first = applyUsage(null, {
+      turn: turn1,
+      context: { usedTokens: 100, contextWindow: 1000 },
+    });
+    expect(first).toEqual({
+      totals: turn1,
+      context: { usedTokens: 100, contextWindow: 1000 },
+      limits: undefined,
+    });
+
+    const withLimit = applyLimits(first, [{ window: "five_hour", status: "allowed", percent: 25 }]);
+    const second = applyUsage(withLimit, { turn: turn2 });
+    expect(second).toEqual({
+      totals: { inputTokens: 30, outputTokens: 20, cacheWriteTokens: 1, cacheReadTokens: 6 },
+      context: { usedTokens: 100, contextWindow: 1000 },
+      limits: [{ window: "five_hour", status: "allowed", percent: 25 }],
+    });
+  });
+
+  test("mergeLimits replaces matching windows and keeps untouched ones", () => {
+    const current: PlanLimit[] = [
+      { window: "five_hour", status: "allowed", percent: 20 },
+      { window: "seven_day", status: "allowed", percent: 10 },
+    ];
+    expect(
+      mergeLimits(current, [
+        { window: "five_hour", status: "allowed_warning", percent: 85, resetsAt: 1234 },
+      ]),
+    ).toEqual([
+      { window: "seven_day", status: "allowed", percent: 10 },
+      { window: "five_hour", status: "allowed_warning", percent: 85, resetsAt: 1234 },
+    ]);
+  });
+
+  test("applyLimits initializes usage with NO_USAGE when starting from null", () => {
+    const limit: PlanLimit = { window: "seven_day", status: "rejected", percent: 100 };
+    expect(applyLimits(null, [limit])).toEqual({
+      totals: NO_USAGE,
+      context: undefined,
+      limits: [limit],
+    });
+  });
+});
+
+describe("questionAnswers", () => {
+  const tool = (overrides: Partial<ToolPart>): ToolPart => ({
+    id: "q1",
+    name: "ask_user",
+    target: "",
+    status: "done",
+    ...overrides,
+  });
+
+  test("extracts valid question answers from a completed tool output", () => {
+    const output = JSON.stringify({
+      answers: [
+        { questionId: "scope", value: "API" },
+        { questionId: "bad", value: 123 },
+        null,
+        { questionId: "confirm", value: "Yes" },
+      ],
+    });
+    expect(questionAnswers(tool({ output }))).toEqual([
+      { questionId: "scope", value: "API" },
+      { questionId: "confirm", value: "Yes" },
+    ]);
+  });
+
+  test("returns an empty array when running, empty, malformed, or lacking an answers array", () => {
+    expect(
+      questionAnswers(
+        tool({ status: "running", output: '{"answers":[{"questionId":"a","value":"b"}]}' }),
+      ),
+    ).toEqual([]);
+    expect(questionAnswers(tool({ output: undefined }))).toEqual([]);
+    expect(questionAnswers(tool({ output: "not-json" }))).toEqual([]);
+    expect(questionAnswers(tool({ output: '{"answers":"nope"}' }))).toEqual([]);
   });
 });

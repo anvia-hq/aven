@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { AnyTool } from "@anvia/core";
 
-import { git } from "./git-clone";
+import { git } from "./git/git-clone";
 import { HostSandboxes } from "./host-sandboxes";
 import { createRemoteRepo } from "./testing/remote-repo";
 
@@ -140,14 +140,25 @@ describe("a runner that works on this machine", () => {
     expect(skills).toBe(join(home, "skills", "threads", "t1"));
   });
 
-  test("says it is awake, has no desktop and opens a shell in the thread's folder", async () => {
+  test("says it is awake and opens a shell in the thread's folder", async () => {
     const { sandbox } = await runner();
     await sandbox.acquire({ id: "t1" });
 
     expect(sandbox.computerState("t1")).toBe("awake");
-    expect(sandbox.desktop()).toBeUndefined();
     const shell = sandbox.shell("t1", "s1");
     expect(shell.env.AVEN_THREAD_DIR).toBe(sandbox.paths("t1").workspace);
+  });
+
+  test("reuses the existing DirectorySandbox across repeated acquire calls without orphaning processes", async () => {
+    const { sandbox } = await runner();
+    const first = await sandbox.acquire({ id: "t-reuse" });
+    const started = await first.processes.start("sleep 30");
+
+    const second = await sandbox.acquire({ id: "t-reuse" });
+    const listed = await second.processes.list();
+
+    expect(listed.some((proc) => proc.id === started.id && proc.status === "running")).toBe(true);
+    await sandbox.release("t-reuse");
   });
 
   describe("a project that is a folder on the machine", () => {

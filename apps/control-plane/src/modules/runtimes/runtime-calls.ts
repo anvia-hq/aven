@@ -5,36 +5,38 @@ import { runMemoryCommand } from "../memory/commands";
 import { explainMachineCallError } from "./machine-call-error";
 import { runtimesService } from "./service";
 import {
-  parseAppendParams,
-  parseBotNotesParams,
-  parseBotProjectParams,
-  parseMemoryNotesParams,
+  parseBotApiParams,
+  parseBotCockpitParams,
   parseBotCreateParams,
   parseBotDeleteParams,
   parseBotGoalParams,
   parseBotMcpParams,
-  parseBotProviderParams,
-  parseBotApiParams,
-  parseBotThreadParams,
   parseBotMemoryParams,
+  parseBotNotesParams,
+  parseBotProjectParams,
+  parseBotProviderParams,
   parseBotQuestionParams,
   parseBotReactParams,
   parseBotScheduleParams,
   parseBotSendParams,
   parseBotSkillParams,
+  parseBotThreadParams,
   parseBotUpdateParams,
-  parseMcpReportParams,
+} from "@aven/protocol/wire/bot-calls";
+import {
+  parseAppendParams,
+  parseCockpitReadParams,
   parseCodexAuthParams,
   parseEnvironmentReadParams,
   parseEnvironmentSaveParams,
-  parseMemoryParams,
-  parseBotCockpitParams,
-  parseCockpitReadParams,
   parseForkStartParams,
   parseForkStatusParams,
   parseMachineRelayParams,
+  parseMcpReportParams,
+  parseMemoryNotesParams,
+  parseMemoryParams,
   parseSkillsGetParams,
-} from "@aven/protocol/wire";
+} from "@aven/protocol/wire/run-calls";
 import type { CallBotReply, CallRun, RuntimeCallContext } from "./types";
 import type { CallMethod } from "@aven/protocol/types";
 

@@ -15,7 +15,6 @@
     "@anvia/core": "^1.21.0",
     "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
-    "@aven/protocol": "workspace:*",
-    "zod": "^4.6.7"
+    "@aven/protocol": "workspace:*"
   }
 }

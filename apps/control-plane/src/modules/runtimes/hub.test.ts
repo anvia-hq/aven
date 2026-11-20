@@ -4,7 +4,7 @@ import { Elysia } from "elysia";
 import { db } from "@aven/db/client";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 import { createMemoryStore } from "../../memory-store";
 import { seedOrgPair } from "../../testing/seed-org-pair";
 import { signUp } from "../../testing/sign-up";

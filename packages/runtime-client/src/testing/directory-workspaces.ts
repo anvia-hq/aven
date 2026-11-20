@@ -2,12 +2,12 @@ import { mkdtemp, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ArtifactStore } from "../artifacts";
-import { DirectorySandbox } from "../directory-sandbox";
-import { SkillStore } from "../skills";
-import { UploadStore } from "../uploads";
+import { ArtifactStore } from "../files/artifacts";
+import { DirectorySandbox } from "../sandboxes/directory-sandbox";
+import { SkillStore } from "../files/skills";
+import { UploadStore } from "../files/uploads";
 import { threadProcesses } from "../thread-processes";
-import { hasRunningProcesses, sandboxTools } from "../thread-tools";
+import { hasRunningProcesses, sandboxTools } from "../tools/thread-tools";
 import type { ThreadSandbox, ThreadWorkspaces } from "../types";
 
 export function directoryWorkspaces(seed?: (root: string) => Promise<void>): ThreadWorkspaces & {

@@ -1,5 +1,5 @@
 import type { COCKPIT_KINDS, TASK_PRIORITIES, TASK_STATUSES } from "./cockpit";
-import type { LensCaptureMode } from "./lens";
+import type { LENS_CAPTURE_MODES } from "./lens";
 import type { MCP_TARGETS } from "./mcp";
 import type { MEMORY_SCOPES } from "./memory";
 import type {
@@ -10,10 +10,31 @@ import type {
   PROVIDERS,
   BOAT_MACHINE_TYPES,
   RUNTIME_GITHUB_MODES,
-  RUNTIME_LIFETIMES,
   RUNTIME_PROVIDERS,
   MODEL_APIS,
 } from "./runtime-wire";
+
+export type LensCaptureMode = (typeof LENS_CAPTURE_MODES)[number];
+
+export type ParsedBotPrompt = {
+  id?: string;
+  quoted?: string;
+  from?: string;
+  note?: boolean;
+  text: string;
+};
+
+export type CodexAuthFile = {
+  auth_mode?: string;
+  OPENAI_API_KEY?: string | null;
+  tokens: {
+    id_token?: unknown;
+    access_token: string;
+    refresh_token: string;
+    account_id?: string | null;
+  };
+  last_refresh?: string;
+};
 
 export type BotAttentionReason = "question" | "goal" | "schedule" | "message";
 
@@ -428,11 +449,13 @@ export type RunOutcome = "response" | "blocked" | "interaction" | "error";
 
 export type AgentBackendKind = (typeof AGENT_BACKENDS)[number];
 
+export type AgentBackendCapability = "question" | "restart" | "steering" | "goals" | "compaction";
+
+export type AgentBackendCapabilities = Readonly<Record<AgentBackendCapability, boolean>>;
+
 export type RuntimeProviderKind = (typeof RUNTIME_PROVIDERS)[number];
 
 export type BoatMachineType = (typeof BOAT_MACHINE_TYPES)[number];
-
-export type RuntimeLifetime = (typeof RUNTIME_LIFETIMES)[number];
 
 export type RuntimeGithubMode = (typeof RUNTIME_GITHUB_MODES)[number];
 
@@ -595,8 +618,6 @@ export type RunnerUpdateResult =
 
 export type SandboxReleaseParams = { threadId: string };
 
-export type SandboxReleaseResult = { released: boolean };
-
 export type RunnerCallMethod =
   | ComputerCallMethod
   | DiffCallMethod
@@ -652,10 +673,39 @@ export type RunSecrets = {
   github?: RunGithub;
   identity?: RunIdentityCredential;
   mcp?: RunMcpServer[];
+  gatewayToken?: string;
+  webSearch?: RunWebSearch;
   claudeToken?: string;
   codexToken?: string;
   lens?: RunLens;
 };
+
+export type RunModelOptions = {
+  model?: RunModel;
+  backend?: AgentBackendKind;
+  claudeToken?: string;
+  claudeModel?: string;
+  claudeEffort?: string;
+  codexToken?: string;
+  codexModel?: string;
+  codexEffort?: string;
+};
+
+export type RunContextOptions = {
+  skills?: RunSkill[];
+  mcp?: RunMcpServer[];
+  webSearch?: RunWebSearch;
+  lens?: RunLens;
+  memory?: RunMemory;
+  cockpit?: CockpitAccess;
+};
+
+export type RunExecutionOptions = RunModelOptions &
+  RunContextOptions & {
+    github?: RunGithub;
+    env?: RunEnvVar[];
+    identity?: RunIdentityCredential;
+  };
 
 export type BotReplyInfo = {
   id: string;
@@ -674,7 +724,7 @@ export type BotReplyProject = { id: string; slug: string; repository: string; br
 export type BotPeer = { handle: string; name: string; description: string };
 
 export type ControlPlaneToRuntime =
-  | {
+  | ({
       type: "run.start";
       runId: string;
       thread: RunThreadInfo;
@@ -682,73 +732,26 @@ export type ControlPlaneToRuntime =
       compact?: boolean;
       attachments?: RunAttachment[];
       mentions?: MessageMention[];
-      skills?: RunSkill[];
-      mcp?: RunMcpServer[];
-      github?: RunGithub;
-      env?: RunEnvVar[];
-      identity?: RunIdentityCredential;
-      webSearch?: RunWebSearch;
-      lens?: RunLens;
-      memory?: RunMemory;
-      cockpit?: CockpitAccess;
-      model?: RunModel;
-      backend?: AgentBackendKind;
-      claudeToken?: string;
-      claudeModel?: string;
-      claudeEffort?: string;
-      codexToken?: string;
-      codexModel?: string;
-      codexEffort?: string;
-    }
-  | {
+    } & RunExecutionOptions)
+  | ({
       type: "run.resume";
       runId: string;
       thread: RunThreadInfo;
       continuation: unknown;
       response: unknown;
-      skills?: RunSkill[];
-      mcp?: RunMcpServer[];
-      github?: RunGithub;
-      env?: RunEnvVar[];
-      identity?: RunIdentityCredential;
-      webSearch?: RunWebSearch;
-      lens?: RunLens;
-      memory?: RunMemory;
-      cockpit?: CockpitAccess;
-      model?: RunModel;
-      backend?: AgentBackendKind;
-      claudeToken?: string;
-      claudeModel?: string;
-      claudeEffort?: string;
-      codexToken?: string;
-      codexModel?: string;
-      codexEffort?: string;
-    }
+    } & RunExecutionOptions)
   | { type: "run.cancel"; runId: string; reason: string }
-  | {
+  | ({
       type: "bot.reply";
       replyId: string;
       bot: BotReplyInfo;
       prompt: string;
-      model?: RunModel;
-      backend?: AgentBackendKind;
-      claudeToken?: string;
-      claudeModel?: string;
-      claudeEffort?: string;
-      codexToken?: string;
-      codexModel?: string;
-      codexEffort?: string;
       attachments?: RunAttachment[];
-      skills?: RunSkill[];
-      mcp?: RunMcpServer[];
-      memory?: RunMemory;
-      cockpit?: CockpitAccess;
       context?: string;
       projects?: BotReplyProject[];
-      webSearch?: RunWebSearch;
-      lens?: RunLens;
       machine?: string;
-    }
+    } & RunModelOptions &
+      RunContextOptions)
   | { type: "bot.cancel"; replyId: string; reason: string }
   | { type: "run.attach"; runId: string; after: number; secrets?: RunSecrets }
   | { type: "run.ack"; runId: string }
@@ -971,7 +974,7 @@ export type BotProjectParams = { replyId: string } & (
   | { op: "file"; projectId: string; path: string }
 );
 
-export type BotProjectEntry = { name: string; path: string; type: "file" | "directory" };
+export type BotProjectEntry = FolderFileEntry;
 
 export type BotProjected =
   | { entries: BotProjectEntry[] }

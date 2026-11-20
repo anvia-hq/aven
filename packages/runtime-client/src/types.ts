@@ -64,13 +64,13 @@ import type {
 } from "@anvia/durable";
 import type { SandboxRuntime } from "@anvia/sandbox";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
-import type { RunOutbox } from "./run-outbox";
-import type { RunRecords } from "./run-records";
-import type { IdleRelease } from "./idle-release";
-import type { ProcessEndWatch } from "./process-end-watch";
-import type { ArtifactStore } from "./artifacts";
-import type { UploadStore } from "./uploads";
-import type { SkillStore } from "./skills";
+import type { RunOutbox } from "./runs/run-outbox";
+import type { RunRecords } from "./runs/run-records";
+import type { IdleRelease } from "./sandboxes/idle-release";
+import type { ProcessEndWatch } from "./processes/process-end-watch";
+import type { ArtifactStore } from "./files/artifacts";
+import type { UploadStore } from "./files/uploads";
+import type { SkillStore } from "./files/skills";
 import type {
   AgentBackendSet,
   DurableEnd,
@@ -273,10 +273,12 @@ export type DriverContext = {
   stopped(): boolean;
 };
 
+export type StoredRunModel = Omit<RunModel, "gatewayToken">;
+
 export type RunRecord = {
   runId: string;
   thread: RunThreadInfo;
-  model?: RunModel;
+  model?: StoredRunModel;
   kind: "start" | "answer";
   prompt?: string;
   compact?: boolean;
@@ -285,7 +287,6 @@ export type RunRecord = {
   skills?: RunSkill[];
   skillListing?: SkillListing[];
   memory?: RunMemory;
-  webSearch?: RunWebSearch;
   cockpit?: CockpitAccess;
   agentId: string;
   durableId?: string;
@@ -449,8 +450,6 @@ export type ThreadProcesses = {
 export type Timing = {
   mark(step: string): void;
 };
-
-export type IdentityRelay = { port: number; stop: () => void };
 
 export type Spawned = ReturnType<typeof Bun.spawn>;
 

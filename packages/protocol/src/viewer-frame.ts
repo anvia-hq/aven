@@ -1,8 +1,15 @@
 const VIEWER_ID_BYTES = 16;
+const VIEWER_ID_HEX = /^[0-9a-f]{32}$/i;
 
 export function encodeViewerFrame(viewerId: string, payload: Uint8Array): Uint8Array<ArrayBuffer> {
+  const hex = viewerId.replaceAll("-", "");
+
+  if (!VIEWER_ID_HEX.test(hex)) {
+    throw new Error("Invalid viewer id: expected 32 hex characters");
+  }
+
   const frame = new Uint8Array(VIEWER_ID_BYTES + payload.length);
-  frame.set(Uint8Array.fromHex(viewerId.replaceAll("-", "")));
+  frame.set(Uint8Array.fromHex(hex));
   frame.set(payload, VIEWER_ID_BYTES);
   return frame;
 }
