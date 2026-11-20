@@ -419,7 +419,8 @@ export const runtimesService = {
       .update(runtimes)
       .set({ boatSandboxId: sandboxId })
       .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
-    const configId = await activeProviderConfigId();
+    const existing = await cloudSandboxStore.get(id);
+    const configId = existing?.providerConfigId ?? (await activeProviderConfigId());
     await cloudSandboxStore.setExternalId(id, sandboxId, configId);
   },
 

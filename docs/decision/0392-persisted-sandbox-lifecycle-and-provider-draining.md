@@ -29,5 +29,5 @@ Cloud sandbox lifecycle state was previously split across four in-memory maps (`
 ## Consequences
 
 - Adding a new sandbox provider (such as Lizard) requires only its isolated folder under `sandbox/src/<name>/`, its capability declaration, and its registry entry — the state machine, drain logic, backoff, and spend brake apply automatically.
-- Existing installations upgrade cleanly: legacy `spaces_settings` rows sync into `cloud_provider_configs` on startup, and pre-existing cloud `runtimes` rows are lazily backfilled into `cloud_sandboxes` by the reconciler.
+- Sandbox provider settings are stored exclusively in `cloud_provider_configs` (no dual-write or fallback to `platform_settings["spaces_settings"]`), and pre-existing cloud `runtimes` rows are lazily backfilled into `cloud_sandboxes` by the reconciler.
 - Legacy already-revoked cloud runtimes remain rejected with `EXPIRED_COMPUTER`, while newly expired sandboxes reset to `absent` and transparently recreate on the next call.
