@@ -427,6 +427,7 @@ test.describe("bots", () => {
     await expect(image).toBeVisible();
     await expect.poll(() => image.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(1);
 
+    await expect(bubble(page, "Hey there!")).toBeVisible();
     const heard = page
       .locator('[data-slot="bubble-content"], [data-role="user"]')
       .filter({ hasText: "You said:" });
