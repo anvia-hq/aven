@@ -44,7 +44,7 @@ jobs:
         if: steps.deps.outputs.cache-hit != 'true'
       - name: Check setup budget
         if: steps.deps.outputs.cache-hit == 'true'
-        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 20
+        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 15
       - name: Run typecheck, lint, format and platform build
         run: |
           RUN_START=$(date +%s)
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           filter: blob:none
-          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - uses: ./.github/actions/setup-bun-pinned
         with:
           version: ${{ env.BUN_VERSION }}
@@ -115,7 +115,7 @@ jobs:
             exit 0
           fi
           bun tooling/ci/select-tests.ts \
-            --base="${{ github.event.pull_request.base.sha }}" \
+            --base=HEAD^1 \
             --github-output="$GITHUB_OUTPUT"
           full_unit=$(grep '^full_unit=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
           use_changed=$(grep '^use_bun_changed=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
@@ -186,7 +186,7 @@ jobs:
                 --parallel=4 \
                 --isolate \
                 --preload ./tooling/ci/test-db-preload.ts \
-                --changed="${{ github.event.pull_request.base.sha }}" \
+                --changed=HEAD^1 \
                 --pass-with-no-tests \
                 apps packages sandbox tooling
             fi
@@ -241,7 +241,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           filter: blob:none
-          fetch-depth: ${{ github.event_name == 'pull_request' && 0 || 1 }}
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - uses: ./.github/actions/setup-bun-pinned
         with:
           version: ${{ env.BUN_VERSION }}
@@ -258,7 +258,7 @@ jobs:
             specs=$(bun tooling/ci/e2e-shards.ts plan --shard=${{ matrix.shard }}/3 --timings=.ci-timings/e2e-timings.json | paste -sd, -)
           else
             bun tooling/ci/select-tests.ts \
-              --base="${{ github.event.pull_request.base.sha }}" \
+              --base=HEAD^1 \
               --github-output="$GITHUB_OUTPUT"
             full_e2e=$(grep '^full_e2e=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
             if [ "$full_e2e" = "true" ]; then
