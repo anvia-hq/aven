@@ -1,3 +1,5 @@
+import { useLayoutEffect } from "react";
+
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
@@ -23,16 +25,28 @@ export function ImageViewer({
     if (open) onIndex((index + by + images.length) % images.length);
   };
 
+  useLayoutEffect(() => {
+    if (!open || images.length <= 1) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        onIndex((index - 1 + images.length) % images.length);
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        onIndex((index + 1) % images.length);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [open, index, images.length, onIndex]);
+
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent
-        className="flex h-[80vh] w-[80vw] max-w-[80vw] flex-col gap-0 p-2 sm:max-w-[80vw]"
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft") step(-1);
-
-          if (event.key === "ArrowRight") step(1);
-        }}
-      >
+      <DialogContent className="flex h-[80vh] w-[80vw] max-w-[80vw] flex-col gap-0 p-2 sm:max-w-[80vw]">
         <DialogTitle className="sr-only">{current?.label ?? "Image"}</DialogTitle>
         {current && (
           <img
