@@ -13,7 +13,7 @@ export type SandboxPaths = {
   skills: string;
 };
 
-export type MachineProvider = "boat" | "spaces";
+export type MachineProvider = "boat" | "spaces" | "lizard";
 
 export type SentExtras = {
   paths?: SandboxPaths;

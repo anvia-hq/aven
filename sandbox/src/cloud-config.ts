@@ -1,16 +1,18 @@
 import { boatModule } from "./boat/module";
+import { lizardModule } from "./lizard/module";
 import { spacesModule } from "./spaces/module";
-import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
+import { CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
 import { SANDBOX_PROVIDERS } from "./settings";
-import type { CloudProviderModule } from "./types";
+import type { CloudProviderModule, ProviderCredentials } from "./types";
 
-export { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID };
+export { CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, SPACES_RUNTIME_ID };
 
 export const CLOUD_OFF = "Aven Cloud is turned off on this server";
 
 const CLOUD_PROVIDERS = {
   boat: { templateId: CLOUD_RUNTIME_ID, module: boatModule },
   spaces: { templateId: SPACES_RUNTIME_ID, module: spacesModule },
+  lizard: { templateId: LIZARD_RUNTIME_ID, module: lizardModule },
 } as const;
 
 export type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
@@ -42,6 +44,7 @@ export const disabledTemplateIds = () =>
 const CLOUD_PROVIDER_LABELS: Record<CloudProviderName, string> = {
   boat: "boat.dev",
   spaces: "Spaces",
+  lizard: "lizard.build",
 };
 
 export const cloudTemplateName = (name: CloudProviderName) => CLOUD_PROVIDER_LABELS[name];
@@ -56,8 +59,12 @@ export const cloudProviderApiKey = (name: string) =>
 
 export const cloudProviderNames = () => NAMES;
 
-export const cloudSandboxRemover = async (provider: string, sandboxId: string) => {
+export const cloudSandboxRemover = async (
+  provider: string,
+  sandboxId: string,
+  credentials?: ProviderCredentials,
+) => {
   if (!isCloudProvider(provider)) return true;
 
-  return CLOUD_PROVIDERS[provider].module.removeSandbox(sandboxId);
+  return CLOUD_PROVIDERS[provider].module.removeSandbox(sandboxId, credentials);
 };

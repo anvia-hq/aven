@@ -160,6 +160,7 @@ describe("reaching a runtime's sandbox", () => {
     expect(asked).toEqual([
       { provider: "boat", revoked: true },
       { provider: "spaces", revoked: true },
+      { provider: "lizard", revoked: true },
     ]);
   });
 });

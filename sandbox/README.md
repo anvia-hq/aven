@@ -1,23 +1,24 @@
 # sandbox
 
 How a runtime's machine comes to exist, and is woken, stopped and freed: the Aven Cloud providers
-(`boat`, `spaces`) and the plumbing they share. `@aven/sandbox` is a workspace package, shipped as
+(`boat`, `spaces`, `lizard`) and the plumbing they share. `@aven/sandbox` is a workspace package, shipped as
 TypeScript source; the control plane imports it and lends it the database.
 
 Decision: `docs/decision/0307-sandbox-providers-are-their-own-package.md`.
 
 ## Layout
 
-| File                       | What it holds                                                                                 |
-| -------------------------- | --------------------------------------------------------------------------------------------- |
-| `src/types.ts`             | The interfaces: `SandboxProvider`, `CloudProviderModule`, `SandboxStore`, `SandboxRecord`.    |
-| `src/cloud-config.ts`      | The registry: one entry per provider (template runtime id, module), and which are offered.    |
-| `src/runtime.ts`           | `reachRunner`, `releaseThread`, `stopCloudRuntime` over a `SandboxStore`.                     |
-| `src/cloud-expiry.ts`      | The 48-hour sweep over idle Aven Cloud computers.                                             |
-| `src/cloud-id.ts`          | The runtime ids of the Aven Cloud templates, which rows already name.                         |
-| `src/settings.ts`          | `SANDBOX_PROVIDERS` and the one saved sandbox (`SandboxSettings`) the control plane hands in. |
-| `src/offline.ts`           | `RuntimeOfflineError`.                                                                        |
-| `src/boat/`, `src/spaces/` | One provider each: its client, boot script, wake flow, stop, lifetime and `module.ts`.        |
+| File                                      | What it holds                                                                                                                                                        |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/types.ts`                            | The interfaces: `SandboxProvider`, `CloudProviderModule`, `ProviderCapabilities`, `ProviderCredentials`, `SandboxStore`, `SandboxRecord`, and lifecycle state types. |
+| `src/lifecycle.ts`                        | Pure sandbox lifecycle state machine: activity/reclaim/hard-wall clocks, TTL clamping, delete backoff, and spend brake evaluation.                                   |
+| `src/cloud-config.ts`                     | The registry: one entry per provider (template runtime id, module), and which are offered.                                                                           |
+| `src/runtime.ts`                          | `reachRunner`, `releaseThread`, `stopCloudRuntime`, `extendCloudRuntime` over a `SandboxStore`.                                                                      |
+| `src/cloud-expiry.ts`                     | The sweep helper over idle Aven Cloud computers.                                                                                                                     |
+| `src/cloud-id.ts`                         | The runtime ids of the Aven Cloud templates, which rows already name.                                                                                                |
+| `src/settings.ts`                         | `SANDBOX_PROVIDERS` and the one saved sandbox (`SandboxSettings`) the control plane hands in.                                                                        |
+| `src/offline.ts`                          | `RuntimeOfflineError`.                                                                                                                                               |
+| `src/boat/`, `src/spaces/`, `src/lizard/` | One provider each: its client, boot script, wake flow, stop, lifetime and `module.ts`.                                                                               |
 
 A provider imports nothing of the other's. The tests sit beside what they cover.
 
