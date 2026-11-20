@@ -220,6 +220,9 @@ export function startRuntime(options: RuntimeOptions) {
       case "run.cancel":
         await driver.cancel(message.runId, message.reason);
         return;
+      case "run.drain":
+        await driver.drain(message.runId, message.reason);
+        return;
       case "bot.reply":
         bots.start(message);
         return;

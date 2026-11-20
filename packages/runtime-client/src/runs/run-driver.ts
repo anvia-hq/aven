@@ -34,7 +34,13 @@ import { toolsForRun } from "../tools/run-tools";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { createHostedRunInput } from "./hosted-input";
-import type { RunModel, RunSecrets, RunThreadInfo, SteerResult } from "@aven/protocol/types";
+import type {
+  RunDrainReason,
+  RunModel,
+  RunSecrets,
+  RunThreadInfo,
+  SteerResult,
+} from "@aven/protocol/types";
 import type {
   AgentBackend,
   DurableEnd,
@@ -62,6 +68,7 @@ type Live = {
   followed?: Pick<FollowedRun, "cancel">;
   goal?: FollowedGoal;
   cancelReason?: string;
+  drained?: boolean;
   steers: { steerId: string; message: AgentPrompt }[];
   mcp?: ConnectedMcp;
   mcpGoing?: Promise<ConnectedMcp | undefined>;
@@ -91,6 +98,15 @@ const withoutPrompt = (messages: Message[]) =>
 const FIRST_OUTPUT = new Set(["text", "reasoning", "tool_start"]);
 
 const RUN_GONE = "The run is gone: this runner has no record of it";
+
+const DRAIN_PROMPTS: Record<RunDrainReason, string> = {
+  hard_wall:
+    "This sandbox reached its maximum continuous runtime limit and is stopping. Finish your current step cleanly, do not start new work, summarize where things stand, and end your turn now.",
+  budget:
+    "This workspace reached its cloud sandbox spend limit and the sandbox is stopping. Finish your current step cleanly, do not start new work, summarize where things stand, and end your turn now.",
+  provider_switch:
+    "This sandbox provider is being drained and the sandbox is stopping. Finish your current step cleanly, do not start new work, summarize where things stand, and end your turn now.",
+};
 
 function namedBackend(value: unknown) {
   return typeof value === "string" ? value : undefined;
@@ -935,6 +951,33 @@ export function createRunDriver(context: DriverContext) {
       const taken = await backend.steer(record.durableId, message, steerId);
 
       return { status: taken ? "queued" : "closed" };
+    },
+
+    async drain(runId: string, reason: RunDrainReason) {
+      const run = live.get(runId);
+      const record = records.get(runId);
+
+      if (!run || !record || record.done || run.drained) return;
+
+      run.drained = true;
+      const steerId = `drain-${runId}-${reason}`;
+      const prompt = DRAIN_PROMPTS[reason];
+
+      if (record.phase === "goal") {
+        await run.goal?.steer(prompt, steerId).catch(() => false);
+        return;
+      }
+
+      if (!record.durableId) {
+        run.steers.push({ steerId, message: prompt });
+        return;
+      }
+
+      const backend = await context.backend(record.backend);
+
+      if (!backend.capabilities.steering || record.compact || record.phase === "report") return;
+
+      await backend.steer(record.durableId, prompt, steerId).catch(() => false);
     },
 
     async cancel(runId: string, reason: string) {
