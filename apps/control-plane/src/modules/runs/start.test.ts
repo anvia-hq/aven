@@ -208,6 +208,7 @@ describe("steering a run (decision 0098)", () => {
     } finally {
       console.warn = silenced;
     }
+    await Bun.sleep(10);
     listener.stop();
     expect(listener.events.map((event) => event.type)).toContain("steer_rejected");
     expect(manager.isRunning(thread.id)).toBe(true);

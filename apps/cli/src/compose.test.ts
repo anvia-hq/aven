@@ -33,7 +33,7 @@ test("names each home's project after AVEN_HOME", () => {
 });
 
 test("points compose at the install's directory and file, under the home's own project", () => {
-  expect(composeCommand(join(home, "server"), ["up", "-d"])).toEqual([
+  expect(composeCommand(join(home, "server"), ["up", "-d"], [])).toEqual([
     "docker",
     "compose",
     "--project-name",
