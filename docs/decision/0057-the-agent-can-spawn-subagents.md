@@ -1,6 +1,6 @@
 # The agent can hand tasks to subagents
 
-Status: accepted. Builds on [0012](0012-agent-tools-come-from-the-sandbox.md), [0021](0021-runs-go-through-anvia-durable.md) and [0022](0022-long-running-work-is-a-durable-goal.md).
+Status: accepted. Builds on [0012](0012-agent-tools-come-from-the-sandbox.md), [0021](0021-runs-go-through-anvia-durable.md) and [0022](0022-long-running-work-is-a-durable-goal.md). Superseded in part by 0390 (a subagent is one line, and a task that names no type explores).
 
 ## Context
 

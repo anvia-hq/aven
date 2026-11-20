@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-385 decisions: 298 are the answer, 37 are superseded and 50 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+387 decisions: 299 are the answer, 37 are superseded and 51 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -60,7 +60,7 @@ These describe something that is gone. Read what replaced them.
 | 0322     | The Aven theme is neutral gray                                                               | 0382                         |
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 
-## Superseded in part (50)
+## Superseded in part (51)
 
 These hold, except for the part named.
 
@@ -83,6 +83,7 @@ These hold, except for the part named.
 | 0044     | The agent acts as the person on GitHub, and shipping is an agent run    | 0069 and 0276                    |
 | 0045     | A project has environment variables and secrets, set in the app         | 0219                             |
 | 0053     | A person can open a shell in a thread's sandbox from a Terminal panel   | 0219                             |
+| 0057     | The agent can hand tasks to subagents                                   | 0390                             |
 | 0058     | Bots are agents that talk by sending messages                           | 0059                             |
 | 0059     | A bot has a computer of its own, on a runner                            | 0219                             |
 | 0063     | The main bot can message other bots                                     | 0271 and 0065                    |
