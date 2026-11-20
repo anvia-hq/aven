@@ -12,6 +12,7 @@ import { projectToolCall, projectToolEnd } from "@aven/agents/tool-projection";
 import { tokenUsageOf } from "@aven/agents/usage";
 import { asRecord } from "@aven/agents/values";
 import type { ContextUsage, RunEvent } from "@aven/protocol/types";
+import { TOOL_DID_NOT_RUN } from "@aven/protocol/events";
 import type { DurableEnd } from "@aven/agent-backend/types";
 
 import { segmentsOf } from "./context-segments";
@@ -23,6 +24,7 @@ export function createDurableEventMapper(
 ) {
   const calls = new Map<string, { id: string; name?: string }>();
   const announced = new Set<string>();
+  const ended = new Set<string>();
   const requests = new Map<string, ContextBreakdownSource>();
 
   function map(event: DurableEvent): { events: RunEvent[]; end?: DurableEnd } {
@@ -103,14 +105,30 @@ export function createDurableEventMapper(
 
         if (!call || !output) return { events: [] };
 
+        ended.add(call.id);
+
         return { events: [projectToolEnd(call.id, output, call.name)] };
       }
       case "steering_applied":
         return typeof data.id === "string"
           ? { events: [{ type: "steer_applied", id: data.id }] }
           : { events: [] };
-      case "status":
-        return { events: [], end: endOf(data) };
+      case "status": {
+        const end = endOf(data);
+
+        if (end?.type === "interaction") return { events: [], end };
+
+        const events: RunEvent[] = [];
+
+        for (const id of announced) {
+          if (ended.has(id)) continue;
+
+          ended.add(id);
+          events.push({ type: "tool_end", id, status: "error", output: TOOL_DID_NOT_RUN });
+        }
+
+        return { events, end };
+      }
       default:
         return { events: [] };
     }

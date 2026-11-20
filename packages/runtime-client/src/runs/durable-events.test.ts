@@ -1,4 +1,5 @@
 import type { DurableEvent } from "@anvia/durable";
+import { TOOL_DID_NOT_RUN } from "@aven/protocol/events";
 import { expect, test } from "bun:test";
 
 import { createDurableEventMapper } from "./durable-events";
@@ -224,4 +225,49 @@ test("what the agent showed reaches the client with its tool's end", () => {
   expect(completed.events).toEqual([
     { type: "tool_end", id: "c2", status: "done", output: "Showed 2", artifacts },
   ]);
+});
+
+test("a call the model announced that never ran ends when the run does", () => {
+  const { map } = createDurableEventMapper();
+  map(
+    event("model_completed", {
+      operationId: "model:1",
+      result: {
+        choice: [
+          {
+            type: "tool-call",
+            toolCallId: "c9",
+            toolName: "spawn_agent",
+            input: { tasks: [{ description: "a", prompt: "p" }] },
+          },
+        ],
+        usage: { inputTokens: 10, outputTokens: 1, totalTokens: 11 },
+      },
+    }),
+  );
+  expect(map(event("status", { status: "completed", outcome: { messages: [] } })).events).toEqual([
+    { type: "tool_end", id: "c9", status: "error", output: TOOL_DID_NOT_RUN },
+  ]);
+});
+
+test("a call that ended before the run says nothing more, and one waiting for an answer is kept", () => {
+  const { map } = createDurableEventMapper();
+  map(started);
+  map(
+    event("tool_completed", {
+      operationId: "op1",
+      result: { output: { type: "text", value: "x" } },
+    }),
+  );
+  expect(map(event("status", { status: "completed", outcome: { messages: [] } })).events).toEqual(
+    [],
+  );
+
+  const waiting = createDurableEventMapper();
+  waiting.map(started);
+  expect(
+    waiting.map(
+      event("status", { status: "waiting", outcome: { type: "interaction", continuation: {} } }),
+    ).events,
+  ).toEqual([]);
 });
