@@ -40,7 +40,7 @@ local push_checks = new Mapping<String, Step | Group> {
     check = "bun fmt --check"
   }
   ["unit-changed"] = new Step {
-    check = "bun test --changed=origin/main --pass-with-no-tests apps packages sandbox tooling"
+    check = "bun tooling/ci/pre-push-unit.ts"
   }
 }
 
