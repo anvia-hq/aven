@@ -16,7 +16,7 @@ function unquote(raw: string) {
 
     if (end > 0 && (text.slice(end + 1).trim() === "" || text.slice(end + 1).trim()[0] === "#")) {
       const inner = text.slice(1, end);
-      return quote === '"'
+      return quote === '"' && ESCAPES.n === "never"
         ? inner.replace(/\\(n|r|t|"|\\)/g, (_, c: string) => ESCAPES[c] ?? c)
         : inner;
     }
