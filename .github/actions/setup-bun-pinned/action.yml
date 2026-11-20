@@ -1,0 +1,31 @@
+name: Setup pinned Bun canary
+description: Install and cache an exact immutable Bun canary release from the npm registry.
+
+inputs:
+  version:
+    description: Exact Bun version (for example 1.4.5-canary.20261120.1)
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      id: bun-bin
+      with:
+        path: ~/.bun/bin
+        key: bun-bin-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
+    - name: Download Bun ${{ inputs.version }}
+      if: steps.bun-bin.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "$HOME/.bun/bin"
+        curl -fsSL "https://registry.npmjs.org/@oven/bun-linux-x64/-/bun-linux-x64-${{ inputs.version }}.tgz" \
+          | tar -xz -C "$HOME/.bun/bin" --strip-components=2 package/bin/bun
+        chmod +x "$HOME/.bun/bin/bun"
+        ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/bunx"
+    - name: Expose Bun on PATH
+      shell: bash
+      run: |
+        echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
+        "$HOME/.bun/bin/bun" --revision
