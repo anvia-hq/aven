@@ -47,6 +47,11 @@ export type ModelSelection = { providerId?: string; modelId?: string; reasoningE
 export type ProviderView = Omit<ProviderRow, "apiKeyEncrypted" | "keyDigest" | "userId"> & {
   hasKey: boolean;
   backend: AgentBackendKind;
+  managed?: boolean;
+};
+
+export type RunnableProvider = ProviderRow & {
+  allowedModels?: string[] | null;
 };
 
 export type ModelEfforts = { options: string[]; defaultValue: string | null };

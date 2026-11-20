@@ -12,7 +12,6 @@ import { AGENT_BACKENDS } from "@aven/protocol/runtime-wire";
 
 import { organizations } from "./organizations";
 import { projects } from "./projects";
-import { providers } from "./providers";
 import { runtimes } from "./runtimes";
 import { users } from "./users";
 
@@ -46,9 +45,7 @@ export const threads = pgTable(
     state: text("state", { enum: ["open", "snoozed", "archived"] })
       .notNull()
       .default("open"),
-    modelProviderId: uuid("model_provider_id").references(() => providers.id, {
-      onDelete: "set null",
-    }),
+    modelProviderId: uuid("model_provider_id"),
     modelId: text("model_id"),
     reasoningEffort: text("reasoning_effort"),
     pendingContinuation: jsonb("pending_continuation"),

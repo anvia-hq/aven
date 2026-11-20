@@ -1,12 +1,16 @@
 import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { db } from "@aven/db/client";
+import { bots } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
+import { threads } from "@aven/db/schema/threads";
 import { isModelApi, providerBackend, providerNeedsKey } from "@aven/protocol/providers";
 import { MODEL_APIS } from "@aven/protocol/runtime-wire";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { encryptSecret } from "@aven/server-kit/crypto";
+import { editionInUse } from "../../edition/current";
+import type { GrantedProvider } from "../../edition/types";
 import { readKey } from "./crypto";
 import { hostedKindOf, HOSTED_BACKENDS } from "./backends";
 import { parseServiceAccount } from "./google-auth";
@@ -21,7 +25,7 @@ import {
   type KeylessProviderBody,
   type UpdateProviderBody,
 } from "./schema";
-import type { ModelSource, ProviderCatalog, ProviderView } from "./types";
+import type { ModelSource, ProviderCatalog, ProviderView, RunnableProvider } from "./types";
 import type { Provider } from "@aven/protocol/types";
 import type { ProviderRow } from "@aven/db/schema/types";
 
@@ -46,6 +50,61 @@ function view({
   ...row
 }: ProviderRow): ProviderView {
   return { ...row, hasKey: apiKeyEncrypted !== null, backend: providerBackend(row.kind) };
+}
+
+function grantedView(granted: GrantedProvider): ProviderView {
+  return {
+    id: granted.id,
+    kind: granted.kind,
+    name: granted.name,
+    baseUrl: granted.baseUrl,
+    modelId: granted.modelId,
+    keyHint: granted.keyHint,
+    isDefault: false,
+    createdAt: granted.createdAt,
+    updatedAt: granted.createdAt,
+    hasKey: granted.apiKeyEncrypted !== null,
+    backend: providerBackend(granted.kind),
+    managed: true,
+  };
+}
+
+function grantedToRow(userId: string, granted: GrantedProvider): RunnableProvider {
+  return {
+    id: granted.id,
+    userId,
+    kind: granted.kind,
+    name: granted.name,
+    baseUrl: granted.baseUrl,
+    modelId: granted.modelId,
+    apiKeyEncrypted: granted.apiKeyEncrypted,
+    keyHint: granted.keyHint,
+    keyDigest: null,
+    isDefault: false,
+    createdAt: granted.createdAt,
+    updatedAt: granted.createdAt,
+    allowedModels: granted.allowedModels,
+  };
+}
+
+function filterAllowedModels<E>(
+  catalog: { models: string[]; labels: Record<string, string>; efforts: Record<string, E> },
+  allowed: string[] | null,
+) {
+  if (!allowed || allowed.length === 0) return catalog;
+
+  const set = new Set(allowed);
+  const models = catalog.models.filter((model) => set.has(model));
+  const labels: Record<string, string> = {};
+  const efforts: Record<string, E> = {};
+
+  for (const model of models) {
+    if (catalog.labels[model]) labels[model] = catalog.labels[model];
+
+    if (catalog.efforts[model]) efforts[model] = catalog.efforts[model];
+  }
+
+  return { models, labels, efforts };
 }
 
 function offered(kind: Provider) {
@@ -152,12 +211,15 @@ const ownProvider = (userId: string, id: string) =>
 
 export const providersService = {
   async list(userId: string) {
-    const rows = await db
-      .select()
-      .from(providers)
-      .where(eq(providers.userId, userId))
-      .orderBy(asc(providers.createdAt));
-    return rows.map(view);
+    const [rows, granted] = await Promise.all([
+      db
+        .select()
+        .from(providers)
+        .where(eq(providers.userId, userId))
+        .orderBy(asc(providers.createdAt)),
+      editionInUse.current.providers?.list(userId) ?? Promise.resolve([]),
+    ]);
+    return [...rows.map(view), ...granted.map(grantedView)];
   },
 
   async create(userId: string, body: CreateProviderBody | KeylessProviderBody) {
@@ -261,6 +323,12 @@ export const providersService = {
 
       if (!row) return false;
 
+      await tx
+        .update(threads)
+        .set({ modelProviderId: null })
+        .where(eq(threads.modelProviderId, id));
+      await tx.update(bots).set({ providerId: null }).where(eq(bots.providerId, id));
+
       if (row.isDefault) {
         const [next] = await tx
           .select({ id: providers.id })
@@ -278,13 +346,16 @@ export const providersService = {
   },
 
   async listModels(userId: string, id: string) {
-    const [row] = await db.select().from(providers).where(ownProvider(userId, id));
+    const [own] = await db.select().from(providers).where(ownProvider(userId, id));
+    const granted = own ? null : ((await editionInUse.current.providers?.find(userId, id)) ?? null);
+    const row = own ?? (granted ? grantedToRow(userId, granted) : null);
 
     if (!row) return null;
 
+    const allowed = granted?.allowedModels ?? null;
     const catalog = subscriptionCatalog(row.kind);
 
-    if (catalog) return catalog;
+    if (catalog) return filterAllowedModels(catalog, allowed);
 
     const source = sourceOf(row);
     const models = await modelsOf(row, source);
@@ -292,7 +363,7 @@ export const providersService = {
       effortsByModel(source, models),
       labelsByModel(source, models),
     ]);
-    return { models, efforts, labels };
+    return filterAllowedModels({ models, efforts, labels }, allowed);
   },
 
   async rowForBackend(userId: string, backend: string) {
@@ -347,7 +418,10 @@ export const providersService = {
     return readKey(row);
   },
 
-  async forNativeRun(userId: string, providerId: string | undefined) {
+  async forNativeRun(
+    userId: string,
+    providerId: string | undefined,
+  ): Promise<RunnableProvider | undefined> {
     if (providerId) return this.forRun(userId, providerId);
 
     const [row] = await db
@@ -357,10 +431,18 @@ export const providersService = {
       .orderBy(desc(providers.isDefault), asc(providers.createdAt))
       .limit(1);
 
-    return row;
+    if (row) return row;
+
+    const granted = (await editionInUse.current.providers?.list(userId)) ?? [];
+    const native = granted.find((item) => isModelApi(item.kind));
+
+    return native ? grantedToRow(userId, native) : undefined;
   },
 
-  async forRun(userId: string, providerId: string | undefined) {
+  async forRun(
+    userId: string,
+    providerId: string | undefined,
+  ): Promise<RunnableProvider | undefined> {
     const [row] = await db
       .select()
       .from(providers)
@@ -369,7 +451,18 @@ export const providersService = {
           ? ownProvider(userId, providerId)
           : and(eq(providers.userId, userId), eq(providers.isDefault, true)),
       );
-    return row;
+
+    if (row) return row;
+
+    if (providerId) {
+      const granted = await editionInUse.current.providers?.find(userId, providerId);
+
+      return granted ? grantedToRow(userId, granted) : undefined;
+    }
+
+    const granted = (await editionInUse.current.providers?.list(userId)) ?? [];
+
+    return granted[0] ? grantedToRow(userId, granted[0]) : undefined;
   },
 };
 

@@ -10,7 +10,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-import { providers } from "./providers";
 import { runtimes } from "./runtimes";
 import { users } from "./users";
 
@@ -26,7 +25,7 @@ export const bots = pgTable(
     instruction: text("instruction").notNull(),
     description: text("description").notNull().default(""),
     avatar: text("avatar").notNull().default(""),
-    providerId: uuid("provider_id").references(() => providers.id, { onDelete: "set null" }),
+    providerId: uuid("provider_id"),
     modelId: text("model_id"),
     reasoningEffort: text("reasoning_effort"),
     compactAfterTokens: integer("compact_after_tokens"),

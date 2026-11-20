@@ -42,6 +42,7 @@ export type Provider = {
   hasKey: boolean;
   keyHint: string | null;
   isDefault: boolean;
+  managed?: boolean;
   createdAt: string;
 };
 
