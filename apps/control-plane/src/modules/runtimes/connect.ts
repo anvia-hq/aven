@@ -2,6 +2,7 @@ import { CloseCode } from "@aven/protocol/runtime-wire";
 import { Elysia } from "elysia";
 
 import { bytesOf } from "@aven/server-kit/bytes";
+import { cloudSandboxStore } from "../cloud-lifecycle/sandbox-store";
 import { bearerToken } from "./bearer";
 import { computerUsageService } from "./computer-usage";
 import type { RuntimeConnection, RuntimeHub } from "./hub";
@@ -63,11 +64,15 @@ export const connectRouter = (hub: RuntimeHub) => {
         void runtimesService.touch(connection.runtimeId);
 
         if (!hub.get(connection.runtimeId)) {
-          void computerUsageService
-            .closed(connection.runtimeId)
-            .catch((error: unknown) =>
-              console.warn(`Could not record computer ${connection.runtimeId} stopped:`, error),
-            );
+          void (async () => {
+            const sandbox = await cloudSandboxStore.get(connection.runtimeId);
+
+            if (sandbox && (sandbox.state === "running" || sandbox.state === "draining")) return;
+
+            await computerUsageService.closed(connection.runtimeId);
+          })().catch((error: unknown) =>
+            console.warn(`Could not record computer ${connection.runtimeId} stopped:`, error),
+          );
         }
       },
     });

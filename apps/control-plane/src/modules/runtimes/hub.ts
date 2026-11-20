@@ -24,6 +24,7 @@ import type {
   RepoAccess,
   ReportedStats,
   RunAttachment,
+  RunDrainReason,
   RunLens,
   RunMcpServer,
   RunMemory,
@@ -212,6 +213,10 @@ export class RuntimeConnection {
 
   hasRun(runId: string) {
     return this.#runs.has(runId);
+  }
+
+  runIds() {
+    return [...this.#runs.keys()];
   }
 
   endRun(runId: string) {
@@ -518,6 +523,32 @@ export class RuntimeHub {
     const held = this.#held.get(runtimeId)?.runs.get(runId);
 
     if (held) held.cancel = reason;
+  }
+
+  drainRuntime(runtimeId: string, reason: RunDrainReason) {
+    const connection = this.#connections.get(runtimeId);
+
+    if (!connection?.ready) return;
+
+    for (const runId of connection.runIds()) {
+      connection.post({ type: "run.drain", runId, reason });
+    }
+  }
+
+  cancelRuntime(runtimeId: string, reason: string) {
+    const connection = this.#connections.get(runtimeId);
+
+    if (connection?.ready) {
+      for (const runId of connection.runIds()) {
+        connection.post({ type: "run.cancel", runId, reason });
+      }
+    }
+
+    const held = this.#held.get(runtimeId);
+
+    if (held) {
+      for (const run of held.runs.values()) run.cancel = reason;
+    }
   }
 
   #giveUp(runtimeId: string, message = RUNTIME_DISCONNECTED) {

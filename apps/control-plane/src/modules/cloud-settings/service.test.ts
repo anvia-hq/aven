@@ -5,6 +5,7 @@ import { platformSettings } from "@aven/db/schema/platform-settings";
 import { enabledCloudProviders } from "@aven/sandbox/cloud-config";
 import { setSandboxSettings } from "@aven/sandbox/settings";
 import { boatApiBase, boatApiKey } from "@aven/sandbox/boat/client";
+import { lizardApiBase, lizardApiKey, lizardProject } from "@aven/sandbox/lizard/config";
 import { spacesApiBase, spacesApiKey, spacesRunnerUrl } from "@aven/sandbox/spaces/config";
 import { eq } from "drizzle-orm";
 
@@ -20,6 +21,7 @@ describe("the Aven Cloud sandbox settings", () => {
     const saved = await cloudSettingsService.save({
       provider: "spaces",
       base: "https://spaces.example.com/api/v1/",
+      project: "",
       runnerUrl: "https://aven.example.com/api/",
       apiKey: "spk_saved_key",
     });
@@ -27,6 +29,7 @@ describe("the Aven Cloud sandbox settings", () => {
     expect(saved).toEqual({
       provider: "spaces",
       base: "https://spaces.example.com/api/v1",
+      project: "",
       runnerUrl: "https://aven.example.com/api",
       keyHint: "_key",
     });
@@ -40,6 +43,7 @@ describe("the Aven Cloud sandbox settings", () => {
     await cloudSettingsService.save({
       provider: "spaces",
       base: "https://other.example.com/api/v1",
+      project: "",
       runnerUrl: "",
     });
 
@@ -49,7 +53,7 @@ describe("the Aven Cloud sandbox settings", () => {
 
   test("switching to another platform needs that platform's own key, and replaces the first", async () => {
     await expect(
-      cloudSettingsService.save({ provider: "boat", base: "", runnerUrl: "" }),
+      cloudSettingsService.save({ provider: "boat", base: "", project: "", runnerUrl: "" }),
     ).rejects.toThrow("API key");
 
     expect(spacesApiKey()).toBe("spk_saved_key");
@@ -57,15 +61,31 @@ describe("the Aven Cloud sandbox settings", () => {
     const saved = await cloudSettingsService.save({
       provider: "boat",
       base: "",
+      project: "",
       runnerUrl: "",
       apiKey: "boat_saved_key",
     });
 
-    expect(saved).toMatchObject({ provider: "boat", base: "" });
+    expect(saved).toMatchObject({ provider: "boat", base: "", project: "" });
     expect(boatApiKey()).toBe("boat_saved_key");
     expect(boatApiBase()).toBe("https://boat.dev/api/v1");
     expect(spacesApiKey()).toBeNull();
     expect(enabledCloudProviders()).toEqual(["boat"]);
+
+    const lizard = await cloudSettingsService.save({
+      provider: "lizard",
+      base: "",
+      project: "aven-prod",
+      runnerUrl: "",
+      apiKey: "liz_saved_key",
+    });
+
+    expect(lizard).toMatchObject({ provider: "lizard", base: "", project: "aven-prod" });
+    expect(lizardApiKey()).toBe("liz_saved_key");
+    expect(lizardApiBase()).toBe("https://lizard.build");
+    expect(lizardProject()).toBe("aven-prod");
+    expect(boatApiKey()).toBeNull();
+    expect(enabledCloudProviders()).toEqual(["lizard"]);
   });
 
   test("spaces needs its server's address, and an address that is not http is refused", async () => {
@@ -73,6 +93,7 @@ describe("the Aven Cloud sandbox settings", () => {
       cloudSettingsService.save({
         provider: "spaces",
         base: "",
+        project: "",
         runnerUrl: "",
         apiKey: "spk_key",
       }),
@@ -81,7 +102,9 @@ describe("the Aven Cloud sandbox settings", () => {
       cloudSettingsService.save({
         provider: "boat",
         base: "nope",
+        project: "",
         runnerUrl: "",
+        apiKey: "boat_key",
       }),
     ).rejects.toThrow("must be an http or https address");
   });

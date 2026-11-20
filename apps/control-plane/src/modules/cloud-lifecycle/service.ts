@@ -1,7 +1,15 @@
 import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { CLOUD_SANDBOX_LIFE_MS } from "@aven/sandbox/cloud-expiry";
-import { idleWindows } from "@aven/sandbox/idle";
+import { EXTEND_EVERY_MS, idleWindows } from "@aven/sandbox/idle";
+import {
+  DEFAULT_DRAIN_GRACE_MS,
+  DEFAULT_MAX_AGE_HOURS,
+  DEFAULT_MAX_DELETE_ATTEMPTS,
+  DEFAULT_SOFT_BUDGET_PERCENT,
+  DEFAULT_TRANSITION_WATCHDOG_MS,
+} from "@aven/sandbox/lifecycle";
+import type { LifecyclePolicy } from "@aven/sandbox/types";
 import { eq } from "drizzle-orm";
 
 import { saveCloudLifecycleBody } from "./schema";
@@ -20,9 +28,12 @@ function defaults(env: Record<string, string | undefined> = process.env): CloudL
     agentIdleSeconds: windows.agentIdleMs / 1000,
     userIdleSeconds: windows.userIdleMs / 1000,
     expireHours: CLOUD_SANDBOX_LIFE_MS / HOUR_MS,
+    maxAgeHours: DEFAULT_MAX_AGE_HOURS,
     maxRunning: null,
     startBurst: null,
     startEveryMinutes: START_EVERY_MINUTES,
+    monthlyBudgetCents: null,
+    softBudgetPercent: DEFAULT_SOFT_BUDGET_PERCENT,
   };
 }
 
@@ -71,5 +82,24 @@ export const cloudLifecycleService = {
 
   async expireAfterMs() {
     return (await this.current()).expireHours * HOUR_MS;
+  },
+
+  async maxAgeMs() {
+    return (await this.current()).maxAgeHours * HOUR_MS;
+  },
+
+  async policy(): Promise<LifecyclePolicy> {
+    const current = await this.current();
+
+    return {
+      agentIdleMs: current.agentIdleSeconds * 1000,
+      userIdleMs: current.userIdleSeconds * 1000,
+      maxAgeMs: current.maxAgeHours * HOUR_MS,
+      drainGraceMs: DEFAULT_DRAIN_GRACE_MS,
+      expireMs: current.expireHours * HOUR_MS,
+      extendEveryMs: EXTEND_EVERY_MS,
+      transitionWatchdogMs: DEFAULT_TRANSITION_WATCHDOG_MS,
+      maxDeleteAttempts: DEFAULT_MAX_DELETE_ATTEMPTS,
+    };
   },
 };

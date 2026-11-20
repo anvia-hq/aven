@@ -4,7 +4,7 @@ import {
   createCloudExpiry as createSweep,
 } from "@aven/sandbox/cloud-expiry";
 import type { CloudProviderName } from "@aven/sandbox/cloud-config";
-import type { SandboxRemover } from "@aven/sandbox/types";
+import type { ProviderCredentials, SandboxRemover } from "@aven/sandbox/types";
 import type { RuntimeProviderKind } from "@aven/protocol/types";
 import { cloudLifecycleService } from "../cloud-lifecycle/service";
 import { runtimesService } from "./service";
@@ -22,12 +22,16 @@ export function createCloudExpiry({
   afterMs = () => cloudLifecycleService.expireAfterMs(),
   remove,
 }: Options) {
-  const remover = async (provider: RuntimeProviderKind, sandboxId: string) => {
+  const remover = async (
+    provider: RuntimeProviderKind,
+    sandboxId: string,
+    credentials?: ProviderCredentials,
+  ) => {
     const override = isCloudProvider(provider) ? remove?.[provider] : undefined;
 
-    if (override) return override(sandboxId);
+    if (override) return override(sandboxId, credentials);
 
-    return cloudSandboxRemover(provider, sandboxId);
+    return cloudSandboxRemover(provider, sandboxId, credentials);
   };
 
   return createSweep({

@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { db } from "@aven/db/client";
+import { cloudSandboxes } from "@aven/db/schema/cloud-sandboxes";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
 import {
@@ -23,6 +24,7 @@ import {
   CLOUD_OFF,
   CLOUD_RUNTIME_ID,
   CLOUD_TEMPLATE_IDS,
+  LIZARD_RUNTIME_ID,
   SPACES_RUNTIME_ID,
   cloudEnabled,
   cloudProviderApiKey,
@@ -33,6 +35,8 @@ import {
   enabledTemplateIds,
   templateProvider,
 } from "@aven/sandbox/cloud-config";
+import { cloudSandboxStore } from "../cloud-lifecycle/sandbox-store";
+import { activeProviderConfigId, credentialsForConfig } from "../cloud-settings/credentials";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import { environmentsService } from "../environments/service";
 import type { CloudSandboxPage, SandboxRecord } from "@aven/sandbox/types";
@@ -41,7 +45,7 @@ import type { RuntimeRow } from "@aven/db/schema/types";
 import type { CloudSandboxCursor } from "./types";
 import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
 
-export { CLOUD_OFF, CLOUD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
+export { CLOUD_OFF, CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
 
 const TOKEN_PREFIX = "avrt_";
 
@@ -186,6 +190,7 @@ export const runtimesService = {
 
     const { token, columns } = issueToken();
     const environment = await environmentsService.ready(projectId, provider);
+    const providerConfigId = await activeProviderConfigId();
     const [row] = await db
       .insert(runtimes)
       .values({
@@ -202,6 +207,12 @@ export const runtimesService = {
         ...columns,
       })
       .returning();
+    await cloudSandboxStore.ensure({
+      runtimeId: row!.id,
+      provider,
+      providerConfigId,
+      machineType: "default",
+    });
     return publicRuntime(row!);
   },
 
@@ -215,23 +226,57 @@ export const runtimesService = {
     return row ?? null;
   },
 
+  async computerRuntimeOf(runtimeId: string) {
+    const [row] = await db
+      .select({
+        id: runtimes.id,
+        organizationId: runtimes.organizationId,
+        ownerId: runtimes.ownerId,
+        parentRuntimeId: runtimes.parentRuntimeId,
+        provider: runtimes.provider,
+        machineType: runtimes.boatMachineType,
+        providerConfigId: cloudSandboxes.providerConfigId,
+      })
+      .from(runtimes)
+      .leftJoin(cloudSandboxes, eq(cloudSandboxes.runtimeId, runtimes.id))
+      .where(
+        and(eq(runtimes.id, runtimeId), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)),
+      );
+    return row ?? null;
+  },
+
   async idleCloudSandboxes(before: Date, limit = 100) {
     const lastUsed = sql`greatest(
       ${runtimes.createdAt},
-      coalesce(${runtimes.lastSeenAt}, ${runtimes.createdAt}),
+      coalesce(${cloudSandboxes.lastActivityAt}, ${runtimes.createdAt}),
       coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
     )`;
-    return db
-      .select({ id: runtimes.id, provider: runtimes.provider, sandboxId: runtimes.boatSandboxId })
+    const rows = await db
+      .select({
+        id: runtimes.id,
+        provider: runtimes.provider,
+        sandboxId: runtimes.boatSandboxId,
+        providerConfigId: cloudSandboxes.providerConfigId,
+      })
       .from(runtimes)
+      .leftJoin(cloudSandboxes, eq(cloudSandboxes.runtimeId, runtimes.id))
       .where(
         and(
           inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
           isNull(runtimes.revokedAt),
+          or(isNull(cloudSandboxes.state), ne(cloudSandboxes.state, "delete_failed")),
           sql`${lastUsed} < ${before.toISOString()}::timestamptz`,
         ),
       )
       .limit(limit);
+    return Promise.all(
+      rows.map(async ({ id, provider, sandboxId, providerConfigId }) => {
+        const credentials = providerConfigId
+          ? ((await credentialsForConfig(providerConfigId)) ?? undefined)
+          : undefined;
+        return { id, provider, sandboxId, credentials };
+      }),
+    );
   },
 
   async liveCloudSandboxes({
@@ -274,8 +319,9 @@ export const runtimesService = {
   async expireCloudSandbox(id: string) {
     await db
       .update(runtimes)
-      .set({ revokedAt: new Date() })
+      .set({ boatSandboxId: null })
       .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
+    await cloudSandboxStore.markAbsent(id);
   },
 
   async list(organizationId: string, userId: string) {
@@ -335,10 +381,16 @@ export const runtimesService = {
       .from(runtimes)
       .where(revoked ? eq(runtimes.id, id) : and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
 
-    if (!row || row.provider !== provider || !row.parentRuntimeId || !cloudEnabled(row.provider))
-      return null;
+    if (!row || row.provider !== provider || !row.parentRuntimeId) return null;
 
-    const apiKey = cloudProviderApiKey(provider);
+    const sandboxRow = await cloudSandboxStore.get(row.id);
+    const storedCredentials = sandboxRow?.providerConfigId
+      ? await credentialsForConfig(sandboxRow.providerConfigId)
+      : null;
+
+    if (!storedCredentials && !cloudEnabled(row.provider)) return null;
+
+    const apiKey = storedCredentials?.apiKey ?? cloudProviderApiKey(provider);
     const runnerToken = await readRunnerToken(row.boatRunnerTokenEncrypted, row.id);
 
     if (!apiKey || !runnerToken) return null;
@@ -347,9 +399,10 @@ export const runtimesService = {
       runtimeId: row.id,
       apiKey,
       runnerToken,
-      sandboxId: row.boatSandboxId,
+      sandboxId: sandboxRow?.externalId ?? row.boatSandboxId,
       machineType: row.boatMachineType ?? "default",
-      environment: row.environmentSnapshot,
+      environment: sandboxRow?.runtimeSnapshotName ?? row.environmentSnapshot,
+      credentials: storedCredentials ?? undefined,
     };
   },
 
@@ -366,6 +419,8 @@ export const runtimesService = {
       .update(runtimes)
       .set({ boatSandboxId: sandboxId })
       .where(and(eq(runtimes.id, id), isNull(runtimes.revokedAt)));
+    const configId = await activeProviderConfigId();
+    await cloudSandboxStore.setExternalId(id, sandboxId, configId);
   },
 
   async setHost(id: string, host: boolean) {

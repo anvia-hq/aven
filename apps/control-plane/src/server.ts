@@ -6,9 +6,7 @@ import { app } from "./app";
 import {
   botApiApp,
   botRunner,
-  cloudExpiry,
-  cloudIdle,
-  environmentExpiry,
+  cloudReconciler,
   goalDriver,
   previews,
   runsService,
@@ -73,9 +71,7 @@ export async function startControlPlane(edition: Edition) {
     await threadWatcher.close();
     await pullRequestWatch.close();
     await threadRetention.close();
-    await cloudExpiry.close();
-    await cloudIdle.close();
-    await environmentExpiry.close();
+    await cloudReconciler.close();
     await closeLens();
     runsService.dispose();
     process.exit(0);
@@ -88,9 +84,7 @@ export async function startControlPlane(edition: Edition) {
   threadWatcher.start();
   pullRequestWatch.start();
   threadRetention.start();
-  cloudExpiry.start();
-  cloudIdle.start();
-  environmentExpiry.start();
+  cloudReconciler.start();
 
   console.log(`control-plane listening on ${app.server?.url}`);
 }

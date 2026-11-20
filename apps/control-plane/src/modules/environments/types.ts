@@ -1,5 +1,6 @@
 import type { ProjectEnvironmentRow } from "@aven/db/schema/types";
 import type { EnvironmentStatus, RuntimeProviderKind } from "@aven/protocol/types";
+import type { ProviderCredentials } from "@aven/sandbox/types";
 
 export type EnvironmentSaved = {
   name: string;
@@ -8,9 +9,16 @@ export type EnvironmentSaved = {
 };
 
 export type EnvironmentProvider = {
-  saveEnvironment(sandboxId: string, name: string): Promise<EnvironmentSaved>;
-  readEnvironment(name: string): Promise<EnvironmentSaved | null>;
-  removeEnvironment(name: string): Promise<boolean>;
+  saveEnvironment(
+    sandboxId: string,
+    name: string,
+    credentials?: ProviderCredentials,
+  ): Promise<EnvironmentSaved>;
+  readEnvironment(
+    name: string,
+    credentials?: ProviderCredentials,
+  ): Promise<EnvironmentSaved | null>;
+  removeEnvironment(name: string, credentials?: ProviderCredentials): Promise<boolean>;
 };
 
 export type EnvironmentLookup = {
@@ -22,6 +30,7 @@ export type EnvironmentSaveInput = EnvironmentLookup & {
   organizationId: string;
   sandboxId: string | null;
   setupDigest: string;
+  providerConfigId?: string | null;
 };
 
 export type EnvironmentExpiryOptions = {
