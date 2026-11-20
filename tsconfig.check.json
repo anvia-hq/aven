@@ -1,0 +1,21 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./apps/cli" },
+    { "path": "./apps/control-plane" },
+    { "path": "./apps/platform" },
+    { "path": "./apps/runtime" },
+    { "path": "./e2e" },
+    { "path": "./packages/agent-backend" },
+    { "path": "./packages/agents" },
+    { "path": "./packages/claude" },
+    { "path": "./packages/codex" },
+    { "path": "./packages/db" },
+    { "path": "./packages/github" },
+    { "path": "./packages/protocol" },
+    { "path": "./packages/runtime-client" },
+    { "path": "./packages/server-kit" },
+    { "path": "./packages/ui" },
+    { "path": "./sandbox" }
+  ]
+}

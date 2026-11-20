@@ -1,6 +1,6 @@
 # Husky runs the fast CI checks before a commit
 
-Status: accepted. Decided 2026-11-16. Superseded in part by 0391 (the e2e suite runs before the push that makes a branch).
+Status: accepted. Decided 2026-11-16. Superseded by 0394 (hk replaces husky with staged pre-commit and sub-9s pre-push checks; 0391 earlier refined pre-push).
 
 ## Decision
 

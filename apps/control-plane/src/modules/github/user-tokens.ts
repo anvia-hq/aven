@@ -23,7 +23,10 @@ const ofPerson = (userId: string) => eq(githubUserTokens.userId, userId);
 export function createGithubUserTokens(
   client: Pick<GithubClient, "refreshGrant" | "userProfile"> = github,
 ) {
-  const renewing = new Map<string, Promise<GithubUserToken | null>>();
+  const renewing = new Map<
+    string,
+    { minRemainingMs: number; promise: Promise<GithubUserToken | null> }
+  >();
 
   const remove = async (userId: string) => {
     await db.delete(githubUserTokens).where(ofPerson(userId));
@@ -74,31 +77,43 @@ export function createGithubUserTokens(
     return { token: grant.accessToken, identity: identityOf(row) };
   }
 
-  async function use(
+  function use(
     userId: string,
     minRemainingMs = REFRESH_MARGIN_MS,
   ): Promise<GithubUserToken | null> {
-    const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId));
+    const active = renewing.get(userId);
 
-    if (!row) return null;
+    if (active && active.minRemainingMs >= minRemainingMs) return active.promise;
 
-    const fresh =
-      row.accessExpiresAt === null || row.accessExpiresAt.getTime() - Date.now() > minRemainingMs;
+    const promise = (async (): Promise<GithubUserToken | null> => {
+      if (active) await active.promise.catch(() => null);
 
-    if (fresh) {
-      try {
-        return {
-          token: decryptSecret(row.accessTokenEncrypted),
-          identity: identityOf(row),
-        };
-      } catch (error) {
-        return drop(userId, error);
+      const [row] = await db.select().from(githubUserTokens).where(ofPerson(userId));
+
+      if (!row) return null;
+
+      const fresh =
+        row.accessExpiresAt === null || row.accessExpiresAt.getTime() - Date.now() > minRemainingMs;
+
+      if (fresh) {
+        try {
+          return {
+            token: decryptSecret(row.accessTokenEncrypted),
+            identity: identityOf(row),
+          };
+        } catch (error) {
+          return drop(userId, error);
+        }
       }
-    }
 
-    const running = renewing.get(userId) ?? renew(row).finally(() => renewing.delete(userId));
-    renewing.set(userId, running);
-    return running;
+      return renew(row);
+    })();
+
+    const entry = { minRemainingMs, promise };
+    renewing.set(userId, entry);
+    return promise.finally(() => {
+      if (renewing.get(userId) === entry) renewing.delete(userId);
+    });
   }
 
   return {

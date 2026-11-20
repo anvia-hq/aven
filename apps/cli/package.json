@@ -5,7 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p .",
+    "typecheck": "bun check -p .",
     "build": "bun build --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --external @valibot/to-json-schema src/main.ts --outfile dist/aven"
   },
   "dependencies": {

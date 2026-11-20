@@ -1,0 +1,64 @@
+amends "package://github.com/jdx/hk/releases/download/v2.13.0/hk@2.13.0#/Config.pkl"
+
+default_branch = "main"
+
+local staged_linters = new Mapping<String, Step | Group> {
+  ["bun-fmt"] = new Step {
+    glob = List(
+      "*.ts",
+      "*.tsx",
+      "*.js",
+      "*.jsx",
+      "*.mjs",
+      "*.cjs",
+      "*.json",
+      "*.md",
+      "*.yml",
+      "*.yaml",
+      "*.css",
+    )
+    exclude = List("apps/platform/src/routeTree.gen.ts", "packages/db/drizzle/**")
+    check = "bun fmt --check {{files}}"
+    fix = "bun fmt {{files}}"
+  }
+  ["bun-lint"] = new Step {
+    glob = List("*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs")
+    exclude = List("apps/platform/src/routeTree.gen.ts")
+    check = "bun lint {{files}}"
+    fix = "bun lint --fix {{files}}"
+  }
+}
+
+local push_checks = new Mapping<String, Step | Group> {
+  ["typecheck"] = new Step {
+    check = "bun check -b -p tsconfig.check.json"
+  }
+  ["lint"] = new Step {
+    check = "bun lint"
+  }
+  ["format"] = new Step {
+    check = "bun fmt --check"
+  }
+  ["unit-changed"] = new Step {
+    check = "bun tooling/ci/pre-push-unit.ts"
+  }
+}
+
+hooks = new {
+  ["pre-commit"] {
+    fix = true
+    stash = "git"
+    stage = true
+    steps = staged_linters
+  }
+  ["pre-push"] {
+    steps = push_checks
+  }
+  ["check"] {
+    steps = push_checks
+  }
+  ["fix"] {
+    fix = true
+    steps = staged_linters
+  }
+}

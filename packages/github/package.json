@@ -8,7 +8,7 @@
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "bun check -p ."
   },
   "dependencies": {
     "@aven/server-kit": "workspace:*"

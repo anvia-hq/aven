@@ -177,7 +177,7 @@ export class DirectorySandbox implements SandboxRuntime {
       return new Uint8Array(await readFile(this.#path(path)));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-        throw new Error(`File not found: ${path}`);
+        throw new Error(`File not found: ${path}`, { cause: error });
       }
 
       throw error;

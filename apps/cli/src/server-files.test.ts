@@ -43,7 +43,7 @@ async function installWith(argv: string[], plan: Parameters<typeof planServer>[0
   await writeFile(join(dir, ".env"), installed);
   const args = parseArgs(argv);
   const { options: planned } = planServer(plan);
-  const result = await writeServerFiles(dir, files, planned, installEnvValues(args, planned));
+  const result = await writeServerFiles(dir, files, planned, installEnvValues(args, planned), []);
   return { result, env: parseEnv(await readFile(join(dir, ".env"), "utf8")) };
 }
 
@@ -156,7 +156,7 @@ test("a key an older .env lacks is added, and the output says it was unset", asy
     bind: "0.0.0.0",
     ownerEmail: "me@example.com",
   });
-  const result = await writeServerFiles(dir, files, planned, installEnvValues(args, planned));
+  const result = await writeServerFiles(dir, files, planned, installEnvValues(args, planned), []);
 
   const env = parseEnv(await readFile(join(dir, ".env"), "utf8"));
   expect(env.AVEN_BIND).toBe("0.0.0.0");
