@@ -78,7 +78,7 @@ export function BotChatBubble({
               data-role="user"
               style={bubbleStyle(tint)}
               className={cn(
-                "rounded-2xl border border-foreground/10 bg-clip-padding px-3 py-2 text-sm whitespace-pre-wrap",
+                "rounded-2xl border border-foreground/10 bg-clip-padding px-3 py-2 text-[15px]/[22px] font-medium whitespace-pre-wrap [word-spacing:0.15em]",
                 tint === undefined &&
                   "bg-linear-to-b from-accent to-[color-mix(in_oklch,var(--accent),var(--foreground)_6%)]",
                 bubbleInk(tint),
@@ -97,7 +97,7 @@ export function BotChatBubble({
           >
             <BubbleContent
               className={cn(
-                "rounded-2xl",
+                "rounded-2xl font-medium [word-spacing:0.15em] [&>.prose]:text-[15px] [&>.prose]:leading-[24px] [&>.prose]:[word-spacing:0.15em]",
                 joined?.above && "rounded-tl-md",
                 joined?.below && "rounded-bl-md",
               )}

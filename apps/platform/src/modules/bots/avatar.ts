@@ -18,7 +18,7 @@ export const colors: readonly string[] = [
   "#ffc400",
 ];
 
-const LIGHT_TINT = 0.35;
+const LIGHT_TINT = 0.18;
 
 function channel(value: number) {
   const unit = value / 255;
