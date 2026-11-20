@@ -175,25 +175,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
   switch (event.type) {
     case "snapshot":
       return [...event.messages];
-    case "run_start": {
-      const user: ChatMessage = {
-        id: messageId(messages.length),
-        role: "user",
-        parts: [{ type: "text", text: event.prompt }],
-      };
-
-      if (event.attachments?.length) user.attachments = event.attachments;
-
-      if (event.mentions?.length) user.mentions = event.mentions;
-
-      if (event.senderId) user.senderId = event.senderId;
-
-      return [
-        ...messages,
-        user,
-        { id: messageId(messages.length + 1), role: "assistant", parts: [] },
-      ];
-    }
+    case "run_start":
     case "steer": {
       const user: ChatMessage = {
         id: messageId(messages.length),
@@ -214,29 +196,20 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
       ];
     }
     case "text":
+    case "reasoning": {
+      const kind = event.type;
       return updateLastAssistant(messages, (parts) => {
         const last = parts.at(-1);
 
-        if (last?.type === "text") {
-          return [...parts.slice(0, -1), { type: "text", text: last.text + event.delta }];
+        if (last?.type === kind) {
+          return [...parts.slice(0, -1), { type: kind, text: last.text + event.delta }];
         }
 
         if (event.delta.trim() === "") return parts;
 
-        return [...parts, { type: "text", text: event.delta }];
+        return [...parts, { type: kind, text: event.delta }];
       });
-    case "reasoning":
-      return updateLastAssistant(messages, (parts) => {
-        const last = parts.at(-1);
-
-        if (last?.type === "reasoning") {
-          return [...parts.slice(0, -1), { type: "reasoning", text: last.text + event.delta }];
-        }
-
-        if (event.delta.trim() === "") return parts;
-
-        return [...parts, { type: "reasoning", text: event.delta }];
-      });
+    }
     case "tool_start":
       return updateLastAssistant(messages, (parts) => [
         ...parts,
@@ -289,7 +262,16 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
         at === index ? { ...message, workedMs: (message.workedMs ?? 0) + workedMs } : message,
       );
     }
+    case "run_resume":
+    case "steer_queued":
+    case "steer_applied":
+    case "steer_rejected":
+    case "usage":
+    case "limits":
+    case "error":
+      return messages;
     default:
+      event satisfies never;
       return messages;
   }
 }

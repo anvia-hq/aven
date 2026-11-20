@@ -8,7 +8,7 @@ import { PendingCalls } from "./pending-calls";
 import { answerRuntimeCall } from "./runtime-calls";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import { ViewerStreams } from "./viewer-streams";
-import { parseRuntimeFrame } from "@aven/protocol/wire";
+import { parseRuntimeFrame } from "@aven/protocol/wire/frames";
 import type { CockpitCaller } from "../cockpit/types";
 import type { MemoryCaller } from "../memory/types";
 import type { BotReplySink, MachineRelay, RunSink, ViewerHandle, ViewerSink } from "./types";

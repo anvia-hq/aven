@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 
 import { db } from "@aven/db/client";
 
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 import { createMemoryStore } from "../../memory-store";
 import { RuntimeHub } from "./hub";
 import { runtimesRouter } from "./router";

@@ -2,7 +2,7 @@ export const DRIVING_DAYS_MAX = 30;
 export const DRIVING_DAYS_DEFAULT = 7;
 
 const DRIVER = /^\[driver: ([^\]\n]{1,80})\] ([\s\S]*)$/;
-const OWN_MARK = "​";
+const OWN_MARK = "\u200B";
 
 export const driverName = (name: string) =>
   name

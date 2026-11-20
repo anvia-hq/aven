@@ -168,7 +168,7 @@ function blocks(list: Block[]): string {
   return out;
 }
 
-export function isBlockDocument(parsed: unknown): parsed is unknown[] {
+export function isBlockDocument(parsed: unknown): parsed is Block[] {
   return Array.isArray(parsed) && parsed.length > 0 && parsed.every(isBlock);
 }
 
@@ -184,5 +184,5 @@ export function cockpitMarkdown(body: string): string {
 
   if (!isBlockDocument(parsed)) return body;
 
-  return blocks(parsed as Block[]).trim();
+  return blocks(parsed).trim();
 }

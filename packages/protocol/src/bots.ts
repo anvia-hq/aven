@@ -1,4 +1,4 @@
-import type { BotChatMessage, BotEvent } from "./types";
+import type { BotChatMessage, BotEvent, ParsedBotPrompt } from "./types";
 
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
@@ -69,14 +69,6 @@ const PERSON_MARK = "\u200B";
 export const personPrompt = (text: string) => {
   const { from, note } = parseBotPrompt(text);
   return from === undefined && !note ? text : `${PERSON_MARK}${text}`;
-};
-
-export type ParsedBotPrompt = {
-  id?: string;
-  quoted?: string;
-  from?: string;
-  note?: boolean;
-  text: string;
 };
 
 export function parseBotPrompt(prompt: string): ParsedBotPrompt {

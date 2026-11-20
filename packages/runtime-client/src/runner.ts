@@ -1,103 +1,32 @@
 import { dirname } from "node:path";
 
-import { createCodingAgent } from "@aven/agents/coding-agent";
-import { createCompactionAgent } from "@aven/agents/compaction-agent";
 import { closeLens } from "@aven/agents/lens";
-import { subagentInstructions } from "@aven/agents/subagent-instruction";
-import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 import { errorMessage } from "@aven/agents/values";
 import { WIRE_VERSION, CloseCode } from "@aven/protocol/runtime-wire";
 import { decodeViewerFrame } from "@aven/protocol/viewer-frame";
 
 import { BotReplies, defaultCreateBotAgent } from "./bot-replies";
-import { createControlPlaneCalls } from "./control-plane-calls";
-import { cpuSampler, readHostStats } from "./host-stats";
-import { IdleRelease } from "./idle-release";
-import { createMachineProcessWatch } from "./machine-process-watch";
+import { createControlPlaneCalls } from "./runner/control-plane-calls";
+import { defaultCreateAgent } from "./runner/default-agents";
+import { cpuSampler, readHostStats } from "./runner/host-stats";
+import { IdleRelease } from "./sandboxes/idle-release";
+import { createMachineProcessWatch } from "./processes/machine-process-watch";
 import { PortTunnels } from "./port-tunnels";
-import { ProcessEndWatch, ProcessWatchRecords } from "./process-end-watch";
-import { machineCallWait } from "./machine-call-wait";
-import { PlacedWorkspaces } from "./placed-workspaces";
-import { RemoteWorkspaces } from "./remote-workspaces";
-import { createRunnerCalls } from "./runner-calls";
-import { TerminalSessions } from "./terminal-sessions";
-import { openAgentBackends } from "./agent-backends";
-import { readMachineGithubLogin } from "./github-login";
-import { createRunDriver } from "./run-driver";
-import { RunOutbox, openRunDatabase } from "./run-outbox";
-import { RunRecords, agentsOf } from "./run-records";
+import { ProcessEndWatch, ProcessWatchRecords } from "./processes/process-end-watch";
+import { machineCallWait } from "./runner/machine-call-wait";
+import { PlacedWorkspaces } from "./sandboxes/placed-workspaces";
+import { RemoteWorkspaces } from "./sandboxes/remote-workspaces";
+import { createRunnerCalls } from "./runner/runner-calls";
+import { TerminalSessions } from "./processes/terminal-sessions";
+import { openAgentBackends } from "./runs/agent-backends";
+import { readMachineGithubLogin } from "./security/github-login";
+import { createRunDriver } from "./runs/run-driver";
+import { RunOutbox, openRunDatabase } from "./runs/run-outbox";
+import { RunRecords, agentsOf } from "./runs/run-records";
 import type { ControlPlaneToRuntime, RuntimeToControlPlane } from "@aven/protocol/types";
-import type {
-  CreateRuntimeAgent,
-  DriverContext,
-  RuntimeOptions,
-  ThreadSandbox,
-  ViewerLink,
-} from "./types";
+import type { DriverContext, RuntimeOptions, ThreadSandbox, ViewerLink } from "./types";
 
-export const defaultCreateAgent =
-  (origin: string): CreateRuntimeAgent =>
-  ({
-    id,
-    attended,
-    tools,
-    skills,
-    skillsUnavailable,
-    envNames,
-    paths,
-    machine,
-    mcp,
-    memory,
-    project,
-    webSearch,
-    lens,
-    forks,
-    model,
-    role,
-    compact,
-  }) => {
-    if (!model) throw new Error("The control plane sent no model for this run");
-
-    if (compact) {
-      return createCompactionAgent({
-        id,
-        provider: model.provider,
-        modelId: model.modelId,
-        apiKey: model.gatewayToken,
-        baseUrl: `${origin}${model.gatewayPath}`,
-        reasoningEffort: model.reasoningEffort,
-        effortLevels: model.effortLevels,
-        contextWindow: model.contextWindow,
-      });
-    }
-
-    return createCodingAgent({
-      id,
-      retries: role ? undefined : false,
-      questions: attended,
-      instructions: role && subagentInstructions(role, machine),
-      machine,
-      maxTurns: role && SUBAGENT_MAX_TURNS,
-      provider: model.provider,
-      modelId: model.modelId,
-      apiKey: model.gatewayToken,
-      baseUrl: `${origin}${model.gatewayPath}`,
-      reasoningEffort: model.reasoningEffort,
-      effortLevels: model.effortLevels,
-      contextWindow: model.contextWindow,
-      tools,
-      skills,
-      skillsUnavailable,
-      envNames,
-      paths,
-      mcp,
-      memory,
-      project,
-      webSearch,
-      lens,
-      forks,
-    });
-  };
+export { defaultCreateAgent };
 
 type WebSocketWithInit = new (
   url: string,
@@ -129,6 +58,7 @@ export function startRuntime(options: RuntimeOptions) {
   const backends = openAgentBackends(
     options.journalPath,
     new Set(records.all().flatMap((record) => (record.done ? [] : agentsOf(record)))),
+    state,
   );
   const githubLogin = options.githubLogin ?? (options.host ? readMachineGithubLogin : undefined);
   const boxes = new Map<string, ThreadSandbox>();
@@ -448,6 +378,8 @@ export function startRuntime(options: RuntimeOptions) {
       await idle.settled();
       await options.sandbox.dispose();
       await backends.close();
+      await driver.close();
+      await callOf.close();
       await closeLens();
       state.close();
     },

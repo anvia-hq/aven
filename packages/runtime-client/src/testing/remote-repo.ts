@@ -2,7 +2,7 @@ import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { git } from "../git-clone";
+import { git } from "../git/git-clone";
 import type { RepoAccess } from "@aven/protocol/types";
 
 export async function createRemoteRepo(token = "test-token") {

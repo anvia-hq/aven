@@ -16,7 +16,7 @@ import {
   threadContinuation,
   webhooks,
 } from "./composition";
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 import { followUpsRouter } from "./modules/follow-ups/router";
 import { foreignOrigin } from "@aven/server-kit/origin-guard";
 import { trustedOrigins } from "./modules/auth/service";

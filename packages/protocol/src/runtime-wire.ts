@@ -1,3 +1,5 @@
+import type { AgentBackendCapability } from "./types";
+
 export const MODEL_APIS = [
   "openai",
   "anthropic",
@@ -39,10 +41,6 @@ export const AGENT_BACKEND_CAPABILITIES = {
   (typeof AGENT_BACKENDS)[number],
   Readonly<Record<AgentBackendCapability, boolean>>
 >;
-
-export type AgentBackendCapability = "question" | "restart" | "steering" | "goals" | "compaction";
-
-export type AgentBackendCapabilities = Readonly<Record<AgentBackendCapability, boolean>>;
 
 const BACKEND_ACT: Record<AgentBackendCapability, string> = {
   question: "pause for a question",

@@ -3,12 +3,14 @@ import { Elysia } from "elysia";
 
 import {
   ConflictError,
-  errorsRouter,
+  describeError,
   ForbiddenError,
   NotFoundError,
+  orNotFound,
   UnavailableError,
   UnprocessableError,
 } from "./errors";
+import { errorsRouter } from "./errors-router";
 
 const respond = (error: Error) =>
   new Elysia()
@@ -17,6 +19,32 @@ const respond = (error: Error) =>
       throw error;
     })
     .handle(new Request("http://localhost/x"));
+
+describe("error classes and helpers", () => {
+  test("each error class sets its own name", () => {
+    expect(new NotFoundError("a").name).toBe("NotFoundError");
+    expect(new UnprocessableError("b").name).toBe("UnprocessableError");
+    expect(new UnavailableError("c").name).toBe("UnavailableError");
+    expect(new ConflictError("d").name).toBe("ConflictError");
+    expect(new ForbiddenError("e").name).toBe("ForbiddenError");
+  });
+
+  test("orNotFound returns defined values and throws NotFoundError for null or undefined", () => {
+    expect(orNotFound(0, "missing")).toBe(0);
+    expect(orNotFound("", "missing")).toBe("");
+    expect(orNotFound(false, "missing")).toBe(false);
+    expect(orNotFound({ id: 1 }, "missing")).toEqual({ id: 1 });
+    expect(() => orNotFound(null, "no row")).toThrow(NotFoundError);
+    expect(() => orNotFound(undefined, "no row")).toThrow("no row");
+  });
+
+  test("describeError formats Error instances and arbitrary thrown values", () => {
+    expect(describeError(new Error("boom"))).toBe("boom");
+    expect(describeError(new ForbiddenError("denied"))).toBe("denied");
+    expect(describeError("plain string")).toBe("plain string");
+    expect(describeError(42)).toBe("42");
+  });
+});
 
 describe("errorsRouter", () => {
   test("maps each expected error to its status and keeps the message", async () => {

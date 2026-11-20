@@ -5,7 +5,7 @@ import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { and, eq } from "drizzle-orm";
 
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 import { variablesRouter } from "./router";
 
 const run =

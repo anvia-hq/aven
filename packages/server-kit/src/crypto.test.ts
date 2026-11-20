@@ -1,6 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import type * as CryptoModule from "./crypto";
+import { decryptOrUnavailable, decryptSecret, encryptSecret } from "./crypto";
 import { UnavailableError } from "./errors";
 
 const KEY = Buffer.alloc(32, 7).toString("base64");
@@ -9,34 +9,24 @@ const OTHER_KEY = Buffer.alloc(32, 8).toString("base64");
 
 const KEY_ERROR = "PROVIDER_ENCRYPTION_KEY must be 32 bytes, base64 (openssl rand -base64 32)";
 
-const load = async (key: string | undefined) => {
-  const previous = process.env.PROVIDER_ENCRYPTION_KEY;
-
-  if (key === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
-  else process.env.PROVIDER_ENCRYPTION_KEY = key;
-
-  try {
-    return (await import(`./crypto.ts?load=${crypto.randomUUID()}`)) as typeof CryptoModule;
-  } finally {
-    if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
-    else process.env.PROVIDER_ENCRYPTION_KEY = previous;
-  }
-};
-
-const failureOf = async (key: string | undefined) => {
-  try {
-    await load(key);
-    return null;
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-};
-
 const failure = { logged: "Could not decrypt the key:", message: "The key could not be read" };
 
-describe("stored secrets", async () => {
-  const { encryptSecret, decryptSecret, decryptOrUnavailable } = await load(KEY);
-  const other = await load(OTHER_KEY);
+function setKey(key: string | undefined) {
+  if (key === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
+  else process.env.PROVIDER_ENCRYPTION_KEY = key;
+}
+
+describe("stored secrets", () => {
+  let previousKey: string | undefined;
+
+  beforeEach(() => {
+    previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
+    process.env.PROVIDER_ENCRYPTION_KEY = KEY;
+  });
+
+  afterEach(() => {
+    setKey(previousKey);
+  });
 
   test("round-trips and never stores the plain text", () => {
     const stored = encryptSecret("sk-secret-1234");
@@ -63,23 +53,14 @@ describe("stored secrets", async () => {
 
   test("a secret written with one key cannot be read with another", () => {
     const mine = encryptSecret("sk-secret-1234");
-    const theirs = other.encryptSecret("sk-secret-1234");
-    expect(() => other.decryptSecret(mine)).toThrow();
-    expect(() => decryptSecret(theirs)).toThrow();
-    expect(other.decryptSecret(theirs)).toBe("sk-secret-1234");
-    expect(decryptSecret(mine)).toBe("sk-secret-1234");
-  });
+    setKey(OTHER_KEY);
+    const theirs = encryptSecret("sk-secret-1234");
+    expect(() => decryptSecret(mine)).toThrow();
+    expect(decryptSecret(theirs)).toBe("sk-secret-1234");
 
-  test("the key is read once, so changing the environment later re-keys nothing", () => {
-    const stored = encryptSecret("sk-stable");
-    const previous = process.env.PROVIDER_ENCRYPTION_KEY;
-    process.env.PROVIDER_ENCRYPTION_KEY = OTHER_KEY;
-    try {
-      expect(decryptSecret(stored)).toBe("sk-stable");
-    } finally {
-      if (previous === undefined) delete process.env.PROVIDER_ENCRYPTION_KEY;
-      else process.env.PROVIDER_ENCRYPTION_KEY = previous;
-    }
+    setKey(KEY);
+    expect(() => decryptSecret(theirs)).toThrow();
+    expect(decryptSecret(mine)).toBe("sk-secret-1234");
   });
 
   test("refuses every shape of malformed stored secret", () => {
@@ -93,14 +74,16 @@ describe("stored secrets", async () => {
   });
 
   test("an unreadable stored secret is unavailable, not a failure to read", () => {
+    setKey(OTHER_KEY);
+    const otherStored = encryptSecret("sk-secret-1234");
+    setKey(KEY);
+
     const logged: unknown[][] = [];
     const silenced = console.error;
     console.error = (...args: unknown[]) => void logged.push(args);
     try {
       expect(() => decryptOrUnavailable("not-a-secret", failure)).toThrow(UnavailableError);
-      expect(() => decryptOrUnavailable(other.encryptSecret("sk-secret-1234"), failure)).toThrow(
-        UnavailableError,
-      );
+      expect(() => decryptOrUnavailable(otherStored, failure)).toThrow(UnavailableError);
     } finally {
       console.error = silenced;
     }
@@ -110,16 +93,38 @@ describe("stored secrets", async () => {
   });
 });
 
-describe("the encryption key at startup", () => {
-  test("a key that is not 32 bytes fails when the module loads", async () => {
-    expect(await failureOf("short")).toBe(KEY_ERROR);
-    expect(await failureOf("")).toBe(KEY_ERROR);
-    expect(await failureOf(undefined)).toBe(KEY_ERROR);
-    expect(await failureOf(Buffer.alloc(31, 7).toString("base64"))).toBe(KEY_ERROR);
-    expect(await failureOf(Buffer.alloc(33, 7).toString("base64"))).toBe(KEY_ERROR);
+describe("lazy encryption key validation", () => {
+  let previousKey: string | undefined;
+
+  beforeEach(() => {
+    previousKey = process.env.PROVIDER_ENCRYPTION_KEY;
   });
 
-  test("a 32 byte key in base64 loads", async () => {
-    expect(await failureOf(KEY)).toBeNull();
+  afterEach(() => {
+    setKey(previousKey);
+  });
+
+  test("a key that is not 32 bytes fails when encrypting or decrypting", () => {
+    setKey(KEY);
+    const stored = encryptSecret("secret");
+
+    for (const bad of [
+      "short",
+      "",
+      undefined,
+      Buffer.alloc(31, 7).toString("base64"),
+      Buffer.alloc(33, 7).toString("base64"),
+    ]) {
+      setKey(bad);
+      expect(() => encryptSecret("secret")).toThrow(KEY_ERROR);
+      expect(() => decryptSecret(stored)).toThrow(KEY_ERROR);
+    }
+  });
+
+  test("importing the module does not require the key to be set", async () => {
+    setKey(undefined);
+    const loaded = await import(`./crypto.ts?lazy=${crypto.randomUUID()}`);
+    expect(typeof loaded.encryptSecret).toBe("function");
+    expect(() => loaded.encryptSecret("secret")).toThrow(KEY_ERROR);
   });
 });

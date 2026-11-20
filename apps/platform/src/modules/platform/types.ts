@@ -1,4 +1,4 @@
-import type { LensCaptureMode } from "@aven/protocol/lens";
+import type { LensCaptureMode } from "@aven/protocol/types";
 
 export type { LensCaptureMode };
 

@@ -1,14 +1,4 @@
-export type CodexAuthFile = {
-  auth_mode?: string;
-  OPENAI_API_KEY?: string | null;
-  tokens: {
-    id_token?: unknown;
-    access_token: string;
-    refresh_token: string;
-    account_id?: string | null;
-  };
-  last_refresh?: string;
-};
+import type { CodexAuthFile } from "./types";
 
 export function parseCodexAuth(text: string): CodexAuthFile | undefined {
   const trimmed = text.trim();

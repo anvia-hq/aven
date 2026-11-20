@@ -3,7 +3,7 @@ import { Elysia, type AnyElysia } from "elysia";
 import { db } from "@aven/db/client";
 import { WIRE_VERSION } from "@aven/protocol/runtime-wire";
 import type { ControlPlaneToRuntime } from "@aven/protocol/types";
-import { errorsRouter } from "@aven/server-kit/errors";
+import { errorsRouter } from "@aven/server-kit/errors-router";
 
 import { createMemoryStore } from "../memory-store";
 import { connectRouter } from "../modules/runtimes/connect";

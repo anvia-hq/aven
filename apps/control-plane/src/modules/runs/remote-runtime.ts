@@ -117,7 +117,19 @@ export class RemoteRuntime implements Runtime {
     codexModel,
     codexEffort,
   }: StartRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, lens, claudeToken, codexToken };
+    const extras = {
+      skills,
+      mcp,
+      identity,
+      memory,
+      cockpit,
+      github,
+      env,
+      webSearch,
+      lens,
+      claudeToken,
+      codexToken,
+    };
     return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
       const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
         type: "run.start",
@@ -178,7 +190,19 @@ export class RemoteRuntime implements Runtime {
     codexModel,
     codexEffort,
   }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = { skills, mcp, identity, memory, cockpit, lens, claudeToken, codexToken };
+    const extras = {
+      skills,
+      mcp,
+      identity,
+      memory,
+      cockpit,
+      github,
+      env,
+      webSearch,
+      lens,
+      claudeToken,
+      codexToken,
+    };
     return this.#launch(
       thread,
       model,
@@ -232,6 +256,7 @@ export class RemoteRuntime implements Runtime {
       cockpit,
       github,
       env,
+      webSearch,
       lens,
       claudeToken,
       codexToken,
@@ -244,6 +269,7 @@ export class RemoteRuntime implements Runtime {
       | "cockpit"
       | "github"
       | "env"
+      | "webSearch"
       | "lens"
       | "claudeToken"
       | "codexToken"
@@ -277,7 +303,17 @@ export class RemoteRuntime implements Runtime {
       mcp?.map((server) => server.id),
       memory?.caller,
       cockpit,
-      keptSecrets(github, env, credential, mcp, claudeToken, codexToken, nativeLens(lens, thread)),
+      keptSecrets(
+        github,
+        env,
+        credential,
+        mcp,
+        runModel?.gatewayToken,
+        webSearch,
+        claudeToken,
+        codexToken,
+        nativeLens(lens, thread),
+      ),
     );
     this.#post(connection, runId, message(runId, runModel, credential, placed));
 
@@ -369,6 +405,8 @@ function keptSecrets(
   env: StartRunInput["env"],
   identity: RunIdentityCredential | undefined,
   mcp: StartRunInput["mcp"],
+  gatewayToken: string | undefined,
+  webSearch: StartRunInput["webSearch"],
   claudeToken: string | undefined,
   codexToken: string | undefined,
   lens: StartRunInput["lens"],
@@ -379,6 +417,10 @@ function keptSecrets(
     identity,
     mcp: mcp?.length ? mcp : undefined,
   };
+
+  if (gatewayToken) secrets.gatewayToken = gatewayToken;
+
+  if (webSearch) secrets.webSearch = webSearch;
 
   if (claudeToken) secrets.claudeToken = claudeToken;
 

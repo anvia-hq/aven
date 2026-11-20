@@ -1,4 +1,4 @@
-import { SHELL_START } from "./shell-start";
+import { SHELL_START } from "./sandboxes/shell-start";
 import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { lstat, mkdir, realpath, rename, rmdir, symlink } from "node:fs/promises";
@@ -7,23 +7,23 @@ import { dirname, join, sep } from "node:path";
 import type { SandboxPaths } from "@aven/agents/types";
 import type { ComputerState, RepoAccess, RunEnvVar, RunGithub } from "@aven/protocol/types";
 
-import { ArtifactStore } from "./artifacts";
-import { DirectorySandbox } from "./directory-sandbox";
-import { fetchBranch } from "./fetch-branch";
-import { forkWorkspace } from "./fork-workspace";
-import { cloneRepository, git, isCloned } from "./git-clone";
-import { cloneRepositoryFolder, refreshRepositoryFolder } from "./repository-clone";
-import { ensureLocalExcludes } from "./local-excludes";
-import { githubRunEnv } from "./github-signin";
-import { envOf, withProjectEnv } from "./project-env";
+import { ArtifactStore } from "./files/artifacts";
+import { DirectorySandbox } from "./sandboxes/directory-sandbox";
+import { fetchBranch } from "./git/fetch-branch";
+import { forkWorkspace } from "./git/fork-workspace";
+import { cloneRepository, git, isCloned } from "./git/git-clone";
+import { cloneRepositoryFolder, refreshRepositoryFolder } from "./git/repository-clone";
+import { ensureLocalExcludes } from "./git/local-excludes";
+import { githubRunEnv } from "./security/github-signin";
+import { envOf, withProjectEnv } from "./security/project-env";
 import { runtimeHome } from "./runtime-home";
-import { secretRedactor } from "./secret-redaction";
-import { SkillStore } from "./skills";
-import { startedOnUse } from "./started-on-use";
-import { markTurn } from "./thread-diff";
+import { secretRedactor } from "./security/secret-redaction";
+import { SkillStore } from "./files/skills";
+import { startedOnUse } from "./sandboxes/started-on-use";
+import { markTurn } from "./git/thread-diff";
 import { threadProcesses } from "./thread-processes";
-import { hasRunningProcesses, sandboxTools } from "./thread-tools";
-import { UploadStore } from "./uploads";
+import { hasRunningProcesses, sandboxTools } from "./tools/thread-tools";
+import { UploadStore } from "./files/uploads";
 import type {
   AcquireOptions,
   HostSandboxConfig,
@@ -248,9 +248,20 @@ export class HostSandboxes implements ThreadWorkspaces {
 
     if (!(lazy && repo)) await start();
 
-    await mkdir(this.#workspaceDir(thread.id), { recursive: true });
-    const sandbox = new DirectorySandbox(thread.id, this.#workspaceDir(thread.id));
-    this.#sandboxes.set(thread.id, sandbox);
+    const dir = this.#workspaceDir(thread.id);
+    await mkdir(dir, { recursive: true });
+    const existing = this.#sandboxes.get(thread.id);
+    let sandbox: DirectorySandbox;
+
+    if (existing && existing.root === dir) {
+      sandbox = existing;
+    } else {
+      if (existing) await existing.dispose();
+
+      sandbox = new DirectorySandbox(thread.id, dir);
+      this.#sandboxes.set(thread.id, sandbox);
+    }
+
     const runtime = withProjectEnv(startedOnUse(sandbox, start), () => this.#envOf(thread.id));
     return {
       tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
@@ -268,10 +279,6 @@ export class HostSandboxes implements ThreadWorkspaces {
 
   computerState(_threadId: string): ComputerState {
     return "awake";
-  }
-
-  desktop() {
-    return undefined;
   }
 
   shell(threadId: string, _sessionId: string) {

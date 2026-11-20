@@ -1,4 +1,3 @@
-import { renewCodexAuth } from "./codex-auth-renewal";
 import type { AgentPrompt } from "@anvia/core";
 import { sentPrompt } from "@aven/agents/attachments";
 import { botAgentParts, createBotAgent } from "@aven/agents/bot-agent";
@@ -8,31 +7,22 @@ import { errorMessage } from "@aven/agents/values";
 import { botNote, MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
 import { SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
 
-import { keepAttachments } from "./attachments";
-import { verifyWith } from "./goal-assessment";
-import { boundedTools } from "./late-bound-tools";
-import { connectMcpServers } from "./mcp-servers";
-import { connectMcpForMachine } from "./machine-mcp";
-import { rememberBotTurn, remoteBotMemory } from "./remote-bot-memory";
+import { createBotRpcHosts } from "./bots/bot-hosts";
+import { rememberBotTurn, remoteBotMemory } from "./bots/remote-bot-memory";
+import { keepAttachments } from "./files/attachments";
+import { connectMcpForMachine } from "./mcp/machine-mcp";
+import { connectMcpServers } from "./mcp/mcp-servers";
+import { createHostedRunInput } from "./runs/hosted-input";
+import { boundedTools } from "./tools/late-bound-tools";
 import type { ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
-  BotGoalView,
-  BotMcpView,
-  BotProjectEntry,
-  BotProjectView,
-  BotProviderView,
   BotReplyInfo,
-  BotScheduleView,
-  BotThreadDetail,
-  BotThreadView,
   CockpitAccess,
-  RunWebSearch,
-  ProviderKeyAsk,
-  RunMemory,
   RunEvent,
+  RunMemory,
   RunSkill,
+  RunWebSearch,
 } from "@aven/protocol/types";
-import type { RunInput } from "@aven/agent-backend/types";
 import type {
   BotRepliesContext,
   BotReplyMessage,
@@ -196,16 +186,17 @@ export class BotReplies {
         servers,
         Boolean(this.#live.get(replyId)?.machine),
       );
+      const parsedPrompt = parseBotPrompt(prompt);
       const agent = await this.#agentFor(
         replyId,
-        { message, skills: skills ?? [], memory, cockpit, webSearch },
+        { message, skills: skills ?? [], memory, cockpit, webSearch, parsedPrompt },
         mcp,
         abort,
       );
       const asked = await this.#promptOf(bot.id, prompt, attachments);
       const session = { sessionId: bot.id };
       await agent.generate({ prompt: asked, session, abortSignal: signal });
-      const { from, note } = parseBotPrompt(prompt);
+      const { from, note } = parsedPrompt;
 
       if (!this.#live.get(replyId)?.spoke && !note && from === undefined) {
         await agent.generate({ prompt: botNote(UNSENT_NOTE), session, abortSignal: signal });
@@ -293,17 +284,19 @@ export class BotReplies {
       memory,
       cockpit,
       webSearch,
+      parsedPrompt,
     }: {
       message: BotReplyMessage;
       skills: readonly RunSkill[];
       memory?: RunMemory;
       cockpit?: CockpitAccess;
       webSearch?: RunWebSearch;
+      parsedPrompt: ReturnType<typeof parseBotPrompt>;
     },
     mcp: ConnectedMcp | undefined,
     abort: AbortController,
   ) {
-    const { bot, prompt } = message;
+    const { bot } = message;
     const { boxes, starting, call, send: post, createAgent } = this.#context;
     const sandbox = this.#computer(bot.id);
     await starting(bot.id);
@@ -312,7 +305,7 @@ export class BotReplies {
     boxes.set(bot.id, box);
     const skillListing = await this.#installSkills(replyId, bot.id, skills);
     const peers = [...bot.peers];
-    const { from, note } = parseBotPrompt(prompt);
+    const { from, note } = parsedPrompt;
     const canAskPerson = !note && (bot.handle === MAIN_BOT_HANDLE || from === undefined);
     const spoke = () => {
       const reply = this.#live.get(replyId);
@@ -378,6 +371,14 @@ export class BotReplies {
       shown = label;
       post({ type: "bot.activity", replyId, label });
     };
+    const rpcHosts = createBotRpcHosts({
+      replyId,
+      call,
+      exec,
+      canAskPerson,
+      hasProjects: Boolean(message.projects?.length),
+      spoke,
+    });
     const hosts: BotHosts = {
       bot,
       send,
@@ -390,36 +391,8 @@ export class BotReplies {
       },
       computer,
       paths: sandbox.paths?.(bot.id),
-      goals: {
-        get: async () => (await call("bot.goal", { replyId, op: "get" })) as BotGoalView | null,
-        start: async (input) =>
-          (await call("bot.goal", { replyId, op: "start", ...input })) as BotGoalView,
-        update: async (action, reason) =>
-          (await call("bot.goal", { replyId, op: "update", action, reason })) as BotGoalView | null,
-        check: async (checks, signal) => {
-          const failed: string[] = [];
-          for (const check of checks) {
-            signal?.throwIfAborted();
-            const [result] = await verifyWith(exec, [check])();
-
-            if (result && result.exitCode !== 0) {
-              const how = result.exitCode === null ? "timed out" : `exited ${result.exitCode}`;
-              failed.push(`$ ${result.command}\n(${how})\n${result.output}`.trimEnd());
-            }
-          }
-          return failed;
-        },
-      },
-      schedules: {
-        list: async () =>
-          (await call("bot.schedule", { replyId, op: "list" })) as BotScheduleView[],
-        create: async (input) =>
-          (await call("bot.schedule", { replyId, op: "create", ...input })) as BotScheduleView,
-        update: async (id, patch) =>
-          (await call("bot.schedule", { replyId, op: "update", id, ...patch })) as BotScheduleView,
-        remove: async (id) => void (await call("bot.schedule", { replyId, op: "delete", id })),
-      },
-      askQuestion: parseBotPrompt(prompt).note
+      ...rpcHosts,
+      askQuestion: note
         ? undefined
         : (questions) => {
             spoke();
@@ -428,51 +401,7 @@ export class BotReplies {
       updateSelf: (changes) => call("bot.update", { ...changes, replyId }),
       skills: skillListing,
       mcp: mcp && { tools: boundedTools(mcp.tools), note: mcp.note },
-      mcpServers: {
-        list: async () => (await call("bot.mcp", { replyId, op: "list" })) as BotMcpView[],
-        add: async (input) =>
-          (await call("bot.mcp", { replyId, op: "add", ...input })) as BotMcpView,
-        update: async (id, patch) =>
-          (await call("bot.mcp", { replyId, op: "update", id, ...patch })) as BotMcpView,
-        remove: async (id) => void (await call("bot.mcp", { replyId, op: "remove", id })),
-      },
-      providers: {
-        list: async () =>
-          (await call("bot.provider", { replyId, op: "list" })) as BotProviderView[],
-        add: async (input) =>
-          (await call("bot.provider", { replyId, op: "add", ...input })) as BotProviderView,
-        update: async (id, patch) =>
-          (await call("bot.provider", { replyId, op: "update", id, ...patch })) as BotProviderView,
-        remove: async (id) => void (await call("bot.provider", { replyId, op: "remove", id })),
-        models: async (id) =>
-          ((await call("bot.provider", { replyId, op: "models", id })) as { models: string[] })
-            .models,
-        askKey: canAskPerson
-          ? async (id) => {
-              spoke();
-              return (await call("bot.provider", { replyId, op: "askKey", id })) as ProviderKeyAsk;
-            }
-          : undefined,
-      },
       api: async (params) => call("bot.api", { replyId, ...params }),
-      threads: {
-        projects: async () =>
-          (await call("bot.thread", { replyId, op: "projects" })) as BotProjectView[],
-        list: async (filter) =>
-          (await call("bot.thread", { replyId, op: "list", ...filter })) as BotThreadView[],
-        get: async (id) =>
-          (await call("bot.thread", { replyId, op: "get", id })) as BotThreadDetail,
-        start: async (input) =>
-          (await call("bot.thread", { replyId, op: "start", ...input })) as BotThreadView,
-        continue: async (id, input) =>
-          (await call("bot.thread", { replyId, op: "continue", id, ...input })) as BotThreadView,
-        archive: async (id, archived) =>
-          (await call("bot.thread", { replyId, op: "archive", id, archived })) as BotThreadView,
-        stop: async (id) =>
-          (await call("bot.thread", { replyId, op: "stop", id })) as BotThreadView,
-        answer: async (id, input) =>
-          (await call("bot.thread", { replyId, op: "answer", id, ...input })) as BotThreadView,
-      },
       notes: memory && {
         memory,
         host: (command) => call("bot.notes", { replyId, command }),
@@ -483,22 +412,6 @@ export class BotReplies {
       },
       context: message.context,
       projects: message.projects,
-      projectFiles: message.projects?.length
-        ? {
-            folder: async (projectId, path) =>
-              (
-                (await call("bot.project", { replyId, op: "folder", projectId, path })) as {
-                  entries: BotProjectEntry[];
-                }
-              ).entries,
-            file: async (projectId, path) =>
-              (await call("bot.project", { replyId, op: "file", projectId, path })) as {
-                path: string;
-                text: string;
-                truncated: boolean;
-              },
-          }
-        : undefined,
       webSearch,
       lens: message.lens,
       createBot: bot.canCreateBots
@@ -585,20 +498,16 @@ function hostedAgent(
         (await computer.workspace?.(bot.id).catch(() => undefined)) ??
         computer.paths?.(bot.id)?.workspace ??
         process.cwd();
-      const input: RunInput = {
-        [backend]: {
-          token: backend === "claude" ? claudeToken : codexToken,
-          workspace: () => Promise.resolve(cwd),
-          redact: (text: string) => text,
-          env: [],
-          instructions: parts.instructions,
-          model: backend === "claude" ? claudeModel : codexModel,
-          effort: backend === "claude" ? claudeEffort : codexEffort,
-          renewed: (token: string, previous: string) => renewCodexAuth(context, previous, token),
-          questions: false,
-          tools: { catalog: parts.tools, questions: false },
-        },
-      } as RunInput;
+      const input = createHostedRunInput(backend, {
+        token: backend === "claude" ? claudeToken : codexToken,
+        workspace: () => Promise.resolve(cwd),
+        caller: context,
+        instructions: parts.instructions,
+        model: backend === "claude" ? claudeModel : codexModel,
+        effort: backend === "claude" ? claudeEffort : codexEffort,
+        questions: false,
+        tools: { catalog: parts.tools, questions: false },
+      });
       const followed = await agent.start(
         runOf(turns++ === 0 ? "" : `-${turns}`),
         bot.id,

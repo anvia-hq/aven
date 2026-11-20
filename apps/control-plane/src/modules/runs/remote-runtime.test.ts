@@ -41,9 +41,21 @@ function runtime({
   const cancelled: string[] = [];
   const revoked: string[] = [];
   const issued: { runId: string; tokenOf: string | undefined }[] = [];
+  const kept: unknown[] = [];
   const connection = {
     offers: (kind: string) => backends.includes(kind),
-    startRun() {},
+    startRun(
+      _runId: string,
+      _thread: unknown,
+      _sink: unknown,
+      _skills?: unknown,
+      _mcp?: unknown,
+      _memory?: unknown,
+      _cockpit?: unknown,
+      secrets?: unknown,
+    ) {
+      kept.push(secrets);
+    },
     endRun() {},
     post(message: ControlPlaneToRuntime) {
       if (failPost) throw new Error("connection lost");
@@ -67,6 +79,7 @@ function runtime({
     posted,
     revoked,
     issued,
+    kept,
     asked,
     cancelled,
     remote: new RemoteRuntime(
@@ -167,6 +180,21 @@ describe("a run's message to its runtime", () => {
     expect(posted[0]).toMatchObject({ type: "run.start", webSearch });
     expect(posted[1]).toMatchObject({ type: "run.resume", webSearch });
     expect(posted[2]).not.toHaveProperty("webSearch", expect.anything());
+  });
+
+  test("keeps gatewayToken, webSearch, github and env in run secrets for reconnect attach", async () => {
+    const { kept, remote } = runtime();
+    const webSearch = { apiKey: "tvly-control-plane" };
+    const env = [{ name: "SECRET_KEY", value: "s3cret", secret: true }];
+
+    await remote.start({ thread, prompt: "hi", webSearch, github, env });
+
+    expect(kept[0]).toMatchObject({
+      gatewayToken: model.gatewayToken,
+      webSearch,
+      github,
+      env,
+    });
   });
 
   test("ends the credential when the run cannot be posted", async () => {
