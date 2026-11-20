@@ -11,7 +11,7 @@ test.describe("subagents", () => {
     runner = undefined;
   });
 
-  test("each shows as a card with its work and what it sent back", async ({ page }) => {
+  test("each shows as one line, and the one that failed says why", async ({ page }) => {
     await registerUser(page, "subs", "Sub Agents");
     const provider = await page.request.post("/api/providers", {
       data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
@@ -25,20 +25,13 @@ test.describe("subagents", () => {
     await page.getByRole("button", { name: "Send" }).click();
 
     await page.locator('[data-role="worked"]').click();
-    const explorer = page.getByRole("button", { name: /Find the auth middleware/ });
-    await expect(explorer).toBeVisible();
-    await expect(explorer).toContainText("explore");
-    await expect(explorer).toContainText("1 tool call");
-    await expect(page.getByRole("button", { name: /Add a test/ })).toContainText("general");
-
-    await explorer.click();
-    await expect(page.getByRole("button", { name: /Read src\/auth\.ts/ })).toBeVisible();
-    await expect(page.getByText("Auth lives in")).toBeVisible();
-
-    await page.getByRole("button", { name: /Add a test/ }).click();
+    await expect(page.getByText("Find the auth middleware")).toBeVisible();
+    await expect(page.getByText("Add a test")).toBeVisible();
+    await expect(page.getByText("1 tool call")).toHaveCount(0);
+    await expect(page.getByText("Read src/auth.ts")).toHaveCount(0);
+    await expect(page.getByText("Auth lives in")).toHaveCount(0);
     await expect(page.getByText("The model refused.")).toBeVisible();
     await expect(page.getByLabel("Failed")).toBeVisible();
-
     await expect(page.getByText("the test could not be written")).toBeVisible();
   });
 });
