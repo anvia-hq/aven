@@ -61,7 +61,7 @@ export function createWebSearchTool(options: WebSearchOptions) {
           time_range: args.timeRange,
           include_answer: true,
         }),
-        signal: context.abortSignal,
+        signal: context?.abortSignal,
       });
 
       if (!response.ok) throw new Error(`Tavily search failed with ${response.status}`);

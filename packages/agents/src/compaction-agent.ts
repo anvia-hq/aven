@@ -20,7 +20,7 @@ import type { ModelSource } from "./types";
 
 export { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT };
 
-const MODEL_ID = "compaction";
+export const COMPACTION_MODEL_ID = "compaction";
 
 function compactionReply(spent: () => Usage, contextWindow?: number): StreamingCompletionModel {
   const respond = async (request: CompletionRequest): Promise<CompletionResponse> => {
@@ -32,7 +32,7 @@ function compactionReply(spent: () => Usage, contextWindow?: number): StreamingC
       contextUsage: contextWindow
         ? calculateContextUsage(
             { ...Usage.empty(), inputTokens: size, totalTokens: size },
-            { modelId: MODEL_ID, context: { contextWindow } },
+            { modelId: COMPACTION_MODEL_ID, context: { contextWindow } },
           )
         : undefined,
       finishReason: "stop",
@@ -41,7 +41,7 @@ function compactionReply(spent: () => Usage, contextWindow?: number): StreamingC
   };
   return {
     provider: "aven",
-    modelId: MODEL_ID,
+    modelId: COMPACTION_MODEL_ID,
     capabilities: {
       streaming: true,
       tools: false,

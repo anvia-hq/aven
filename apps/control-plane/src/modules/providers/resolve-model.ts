@@ -1,4 +1,3 @@
-import type { Provider } from "@aven/agents/model";
 import { isModelApi, providerNeedsKey } from "@aven/protocol/providers";
 
 import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
@@ -11,7 +10,7 @@ import { providersService } from "./service";
 import type { ModelSelection } from "./types";
 import type { ModelConfig } from "@aven/agents/types";
 import type { ProviderRow } from "@aven/db/schema/types";
-import type { ModelApi } from "@aven/protocol/types";
+import type { ModelApi, Provider } from "@aven/protocol/types";
 
 export const ENV_KEYS: Partial<Record<Provider, string>> = {
   anthropic: "ANTHROPIC_API_KEY",

@@ -1,7 +1,7 @@
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
-import { MAX_WAIT_SECONDS, realClock } from "./clock";
+import { MAX_WAIT_SECONDS, realClock } from "../internal/clock";
 import type { Clock } from "./types";
 import type { ForkView } from "@aven/protocol/types";
 

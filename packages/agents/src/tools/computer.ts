@@ -35,5 +35,5 @@ export function createComputerTools(host: ComputerHost) {
       return { state, summary: "The computer was already awake." };
     },
   });
-  return [status, wake];
+  return [status, wake] as const;
 }

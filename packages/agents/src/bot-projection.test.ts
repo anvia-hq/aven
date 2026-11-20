@@ -404,6 +404,114 @@ describe("botMessagesToChat", () => {
       ).toEqual([]);
     });
   });
+
+  test("handles null and primitive json tool outputs without throwing", () => {
+    const messages: Message[] = [
+      {
+        role: "assistant",
+        content: [
+          call("c1", { text: "hello" }),
+          {
+            type: "tool-call",
+            toolCallId: "q1",
+            toolName: "ask_question",
+            input: {
+              questions: [
+                {
+                  id: "q",
+                  text: "Pick?",
+                  choices: [
+                    { label: "A", value: "a" },
+                    { label: "B", value: "b" },
+                  ],
+                },
+              ],
+            },
+          },
+          { type: "tool-call", toolCallId: "k1", toolName: "ask_provider_key", input: { id: "p" } },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "c1",
+            toolName: "send_message",
+            output: { type: "json", value: null },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "q1",
+            toolName: "ask_question",
+            output: { type: "json", value: "plain" },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "k1",
+            toolName: "ask_provider_key",
+            output: { type: "json", value: null },
+          },
+        ],
+      },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([
+      { id: "b-0", role: "bot", text: "hello" },
+      {
+        id: "b-1",
+        role: "bot",
+        text: "Pick?",
+        questions: [
+          {
+            id: "q",
+            text: "Pick?",
+            choices: [
+              { label: "A", value: "A" },
+              { label: "B", value: "B" },
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  test("drops tool calls whose execution was denied", () => {
+    const messages: Message[] = [
+      { role: "user", content: "[m-0] hi" },
+      {
+        role: "assistant",
+        content: [
+          call("c1", { text: "denied message" }),
+          {
+            type: "tool-call",
+            toolCallId: "r1",
+            toolName: "react_to_message",
+            input: { messageId: "m-0", emoji: "👍" },
+          },
+        ],
+      },
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "c1",
+            toolName: "send_message",
+            output: { type: "execution-denied", reason: "Not allowed" },
+          },
+          {
+            type: "tool-result",
+            toolCallId: "r1",
+            toolName: "react_to_message",
+            output: { type: "execution-denied", reason: "Not allowed" },
+          },
+        ],
+      },
+    ];
+
+    expect(botMessagesToChat(messages)).toEqual([{ id: "m-0", role: "user", text: "hi" }]);
+  });
 });
 
 describe("quoting and reacting (decision 0258)", () => {

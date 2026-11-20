@@ -1,6 +1,8 @@
 import { createTool } from "@anvia/core";
 import { MEMORY_NOTE_MAX, MEMORY_ROOT } from "@aven/protocol/memory";
 import { z } from "zod";
+
+import { required } from "../internal/required";
 import type { MemoryHost } from "./types";
 import type { MemoryCommand } from "@aven/protocol/types";
 
@@ -41,14 +43,6 @@ export const memorySchema = z.object({
 });
 
 type MemoryInput = z.infer<typeof memorySchema>;
-
-function required<K extends keyof MemoryInput>(input: MemoryInput, key: K) {
-  const value = input[key];
-
-  if (value === undefined) throw new Error(`${input.command} needs ${key}`);
-
-  return value as NonNullable<MemoryInput[K]>;
-}
 
 export function memoryCommandOf(input: MemoryInput): MemoryCommand {
   switch (input.command) {

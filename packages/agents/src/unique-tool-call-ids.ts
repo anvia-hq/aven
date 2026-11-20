@@ -5,6 +5,8 @@ import type {
   CompletionResponse,
 } from "@anvia/core";
 
+import { proxyCompletionModel } from "./internal/model-proxy";
+
 const POSITIONAL = /^tool_\d+$/;
 
 type Rename = (id: string) => string;
@@ -51,24 +53,10 @@ async function* renamedStream<R>(
 }
 
 export function withUniqueToolCallIds<T extends CompletionModel>(model: T): T {
-  return new Proxy(model, {
-    get(target, key) {
-      const value: unknown = target[key as keyof typeof target];
-
-      if (typeof value !== "function") return value;
-
-      const call = (...args: unknown[]) =>
-        (value as (...args: unknown[]) => unknown).apply(target, args);
-
-      if (key === "streamCompletion")
-        return (...args: unknown[]) =>
-          renamedStream(call(...args) as AsyncIterable<CompletionModelStreamEvent>, renamer());
-
-      if (key === "completion")
-        return async (...args: unknown[]) =>
-          renameResponse((await call(...args)) as CompletionResponse, renamer());
-
-      return value.bind(target);
-    },
+  return proxyCompletionModel(model, {
+    streamCompletion: (call, ...args) =>
+      renamedStream(call(...args) as AsyncIterable<CompletionModelStreamEvent>, renamer()),
+    completion: async (call, ...args) =>
+      renameResponse((await call(...args)) as CompletionResponse, renamer()),
   });
 }

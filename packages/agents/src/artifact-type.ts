@@ -1,9 +1,5 @@
 import { imageType } from "./image-type";
-
-const startsWith = (bytes: Uint8Array, at: number, prefix: readonly number[]) =>
-  prefix.every((byte, index) => bytes[at + index] === byte);
-
-const ascii = (text: string) => [...text].map((char) => char.charCodeAt(0));
+import { ascii, startsWith } from "./internal/bytes";
 
 const contains = (bytes: Uint8Array, text: string, within: number) => {
   const head = new TextDecoder("latin1").decode(bytes.subarray(0, within));

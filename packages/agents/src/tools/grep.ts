@@ -8,7 +8,7 @@ import {
   SEARCH_TIMEOUT_MS,
   SKIPPED_DIRECTORIES,
   withNotes,
-} from "./search-paths";
+} from "../internal/search-paths";
 import type { SearchableFiles } from "./types";
 
 export const GREP_TOOL_NAME = "grep";

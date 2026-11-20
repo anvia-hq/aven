@@ -8,6 +8,10 @@ describe("activityLabelOf", () => {
       "Running a command",
     );
     expect(activityLabelOf("start_thread", { prompt: "secret plans" })).toBe("Starting a thread");
+    expect(activityLabelOf("delete_bot", { handle: "scout" })).toBe("Deleting a bot");
+    expect(activityLabelOf("read_project_file", { path: "src/app.ts" })).toBe(
+      "Reading a project file",
+    );
   });
 
   test("names the file a file tool works on, not its folder", () => {

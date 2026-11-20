@@ -166,4 +166,18 @@ describe("glob", () => {
       "[2 more not shown; narrow the search]",
     ]);
   });
+
+  test("rejects search paths that escape the workspace", async () => {
+    for (const outside of ["..", "../other", "src/../../outside", "/etc"]) {
+      await expect(
+        createGrepTool(files()).call({ pattern: "Alpha", path: outside }),
+      ).rejects.toThrow("outside the workspace");
+      await expect(createFindTool(files()).call({ name: "app", path: outside })).rejects.toThrow(
+        "outside the workspace",
+      );
+      await expect(
+        createGlobTool(files()).call({ pattern: "*.ts", path: outside }),
+      ).rejects.toThrow("outside the workspace");
+    }
+  });
 });

@@ -621,6 +621,25 @@ describe("createBotAgent", () => {
     });
     expect(plain.tools.map((tool) => tool.name)).not.toContain("create_schedule");
     expect(plain.instructions).not.toContain("<schedules>");
+
+    const withoutTimezone = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      schedules: {
+        list: async () => [],
+        create: async () => {
+          throw new Error("no");
+        },
+        update: async () => {
+          throw new Error("no");
+        },
+        remove: async () => undefined,
+      },
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    expect(withoutTimezone.tools.map((tool) => tool.name)).not.toContain("create_schedule");
+    expect(withoutTimezone.instructions).not.toContain("<schedules>");
   });
 
   test("a bot given a way to change itself has the tool, and is told its description and when to use it", async () => {

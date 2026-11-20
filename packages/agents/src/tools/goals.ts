@@ -67,14 +67,14 @@ export function createGoalTools(host: GoalHost) {
     description:
       "Change your goal. complete: the whole objective is achieved (its checks run first on your computer). blocked: you cannot go on without the person; give the reason. pause, resume and clear: only when the person asks, in a chat reply.",
     inputSchema: updateSchema,
-    handler: async ({ action, reason }, { abortSignal }) => {
+    handler: async ({ action, reason }, context) => {
       if (action === "complete") {
         const goal = await host.get();
 
         if (goal && goal.phase !== "complete" && goal.checks.length > 0) {
           if (!host.check) throw new Error("You have no computer to run the checks on.");
 
-          const failed = await host.check(goal.checks, abortSignal);
+          const failed = await host.check(goal.checks, context?.abortSignal);
 
           if (failed.length > 0) {
             return {

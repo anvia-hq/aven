@@ -1,44 +1,25 @@
-import { MAX_DOCUMENT_BYTES } from "@aven/protocol/runtime-wire";
-
 import { artifactType, documentType } from "./artifact-type";
-import { MAX_HTML_BYTES, MAX_IMAGE_BYTES, MAX_VIDEO_BYTES } from "./tools/show-artifact";
+import { saveCheckedFile } from "./internal/save-file";
 import { errorMessage } from "./values";
 import type { BotFiles, SentFile } from "./types";
 import type { ToolArtifact } from "@aven/protocol/types";
-
-function limitOf(mediaType: string) {
-  if (mediaType === "text/html") return MAX_HTML_BYTES;
-
-  if (mediaType.startsWith("video/")) return MAX_VIDEO_BYTES;
-
-  if (mediaType.startsWith("image/")) return MAX_IMAGE_BYTES;
-
-  return MAX_DOCUMENT_BYTES;
-}
 
 async function keepFile(
   files: BotFiles,
   { path, title }: SentFile,
   abortSignal?: AbortSignal,
 ): Promise<ToolArtifact> {
-  const bytes = await files.readFile({ path, abortSignal });
-  const mediaType = artifactType(bytes) ?? documentType(bytes, path);
-
-  if (!mediaType) {
-    throw new Error(
-      `${path} is not an image, video, HTML page, PDF, or a markdown, CSV or text file`,
-    );
-  }
-
-  const limit = limitOf(mediaType);
-
-  if (bytes.length > limit) {
-    throw new Error(`${path} is ${bytes.length} bytes; ${mediaType} up to ${limit} can be sent`);
-  }
-
-  const name = await files.save(bytes, mediaType);
+  const { name, mediaType, size } = await saveCheckedFile(files, {
+    path,
+    abortSignal,
+    sniff: (bytes, filePath) => artifactType(bytes) ?? documentType(bytes, filePath),
+    unsupportedError: (filePath) =>
+      `${filePath} is not an image, video, HTML page, PDF, or a markdown, CSV or text file`,
+    tooLargeError: (filePath, fileSize, type, limit) =>
+      `${filePath} is ${fileSize} bytes; ${type} up to ${limit} can be sent`,
+  });
   const fileName = path.slice(path.lastIndexOf("/") + 1);
-  return { name, mediaType, title: title ?? fileName, size: bytes.length };
+  return { name, mediaType, title: title ?? fileName, size };
 }
 
 export async function keepFiles(

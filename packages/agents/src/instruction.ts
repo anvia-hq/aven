@@ -1,3 +1,4 @@
+import { machinePlace } from "./internal/machine-place";
 import type { MachineProvider } from "./types";
 
 function longTasks(maxTurns: number, canHandOff: boolean) {
@@ -27,13 +28,6 @@ function goalReporting() {
     "Leave the routine out of your messages: reading files, a check that passes, a small edit, a retry.",
   ];
   return `<reporting>\n${lines.map((line) => `- ${line}`).join("\n")}\n</reporting>`;
-}
-
-function place(provider?: MachineProvider) {
-  if (provider)
-    return `- You work inside an Aven Cloud sandbox, on the ${provider} provider: a fresh machine made for this thread and deleted when the thread is idle, so anything you have not pushed is lost. It is not the person's computer, and only what this sandbox has installed is available to you.`;
-
-  return "- You work on the person's own computer, as their user: nothing is fenced around you. The folder and the tools installed on it stay when this thread ends.";
 }
 
 function workspace(provider?: MachineProvider) {
@@ -113,7 +107,7 @@ You are a coding agent working in the folder of a project${provider ? `, inside 
 ${longTasks(maxTurns, canHandOff)}${canHandOff ? "" : `\n\n${goalReporting()}`}
 
 <machine>
-${place(provider)}
+- ${machinePlace(provider)}
 - The project is /workspace; make your changes there, and keep to it. Do not read, change or copy what is outside it (their keys, tokens, dotfiles, other projects) unless the task needs it, and never print a secret.
 ${workspace(provider)}
 - read_file opens text only. To look at a PNG, JPEG, GIF or WebP file (a screenshot you took, a chart, a mockup, an uploaded picture), call view_image with its path.

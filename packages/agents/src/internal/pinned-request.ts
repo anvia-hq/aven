@@ -3,7 +3,7 @@ import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
 import type { IncomingMessage } from "node:http";
 
-import type { PinnedTarget } from "./types";
+import type { PinnedTarget } from "../tools/types";
 
 function bodyOf(incoming: IncomingMessage) {
   const chunks = incoming[Symbol.asyncIterator]();
