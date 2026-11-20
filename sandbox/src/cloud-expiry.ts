@@ -22,9 +22,9 @@ export function createCloudExpiry({
     const stale = await idle(new Date(now.getTime() - life));
     let expired = 0;
 
-    for (const { id, provider, sandboxId } of stale) {
+    for (const { id, provider, sandboxId, credentials } of stale) {
       try {
-        if (sandboxId && !(await remove(provider, sandboxId))) continue;
+        if (sandboxId && !(await remove(provider, sandboxId, credentials))) continue;
 
         await expire(id);
         expired += 1;

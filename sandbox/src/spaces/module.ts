@@ -1,22 +1,40 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { SpacesApiError, SpacesClient } from "./client";
-import { spacesApiBase, spacesApiKey } from "./config";
+import { spacesApiBase, spacesApiKey, spacesAutoStopSeconds } from "./config";
 import { spacesLifetime } from "./lifetime";
 import { createSpacesProvider } from "./provider";
 import { destroySpacesSandbox, stopSpacesSandbox } from "./stop";
-import type { CloudProviderModule, ProviderDeps, SandboxRunner } from "../types";
+import type {
+  CloudProviderModule,
+  ProviderCapabilities,
+  ProviderCredentials,
+  ProviderDeps,
+  SandboxRunner,
+} from "../types";
 
-function client() {
-  const base = spacesApiBase();
+const CAPABILITIES: ProviderCapabilities = {
+  stopMode: "native_resume",
+  supportsMaxLifetime: false,
+  supportsDiskSizeQuery: false,
+  defaultAutoStopSeconds: spacesAutoStopSeconds(),
+};
+
+function baseOf(credentials?: ProviderCredentials) {
+  const configured = credentials?.base.trim().replace(/\/$/, "");
+  return configured || spacesApiBase();
+}
+
+function clientFor(credentials?: ProviderCredentials) {
+  const base = baseOf(credentials);
 
   if (!base) throw new UnavailableError("The spaces server address is not set");
 
   return new SpacesClient(base);
 }
 
-function key() {
-  const apiKey = spacesApiKey();
+function key(credentials?: ProviderCredentials) {
+  const apiKey = credentials?.apiKey.trim() || spacesApiKey();
 
   if (!apiKey) throw new UnavailableError("The spaces API key is not set");
 
@@ -26,6 +44,7 @@ function key() {
 const gone = (error: unknown) => error instanceof SpacesApiError && error.status === 404;
 
 export const spacesModule: CloudProviderModule = {
+  capabilities: CAPABILITIES,
   apiKey: spacesApiKey,
   ready: () => spacesApiKey() !== null && spacesApiBase() !== null,
   create: <T extends SandboxRunner>(deps: ProviderDeps<T>) =>
@@ -35,41 +54,48 @@ export const spacesModule: CloudProviderModule = {
       saveSandboxId: deps.saveSandboxId,
       clock: deps.clock,
     }),
-  stop: async (record) => {
-    await stopSpacesSandbox(record, client());
+  stop: async (record, credentials) => {
+    const resolved = credentials ?? record.credentials;
+    const effective = resolved ? { ...record, apiKey: resolved.apiKey } : record;
+    await stopSpacesSandbox(effective, clientFor(resolved));
     spacesLifetime.stopped(record.runtimeId);
   },
-  extend: async (record) => {
+  extend: async (record, options, credentials) => {
     if (!record.sandboxId) return;
 
-    await client().extend(record.apiKey, record.sandboxId);
+    const resolved = credentials ?? record.credentials;
+    const apiKey = resolved?.apiKey ?? record.apiKey;
+    await clientFor(resolved).extend(apiKey, record.sandboxId, options?.ttlSeconds);
   },
-  removeSandbox: async (sandboxId) => {
-    const apiKey = spacesApiKey();
+  removeSandbox: async (sandboxId, credentials) => {
+    const apiKey = credentials?.apiKey.trim() || spacesApiKey();
+    const base = baseOf(credentials);
 
-    if (!apiKey) throw new UnavailableError("The spaces API key is not set");
+    if (!apiKey || !base) return false;
 
-    await destroySpacesSandbox(apiKey, sandboxId, client());
-
+    await destroySpacesSandbox(apiKey, sandboxId, new SpacesClient(base));
     return true;
   },
-  saveEnvironment: async (sandboxId, name) => client().saveSnapshot(key(), sandboxId, name),
-  readEnvironment: async (name) => {
-    const apiKey = spacesApiKey();
+  saveEnvironment: async (sandboxId, name, credentials) =>
+    clientFor(credentials).saveSnapshot(key(credentials), sandboxId, name),
+  readEnvironment: async (name, credentials) => {
+    const apiKey = credentials?.apiKey.trim() || spacesApiKey();
+    const base = baseOf(credentials);
 
-    if (!apiKey) return null;
+    if (!apiKey || !base) return null;
 
-    return client()
+    return new SpacesClient(base)
       .getSavedSnapshot(apiKey, name)
       .catch((error: unknown) => (gone(error) ? null : Promise.reject(error)));
   },
-  removeEnvironment: async (name) => {
-    const apiKey = spacesApiKey();
+  removeEnvironment: async (name, credentials) => {
+    const apiKey = credentials?.apiKey.trim() || spacesApiKey();
+    const base = baseOf(credentials);
 
-    if (!apiKey || !spacesApiBase()) return true;
+    if (!apiKey || !base) return false;
 
     try {
-      await client().deleteSavedSnapshot(apiKey, name);
+      await new SpacesClient(base).deleteSavedSnapshot(apiKey, name);
       return true;
     } catch (error) {
       if (gone(error)) return true;

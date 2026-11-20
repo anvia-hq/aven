@@ -31,9 +31,11 @@ export async function stopBoatSandbox(record: SandboxRecord, client: BoatClient)
   }
 }
 
-export async function removeBoatSandbox(sandboxId: string, client = new BoatClient()) {
-  const apiKey = boatApiKey();
-
+export async function removeBoatSandbox(
+  sandboxId: string,
+  client = new BoatClient(),
+  apiKey = boatApiKey(),
+) {
   if (!apiKey) return false;
 
   try {
