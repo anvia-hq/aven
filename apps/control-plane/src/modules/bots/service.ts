@@ -2,12 +2,12 @@ import { db } from "@aven/db/client";
 import { botGoals } from "@aven/db/schema/bot-goals";
 import { botSchedules } from "@aven/db/schema/bot-schedules";
 import { bots } from "@aven/db/schema/bots";
-import { providers } from "@aven/db/schema/providers";
 import { BOT_LIMIT, botHandleOf, freeBotHandle, MAIN_BOT_HANDLE } from "@aven/protocol/bots";
 import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
 import { assertBotModel } from "../providers/bot-run-choice";
+import { providersService } from "../providers/service";
 import { requireUsableRuntime } from "../runtimes/usable";
 import type { UpdateBotBody } from "./schema";
 import type { NewBot } from "./types";
@@ -110,10 +110,19 @@ export const botsService = {
       : [];
     const blockedAt = new Map(blocked.map((each) => [each.botId, each.since]));
     const failedAt = new Map(failing.map((each) => [each.botId, each.since]));
+    const hasProvider = rows.some((row) => row.providerId !== null);
+    const knownProviders = hasProvider
+      ? new Set((await providersService.list(userId)).map((provider) => provider.id))
+      : null;
 
-    return rows.map((row) =>
-      view(row, attentionOf(row, blockedAt.get(row.id), failedAt.get(row.id))),
-    );
+    return rows.map((row) => {
+      const normalized =
+        row.providerId && knownProviders && !knownProviders.has(row.providerId)
+          ? { ...row, providerId: null, modelId: null, reasoningEffort: null }
+          : row;
+
+      return view(normalized, attentionOf(normalized, blockedAt.get(row.id), failedAt.get(row.id)));
+    });
   },
 
   async markSaid(botId: string, askedQuestion: boolean) {
@@ -161,7 +170,10 @@ export const botsService = {
 
   async get(userId: string, id: string) {
     const [row] = await db.select().from(bots).where(ownBot(userId, id));
-    return row ? view(row, null) : null;
+
+    if (!row) return null;
+
+    return view(await liveProvider(userId, row), null);
   },
 
   async getByHandle(userId: string, handle: string) {
@@ -169,7 +181,10 @@ export const botsService = {
       .select()
       .from(bots)
       .where(and(eq(bots.userId, userId), eq(bots.handle, handle)));
-    return row ? view(row, null) : null;
+
+    if (!row) return null;
+
+    return view(await liveProvider(userId, row), null);
   },
 
   async remove(userId: string, id: string) {
@@ -241,11 +256,16 @@ function modelAfter(current: BotModel, change: ModelChange): BotModel {
   };
 }
 
+async function liveProvider(userId: string, row: BotRow): Promise<BotRow> {
+  if (!row.providerId) return row;
+
+  const found = await providersService.forRun(userId, row.providerId);
+
+  return found ? row : { ...row, providerId: null, modelId: null, reasoningEffort: null };
+}
+
 async function requireOwnProvider(userId: string, providerId: string) {
-  const [row] = await db
-    .select({ id: providers.id })
-    .from(providers)
-    .where(and(eq(providers.id, providerId), eq(providers.userId, userId)));
+  const row = await providersService.forRun(userId, providerId);
 
   if (!row) throw new UnprocessableError("Provider not found");
 }
