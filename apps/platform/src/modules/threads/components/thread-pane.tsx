@@ -114,7 +114,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div
               className={cn(
-                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border md:border-sidebar-border",
+                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border md:border-foreground/12",
               )}
             >
               <ThreadHeader
