@@ -1,3 +1,5 @@
+export type GithubFetch = (input: string, init?: RequestInit) => Promise<Response>;
+
 export type GithubBranchSummary = {
   name: string;
   isDefault: boolean;
@@ -6,12 +8,6 @@ export type GithubBranchSummary = {
   behind: number;
   lastCommit: { sha: string; message: string; author: string | null; date: string } | null;
   pull: { number: number; title: string } | null;
-};
-
-export type OpenPullPayload = {
-  number: number;
-  title: string;
-  head: { ref: string; repo: { full_name: string } | null };
 };
 
 export type GithubConfig = {
@@ -41,6 +37,10 @@ export type GithubUserGrant = {
 
 export type GithubUserProfile = { id: number; login: string; name: string | null };
 
+export type GithubIdentity = GithubUserProfile;
+
+export type GithubUserToken = { token: string; identity: GithubIdentity };
+
 export type GithubTreeEntry = { name: string; path: string; type: "file" | "directory" };
 
 export type GithubRepository = {
@@ -51,6 +51,14 @@ export type GithubRepository = {
 };
 
 export type GithubNewRepository = GithubRepository & { id: number };
+
+export type GithubCreateRepositoryInput = {
+  owner: string;
+  name: string;
+  private: boolean;
+  accountType: GithubInstallationAccountType;
+  userToken: string | null;
+};
 
 export type GithubInstallationAccountType = "user" | "organization";
 
@@ -168,53 +176,9 @@ export type GithubCommitDetail = {
   filesTruncated: boolean;
 };
 
-export type FilePayload = {
-  filename: string;
-  previous_filename?: string;
-  status: string;
-  additions: number;
-  deletions: number;
-  patch?: string;
-};
-
-export type ReviewPayload = {
-  user: { login: string } | null;
-  state: string;
-  submitted_at?: string;
-};
-
-export type CheckRunPayload = {
-  name: string;
-  status: string;
-  conclusion: string | null;
-  html_url: string | null;
-};
-
-export type GithubIdentity = { id: number; login: string; name: string | null };
-
-export type GithubUserToken = { token: string; identity: GithubIdentity };
-
 export type GithubReviewComment = {
   author: string | null;
   path: string;
   text: string;
   outdated: boolean;
-};
-
-export type ReviewThreadsPayload = {
-  data?: {
-    repository: {
-      pullRequest: {
-        reviewThreads: {
-          nodes: {
-            isResolved: boolean;
-            isOutdated: boolean;
-            path: string;
-            comments: { nodes: { body: string; author: { login: string } | null }[] };
-          }[];
-        };
-      } | null;
-    } | null;
-  };
-  errors?: { message: string }[];
 };
