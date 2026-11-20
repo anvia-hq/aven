@@ -62,9 +62,19 @@ export async function resolveModel(
     );
   }
 
+  const chosenModel = selection.modelId ?? row.modelId ?? row.allowedModels?.[0] ?? undefined;
+
+  if (row.allowedModels && row.allowedModels.length > 0) {
+    if (!chosenModel || !row.allowedModels.includes(chosenModel)) {
+      throw new InvalidSelectionError(
+        `${chosenModel ?? "That model"} is not enabled on ${row.name}`,
+      );
+    }
+  }
+
   const config: ModelConfig = {
     provider: kindOf(row),
-    modelId: selection.modelId ?? row.modelId ?? undefined,
+    modelId: chosenModel,
     baseUrl: row.baseUrl ?? undefined,
     apiKey: readKey(row),
   };

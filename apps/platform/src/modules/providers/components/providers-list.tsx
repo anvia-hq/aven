@@ -135,16 +135,18 @@ export function ProvidersList() {
 
     return !flag || config?.[flag] !== false;
   };
+  const own = providers.filter((provider) => !provider.managed);
   const available = PROVIDERS.filter(
-    (kind) =>
-      offered(kind) && (MANY.has(kind) || !providers.some((provider) => provider.kind === kind)),
+    (kind) => offered(kind) && (MANY.has(kind) || !own.some((provider) => provider.kind === kind)),
   );
 
-  const taken = connectedPresets(providers);
+  const taken = connectedPresets(own);
   const presets = COMPATIBLE_PRESETS.filter((preset) => !taken.has(preset.id));
   const featured = FEATURED.filter(offered);
   const availableRows = available.filter((kind) => !featured.includes(kind));
-  const connected = providers.filter((provider) => !featured.includes(provider.kind));
+  const connected = providers.filter(
+    (provider) => provider.managed || !featured.includes(provider.kind),
+  );
   const kindRow = (kind: ProviderKind): Row => ({
     key: kind,
     kind,
@@ -182,7 +184,7 @@ export function ProvidersList() {
           </div>
           <ul className="grid gap-3 sm:grid-cols-2">
             {featured.map((kind) => {
-              const provider = providers.find((item) => item.kind === kind);
+              const provider = own.find((item) => item.kind === kind);
 
               return (
                 <Highlight
@@ -212,6 +214,7 @@ export function ProvidersList() {
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm font-medium">{provider.name}</span>
+                  {provider.managed && <Badge variant="secondary">Managed</Badge>}
                   {isSubscription(provider) && <Badge variant="outline">Subscription</Badge>}
                   {provider.isDefault && <Badge variant="secondary">Default</Badge>}
                 </div>
@@ -224,19 +227,21 @@ export function ProvidersList() {
                   )}
                 </p>
               </div>
-              <ProviderActions
-                provider={provider}
-                edit={
-                  provider.kind === "openai-compatible" && !presetOf(provider) ? undefined : (
-                    <ProviderDialog
-                      kind={provider.kind}
-                      provider={provider}
-                      preset={presetOf(provider)}
-                      label="Edit"
-                    />
-                  )
-                }
-              />
+              {!provider.managed && (
+                <ProviderActions
+                  provider={provider}
+                  edit={
+                    provider.kind === "openai-compatible" && !presetOf(provider) ? undefined : (
+                      <ProviderDialog
+                        kind={provider.kind}
+                        provider={provider}
+                        preset={presetOf(provider)}
+                        label="Edit"
+                      />
+                    )
+                  }
+                />
+              )}
             </li>
           ))}
         </Group>
