@@ -21,10 +21,11 @@ Run from the repo root.
 
 ```sh
 bun install            # install deps for all workspaces
+hk install             # install local git hooks from hk.pkl (pre-commit <1s, pre-push <9s)
 bun run dev            # start every app that defines a `dev` script
-bun run typecheck      # tsc across all workspaces; must pass before committing
-bun run lint           # oxlint (lint:fix to autofix)
-bun run format         # oxfmt (format:check to verify only)
+bun run typecheck      # bun check (TypeScript 7) across all workspaces; must pass before pushing
+bun run lint           # bun lint reading .oxlintrc.json (lint:fix to autofix)
+bun run format         # bun fmt (format:check to verify only)
 bun test apps packages sandbox tooling # unit tests (tooling = our lint rules); the Postgres ones need `createdb aven` and DATABASE_URL
 bun run test            # the unit tests
 bun run test:e2e       # Playwright. Own ports 8100/5174 and database aven_e2e, a production build of the platform
@@ -47,6 +48,7 @@ Ports: control-plane `8000`, platform `5173` (Vite proxies `/api/*` to the backe
 - **Secrets and config.** Never commit secrets or `.env`. Every variable is also listed in `.env.example` with a safe placeholder.
 - **Our own lint rules** are in `tooling/oxlint/rules/` (one file and one test each, `aven/<name>` in `.oxlintrc.json`; decisions 0149 and 0281). Beyond no comments, no barrel files and `padded-if`: no `Reflect.get`/`Reflect.apply`, no `.filter().map()` chains (use `flatMap`), no `as unknown as T` in source, no `type X = unknown`, no module mocking, and no copying the accumulator in `reduce`.
 - **Tests share the dev database.** A test that reads or changes a shared row (platform settings, the built-in runner) sets it up itself and puts it back (`apps/control-plane/src/testing/kept-platform-settings.ts`). Test support never copies a production class; runner tests use the shipped `DirectorySandbox`.
+- **Test quality and banned change-detector patterns.** Tests must assert observable behavior, never implementation internals. Banned patterns: asserting exact call counts or call order on private helpers, snapshotting entire markup or raw CSS class strings, or mirroring internal source logic just to repeat it in a test. Log every fixed test failure in `docs/testing/failure-log.md` as either `caught regression` or `change detector` and delete files that only detect change. Never delete tests for authorization, privacy, migrations, or concurrency.
 - **Never edit generated files:** `apps/platform/src/routeTree.gen.ts`, and migrations in `packages/db/drizzle/` (generate them).
 
 ## By area
@@ -75,7 +77,7 @@ Before non-trivial work, check `docs/` (format `xxxx-name.md`, numbers per folde
 - Keep changes small and focused; match the code around them. Read the area's section of the system reference first.
 - The remote's default branch is `main`. Work reaches it through pull requests, and typecheck, lint, format, the unit tests and the e2e suite run on every one (decision 0314).
 - Make small atomic commits with a short imperative subject. A change that spans layers goes in one pull request, one commit per step.
-- Run `bun run typecheck`, `bun run lint`, `bun run format` and the tests for what you changed before every commit. Husky runs typecheck, lint and `format:check` on every commit (decision 0316), and the e2e suite before a push that makes a branch, the push you open a pull request from (decision 0391); the unit tests stay in CI. Do not skip the hooks with `--no-verify`. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
+- Local git hooks are managed by `hk` (`hk.pkl`, decision 0394): `pre-commit` formats and lints staged files (<1s), and `pre-push` runs `bun check`, `bun lint`, `bun fmt --check`, and `bun tooling/ci/pre-push-unit.ts` (isolated `aven_prepush_template` per-worker DB when DB files change, never touching the dev DB; <9s). Do not skip hooks with `--no-verify`. Test against the real thing (a real runner, a real server) when you can, and say what you could not check.
 - Record a significant choice as a decision doc in the same pull request. When a change alters how a part works, update its section of `docs/products/0007-system-reference.md`.
 - Do not commit, push, merge or release unless asked. Before merging, read every review comment, including the ones a reviewer filtered out.
 - Docs and migrations numbered in two open pull requests collide: the second takes the next number at the end of its folder at merge time, and every reference to it moves in the same change (0387).

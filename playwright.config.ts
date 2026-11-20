@@ -38,12 +38,16 @@ process.env.E2E_DATABASE_URL ??= E2E_DATABASE_URL;
 process.env.E2E_API_URL ??= API_URL;
 process.env.AVEN_RUNTIME_HOME = RUNTIME_HOME;
 
+const E2E_WORKERS = process.env.E2E_WORKERS ? Number(process.env.E2E_WORKERS) : undefined;
+const E2E_REPORT_FILE = process.env.E2E_REPORT_FILE;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: [["list"]],
+  retries: 0,
+  workers: process.env.CI ? (E2E_WORKERS ?? 4) : E2E_WORKERS,
+  reporter: E2E_REPORT_FILE ? [["list"], ["json", { outputFile: E2E_REPORT_FILE }]] : [["list"]],
   use: {
     baseURL: WEB_URL,
     reducedMotion: "reduce",

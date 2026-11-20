@@ -5,27 +5,33 @@ inputs:
   version:
     description: Exact Bun version (for example 1.4.5-canary.20261120.1)
     required: true
+  sha512:
+    description: Base64 SHA-512 integrity digest of the npm tarball
+    required: false
+    default: WeORe6WhB0QEhPu739WCWKFswaplOIoP21RgEk3NmHC5gNOOKmHMiQZuy29bnEwtGqQ8LuBZ+SI57RHxbOhfZQ==
 
 runs:
   using: composite
   steps:
-    - uses: actions/cache@v4
-      id: bun-bin
-      with:
-        path: ~/.bun/bin
-        key: bun-bin-${{ runner.os }}-${{ runner.arch }}-${{ inputs.version }}
-    - name: Download Bun ${{ inputs.version }}
-      if: steps.bun-bin.outputs.cache-hit != 'true'
+    - name: Install Bun ${{ inputs.version }}
       shell: bash
       run: |
         set -euo pipefail
         mkdir -p "$HOME/.bun/bin"
-        curl -fsSL "https://registry.npmjs.org/@oven/bun-linux-x64/-/bun-linux-x64-${{ inputs.version }}.tgz" \
-          | tar -xz -C "$HOME/.bun/bin" --strip-components=2 package/bin/bun
-        chmod +x "$HOME/.bun/bin/bun"
-        ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/bunx"
-    - name: Expose Bun on PATH
-      shell: bash
-      run: |
+        if [ ! -f "$HOME/.bun/bin/.version-${{ inputs.version }}" ]; then
+          tgz=$(mktemp)
+          trap 'rm -f "$tgz"' EXIT
+          curl -fsSL "https://registry.npmjs.org/@oven/bun-linux-x64/-/bun-linux-x64-${{ inputs.version }}.tgz" -o "$tgz"
+          actual=$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)
+          if [ "$actual" != "${{ inputs.sha512 }}" ]; then
+            echo "::error::Bun tarball integrity mismatch: expected ${{ inputs.sha512 }}, got $actual"
+            exit 1
+          fi
+          tar -xzf "$tgz" -C "$HOME/.bun/bin" --strip-components=2 package/bin/bun
+          chmod +x "$HOME/.bun/bin/bun"
+          ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/bunx"
+          rm -f "$HOME/.bun/bin"/.version-*
+          touch "$HOME/.bun/bin/.version-${{ inputs.version }}"
+        fi
         echo "$HOME/.bun/bin" >> "$GITHUB_PATH"
         "$HOME/.bun/bin/bun" --revision

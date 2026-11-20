@@ -20,7 +20,10 @@ jobs:
   check:
     name: typecheck, lint, format
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
+      - name: Start timer
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           filter: blob:none
@@ -39,22 +42,39 @@ jobs:
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
         if: steps.deps.outputs.cache-hit != 'true'
+      - name: Check setup budget
+        if: steps.deps.outputs.cache-hit == 'true'
+        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 30
       - name: Run typecheck, lint, format and platform build
         run: |
+          RUN_START=$(date +%s)
           failed=()
           run_check() {
             local label="$1"
-            shift
+            local budget_ms="$2"
+            shift 2
             echo "::group::$label"
+            local t0 t1 elapsed
+            t0=$(date +%s%3N)
             if ! "$@"; then
               failed+=("$label")
             fi
+            t1=$(date +%s%3N)
+            elapsed=$((t1 - t0))
+            echo "Elapsed [$label]: ${elapsed}ms (budget ${budget_ms}ms)"
+            if [ "$elapsed" -gt "$budget_ms" ]; then
+              echo "::error::Budget exceeded for $label: ${elapsed}ms > ${budget_ms}ms"
+              failed+=("$label-budget")
+            fi
             echo "::endgroup::"
           }
-          run_check "typecheck" bun run typecheck
-          run_check "lint" bun run lint
-          run_check "format" bun run format:check
-          run_check "platform build" bunx --cwd apps/platform vite build
+          run_check "typecheck" 5000 bun check -b -p tsconfig.check.json
+          run_check "lint" 1000 bun lint
+          run_check "format" 1000 bun fmt --check
+          run_check "platform build" 20000 bunx --cwd apps/platform vite build
+          if ! bun tooling/ci/check-budget.ts "check running" "$RUN_START" 35; then
+            failed+=("check-running-budget")
+          fi
           if [ ${#failed[@]} -gt 0 ]; then
             echo "::error::Failed checks: ${failed[*]}"
             exit 1
@@ -63,6 +83,7 @@ jobs:
   test:
     name: unit tests ${{ matrix.shard }}/2
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     strategy:
       fail-fast: false
       matrix:
@@ -74,14 +95,41 @@ jobs:
       BETTER_AUTH_URL: http://localhost:5173
       PROVIDER_ENCRYPTION_KEY: ZTJlLW9ubHktZW5jcnlwdGlvbi1rZXktMzJieXRlcyE=
     steps:
+      - name: Start timer
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           filter: blob:none
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - uses: ./.github/actions/setup-bun-pinned
         with:
           version: ${{ env.BUN_VERSION }}
+      - name: Select unit tests
+        id: select
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "full_unit=true" >> "$GITHUB_OUTPUT"
+            echo "use_bun_changed=false" >> "$GITHUB_OUTPUT"
+            echo "unit_files=" >> "$GITHUB_OUTPUT"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          bun tooling/ci/select-tests.ts \
+            --base=HEAD^1 \
+            --github-output="$GITHUB_OUTPUT"
+          full_unit=$(grep '^full_unit=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
+          use_changed=$(grep '^use_bun_changed=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
+          unit_files=$(grep '^unit_files=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
+          if [ "$full_unit" = "true" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [ "${{ matrix.shard }}" = "1" ] && { [ "$use_changed" = "true" ] || [ -n "$unit_files" ]; }; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/cache@v4
         id: deps
+        if: steps.select.outputs.should_run == 'true'
         with:
           path: |
             node_modules
@@ -91,13 +139,15 @@ jobs:
           key: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock') }}
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
-        if: steps.deps.outputs.cache-hit != 'true'
+        if: steps.select.outputs.should_run == 'true' && steps.deps.outputs.cache-hit != 'true'
       - uses: actions/cache/restore@v4
+        if: steps.select.outputs.full_unit == 'true'
         with:
           path: .ci-timings/unit-timings.json
           key: unit-timings-${{ github.sha }}
           restore-keys: unit-timings-
       - name: Start Postgres
+        if: steps.select.outputs.should_run == 'true'
         run: |
           PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
           printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\nmax_connections = 300\n' | sudo tee -a "$PG_CONF" >/dev/null
@@ -105,24 +155,45 @@ jobs:
           sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
           sudo -u postgres createdb -O postgres aven_template
       - run: git config --global user.name ci && git config --global user.email ci@example.com
+        if: steps.select.outputs.should_run == 'true'
       - run: bun packages/db/src/migrate.ts
+        if: steps.select.outputs.should_run == 'true'
       - name: Run unit tests shard ${{ matrix.shard }}/2
+        if: steps.select.outputs.should_run == 'true'
         run: |
+          RUN_START=$(date +%s)
           mkdir -p .ci-timings
-          if [ ! -f .ci-timings/unit-timings.json ]; then
-            printf '{"version":1,"files":{}}\n' > .ci-timings/unit-timings.json
+          if [ "${{ steps.select.outputs.full_unit }}" = "true" ]; then
+            if [ ! -f .ci-timings/unit-timings.json ]; then
+              printf '{"version":1,"files":{}}\n' > .ci-timings/unit-timings.json
+            fi
+            bun test \
+              --parallel=4 \
+              --isolate \
+              --preload ./tooling/ci/test-db-preload.ts \
+              --shard=${{ matrix.shard }}/2 \
+              --timings=.ci-timings/unit-timings.json \
+              --update-timings \
+              apps packages sandbox tooling
+            cp .ci-timings/unit-timings.json .ci-timings/unit-timings-${{ matrix.shard }}.json
+          else
+            if [ -n "${{ steps.select.outputs.unit_files }}" ]; then
+              IFS=',' read -ra explicit <<< "${{ steps.select.outputs.unit_files }}"
+              bun test --parallel=4 --isolate --preload ./tooling/ci/test-db-preload.ts "${explicit[@]}"
+            fi
+            if [ "${{ steps.select.outputs.use_bun_changed }}" = "true" ]; then
+              bun test \
+                --parallel=4 \
+                --isolate \
+                --preload ./tooling/ci/test-db-preload.ts \
+                --changed=HEAD^1 \
+                --pass-with-no-tests \
+                apps packages sandbox tooling
+            fi
+            bun tooling/ci/check-budget.ts "unit shard ${{ matrix.shard }}/2 (narrow)" "$RUN_START" 30
           fi
-          bun test \
-            --parallel=4 \
-            --isolate \
-            --preload ./tooling/ci/test-db-preload.ts \
-            --shard=${{ matrix.shard }}/2 \
-            --timings=.ci-timings/unit-timings.json \
-            --update-timings \
-            apps packages sandbox tooling
-          cp .ci-timings/unit-timings.json .ci-timings/unit-timings-${{ matrix.shard }}.json
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && steps.select.outputs.full_unit == 'true'
         with:
           name: unit-timings-${{ matrix.shard }}
           path: .ci-timings/unit-timings-${{ matrix.shard }}.json
@@ -131,6 +202,7 @@ jobs:
   unit-shards-verify:
     name: unit shards completeness
     needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -147,7 +219,6 @@ jobs:
       - name: Prove shards ran every unit test file
         run: bun tooling/ci/verify-unit-shards.ts --out=.ci-timings/unit-timings.json .ci-timings/unit-timings-*.json
       - uses: actions/cache/save@v4
-        if: github.ref == 'refs/heads/main' || github.event_name == 'merge_group'
         with:
           path: .ci-timings/unit-timings.json
           key: unit-timings-${{ github.sha }}
@@ -155,21 +226,61 @@ jobs:
   e2e:
     name: e2e ${{ matrix.shard }}/3
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
         shard: [1, 2, 3]
     env:
       E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_e2e
+      E2E_WORKERS: 3
+      E2E_REPORT_FILE: .ci-timings/e2e-report-${{ matrix.shard }}.json
     steps:
+      - name: Start timer
+        run: echo "JOB_START=$(date +%s)" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           filter: blob:none
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - uses: ./.github/actions/setup-bun-pinned
         with:
           version: ${{ env.BUN_VERSION }}
+      - uses: actions/cache/restore@v4
+        with:
+          path: .ci-timings/e2e-timings.json
+          key: e2e-timings-${{ github.sha }}
+          restore-keys: e2e-timings-
+      - name: Select e2e specs for shard ${{ matrix.shard }}/3
+        id: select
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "full_e2e=true" >> "$GITHUB_OUTPUT"
+            specs=$(bun tooling/ci/e2e-shards.ts plan --shard=${{ matrix.shard }}/3 --timings=.ci-timings/e2e-timings.json | paste -sd, -)
+          else
+            bun tooling/ci/select-tests.ts \
+              --base=HEAD^1 \
+              --github-output="$GITHUB_OUTPUT"
+            full_e2e=$(grep '^full_e2e=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
+            if [ "$full_e2e" = "true" ]; then
+              specs=$(bun tooling/ci/e2e-shards.ts plan --shard=${{ matrix.shard }}/3 --timings=.ci-timings/e2e-timings.json | paste -sd, -)
+            else
+              selected=$(grep '^e2e_specs=' "$GITHUB_OUTPUT" | tail -n 1 | cut -d= -f2)
+              if [ -n "$selected" ]; then
+                specs=$(bun tooling/ci/e2e-shards.ts plan --shard=${{ matrix.shard }}/3 --timings=.ci-timings/e2e-timings.json --files="$selected" | paste -sd, -)
+              else
+                specs=""
+              fi
+            fi
+          fi
+          echo "shard_specs=$specs" >> "$GITHUB_OUTPUT"
+          if [ -n "$specs" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/cache@v4
         id: deps
+        if: steps.select.outputs.should_run == 'true'
         with:
           path: |
             node_modules
@@ -179,25 +290,66 @@ jobs:
           key: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-${{ hashFiles('bun.lock') }}
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
-        if: steps.deps.outputs.cache-hit != 'true'
+        if: steps.select.outputs.should_run == 'true' && steps.deps.outputs.cache-hit != 'true'
       - uses: actions/cache@v4
         id: browsers
+        if: steps.select.outputs.should_run == 'true'
         with:
           path: ~/.cache/ms-playwright
           key: playwright-headless-${{ runner.os }}-${{ hashFiles('bun.lock') }}
           restore-keys: playwright-headless-${{ runner.os }}-
       - run: bunx playwright install chromium-headless-shell
-        if: steps.browsers.outputs.cache-hit != 'true'
+        if: steps.select.outputs.should_run == 'true' && steps.browsers.outputs.cache-hit != 'true'
       - name: Start Postgres
+        if: steps.select.outputs.should_run == 'true'
         run: |
           PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
           printf '\nfsync = off\nsynchronous_commit = off\nfull_page_writes = off\n' | sudo tee -a "$PG_CONF" >/dev/null
           sudo systemctl start postgresql
           sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
-      - run: bun run test:e2e --shard=${{ matrix.shard }}/3
+      - name: Run e2e shard ${{ matrix.shard }}/3
+        if: steps.select.outputs.should_run == 'true'
+        run: |
+          RUN_START=$(date +%s)
+          mkdir -p .ci-timings
+          IFS=',' read -ra specs <<< "${{ steps.select.outputs.shard_specs }}"
+          bun run test:e2e "${specs[@]}"
+          if [ "${{ steps.select.outputs.full_e2e }}" != "true" ] && [ "${#specs[@]}" -le 2 ]; then
+            bun tooling/ci/check-budget.ts "e2e shard ${{ matrix.shard }}/3 (narrow)" "$RUN_START" 35
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.select.outputs.full_e2e == 'true'
+        with:
+          name: e2e-report-${{ matrix.shard }}
+          path: .ci-timings/e2e-report-${{ matrix.shard }}.json
+          retention-days: 1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: playwright-traces-${{ matrix.shard }}
           path: test-results
           retention-days: 7
+
+  e2e-shards-verify:
+    name: e2e shards completeness
+    needs: e2e
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: blob:none
+      - uses: ./.github/actions/setup-bun-pinned
+        with:
+          version: ${{ env.BUN_VERSION }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-report-*
+          path: .ci-timings
+          merge-multiple: true
+      - name: Prove shards ran every e2e spec file
+        run: bun tooling/ci/e2e-shards.ts verify --out=.ci-timings/e2e-timings.json .ci-timings/e2e-report-*.json
+      - uses: actions/cache/save@v4
+        with:
+          path: .ci-timings/e2e-timings.json
+          key: e2e-timings-${{ github.sha }}
