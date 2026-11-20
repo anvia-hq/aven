@@ -4,11 +4,19 @@ import type { SandboxProviderName } from "@aven/sandbox/settings";
 import { runtimesService } from "../modules/runtimes/service";
 
 const SETTINGS = {
-  boat: { provider: "boat", base: "", apiKey: "boat_test_key", runnerUrl: "" },
+  boat: { provider: "boat", base: "", project: "", apiKey: "boat_test_key", runnerUrl: "" },
   spaces: {
     provider: "spaces",
     base: "http://spaces.test:8787/api/v1",
+    project: "",
     apiKey: "sk_test_key",
+    runnerUrl: "",
+  },
+  lizard: {
+    provider: "lizard",
+    base: "",
+    project: "proj_test",
+    apiKey: "liz_test_key",
     runnerUrl: "",
   },
 } as const;

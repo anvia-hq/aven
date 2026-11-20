@@ -72,7 +72,8 @@ run("a project's environment (postgres)", async () => {
       setupDigest: "a".repeat(64),
     });
 
-    expect(started).toMatchObject({ status: "saving", savedAt: null, expiresAt: null });
+    expect(started).toMatchObject({ status: "saving", savedAt: null });
+    expect(started.expiresAt).toBeInstanceOf(Date);
     expect(calls).toEqual([`save bx_23456789 ${environmentName(project.id)}`]);
 
     const ready = await service.ready(project.id, "boat");

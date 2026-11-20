@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
+import { cloudSandboxes } from "@aven/db/schema/cloud-sandboxes";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
 import { eq } from "drizzle-orm";
@@ -8,7 +9,6 @@ import { eq } from "drizzle-orm";
 import { threadsService } from "../threads/service";
 import { BoatApiError } from "@aven/sandbox/boat/client";
 import { CLOUD_SANDBOX_LIFE_MS, createCloudExpiry } from "./cloud-expiry";
-import { EXPIRED_COMPUTER, reachRunner } from "./providers";
 import { CLOUD_RUNTIME_ID, SPACES_RUNTIME_ID, runtimesService } from "./service";
 import { clearSandboxPlatform, useSandboxPlatform } from "../../testing/sandbox-platform";
 
@@ -56,13 +56,22 @@ run("Aven Cloud expiry (postgres)", async () => {
   async function backdate(thread: { id: string; runtimeId: string }, hours: number) {
     const then = new Date(Date.now() - hours * HOUR_MS);
     await db.update(runtimes).set({ createdAt: then }).where(eq(runtimes.id, thread.runtimeId));
+    await db
+      .update(cloudSandboxes)
+      .set({ lastActivityAt: then })
+      .where(eq(cloudSandboxes.runtimeId, thread.runtimeId));
     await db.update(threads).set({ updatedAt: then }).where(eq(threads.id, thread.id));
   }
 
-  const revokedAt = async (id: string) =>
-    (await db.select({ at: runtimes.revokedAt }).from(runtimes).where(eq(runtimes.id, id)))[0]!.at;
+  const sandboxIdOf = async (id: string) =>
+    (
+      await db
+        .select({ sandboxId: runtimes.boatSandboxId })
+        .from(runtimes)
+        .where(eq(runtimes.id, id))
+    )[0]!.sandboxId;
 
-  test("deletes the sandbox of a thread idle for 48 hours and leaves the others", async () => {
+  test("deletes the sandbox of a thread idle for 48 hours and clears its sandbox id for transparent restore", async () => {
     const stale = await cloudThread("stale", "bx_stale000");
     const fresh = await cloudThread("fresh", "bx_fresh000");
     const unused = await cloudThread("unused", null);
@@ -84,18 +93,14 @@ run("Aven Cloud expiry (postgres)", async () => {
     expect(await expiry.sweep()).toBeGreaterThanOrEqual(2);
     expect(deleted).toContain("bx_stale000");
     expect(deleted).not.toContain("bx_fresh000");
-    expect(await revokedAt(stale.runtimeId)).not.toBeNull();
-    expect(await revokedAt(unused.runtimeId)).not.toBeNull();
-    expect(await revokedAt(fresh.runtimeId)).toBeNull();
-    expect(await runtimesService.providerOf(stale.runtimeId)).toBeUndefined();
-    expect(await runtimesService.isExpiredCloud(stale.runtimeId)).toBe(true);
-    expect(await runtimesService.isExpiredCloud(fresh.runtimeId)).toBe(false);
-    await expect(
-      reachRunner({ get: () => undefined }, { runtimeId: stale.runtimeId }),
-    ).rejects.toThrow(EXPIRED_COMPUTER);
+    expect(await sandboxIdOf(stale.runtimeId)).toBeNull();
+    expect(await sandboxIdOf(unused.runtimeId)).toBeNull();
+    expect(await sandboxIdOf(fresh.runtimeId)).toBe("bx_fresh000");
+    expect(await runtimesService.providerOf(stale.runtimeId)).toBe("boat");
+    expect(await runtimesService.isExpiredCloud(stale.runtimeId)).toBe(false);
   });
 
-  test("a sandbox boat no longer has is expired, and one it will not delete is tried again", async () => {
+  test("a sandbox boat no longer has is cleared, and one it will not delete is tried again", async () => {
     const gone = await cloudThread("gone", "bx_gone0000");
     const stuck = await cloudThread("stuck", "bx_stuck000");
     await backdate(gone, 60);
@@ -119,8 +124,8 @@ run("Aven Cloud expiry (postgres)", async () => {
       console.warn = warn;
     }
 
-    expect(await revokedAt(gone.runtimeId)).not.toBeNull();
-    expect(await revokedAt(stuck.runtimeId)).toBeNull();
+    expect(await sandboxIdOf(gone.runtimeId)).toBeNull();
+    expect(await sandboxIdOf(stuck.runtimeId)).toBe("bx_stuck000");
   });
 
   test("deletes a spaces sandbox through spaces and a boat one through boat, each on its own", async () => {
@@ -151,8 +156,8 @@ run("Aven Cloud expiry (postgres)", async () => {
     expect(spaces).not.toContain("bx_boat0000");
     expect(boat).toContain("bx_boat0000");
     expect(boat).not.toContain("bx_spaces00");
-    expect(await revokedAt(onSpaces.runtimeId)).not.toBeNull();
-    expect(await revokedAt(onBoat.runtimeId)).not.toBeNull();
+    expect(await sandboxIdOf(onSpaces.runtimeId)).toBeNull();
+    expect(await sandboxIdOf(onBoat.runtimeId)).toBeNull();
   });
 
   test("a spaces sandbox that cannot be deleted is tried again", async () => {
@@ -180,8 +185,8 @@ run("Aven Cloud expiry (postgres)", async () => {
       await useSandboxPlatform("boat", "boat_test_key_for_expiry");
     }
 
-    expect(await revokedAt(stuck.runtimeId)).toBeNull();
-    expect(await revokedAt(fine.runtimeId)).not.toBeNull();
+    expect(await sandboxIdOf(stuck.runtimeId)).toBe("bx_stuck000");
+    expect(await sandboxIdOf(fine.runtimeId)).toBeNull();
   });
 
   test("does nothing without a sandbox platform", async () => {

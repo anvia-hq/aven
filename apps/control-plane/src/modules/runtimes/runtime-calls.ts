@@ -1,5 +1,6 @@
 import { providersService } from "../providers/service";
 import { runCockpitCommand } from "../cockpit/commands";
+import { activeProviderConfigId } from "../cloud-settings/credentials";
 import { environmentsService } from "../environments/service";
 import { runMemoryCommand } from "../memory/commands";
 import { explainMachineCallError } from "./machine-call-error";
@@ -105,12 +106,14 @@ async function saveEnvironment(run: CallRun, runtimeId: string, setupDigest: str
 
   if (!record) throw new Error("This run is not on an Aven Cloud computer");
 
+  const providerConfigId = await activeProviderConfigId();
   const saved = await environmentsService.start({
     organizationId,
     projectId,
     provider,
     sandboxId: record.sandboxId,
     setupDigest,
+    providerConfigId,
   });
   return { status: saved.status, expiresAt: saved.expiresAt?.toISOString() ?? null };
 }

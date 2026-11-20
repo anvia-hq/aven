@@ -102,9 +102,12 @@ run("stopping idle Aven Cloud computers (real postgres)", async () => {
       agentIdleSeconds: 60,
       userIdleSeconds: 120,
       expireHours: 48,
+      maxAgeHours: 12,
       maxRunning: null,
       startBurst: null,
       startEveryMinutes: 5,
+      monthlyBudgetCents: null,
+      softBudgetPercent: 80,
     });
     const quick = await cloudThread("quick-one", new Date(Date.now() - 3 * 60 * MINUTE));
     const sweep = harness({ connected: [quick.runtimeId], saved: true });

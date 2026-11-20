@@ -166,9 +166,12 @@ export type ComputerStart = {
   userId: string | null;
 };
 
+import type { SpendVerdict } from "@aven/sandbox/types";
+
 export type AdmissionOptions = {
   settings: () => Promise<CloudLifecycle>;
   running: (organizationId: string, exceptRuntimeId: string) => Promise<number>;
+  spend?: () => Promise<SpendVerdict>;
   extra?: (start: ComputerStart) => Promise<void>;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;

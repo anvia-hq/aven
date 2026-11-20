@@ -1,6 +1,11 @@
 import { createSandboxRuntime } from "@aven/sandbox/runtime";
-import type { RuntimeConnection } from "./hub";
+
+import { cloudSandboxStore } from "../cloud-lifecycle/sandbox-store";
+import { cloudLifecycleService } from "../cloud-lifecycle/service";
+import { spendBrakeService } from "../cloud-lifecycle/spend";
 import { admission } from "./admission";
+import { computerUsageService } from "./computer-usage";
+import type { RuntimeConnection } from "./hub";
 import { runtimesService } from "./service";
 
 const sandboxRuntime = createSandboxRuntime<RuntimeConnection>({
@@ -13,6 +18,25 @@ const sandboxRuntime = createSandboxRuntime<RuntimeConnection>({
     const computer = await runtimesService.computerOf(runtimeId);
 
     if (computer) await admission.admit({ runtimeId, ...computer });
+
+    await cloudSandboxStore.markStarting(runtimeId).catch(() => undefined);
+  },
+  onStarted: async (runtimeId) => {
+    const maxAgeMs = await cloudLifecycleService.maxAgeMs();
+    await cloudSandboxStore.markRunning(runtimeId, maxAgeMs).catch(() => undefined);
+    const computer = await runtimesService.computerRuntimeOf(runtimeId);
+
+    if (computer) {
+      await computerUsageService.opened(computer).catch(() => undefined);
+    }
+
+    spendBrakeService.invalidate();
+  },
+  onStopped: async (runtimeId) => {
+    const expireMs = await cloudLifecycleService.expireAfterMs();
+    await cloudSandboxStore.markStopped(runtimeId, expireMs).catch(() => undefined);
+    await computerUsageService.closed(runtimeId).catch(() => undefined);
+    spendBrakeService.invalidate();
   },
 });
 

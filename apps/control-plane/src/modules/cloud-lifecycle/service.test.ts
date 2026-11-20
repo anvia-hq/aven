@@ -14,9 +14,12 @@ describe("the Aven Cloud computer settings", () => {
       agentIdleSeconds: Number(process.env.AVEN_CLOUD_AGENT_IDLE_SECONDS) || 300,
       userIdleSeconds: Number(process.env.AVEN_CLOUD_USER_IDLE_SECONDS) || 1200,
       expireHours: 48,
+      maxAgeHours: 12,
       maxRunning: null,
       startBurst: null,
       startEveryMinutes: 5,
+      monthlyBudgetCents: null,
+      softBudgetPercent: 80,
     });
   });
 
@@ -25,9 +28,12 @@ describe("the Aven Cloud computer settings", () => {
       agentIdleSeconds: 120,
       userIdleSeconds: 600,
       expireHours: 72,
+      maxAgeHours: 8,
       maxRunning: 8,
       startBurst: 20,
       startEveryMinutes: 2,
+      monthlyBudgetCents: 2500,
+      softBudgetPercent: 75,
     });
 
     expect(await cloudLifecycleService.idleWindows()).toEqual({
@@ -35,7 +41,9 @@ describe("the Aven Cloud computer settings", () => {
       userIdleMs: 600_000,
     });
     expect(await cloudLifecycleService.expireAfterMs()).toBe(72 * 3_600_000);
+    expect(await cloudLifecycleService.maxAgeMs()).toBe(8 * 3_600_000);
     expect((await cloudLifecycleService.current()).maxRunning).toBe(8);
+    expect((await cloudLifecycleService.current()).monthlyBudgetCents).toBe(2500);
   });
 
   test("resetting returns to the defaults", async () => {

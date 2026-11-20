@@ -60,6 +60,7 @@ import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
 import { createCloudExpiry } from "./modules/runtimes/cloud-expiry";
+import { createCloudReconciler } from "./modules/cloud-lifecycle/reconciler";
 import { createEnvironmentExpiry } from "./modules/environments/expiry";
 import { environmentsService } from "./modules/environments/service";
 import { createCloudIdle } from "./modules/runtimes/cloud-idle";
@@ -321,6 +322,13 @@ export const environmentExpiry = createEnvironmentExpiry({
 });
 
 export const cloudIdle = createCloudIdle({
+  intervalMs: idleCheckMs(),
+  hub: runtimeHub,
+  running: (threadId) => runsService.isRunning(threadId),
+  lastEventAt: (threadId) => runsService.activity(threadId)?.lastEventAt,
+});
+
+export const cloudReconciler = createCloudReconciler({
   intervalMs: idleCheckMs(),
   hub: runtimeHub,
   running: (threadId) => runsService.isRunning(threadId),

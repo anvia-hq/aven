@@ -1,6 +1,7 @@
 import { UnavailableError } from "@aven/server-kit/errors";
 
 import { cloudLifecycleService } from "../cloud-lifecycle/service";
+import { spendBrakeService } from "../cloud-lifecycle/spend";
 import { editionInUse } from "../../edition/current";
 import { computerUsageService } from "./computer-usage";
 import type { AdmissionOptions, ComputerStart } from "./types";
@@ -18,6 +19,7 @@ const minutesOf = (ms: number) => Math.max(1, Math.ceil(ms / MINUTE_MS));
 export function createAdmission({
   settings,
   running,
+  spend,
   extra,
   now = Date.now,
   sleep = pause,
@@ -64,6 +66,16 @@ export function createAdmission({
 
   return {
     async admit(start: ComputerStart) {
+      if (spend) {
+        const verdict = await spend();
+
+        if (verdict.state === "hard_stop") {
+          throw new UnavailableError(
+            "Aven Cloud reached its monthly spend limit. Raise the budget in Settings > Sandbox or wait for the next billing period",
+          );
+        }
+      }
+
       const limits = await settings();
 
       if (limits.maxRunning !== null) await waitForRoom(start, limits.maxRunning);
@@ -80,5 +92,6 @@ export const admission = createAdmission({
   settings: () => cloudLifecycleService.current(),
   running: (organizationId, exceptRuntimeId) =>
     computerUsageService.runningIn(organizationId, exceptRuntimeId),
+  spend: () => spendBrakeService.verdict(),
   extra: (start) => editionInUse.current.admit?.(start) ?? Promise.resolve(),
 });

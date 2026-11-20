@@ -10,9 +10,12 @@ const OPEN: CloudLifecycle = {
   agentIdleSeconds: 300,
   userIdleSeconds: 1200,
   expireHours: 48,
+  maxAgeHours: 12,
   maxRunning: null,
   startBurst: null,
   startEveryMinutes: 5,
+  monthlyBudgetCents: null,
+  softBudgetPercent: 80,
 };
 
 const MINUTE = 60_000;
@@ -129,5 +132,20 @@ describe("admitting an Aven Cloud computer to start", () => {
     });
 
     await expect(admission.admit(start)).rejects.toThrow("no hours left");
+  });
+
+  test("refuses new starts when the monthly spend brake trips", async () => {
+    const admission = createAdmission({
+      settings: async () => ({ ...OPEN, monthlyBudgetCents: 2000 }),
+      running: async () => 0,
+      spend: async () => ({
+        state: "hard_stop",
+        usedMicros: 20_000_000,
+        budgetMicros: 20_000_000,
+        percent: 100,
+      }),
+    });
+
+    await expect(admission.admit(start)).rejects.toThrow("monthly spend limit");
   });
 });
