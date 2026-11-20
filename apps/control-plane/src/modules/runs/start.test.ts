@@ -140,13 +140,28 @@ describe("steering a run (decision 0098)", () => {
   const message = { id: "steer-1", prompt: "also this", mentions: [] };
   const heard = (manager: RunManager, thread: RunThread) => {
     const events: RunEvent[] = [];
+    const waiters: Array<{ type: RunEvent["type"]; resolve: () => void }> = [];
     const controller = new AbortController();
     void (async () => {
       for await (const event of manager.events(thread, controller.signal)) {
-        if (event) events.push(event);
+        if (!event) continue;
+
+        events.push(event);
+        for (let i = waiters.length - 1; i >= 0; i--) {
+          if (waiters[i]!.type === event.type) {
+            waiters.splice(i, 1)[0]!.resolve();
+          }
+        }
       }
     })();
-    return { events, stop: () => controller.abort() };
+    const waitFor = (type: RunEvent["type"]) => {
+      if (events.some((event) => event.type === type)) return Promise.resolve();
+
+      const deferred = Promise.withResolvers<void>();
+      waiters.push({ type, resolve: deferred.resolve });
+      return deferred.promise;
+    };
+    return { events, waitFor, stop: () => controller.abort() };
   };
 
   test("an agent that is finishing takes no more: the message is for a run of its own, once this one is over", async () => {
@@ -208,7 +223,7 @@ describe("steering a run (decision 0098)", () => {
     } finally {
       console.warn = silenced;
     }
-    await Bun.sleep(10);
+    await listener.waitFor("steer_rejected");
     listener.stop();
     expect(listener.events.map((event) => event.type)).toContain("steer_rejected");
     expect(manager.isRunning(thread.id)).toBe(true);

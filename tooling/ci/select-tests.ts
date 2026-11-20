@@ -129,6 +129,8 @@ const DOCS_EXACT = new Set([
 ]);
 
 function matchesFullInput(file: string): boolean {
+  if (/(?:^|\/)tsconfig[^/]*\.json$/.test(file)) return true;
+
   return FULL_RUN_INPUTS.some((entry) =>
     entry.endsWith("/") ? file.startsWith(entry) : file === entry,
   );

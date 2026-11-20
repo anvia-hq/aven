@@ -44,7 +44,7 @@ jobs:
         if: steps.deps.outputs.cache-hit != 'true'
       - name: Check setup budget
         if: steps.deps.outputs.cache-hit == 'true'
-        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 25
+        run: bun tooling/ci/check-budget.ts "check setup" "$JOB_START" 30
       - name: Run typecheck, lint, format and platform build
         run: |
           RUN_START=$(date +%s)
@@ -68,9 +68,9 @@ jobs:
             fi
             echo "::endgroup::"
           }
-          run_check "typecheck" 5000 bun run typecheck
-          run_check "lint" 1000 bun run lint
-          run_check "format" 1000 bun run format:check
+          run_check "typecheck" 5000 bun check -b -p tsconfig.check.json
+          run_check "lint" 1000 bun lint
+          run_check "format" 1000 bun fmt --check
           run_check "platform build" 20000 bunx --cwd apps/platform vite build
           if ! bun tooling/ci/check-budget.ts "check running" "$RUN_START" 35; then
             failed+=("check-running-budget")

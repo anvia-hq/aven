@@ -7,6 +7,7 @@ describe("selectTests", () => {
     for (const input of [
       "package.json",
       "bun.lock",
+      "apps/platform/tsconfig.json",
       "packages/protocol/src/types.ts",
       "packages/db/src/schema/users.ts",
     ]) {

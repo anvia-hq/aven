@@ -8,21 +8,28 @@ export function needsDatabase(changedFiles: readonly string[]): boolean {
   return changedFiles.some((file) => DB_PREFIXES.some((prefix) => file.startsWith(prefix)));
 }
 
-function listChangedFiles(baseRef: string): string[] {
-  const result = Bun.spawnSync(["git", "diff", "--name-only", `${baseRef}...HEAD`], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-
-  if (result.exitCode !== 0) return [];
-
-  return result.stdout
-    .toString()
-    .split("\n")
-    .flatMap((line) => {
-      const trimmed = line.trim();
-      return trimmed ? [trimmed] : [];
+function listChangedFiles(baseRef: string): { ref: string; files: string[] } {
+  const candidates = [baseRef, "main", "HEAD~1"];
+  for (const ref of candidates) {
+    const result = Bun.spawnSync(["git", "diff", "--name-only", `${ref}...HEAD`], {
+      stdout: "pipe",
+      stderr: "pipe",
     });
+
+    if (result.exitCode === 0) {
+      const files = result.stdout
+        .toString()
+        .split("\n")
+        .flatMap((line) => {
+          const trimmed = line.trim();
+          return trimmed ? [trimmed] : [];
+        });
+      return { ref, files };
+    }
+  }
+
+  console.error(`pre-push: git diff failed against ${candidates.join(", ")}`);
+  process.exit(1);
 }
 
 async function prepareTemplateDatabase(baseUrl: string): Promise<string | null> {
@@ -59,8 +66,8 @@ async function prepareTemplateDatabase(baseUrl: string): Promise<string | null> 
 }
 
 if (import.meta.main) {
-  const baseRef = process.env.AVEN_PREPUSH_BASE ?? "origin/main";
-  const changed = listChangedFiles(baseRef);
+  const requestedBase = process.env.AVEN_PREPUSH_BASE ?? "origin/main";
+  const { ref: baseRef, files: changed } = listChangedFiles(requestedBase);
 
   if (changed.length === 0) {
     process.exit(0);
