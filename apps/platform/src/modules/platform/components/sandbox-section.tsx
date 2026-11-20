@@ -17,7 +17,17 @@ type FormProps = {
   onRemove: () => Promise<boolean>;
 };
 
-const PROVIDER_KEY_HINTS: Record<SandboxProvider, string> = { spaces: "spk_…", boat: "boat_…" };
+const PROVIDER_KEY_HINTS: Record<SandboxProvider, string> = {
+  spaces: "spk_…",
+  boat: "boat_…",
+  lizard: "liz_…",
+};
+
+const BASE_LABELS: Record<SandboxProvider, { label: string; placeholder: string }> = {
+  spaces: { label: "Spaces server", placeholder: "https://spaces.example.com/api/v1" },
+  boat: { label: "Boat API address (optional)", placeholder: "https://boat.dev/api/v1" },
+  lizard: { label: "Lizard API address (optional)", placeholder: "https://lizard.build" },
+};
 
 const OPTIONS = SANDBOX_PROVIDERS.map((value) => ({
   value,
@@ -27,10 +37,12 @@ const OPTIONS = SANDBOX_PROVIDERS.map((value) => ({
 function SandboxForm({ current, onSave, onRemove }: FormProps) {
   const [provider, setProvider] = useState<SandboxProvider>(current?.provider ?? "spaces");
   const [base, setBase] = useState(current?.base ?? "");
+  const [project, setProject] = useState(current?.project ?? "");
   const [runnerUrl, setRunnerUrl] = useState(current?.runnerUrl ?? "");
   const [apiKey, setApiKey] = useState("");
   const [busy, setBusy] = useState(false);
   const spaces = provider === "spaces";
+  const lizard = provider === "lizard";
   const keptKey = current?.provider === provider;
   const keyPlaceholder =
     keptKey && current
@@ -45,9 +57,11 @@ function SandboxForm({ current, onSave, onRemove }: FormProps) {
 
     if (next !== current?.provider) {
       setBase("");
+      setProject("");
       setRunnerUrl("");
     } else {
       setBase(current.base ?? "");
+      setProject(current.project ?? "");
       setRunnerUrl(current.runnerUrl ?? "");
     }
   }
@@ -65,7 +79,7 @@ function SandboxForm({ current, onSave, onRemove }: FormProps) {
       className="flex max-w-md flex-col gap-4 py-4"
       onSubmit={(event) => {
         event.preventDefault();
-        void run(() => onSave({ provider, base, runnerUrl, apiKey }));
+        void run(() => onSave({ provider, base, project, runnerUrl, apiKey }));
       }}
     >
       <LabeledSelect
@@ -75,11 +89,19 @@ function SandboxForm({ current, onSave, onRemove }: FormProps) {
         onChange={(value) => changeProvider(value as SandboxProvider)}
       />
       <TextField
-        label={spaces ? "Spaces server" : "Boat API address (optional)"}
+        label={BASE_LABELS[provider].label}
         value={base}
-        placeholder={spaces ? "https://spaces.example.com/api/v1" : "https://boat.dev/api/v1"}
+        placeholder={BASE_LABELS[provider].placeholder}
         onChange={(event) => setBase(event.target.value)}
       />
+      {lizard && (
+        <TextField
+          label="Lizard project (optional if account has one)"
+          value={project}
+          placeholder="my-project or proj_…"
+          onChange={(event) => setProject(event.target.value)}
+        />
+      )}
       <TextField
         label={spaces ? "Address a sandbox dials (optional)" : "Public address a sandbox dials"}
         value={runnerUrl}
@@ -149,7 +171,7 @@ export function SandboxSection() {
         {settings?.base && <span className="text-xs text-muted-foreground">{settings.base}</span>}
       </SettingsRow>
       <SandboxForm
-        key={`sandbox:${settings?.provider}:${settings?.base}:${settings?.runnerUrl}:${settings?.keyHint}`}
+        key={`sandbox:${settings?.provider}:${settings?.base}:${settings?.project}:${settings?.runnerUrl}:${settings?.keyHint}`}
         current={settings}
         onSave={save}
         onRemove={remove}

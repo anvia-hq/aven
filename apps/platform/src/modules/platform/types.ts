@@ -46,18 +46,20 @@ export type ServerModelOption = {
   keyLabel: string;
 };
 
-export const SANDBOX_PROVIDERS = ["spaces", "boat"] as const;
+export const SANDBOX_PROVIDERS = ["spaces", "boat", "lizard"] as const;
 
 export type SandboxProvider = (typeof SANDBOX_PROVIDERS)[number];
 
 export const SANDBOX_PROVIDER_LABELS: Record<SandboxProvider, string> = {
   spaces: "Spaces",
   boat: "boat.dev",
+  lizard: "lizard.build",
 };
 
 export type CloudSettings = {
   provider: SandboxProvider;
   base: string;
+  project: string;
   runnerUrl: string;
   keyHint: string;
 };
@@ -65,6 +67,7 @@ export type CloudSettings = {
 export type CloudSettingsDraft = {
   provider: SandboxProvider;
   base: string;
+  project: string;
   runnerUrl: string;
   apiKey: string;
 };
@@ -73,9 +76,12 @@ export type CloudLifecycle = {
   agentIdleSeconds: number;
   userIdleSeconds: number;
   expireHours: number;
+  maxAgeHours: number;
   maxRunning: number | null;
   startBurst: number | null;
   startEveryMinutes: number;
+  monthlyBudgetCents: number | null;
+  softBudgetPercent: number;
 };
 
 export type LensSettings = {

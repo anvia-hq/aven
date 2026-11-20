@@ -19,32 +19,54 @@ const minutes = (seconds: number) => String(Math.round((seconds / 60) * 100) / 1
 
 const optional = (value: number | null) => (value === null ? "" : String(value));
 
+const dollars = (cents: number | null) =>
+  cents === null ? "" : String(Math.round((cents / 100) * 100) / 100);
+
 function whole(text: string) {
   const value = Number(text);
 
   return Number.isInteger(value) && value >= 1 ? value : null;
 }
 
+function centsOf(text: string) {
+  if (text.trim() === "") return null;
+
+  const value = Math.round(Number(text) * 100);
+
+  return Number.isInteger(value) && value >= 1 ? value : undefined;
+}
+
 function LifecycleForm({ current, onSave, onReset }: FormProps) {
   const [agentIdle, setAgentIdle] = useState(minutes(current.agentIdleSeconds));
   const [userIdle, setUserIdle] = useState(minutes(current.userIdleSeconds));
   const [expire, setExpire] = useState(String(current.expireHours));
+  const [maxAge, setMaxAge] = useState(String(current.maxAgeHours));
   const [maxRunning, setMaxRunning] = useState(optional(current.maxRunning));
   const [burst, setBurst] = useState(optional(current.startBurst));
   const [every, setEvery] = useState(String(current.startEveryMinutes));
+  const [budget, setBudget] = useState(dollars(current.monthlyBudgetCents));
+  const [softPercent, setSoftPercent] = useState(String(current.softBudgetPercent));
   const [busy, setBusy] = useState(false);
   const agentSeconds = Math.round(Number(agentIdle) * 60);
   const userSeconds = Math.round(Number(userIdle) * 60);
   const hours = whole(expire);
+  const maxAgeHours = whole(maxAge);
   const gap = whole(every);
+  const budgetCents = centsOf(budget);
+  const softBudgetPercent = whole(softPercent);
   const limitOk = (text: string) => text.trim() === "" || whole(text) !== null;
   const valid =
     agentSeconds >= 1 &&
     userSeconds >= 1 &&
     hours !== null &&
+    maxAgeHours !== null &&
+    maxAgeHours <= 168 &&
     gap !== null &&
     limitOk(maxRunning) &&
-    limitOk(burst);
+    limitOk(burst) &&
+    budgetCents !== undefined &&
+    softBudgetPercent !== null &&
+    softBudgetPercent <= 99;
 
   async function run(action: () => Promise<boolean>) {
     setBusy(true);
@@ -58,16 +80,28 @@ function LifecycleForm({ current, onSave, onReset }: FormProps) {
       onSubmit={(event) => {
         event.preventDefault();
 
-        if (!valid || hours === null || gap === null) return;
+        if (
+          !valid ||
+          hours === null ||
+          maxAgeHours === null ||
+          gap === null ||
+          budgetCents === undefined ||
+          softBudgetPercent === null
+        ) {
+          return;
+        }
 
         void run(() =>
           onSave({
             agentIdleSeconds: agentSeconds,
             userIdleSeconds: userSeconds,
             expireHours: hours,
+            maxAgeHours,
             maxRunning: whole(maxRunning),
             startBurst: whole(burst),
             startEveryMinutes: gap,
+            monthlyBudgetCents: budgetCents,
+            softBudgetPercent,
           }),
         );
       }}
@@ -89,7 +123,15 @@ function LifecycleForm({ current, onSave, onReset }: FormProps) {
         onChange={(event) => setUserIdle(event.target.value)}
       />
       <TextField
-        label="Delete a computer after this many hours without use"
+        label="Hard wall: maximum continuous running time (hours)"
+        type="number"
+        min={1}
+        max={168}
+        value={maxAge}
+        onChange={(event) => setMaxAge(event.target.value)}
+      />
+      <TextField
+        label="Delete a stopped computer after this many hours"
         type="number"
         min={1}
         value={expire}
@@ -117,6 +159,23 @@ function LifecycleForm({ current, onSave, onReset }: FormProps) {
         min={1}
         value={every}
         onChange={(event) => setEvery(event.target.value)}
+      />
+      <TextField
+        label="Monthly spend brake (USD)"
+        type="number"
+        min={0.01}
+        step="any"
+        placeholder="No limit"
+        value={budget}
+        onChange={(event) => setBudget(event.target.value)}
+      />
+      <TextField
+        label="Soft warning & tightened idle threshold (% of monthly budget)"
+        type="number"
+        min={1}
+        max={99}
+        value={softPercent}
+        onChange={(event) => setSoftPercent(event.target.value)}
       />
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={busy || !valid}>
@@ -146,7 +205,7 @@ export function CloudLifecycleSection() {
   return (
     <SettingsSection
       title="Aven Cloud computers"
-      description="When a computer stops and is deleted, and optional limits on running computers. A computer that is stopped keeps its disk and costs little, so only running ones count. Leave a limit empty for none."
+      description="When a computer stops and is deleted, hard-wall caps, spend brake, and optional limits on running computers. A stopped computer keeps its disk until deleted; after that, the next call starts a fresh one. Leave a limit empty for none."
     >
       <LifecycleForm
         key={JSON.stringify(settings)}
