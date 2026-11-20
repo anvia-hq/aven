@@ -32,6 +32,11 @@ test.describe("the platform's sandbox page", () => {
     await expect(page.getByLabel("Spaces server")).toHaveValue(saved.base);
 
     await page.getByRole("combobox", { name: "Sandbox platform" }).click();
+    await page.getByRole("option", { name: "lizard.build", exact: true }).click();
+    await expect(page.getByLabel("Lizard API address (optional)")).toHaveValue("");
+    await expect(page.getByLabel("Lizard project (optional if account has one)")).toHaveValue("");
+
+    await page.getByRole("combobox", { name: "Sandbox platform" }).click();
     await page.getByRole("option", { name: "boat.dev", exact: true }).click();
 
     await expect(page.getByLabel("Boat API address (optional)")).toHaveValue("");
@@ -49,6 +54,7 @@ test.describe("the platform's sandbox page", () => {
     expect((await put).postDataJSON()).toMatchObject({
       provider: "boat",
       base: "",
+      project: "",
       runnerUrl: "",
       apiKey: "boat_abcd",
     });
@@ -61,30 +67,40 @@ test.describe("the platform's sandbox page", () => {
     await page.goto("/settings/sandbox");
 
     const section = page.getByRole("region", { name: "Aven Cloud computers" });
+    await expect(section.getByLabel("Delete a stopped computer after this many hours")).toHaveValue(
+      "48",
+    );
     await expect(
-      section.getByLabel("Delete a computer after this many hours without use"),
-    ).toHaveValue("48");
+      section.getByLabel("Hard wall: maximum continuous running time (hours)"),
+    ).toHaveValue("12");
     await expect(
       section.getByLabel("Most computers a workspace may have running at once"),
     ).toHaveValue("");
 
-    await section.getByLabel("Delete a computer after this many hours without use").fill("72");
+    await section.getByLabel("Delete a stopped computer after this many hours").fill("72");
+    await section.getByLabel("Hard wall: maximum continuous running time (hours)").fill("24");
     await section.getByLabel("Most computers a workspace may have running at once").fill("6");
     await section.getByRole("button", { name: "Save settings" }).click();
     await expect(page.getByText("Computer settings saved")).toBeVisible();
 
     await page.reload();
+    await expect(section.getByLabel("Delete a stopped computer after this many hours")).toHaveValue(
+      "72",
+    );
     await expect(
-      section.getByLabel("Delete a computer after this many hours without use"),
-    ).toHaveValue("72");
+      section.getByLabel("Hard wall: maximum continuous running time (hours)"),
+    ).toHaveValue("24");
     await expect(
       section.getByLabel("Most computers a workspace may have running at once"),
     ).toHaveValue("6");
 
     await section.getByRole("button", { name: "Reset to defaults" }).click();
+    await expect(section.getByLabel("Delete a stopped computer after this many hours")).toHaveValue(
+      "48",
+    );
     await expect(
-      section.getByLabel("Delete a computer after this many hours without use"),
-    ).toHaveValue("48");
+      section.getByLabel("Hard wall: maximum continuous running time (hours)"),
+    ).toHaveValue("12");
     await expect(
       section.getByLabel("Most computers a workspace may have running at once"),
     ).toHaveValue("");
