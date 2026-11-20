@@ -12,7 +12,10 @@ export const threadPlanLimits = pgTable(
     status: text("status").notNull(),
     percent: real("percent").notNull(),
     resetsAt: bigint("resets_at", { mode: "number" }),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
   },
   (table) => [primaryKey({ columns: [table.threadId, table.window] })],
 );

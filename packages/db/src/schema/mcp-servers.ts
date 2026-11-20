@@ -1,4 +1,6 @@
-import { boolean, index, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+
+import { MCP_TARGETS } from "@aven/protocol/mcp";
 
 import { users } from "./users";
 
@@ -14,9 +16,7 @@ export const mcpServers = pgTable(
     url: text("url").notNull(),
     headers: text("headers").notNull(),
     headerNames: text("header_names").array().notNull().default([]),
-    target: text("target", { enum: ["all", "bots", "threads"] })
-      .notNull()
-      .default("all"),
+    target: text("target", { enum: MCP_TARGETS }).notNull().default("all"),
     enabled: boolean("enabled").notNull().default(true),
     allowLocal: boolean("allow_local").notNull().default(false),
     lastError: text("last_error"),
@@ -27,8 +27,5 @@ export const mcpServers = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (table) => [
-    uniqueIndex("mcp_servers_user_slug_idx").on(table.userId, table.slug),
-    index("mcp_servers_user_idx").on(table.userId),
-  ],
+  (table) => [uniqueIndex("mcp_servers_user_slug_idx").on(table.userId, table.slug)],
 );

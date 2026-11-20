@@ -1,5 +1,7 @@
 import { index, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 
+import { MEMORY_SCOPES } from "@aven/protocol/memory";
+
 import { bots } from "./bots";
 import { projects } from "./projects";
 import { users } from "./users";
@@ -11,7 +13,7 @@ export const memoryNotes = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    scope: text("scope", { enum: ["personal", "project", "bot"] }).notNull(),
+    scope: text("scope", { enum: MEMORY_SCOPES }).notNull(),
     projectId: uuid("project_id").references(() => projects.id, { onDelete: "cascade" }),
     botId: uuid("bot_id").references(() => bots.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
