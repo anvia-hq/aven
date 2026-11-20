@@ -1,6 +1,6 @@
 # The control plane can update to the newest release
 
-Status: accepted. Builds on decision 0146 (the runner Update button).
+Status: accepted. Builds on decision 0146 (the runner Update button). Superseded in part by 0388 (a server that is not a release build offers the newest release).
 
 ## Context
 

@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-384 decisions: 298 are the answer, 37 are superseded and 49 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+385 decisions: 298 are the answer, 37 are superseded and 50 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -60,7 +60,7 @@ These describe something that is gone. Read what replaced them.
 | 0322     | The Aven theme is neutral gray                                                               | 0382                         |
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 
-## Superseded in part (49)
+## Superseded in part (50)
 
 These hold, except for the part named.
 
@@ -95,6 +95,7 @@ These hold, except for the part named.
 | 0109     | Agents work the cockpit                                                 | 0120                             |
 | 0117     | A message sent shows at once                                            | 0287                             |
 | 0118     | Archiving a thread stops its work and frees its sandbox                 | 0219                             |
+| 0148     | The control plane can update to the newest release                      | 0388                             |
 | 0153     | Nothing is unshipped when the branch adds nothing to the default branch | 0232                             |
 | 0155     | Color themes, each with light and dark                                  | 0224                             |
 | 0159     | A thread that finished while it was not open shows a dot                | 0331                             |
