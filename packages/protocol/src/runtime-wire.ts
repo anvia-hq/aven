@@ -76,7 +76,7 @@ export const CLAUDE_TOKEN_MISSING =
 export const CODEX_TOKEN_MISSING =
   "Set a Codex sign-in in Settings before this thread can run on the Codex agent";
 
-export const RUNTIME_PROVIDERS = ["manual", "boat", "spaces"] as const;
+export const RUNTIME_PROVIDERS = ["manual", "boat", "spaces", "lizard"] as const;
 
 export const BOAT_MACHINE_TYPES = ["small", "default", "large", "xlarge"] as const;
 
@@ -84,7 +84,28 @@ export const RUNTIME_LIFETIMES = ["persistent", "ephemeral"] as const;
 
 export const RUNTIME_GITHUB_MODES = ["machine", "person"] as const;
 
-export const ENVIRONMENT_STATUSES = ["saving", "ready", "failed"] as const;
+export const ENVIRONMENT_STATUSES = [
+  "saving",
+  "ready",
+  "failed",
+  "deleting",
+  "delete_failed",
+] as const;
+
+export const CLOUD_SANDBOX_STATES = [
+  "absent",
+  "starting",
+  "running",
+  "draining",
+  "stopping",
+  "stopped",
+  "deleting",
+  "delete_failed",
+] as const;
+
+export const CLOUD_PROVIDER_CONFIG_STATUSES = ["active", "draining", "drained"] as const;
+
+export const RUN_DRAIN_REASONS = ["hard_wall", "budget", "provider_switch"] as const;
 
 export const SAVED_SNAPSHOT_NAME = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
