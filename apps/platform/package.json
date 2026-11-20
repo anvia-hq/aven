@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && tsc -p .",
+    "build": "vite build && bun check -p .",
     "preview": "vite preview",
-    "typecheck": "tsc -p ."
+    "typecheck": "bun check -p ."
   },
   "dependencies": {
     "@anvia/client": "^1.9.0",

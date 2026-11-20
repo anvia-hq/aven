@@ -84,6 +84,7 @@ export async function installBinary(archive: Uint8Array, target: string) {
     if ((error as NodeJS.ErrnoException).code === "EACCES")
       throw new Error(
         `Cannot write ${target}. Run the update with sudo, or install aven somewhere you own.`,
+        { cause: error },
       );
 
     throw error;

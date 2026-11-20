@@ -16,7 +16,7 @@ export function withPlacedUploads(
 
       if (!extra) throw error;
 
-      throw new Error(`${errorMessage(error)}\n${extra}`);
+      throw new Error(`${errorMessage(error)}\n${extra}`, { cause: error });
     }
   });
 }

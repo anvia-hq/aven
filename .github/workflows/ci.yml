@@ -39,9 +39,26 @@ jobs:
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
         if: steps.deps.outputs.cache-hit != 'true'
-      - run: bun run typecheck
-      - run: bun run lint
-      - run: bun run format:check
+      - name: Run typecheck, lint, format and platform build
+        run: |
+          failed=()
+          run_check() {
+            local label="$1"
+            shift
+            echo "::group::$label"
+            if ! "$@"; then
+              failed+=("$label")
+            fi
+            echo "::endgroup::"
+          }
+          run_check "typecheck" bun run typecheck
+          run_check "lint" bun run lint
+          run_check "format" bun run format:check
+          run_check "platform build" bunx --cwd apps/platform vite build
+          if [ ${#failed[@]} -gt 0 ]; then
+            echo "::error::Failed checks: ${failed[*]}"
+            exit 1
+          fi
 
   test:
     name: unit tests

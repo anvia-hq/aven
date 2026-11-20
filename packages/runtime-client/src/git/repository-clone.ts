@@ -31,6 +31,7 @@ export async function cloneRepositoryFolder(reposDir: string, repository: string
     await rm(target, { recursive: true, force: true });
     throw new Error(
       `Could not clone ${url}: ${errorMessage(error)}. This computer must be signed in to git for a private repository`,
+      { cause: error },
     );
   }
 
