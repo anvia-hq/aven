@@ -3,6 +3,7 @@ import { MAX_NAME_LENGTH, MAX_VALUE_LENGTH, MAX_VARIABLES } from "@aven/protocol
 import type { EnvIssue, ParsedEnv } from "./types";
 
 const LINE = /^(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([\s\S]*)$/;
+const OPENING_QUOTE = /^["']/;
 
 const ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t" };
 
@@ -39,7 +40,7 @@ export function parseEnv(source: string): ParsedEnv {
 
     const opening = LINE.exec(text);
 
-    if (opening && /^["']/.test(opening[2]!.trim())) {
+    if (opening && OPENING_QUOTE.test(opening[2]!.trim())) {
       const quote = opening[2]!.trim()[0]!;
       while (
         !new RegExp(`^${quote}[\\s\\S]*(?<!\\\\)${quote}\\s*(#.*)?$`).test(
