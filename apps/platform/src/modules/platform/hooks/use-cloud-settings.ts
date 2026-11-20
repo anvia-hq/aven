@@ -10,10 +10,11 @@ export function useCloudSettings() {
   const [refreshKey, setRefreshKey] = useState(0);
   const answer = useRequest<CloudSettings | null>("/platform/cloud", { refreshKey });
 
-  async function save({ provider, base, runnerUrl, apiKey }: CloudSettingsDraft) {
+  async function save({ provider, base, project, runnerUrl, apiKey }: CloudSettingsDraft) {
     const body = {
       provider,
       base: base.trim(),
+      project: project.trim(),
       runnerUrl: runnerUrl.trim(),
       apiKey: apiKey.trim() || undefined,
     };
