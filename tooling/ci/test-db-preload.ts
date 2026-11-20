@@ -25,8 +25,13 @@ if (template && baseUrl) {
     adminUrl.pathname = "/postgres";
     const admin = new SQL(adminUrl.toString());
     try {
-      await admin.unsafe(`DROP DATABASE IF EXISTS ${workerDb} WITH (FORCE)`);
-      await admin.unsafe(`CREATE DATABASE ${workerDb} TEMPLATE ${template}`);
+      await admin.unsafe("SELECT pg_advisory_lock(424242)");
+      try {
+        await admin.unsafe(`DROP DATABASE IF EXISTS ${workerDb} WITH (FORCE)`);
+        await admin.unsafe(`CREATE DATABASE ${workerDb} TEMPLATE ${template}`);
+      } finally {
+        await admin.unsafe("SELECT pg_advisory_unlock(424242)");
+      }
     } finally {
       await admin.close();
     }

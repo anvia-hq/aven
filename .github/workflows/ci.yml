@@ -115,7 +115,6 @@ jobs:
           bun test \
             --parallel=4 \
             --isolate \
-            --randomize \
             --preload ./tooling/ci/test-db-preload.ts \
             --shard=${{ matrix.shard }}/2 \
             --timings=.ci-timings/unit-timings.json \

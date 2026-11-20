@@ -63,9 +63,10 @@ export async function writeServerFiles(
   files: { compose: string; envTemplate: string },
   options: ServerEnvOptions,
   values: Record<string, string> = {},
+  projects?: Parameters<typeof recordProject>[1],
 ): Promise<{ created: boolean; changed: EnvChange[] }> {
   await mkdir(dir, { recursive: true });
-  recordProject(dir);
+  recordProject(dir, projects);
   await writeFile(join(dir, "docker-compose.yml"), files.compose);
 
   const envPath = join(dir, ".env");
