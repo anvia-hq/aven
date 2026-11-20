@@ -25,3 +25,12 @@ export interface PlaywrightJsonSuite {
 export interface PlaywrightJsonReport {
   suites?: PlaywrightJsonSuite[];
 }
+
+export interface SelectionPlan {
+  fullUnit: boolean;
+  fullE2e: boolean;
+  reason: string;
+  unitFiles: string[];
+  e2eSpecs: string[];
+  useBunChanged: boolean;
+}
