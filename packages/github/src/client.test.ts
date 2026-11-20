@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createVerify, generateKeyPairSync } from "node:crypto";
 
+import { UnavailableError } from "@aven/server-kit/errors";
 import {
+  GithubApiError,
   GithubClient,
   GithubCreateNotGrantedError,
   GithubIssuesNotGrantedError,
@@ -1120,5 +1122,450 @@ describe("writing to a repository", () => {
         ),
       ).rejects.toThrow();
     });
+
+    test("wraps network errors from GraphQL and REST calls in UnavailableError", async () => {
+      let count = 0;
+      const client = new GithubClient(config, async (url) => {
+        count++;
+
+        if (url.endsWith("/access_tokens")) {
+          return Response.json({ token: "ghs_read", expires_at: "2099-01-01T00:00:00Z" });
+        }
+
+        throw new TypeError("network down");
+      });
+
+      await expect(client.unresolvedReviewComments(7, "acme/web", 12)).rejects.toThrow(
+        UnavailableError,
+      );
+      await expect(client.canReach(7, "acme/web")).rejects.toThrow("Could not reach GitHub");
+      expect(count).toBeGreaterThanOrEqual(2);
+    });
+  });
+});
+
+describe("configuration, OAuth edge cases, and token eviction", () => {
+  test("exposes slug, webUrl, authorizeUrl, and resets state on configure()", async () => {
+    const github = fakeGithub({
+      "POST /app/installations/7/access_tokens": {
+        token: "ghs_first",
+        expires_at: "2099-01-01T00:00:00Z",
+      },
+    });
+    const client = new GithubClient({ ...config, webUrl: "https://github.com/" }, github.fetch);
+
+    expect(client.configured).toBe(true);
+    expect(client.slug).toBe("aven-test");
+    expect(client.webUrl).toBe("https://github.com");
+    expect(client.authorizeUrl("state-123")).toBe(
+      "https://github.com/login/oauth/authorize?client_id=Iv1.abc&state=state-123",
+    );
+
+    await client.installationToken(7);
+    expect(github.calls).toHaveLength(1);
+
+    client.configure({ ...config, slug: "aven-two", webUrl: "https://ghe.local/" });
+    expect(client.slug).toBe("aven-two");
+    expect(client.webUrl).toBe("https://ghe.local");
+    await client.installationToken(7);
+    expect(github.calls).toHaveLength(2);
+
+    client.configure(null);
+    expect(client.configured).toBe(false);
+    expect(() => client.slug).toThrow(GithubNotConfiguredError);
+    expect(() => client.webUrl).toThrow(GithubNotConfiguredError);
+    expect(() => client.authorizeUrl("x")).toThrow(GithubNotConfiguredError);
+  });
+
+  test("preserves expires_in: 0 and refresh_token_expires_in: 0 instead of treating them as non-expiring", async () => {
+    const before = Date.now();
+    const github = fakeGithub({
+      "POST /login/oauth/access_token": {
+        access_token: "ghu_zero",
+        expires_in: 0,
+        refresh_token: "ghr_zero",
+        refresh_token_expires_in: 0,
+      },
+    });
+    const grant = await new GithubClient(config, github.fetch).exchangeCode("zero-code");
+    const after = Date.now();
+
+    expect(grant).not.toBeNull();
+    expect(grant!.expiresAt).toBeGreaterThanOrEqual(before);
+    expect(grant!.expiresAt).toBeLessThanOrEqual(after);
+    expect(grant!.refreshExpiresAt).toBeGreaterThanOrEqual(before);
+    expect(grant!.refreshExpiresAt).toBeLessThanOrEqual(after);
+  });
+
+  test("evicts a cached installation token on 401 and retries once with a fresh token", async () => {
+    let issued = 0;
+    const seenAuth: string[] = [];
+    const client = new GithubClient(config, async (url, init) => {
+      if (url.endsWith("/access_tokens")) {
+        issued++;
+        return Response.json({
+          token: `ghs_tok_${issued}`,
+          expires_at: "2099-01-01T00:00:00Z",
+        });
+      }
+
+      const header = auth({ url, init });
+      seenAuth.push(header);
+
+      if (header === "Bearer ghs_tok_1" && seenAuth.length === 2) {
+        return new Response("bad credentials", { status: 401 });
+      }
+
+      return Response.json({ full_name: "acme/web" });
+    });
+
+    expect(await client.canReach(7, "acme/web")).toBe(true);
+    expect(await client.canReach(7, "acme/web")).toBe(true);
+    expect(issued).toBe(2);
+    expect(seenAuth).toEqual(["Bearer ghs_tok_1", "Bearer ghs_tok_1", "Bearer ghs_tok_2"]);
+  });
+
+  test("evicts the installation token and rethrows when a fresh token also gets 401", async () => {
+    let issued = 0;
+    const client = new GithubClient(config, async (url) => {
+      if (url.endsWith("/access_tokens")) {
+        issued++;
+        return Response.json({
+          token: `ghs_bad_${issued}`,
+          expires_at: "2099-01-01T00:00:00Z",
+        });
+      }
+
+      return new Response("unauthorized", { status: 401 });
+    });
+
+    await expect(client.canReach(7, "acme/web")).rejects.toBeInstanceOf(GithubApiError);
+    await expect(client.canReach(7, "acme/web")).rejects.toBeInstanceOf(GithubApiError);
+    expect(issued).toBe(2);
+  });
+});
+
+describe("pull, commit, and branches details", () => {
+  const tokenRoute = {
+    "POST /app/installations/7/access_tokens": {
+      token: "ghs_one",
+      expires_at: "2099-01-01T00:00:00Z",
+    },
+  };
+
+  describe("client.pull()", () => {
+    const basePull = {
+      number: 42,
+      title: "Add feature",
+      body: "PR body",
+      html_url: "https://github.com/acme/web/pull/42",
+      state: "open",
+      draft: false,
+      merged: false,
+      user: { login: "ada" },
+      base: { ref: "main" },
+      head: { ref: "feat/add", sha: "sha_head" },
+      additions: 12,
+      deletions: 3,
+      changed_files: 1,
+      commits: 2,
+      comments: 4,
+      review_comments: 3,
+      created_at: "2026-11-01T00:00:00Z",
+      updated_at: "2026-11-02T00:00:00Z",
+      mergeable: true,
+      requested_reviewers: [{ login: "grace" }],
+    };
+
+    test("assembles pull files, reviews, checks, and filesTruncated", async () => {
+      const github = fakeGithub({
+        ...tokenRoute,
+        "GET /repos/acme/web/pulls/42": { ...basePull, changed_files: 150 },
+        "GET /repos/acme/web/pulls/42/files?per_page=100": [
+          {
+            filename: "src/app.ts",
+            status: "modified",
+            additions: 12,
+            deletions: 3,
+            patch: "@@ -1 +1 @@",
+          },
+        ],
+        "GET /repos/acme/web/pulls/42/reviews?per_page=100": [
+          { user: { login: "bob" }, state: "CHANGES_REQUESTED" },
+          { user: { login: "bob" }, state: "APPROVED" },
+        ],
+        "GET /repos/acme/web/commits/sha_head/check-runs?per_page=100": {
+          check_runs: [
+            {
+              name: "ci",
+              status: "completed",
+              conclusion: "success",
+              html_url: "https://github.com/acme/web/runs/1",
+            },
+          ],
+        },
+      });
+      const detail = await new GithubClient(config, github.fetch).pull(7, "acme/web", 42);
+
+      expect(detail).toEqual({
+        number: 42,
+        title: "Add feature",
+        body: "PR body",
+        url: "https://github.com/acme/web/pull/42",
+        status: "open",
+        author: "ada",
+        base: "main",
+        head: "feat/add",
+        additions: 12,
+        deletions: 3,
+        changedFiles: 150,
+        commits: 2,
+        comments: 7,
+        createdAt: "2026-11-01T00:00:00Z",
+        updatedAt: "2026-11-02T00:00:00Z",
+        mergeable: true,
+        reviews: [{ login: "bob", state: "approved" }],
+        requestedReviewers: ["grace"],
+        checks: {
+          state: "success",
+          runs: [{ name: "ci", state: "success", url: "https://github.com/acme/web/runs/1" }],
+        },
+        files: [
+          {
+            path: "src/app.ts",
+            oldPath: null,
+            status: "modified",
+            additions: 12,
+            deletions: 3,
+            patch: "@@ -1 +1 @@",
+          },
+        ],
+        filesTruncated: true,
+      });
+    });
+
+    test("returns null on 404, degrades on 403 for reviews/checks, and propagates 500", async () => {
+      const missing = fakeGithub({ ...tokenRoute });
+      expect(await new GithubClient(config, missing.fetch).pull(7, "acme/web", 99)).toBeNull();
+
+      const forbiddenAux = new GithubClient(config, async (url) => {
+        if (url.endsWith("/access_tokens")) {
+          return Response.json({ token: "ghs_one", expires_at: "2099-01-01T00:00:00Z" });
+        }
+
+        if (url.endsWith("/pulls/42")) return Response.json(basePull);
+
+        if (url.includes("/pulls/42/files")) return Response.json([]);
+
+        return new Response("forbidden", { status: 403 });
+      });
+      const degraded = await forbiddenAux.pull(7, "acme/web", 42);
+      expect(degraded?.reviews).toEqual([]);
+      expect(degraded?.checks).toEqual({ state: "none", runs: [] });
+
+      const failingAux = new GithubClient(config, async (url) => {
+        if (url.endsWith("/access_tokens")) {
+          return Response.json({ token: "ghs_one", expires_at: "2099-01-01T00:00:00Z" });
+        }
+
+        if (url.endsWith("/pulls/42")) return Response.json(basePull);
+
+        if (url.includes("/pulls/42/files")) return Response.json([]);
+
+        return new Response("boom", { status: 500 });
+      });
+      await expect(failingAux.pull(7, "acme/web", 42)).rejects.toThrow("GitHub answered 500");
+    });
+  });
+
+  describe("client.commit()", () => {
+    test("returns commit stats, files, filesTruncated, and null on 404", async () => {
+      const manyFiles = Array.from({ length: 105 }, (_, index) => ({
+        filename: `file-${index}.ts`,
+        status: "added",
+        additions: 1,
+        deletions: 0,
+      }));
+      const github = fakeGithub({
+        ...tokenRoute,
+        "GET /repos/acme/web/commits/abc123": {
+          sha: "abc123",
+          html_url: "https://github.com/acme/web/commit/abc123",
+          commit: {
+            message: "Big commit\n\nDetails",
+            author: { name: "Ada", date: "2026-11-01T10:00:00Z" },
+          },
+          author: { login: "ada" },
+          parents: [{ sha: "p0" }],
+          stats: { additions: 105, deletions: 4 },
+          files: manyFiles,
+        },
+      });
+      const client = new GithubClient(config, github.fetch);
+
+      const detail = await client.commit(7, "acme/web", "abc123");
+      expect(detail).toMatchObject({
+        sha: "abc123",
+        message: "Big commit\n\nDetails",
+        author: "Ada",
+        date: "2026-11-01T10:00:00Z",
+        url: "https://github.com/acme/web/commit/abc123",
+        parents: ["p0"],
+        additions: 105,
+        deletions: 4,
+        filesTruncated: true,
+      });
+      expect(detail?.files).toHaveLength(100);
+      expect(await client.commit(7, "acme/web", "missing")).toBeNull();
+    });
+  });
+
+  describe("client.branches()", () => {
+    test("summarizes branches with default first, sorted dates, ahead/behind, and open PRs", async () => {
+      const github = fakeGithub({
+        ...tokenRoute,
+        "GET /repos/acme/web/branches?per_page=100": [
+          { name: "feat/old", protected: false },
+          { name: "main", protected: true },
+          { name: "feat/new", protected: false },
+        ],
+        "GET /repos/acme/web/pulls?state=open&per_page=100": [
+          {
+            number: 11,
+            title: "New feature",
+            head: { ref: "feat/new", repo: { full_name: "acme/web" } },
+          },
+          {
+            number: 12,
+            title: "Fork PR",
+            head: { ref: "feat/old", repo: { full_name: "other/web" } },
+          },
+        ],
+        "GET /repos/acme/web/commits/main": {
+          sha: "s-main",
+          commit: {
+            message: "Main head\nbody",
+            author: { name: "Ada", date: "2026-11-01T10:00:00Z" },
+          },
+          author: { login: "ada" },
+          parents: [],
+        },
+        "GET /repos/acme/web/commits/feat%2Fold": {
+          sha: "s-old",
+          commit: {
+            message: "Old work",
+            author: { name: "Bo", date: "2026-11-02T10:00:00Z" },
+          },
+          author: null,
+          parents: [],
+        },
+        "GET /repos/acme/web/commits/feat%2Fnew": {
+          sha: "s-new",
+          commit: {
+            message: "New work",
+            author: { name: "Cy", date: "2026-11-05T10:00:00Z" },
+          },
+          author: null,
+          parents: [],
+        },
+        "GET /repos/acme/web/compare/main...feat%2Fold?per_page=1": { ahead_by: 1, behind_by: 4 },
+        "GET /repos/acme/web/compare/main...feat%2Fnew?per_page=1": { ahead_by: 3, behind_by: 0 },
+      });
+      const result = await new GithubClient(config, github.fetch).branches(7, "acme/web", "main");
+
+      expect(result).toEqual({
+        truncated: false,
+        branches: [
+          {
+            name: "main",
+            isDefault: true,
+            protected: true,
+            ahead: 0,
+            behind: 0,
+            lastCommit: {
+              sha: "s-main",
+              message: "Main head",
+              author: "Ada",
+              date: "2026-11-01T10:00:00Z",
+            },
+            pull: null,
+          },
+          {
+            name: "feat/new",
+            isDefault: false,
+            protected: false,
+            ahead: 3,
+            behind: 0,
+            lastCommit: {
+              sha: "s-new",
+              message: "New work",
+              author: "Cy",
+              date: "2026-11-05T10:00:00Z",
+            },
+            pull: { number: 11, title: "New feature" },
+          },
+          {
+            name: "feat/old",
+            isDefault: false,
+            protected: false,
+            ahead: 1,
+            behind: 4,
+            lastCommit: {
+              sha: "s-old",
+              message: "Old work",
+              author: "Bo",
+              date: "2026-11-02T10:00:00Z",
+            },
+            pull: null,
+          },
+        ],
+      });
+    });
+
+    test("returns null when repository is missing and propagates 500 on auxiliary branch calls", async () => {
+      const missing = fakeGithub({ ...tokenRoute });
+      expect(
+        await new GithubClient(config, missing.fetch).branches(7, "acme/gone", "main"),
+      ).toBeNull();
+
+      const failingPulls = new GithubClient(config, async (url) => {
+        if (url.endsWith("/access_tokens")) {
+          return Response.json({ token: "ghs_one", expires_at: "2099-01-01T00:00:00Z" });
+        }
+
+        if (url.includes("/branches?")) {
+          return Response.json([{ name: "main", protected: true }]);
+        }
+
+        return new Response("boom", { status: 500 });
+      });
+      await expect(failingPulls.branches(7, "acme/web", "main")).rejects.toThrow(
+        "GitHub answered 500",
+      );
+    });
+  });
+
+  test("commits() does not fetch branches or tags when commits request fails or is empty", async () => {
+    const calls: string[] = [];
+    const client = new GithubClient(config, async (url) => {
+      calls.push(url);
+
+      if (url.endsWith("/access_tokens")) {
+        return Response.json({ token: "ghs_one", expires_at: "2099-01-01T00:00:00Z" });
+      }
+
+      if (url.includes("/acme/missing/commits")) return new Response("gone", { status: 404 });
+
+      if (url.includes("/acme/empty/commits")) return Response.json([]);
+
+      return new Response("unexpected", { status: 500 });
+    });
+
+    expect(await client.commits(7, "acme/missing", 1, "main")).toBeNull();
+    expect(await client.commits(7, "acme/empty", 1, "main")).toEqual({
+      commits: [],
+      hasMore: false,
+    });
+    expect(calls.some((url) => url.includes("/branches") || url.includes("/tags"))).toBe(false);
   });
 });

@@ -1,12 +1,14 @@
 import type {
   CheckRunPayload,
   FilePayload,
+  ReviewPayload,
+  ReviewThreadsPayload,
+} from "./payload-types";
+import type {
   GithubCheckRun,
   GithubFileChange,
   GithubPullDetail,
   GithubReviewComment,
-  ReviewPayload,
-  ReviewThreadsPayload,
 } from "./types";
 
 export const TEXT_MAX_CHARS = 20_000;

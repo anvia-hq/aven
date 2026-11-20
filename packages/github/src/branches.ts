@@ -1,4 +1,4 @@
-import type { OpenPullPayload } from "./types";
+import type { OpenPullPayload } from "./payload-types";
 
 export const BRANCHES_SUMMARIZED = 30;
 export const BRANCH_CALLS_AT_ONCE = 6;
