@@ -1,6 +1,6 @@
 # A project's environment is a saved snapshot, for 72 hours
 
-Status: accepted. Brings back what 0043 decided and 0219 and 0225 retired, now that Aven Cloud runs a thread's sandbox (0299, 0306) and a sandbox can be started from a provider's saved snapshot. Adds to 0225, whose "there is no snapshot" is true of the person's computer only.
+Status: accepted. Superseded in part by 0392 (every environment row has an `expires_at` and delete-failure backoff). Brings back what 0043 decided and 0219 and 0225 retired, now that Aven Cloud runs a thread's sandbox (0299, 0306) and a sandbox can be started from a provider's saved snapshot. Adds to 0225, whose "there is no snapshot" is true of the person's computer only.
 
 ## Context
 

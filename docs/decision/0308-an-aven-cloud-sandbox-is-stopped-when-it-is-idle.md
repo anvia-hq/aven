@@ -1,7 +1,6 @@
 # An Aven Cloud sandbox is stopped when it is idle
 
-Status: accepted. Partly supersedes 0299 (a sandbox waited for boat's two-hour auto-stop) and
-changes how 0297 and 0306's providers are stopped.
+Status: accepted. Superseded in part by 0392 (persisted state machine, 12-hour hard wall, and step-boundary drain). Partly supersedes 0299 (a sandbox waited for boat's two-hour auto-stop) and changes how 0297 and 0306's providers are stopped.
 
 ## Context
 

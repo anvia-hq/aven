@@ -1,6 +1,6 @@
 # — The installation's one sandbox platform is chosen in Settings > Sandbox
 
-Status: accepted. Superseded in part by 0328: the name of the built-in computer. Decided 2026-11-17.
+Status: accepted. Superseded in part by 0328 (the name of the built-in computer) and by 0392 (switching or removing a provider drains its remaining sandboxes and snapshots before dropping its credentials). Decided 2026-11-17.
 
 ## Context
 
