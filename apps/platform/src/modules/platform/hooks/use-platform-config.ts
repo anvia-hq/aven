@@ -15,6 +15,7 @@ const FALLBACK: PlatformConfig = {
   codexBackend: true,
   lens: false,
   isOwner: false,
+  platformSettings: true,
 };
 
 let inflight: Promise<PlatformConfig> | undefined;

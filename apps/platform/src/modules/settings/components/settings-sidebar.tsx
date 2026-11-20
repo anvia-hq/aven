@@ -80,7 +80,8 @@ const platformGroup = {
 
 export function SettingsSidebar() {
   const { config } = usePlatformConfig();
-  const visibleGroups = config?.isOwner ? [...groups, platformGroup] : groups;
+  const visibleGroups =
+    config?.isOwner && config.platformSettings !== false ? [...groups, platformGroup] : groups;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (

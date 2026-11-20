@@ -1,5 +1,6 @@
 import { Elysia } from "elysia";
 
+import { editionInUse } from "../../edition/current";
 import { authRouter } from "../auth/router";
 import { lensEnabled } from "../lens/flag";
 import { claudeBackendEnabled, codexBackendEnabled } from "../providers/backends";
@@ -22,6 +23,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
         codexBackend: codexBackendEnabled(),
         lens: lensEnabled(),
         isOwner: session ? await platformService.isOwner(session.user) : false,
+        platformSettings: !editionInUse.current.hidePlatformSettings,
       };
     })
     .get(

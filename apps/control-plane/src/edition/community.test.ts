@@ -8,5 +8,6 @@ describe("communityEdition", () => {
     expect(communityEdition.routes).toEqual([]);
     expect(communityEdition.features).toEqual([]);
     expect(communityEdition.manageUrl).toBeNull();
+    expect(communityEdition.hidePlatformSettings).toBeUndefined();
   });
 });
