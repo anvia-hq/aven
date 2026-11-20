@@ -1,6 +1,6 @@
 # The e2e suite runs before the push that makes a branch
 
-Status: accepted. Supersedes part of decision 0316 (which kept the e2e suite out of the hooks).
+Status: accepted. Supersedes part of decision 0316 (which kept the e2e suite out of the hooks). Superseded by 0394 (hk runs fast typecheck, lint, format and changed unit tests under 9s on pre-push; full e2e runs in CI and the merge queue).
 
 ## Context
 
