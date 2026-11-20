@@ -17,6 +17,8 @@ import type { SandboxToolName, SubagentType } from "./types";
 
 export const SUBAGENT_TYPES = ["explore", "general"] as const;
 
+export const DEFAULT_SUBAGENT_TYPE: SubagentType = "explore";
+
 export const SUBAGENT_MAX_TURNS = 200;
 
 export const MAX_PARALLEL_SUBAGENTS = 6;

@@ -2,7 +2,7 @@ import { createTool } from "@anvia/core";
 import { SPAWN_AGENT_TOOL_NAME } from "@aven/protocol/events";
 import { z } from "zod";
 
-import { MAX_PARALLEL_SUBAGENTS, SUBAGENT_TYPES } from "../subagents";
+import { DEFAULT_SUBAGENT_TYPE, MAX_PARALLEL_SUBAGENTS, SUBAGENT_TYPES } from "../subagents";
 import { errorMessage } from "../values";
 import type { RunSubagent, SubagentResult } from "./types";
 
@@ -24,7 +24,8 @@ export const subagentTaskSchema = z.object({
     .enum(SUBAGENT_TYPES)
     .describe(
       "explore: only reads and reports, for searching and understanding code. general: can run commands and change files.",
-    ),
+    )
+    .default(DEFAULT_SUBAGENT_TYPE),
 });
 
 export type SubagentTask = z.infer<typeof subagentTaskSchema>;

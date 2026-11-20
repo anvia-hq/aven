@@ -44,6 +44,12 @@ describe("spawn_agent", () => {
     expect(peak).toBe(MAX_PARALLEL_SUBAGENTS);
   });
 
+  test("a task that names no type explores", () => {
+    expect(spawnAgentSchema.parse({ tasks: [{ description: "a", prompt: "p" }] })).toEqual({
+      tasks: [{ description: "a", prompt: "p", type: "explore" }],
+    });
+  });
+
   test("a failed subagent is reported and the others still answer", async () => {
     const tool = createSpawnAgentTool(async ({ description }) => {
       if (description === "bad") throw new Error("the model refused");
