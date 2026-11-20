@@ -112,11 +112,11 @@ export function recordProject(dir: string, projects?: ComposeProject[]) {
   );
 }
 
-export const composeCommand = (dir: string, args: string[]) => [
+export const composeCommand = (dir: string, args: string[], projects?: ComposeProject[]) => [
   "docker",
   "compose",
   "--project-name",
-  composeProject(dir),
+  composeProject(dir, projects),
   "--project-directory",
   dir,
   "-f",
