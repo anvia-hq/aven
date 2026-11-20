@@ -90,7 +90,6 @@ jobs:
         shard: [1, 2, 3]
     env:
       E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_e2e
-      E2E_CHANNEL: chrome
     steps:
       - uses: actions/checkout@v4
         with:
@@ -110,6 +109,14 @@ jobs:
           restore-keys: deps-${{ runner.os }}-bun${{ env.BUN_VERSION }}-
       - run: bun install --frozen-lockfile
         if: steps.deps.outputs.cache-hit != 'true'
+      - uses: actions/cache@v4
+        id: browsers
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-headless-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: playwright-headless-${{ runner.os }}-
+      - run: bunx playwright install chromium-headless-shell
+        if: steps.browsers.outputs.cache-hit != 'true'
       - name: Start Postgres
         run: |
           PG_CONF=$(find /etc/postgresql -name postgresql.conf | head -n 1)
