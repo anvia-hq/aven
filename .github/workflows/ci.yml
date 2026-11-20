@@ -233,7 +233,7 @@ jobs:
         shard: [1, 2, 3]
     env:
       E2E_DATABASE_URL: postgres://postgres:postgres@localhost:5432/aven_e2e
-      E2E_WORKERS: 4
+      E2E_WORKERS: 3
       E2E_REPORT_FILE: .ci-timings/e2e-report-${{ matrix.shard }}.json
     steps:
       - name: Start timer
