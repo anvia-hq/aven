@@ -183,4 +183,17 @@ describe("git the runner runs on a workspace", () => {
       expect(await readdir(outside)).toEqual([]);
     }
   });
+
+  test("ignores a FETCH_HEAD that is a symlink or a pipe", async () => {
+    const { base, root } = await workspace();
+    const elsewhere = join(base, "secret-fetch-head");
+    await writeFile(elsewhere, "0".repeat(40) + "\t\tbranch 'main' of https://example.com/r.git\n");
+    await writeFile(join(root, "a.txt"), "two\n");
+    await symlink(elsewhere, join(root, ".git", "FETCH_HEAD"));
+    expect((await threadDiff(root, "all"))?.patch).toContain("+two");
+
+    await rm(join(root, ".git", "FETCH_HEAD"));
+    await Bun.spawn(["mkfifo", join(root, ".git", "FETCH_HEAD")]).exited;
+    expect((await threadDiff(root, "all"))?.patch).toContain("+two");
+  });
 });
