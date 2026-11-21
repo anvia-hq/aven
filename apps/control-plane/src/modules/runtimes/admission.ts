@@ -21,12 +21,26 @@ export function createAdmission({
   running,
   spend,
   extra,
+  hidePlatformSettings = () => false,
   now = Date.now,
   sleep = pause,
   pollMs = POLL_MS,
   maxWaitMs = MAX_WAIT_MS,
 }: AdmissionOptions) {
   const buckets = new Map<string, { tokens: number; at: number }>();
+
+  async function checkSpend() {
+    if (!spend) return;
+
+    const verdict = await spend();
+
+    if (verdict.state !== "hard_stop") return;
+
+    const guidance = hidePlatformSettings()
+      ? "Wait for the next billing period or contact support"
+      : "Raise the budget in Settings > Sandbox or wait for the next billing period";
+    throw new UnavailableError(`Aven Cloud reached its monthly spend limit. ${guidance}`);
+  }
 
   async function waitForRoom(start: ComputerStart, limit: number) {
     if (start.organizationId === null) return;
@@ -65,16 +79,13 @@ export function createAdmission({
   }
 
   return {
-    async admit(start: ComputerStart) {
-      if (spend) {
-        const verdict = await spend();
+    async preflight(start: ComputerStart) {
+      await checkSpend();
+      await extra?.(start);
+    },
 
-        if (verdict.state === "hard_stop") {
-          throw new UnavailableError(
-            "Aven Cloud reached its monthly spend limit. Raise the budget in Settings > Sandbox or wait for the next billing period",
-          );
-        }
-      }
+    async admit(start: ComputerStart) {
+      await checkSpend();
 
       const limits = await settings();
 
@@ -94,4 +105,5 @@ export const admission = createAdmission({
     computerUsageService.runningIn(organizationId, exceptRuntimeId),
   spend: () => spendBrakeService.verdict(),
   extra: (start) => editionInUse.current.admit?.(start) ?? Promise.resolve(),
+  hidePlatformSettings: () => Boolean(editionInUse.current.hidePlatformSettings),
 });

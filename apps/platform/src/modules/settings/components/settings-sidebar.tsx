@@ -3,6 +3,7 @@ import {
   IconBook,
   IconCode,
   IconCodeblock,
+  IconExternalLink,
   IconFlag,
   IconId,
   IconKey,
@@ -82,6 +83,8 @@ export function SettingsSidebar() {
   const { config } = usePlatformConfig();
   const visibleGroups =
     config?.isOwner && config.platformSettings !== false ? [...groups, platformGroup] : groups;
+  const externalAdminUrl =
+    config?.isOwner && config.platformSettings === false ? (config.manageUrl ?? null) : null;
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
   return (
@@ -107,6 +110,22 @@ export function SettingsSidebar() {
           </SidebarMenu>
         </SidebarGroup>
       ))}
+      {externalAdminUrl && (
+        <SidebarGroup className="py-1">
+          <SidebarGroupLabel>Platform</SidebarGroupLabel>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                render={<a href={externalAdminUrl} target="_blank" rel="noreferrer noopener" />}
+                tooltip="Operator Console"
+              >
+                <IconExternalLink />
+                <span>Operator Console</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
     </nav>
   );
 }

@@ -43,7 +43,7 @@ export function grantedProviderView(granted: GrantedProvider): ProviderView {
     name: granted.name,
     baseUrl: granted.baseUrl,
     modelId: granted.modelId,
-    keyHint: granted.keyHint,
+    keyHint: null,
     isDefault: false,
     createdAt: granted.createdAt,
     updatedAt: granted.createdAt,

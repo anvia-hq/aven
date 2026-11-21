@@ -1308,4 +1308,5 @@ export type PlatformConfig = {
   lens: boolean;
   isOwner: boolean;
   platformSettings: boolean;
+  manageUrl?: string | null;
 };

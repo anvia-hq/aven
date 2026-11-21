@@ -20,11 +20,16 @@ function Register() {
   const onSuccess = useContinueAfterAuth(search);
   const { config } = usePlatformConfig();
   const closed = Boolean(config && !config.registrationEnabled && !invitation);
+  const hosted = config?.platformSettings === false;
 
   return (
     <AuthShell
       title="Create your account"
-      description="Set up Aven on your own machines in a minute."
+      description={
+        hosted
+          ? "Sign up to start running agents on Aven Cloud."
+          : "Set up Aven on your own machines in a minute."
+      }
       footer={
         <>
           Already have an account?{" "}
@@ -40,7 +45,9 @@ function Register() {
     >
       {closed ? (
         <p role="status" className="text-sm text-muted-foreground">
-          Registration is closed. Ask a teammate for an invite link to join.
+          {hosted
+            ? "Registration is currently closed for new accounts. Ask an administrator or teammate for an invite link."
+            : "Registration is closed. Ask a teammate for an invite link to join."}
         </p>
       ) : (
         <>

@@ -20,6 +20,7 @@ import { cloudEnabled, templateProvider } from "@aven/sandbox/cloud-config";
 import { providerBackend } from "@aven/protocol/providers";
 import { providersService } from "../providers/service";
 import { requireSubscriptionToken } from "../providers/token";
+import { admission } from "../runtimes/admission";
 import { CLOUD_OFF, runtimesService } from "../runtimes/service";
 import { threadRunMetadata } from "./run-metadata";
 import type { UpdateThreadBody } from "./schema";
@@ -261,6 +262,10 @@ export const threadsService = {
 
     if (!(await runtimesService.get(organizationId, requested, userId))) {
       throw new ForbiddenError("This project runs on a computer that is private to its owner");
+    }
+
+    if (cloud) {
+      await admission.preflight({ runtimeId: requested, organizationId, userId });
     }
 
     const backend =

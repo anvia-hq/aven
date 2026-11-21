@@ -175,6 +175,7 @@ export type AdmissionOptions = {
   running: (organizationId: string, exceptRuntimeId: string) => Promise<number>;
   spend?: () => Promise<SpendVerdict>;
   extra?: (start: ComputerStart) => Promise<void>;
+  hidePlatformSettings?: () => boolean;
   now?: () => number;
   sleep?: (ms: number) => Promise<void>;
   pollMs?: number;

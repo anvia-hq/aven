@@ -24,6 +24,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
         lens: lensEnabled(),
         isOwner: session ? await platformService.isOwner(session.user) : false,
         platformSettings: !editionInUse.current.hidePlatformSettings,
+        manageUrl: editionInUse.current.manageUrl,
       };
     })
     .get(
