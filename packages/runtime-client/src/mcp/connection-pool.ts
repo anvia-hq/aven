@@ -56,26 +56,20 @@ export class McpConnectionPool {
     if (this.#inUse) await this.sweep(threadId);
 
     const key = mcpConfigKey(configs);
-    const kept = this.#entries.get(threadId);
+    for (;;) {
+      const kept = this.#entries.get(threadId);
 
-    if (kept && kept.key === key && kept.connected.results.every((result) => !result.error)) {
-      return kept.connected;
-    }
+      if (kept && kept.key === key && kept.connected.results.every((result) => !result.error)) {
+        return kept.connected;
+      }
 
-    const pending = this.#connecting.get(threadId);
+      const pending = this.#connecting.get(threadId);
 
-    if (pending && pending.key === key) return pending.promise;
+      if (!pending) break;
 
-    if (pending) await pending.promise.catch(() => undefined);
+      if (pending.key === key) return pending.promise;
 
-    const refreshed = this.#entries.get(threadId);
-
-    if (
-      refreshed &&
-      refreshed.key === key &&
-      refreshed.connected.results.every((result) => !result.error)
-    ) {
-      return refreshed.connected;
+      await pending.promise.catch(() => undefined);
     }
 
     const token = Symbol();
