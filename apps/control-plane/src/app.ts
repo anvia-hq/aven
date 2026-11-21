@@ -107,3 +107,5 @@ export const app = new Elysia()
   .use(variablesRouter)
   .use(projectVariablesRouter)
   .use(workloadIdentityRouter);
+
+export type App = typeof app;

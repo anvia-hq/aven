@@ -7,7 +7,7 @@ export const threadAccess = new Elysia({ name: "thread-access" }).use(authRouter
   thread: (access: "read" | "own" | "drive") => ({
     auth: true,
     org: true,
-    async beforeHandle(context) {
+    async resolve(context) {
       const { params, organizationId, user } = context as typeof context & {
         params: { id: string };
         organizationId: string;
@@ -16,9 +16,11 @@ export const threadAccess = new Elysia({ name: "thread-access" }).use(authRouter
       const { id } = params;
       const viewer = { organizationId, userId: user.id };
 
-      if (access === "own") await threadsService.owned(viewer, id);
-      else if (access === "drive") await threadsService.drivable(viewer, id);
-      else await threadsService.readable(viewer, id);
+      if (access === "own") return { thread: await threadsService.owned(viewer, id) };
+
+      if (access === "drive") return { thread: await threadsService.drivable(viewer, id) };
+
+      return { thread: await threadsService.readable(viewer, id) };
     },
   }),
 });

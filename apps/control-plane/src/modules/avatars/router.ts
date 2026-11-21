@@ -1,10 +1,10 @@
-import { Elysia, status } from "elysia";
-import { z } from "zod";
+import { Elysia } from "elysia";
 
-import { UnprocessableError } from "@aven/server-kit/errors";
+import { UnprocessableError, orNotFound } from "@aven/server-kit/errors";
 
 import { authRouter } from "../auth/router";
 import { AVATAR_MAX_BYTES, readCapped } from "./body";
+import { avatarParams } from "./schema";
 import { avatarsService } from "./service";
 
 export const avatarsRouter = new Elysia()
@@ -25,9 +25,7 @@ export const avatarsRouter = new Elysia()
   .get(
     "/users/:id/avatar",
     async ({ params, user }) => {
-      const avatar = await avatarsService.read(user.id, params.id);
-
-      if (!avatar) return status(404, "No avatar");
+      const avatar = orNotFound(await avatarsService.read(user.id, params.id), "No avatar");
 
       return new Response(avatar.data as BodyInit, {
         headers: {
@@ -37,5 +35,5 @@ export const avatarsRouter = new Elysia()
         },
       });
     },
-    { auth: true, params: z.object({ id: z.string().min(1).max(64) }) },
+    { auth: true, params: avatarParams },
   );

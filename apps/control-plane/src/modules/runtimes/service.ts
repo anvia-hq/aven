@@ -1,25 +1,19 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 
 import { db } from "@aven/db/client";
 import { cloudSandboxes } from "@aven/db/schema/cloud-sandboxes";
 import { runtimes } from "@aven/db/schema/runtimes";
 import { threads } from "@aven/db/schema/threads";
 import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  inArray,
-  isNull,
-  ne,
-  notInArray,
-  or,
-  sql,
-} from "drizzle-orm";
+  RUNNER_TOKEN_MIN_LENGTH,
+  RUNNER_TOKEN_PREFIX,
+  isRunnerTokenFormat,
+} from "@aven/protocol/runtimes";
+import { and, count, desc, eq, inArray, isNull, ne, notInArray, or } from "drizzle-orm";
 
+import { decryptOrUnavailable, encryptSecret } from "@aven/server-kit/crypto";
 import { ConflictError, UnavailableError } from "@aven/server-kit/errors";
+import { hashOpaqueToken, issueOpaqueToken, sameOpaqueToken } from "@aven/server-kit/tokens";
 import {
   CLOUD_OFF,
   CLOUD_RUNTIME_ID,
@@ -39,27 +33,24 @@ import { cloudSandboxStore } from "../cloud-lifecycle/sandbox-store";
 import { activeProviderConfigId, credentialsForConfig } from "../cloud-settings/credentials";
 import { LOCAL_RUNTIME_ID } from "./local-id";
 import { environmentsService } from "../environments/service";
-import type { CloudSandboxPage, SandboxRecord } from "@aven/sandbox/types";
+import type { SandboxRecord } from "@aven/sandbox/types";
 import type { CreateRuntimeBody } from "./schema";
 import type { RuntimeRow } from "@aven/db/schema/types";
-import type { CloudSandboxCursor } from "./types";
 import type { RuntimeGithubMode, RuntimeProviderKind } from "@aven/protocol/types";
 
 export { CLOUD_OFF, CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, LOCAL_RUNTIME_ID, SPACES_RUNTIME_ID };
 
-const TOKEN_PREFIX = "avrt_";
-
 const LOCAL_RUNNER_OFF = "off";
 
-const TOKEN_RULE = `${TOKEN_PREFIX} prefix and at least 32 characters`;
+const TOKEN_RULE = `${RUNNER_TOKEN_PREFIX} prefix and at least ${RUNNER_TOKEN_MIN_LENGTH} characters`;
 
-const TOKEN_COMMAND = `echo "${TOKEN_PREFIX}$(openssl rand -hex 24)"`;
+const TOKEN_COMMAND = `echo "${RUNNER_TOKEN_PREFIX}$(openssl rand -hex 24)"`;
 
 export function localRunnerToken(configured: string | undefined, localRunner: string | undefined) {
   if (configured) {
-    if (!configured.startsWith(TOKEN_PREFIX) || configured.length < 32)
+    if (!isRunnerTokenFormat(configured))
       throw new Error(
-        `AVEN_LOCAL_RUNNER_TOKEN must start with ${TOKEN_PREFIX} and be at least 32 characters long`,
+        `AVEN_LOCAL_RUNNER_TOKEN must start with ${RUNNER_TOKEN_PREFIX} and be at least ${RUNNER_TOKEN_MIN_LENGTH} characters long`,
       );
 
     return configured;
@@ -70,7 +61,7 @@ export function localRunnerToken(configured: string | undefined, localRunner: st
       `AVEN_LOCAL_RUNNER_TOKEN is required while the built-in runner is on, since a token made up here would exist in this process alone: make one with ${TOKEN_COMMAND} (${TOKEN_RULE}), or set AVEN_LOCAL_RUNNER=${LOCAL_RUNNER_OFF} to run only with the runners you attach`,
     );
 
-  return `${TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
+  return `${RUNNER_TOKEN_PREFIX}local_${randomBytes(32).toString("base64url")}`;
 }
 
 const configuredLocalToken = process.env.AVEN_LOCAL_RUNNER_TOKEN;
@@ -97,11 +88,11 @@ const usableBy = (userId: string) =>
     or(isNull(runtimes.parentRuntimeId), eq(runtimes.ownerId, userId)),
   );
 
-const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+const hashToken = hashOpaqueToken;
 
 function issueToken() {
-  const token = `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
-  return { token, columns: { tokenHash: hashToken(token), tokenHint: token.slice(-4) } };
+  const { token, tokenHash, tokenHint } = issueOpaqueToken(RUNNER_TOKEN_PREFIX);
+  return { token, columns: { tokenHash, tokenHint } };
 }
 
 const ownedBy = (organizationId: string, ownerId: string, id: string) =>
@@ -112,8 +103,7 @@ const ownedBy = (organizationId: string, ownerId: string, id: string) =>
     isNull(runtimes.revokedAt),
   );
 
-const sameToken = (a: string, b: string) =>
-  timingSafeEqual(Buffer.from(hashToken(a)), Buffer.from(hashToken(b)));
+const sameToken = sameOpaqueToken;
 
 const publicRuntime = ({
   tokenHash: _hash,
@@ -131,18 +121,16 @@ const named = (row: RuntimeRow) => {
   return provider ? { ...runtime, name: cloudTemplateName(provider) } : runtime;
 };
 
-async function readRunnerToken(stored: string | null, id: string) {
+function readRunnerToken(stored: string | null, id: string) {
   if (!stored) return null;
 
-  const { decryptOrUnavailable } = await import("@aven/server-kit/crypto");
   return decryptOrUnavailable(stored, {
     logged: `Could not decrypt the runner token of Aven Cloud computer ${id}:`,
     message: "This Aven Cloud computer's saved token could not be read",
   });
 }
 
-async function encryptedRunnerToken(token: string) {
-  const { encryptSecret } = await import("@aven/server-kit/crypto");
+function encryptedRunnerToken(token: string) {
   return { boatRunnerTokenEncrypted: encryptSecret(token) };
 }
 
@@ -203,7 +191,7 @@ export const runtimesService = {
         githubMode: "person",
         boatMachineType: "default",
         environmentSnapshot: environment?.name ?? null,
-        ...(await encryptedRunnerToken(token)),
+        ...encryptedRunnerToken(token),
         ...columns,
       })
       .returning();
@@ -245,68 +233,6 @@ export const runtimesService = {
     return row ?? null;
   },
 
-  async idleCloudSandboxes(before: Date, limit = 100) {
-    const lastUsed = sql`greatest(
-      ${runtimes.createdAt},
-      coalesce(${cloudSandboxes.lastActivityAt}, ${runtimes.createdAt}),
-      coalesce((select max(${threads.updatedAt}) from ${threads} where ${threads.runtimeId} = ${runtimes.id}), ${runtimes.createdAt})
-    )`;
-    const rows = await db
-      .select({
-        id: runtimes.id,
-        provider: runtimes.provider,
-        sandboxId: runtimes.boatSandboxId,
-        providerConfigId: cloudSandboxes.providerConfigId,
-      })
-      .from(runtimes)
-      .leftJoin(cloudSandboxes, eq(cloudSandboxes.runtimeId, runtimes.id))
-      .where(
-        and(
-          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
-          isNull(runtimes.revokedAt),
-          or(isNull(cloudSandboxes.state), ne(cloudSandboxes.state, "delete_failed")),
-          sql`${lastUsed} < ${before.toISOString()}::timestamptz`,
-        ),
-      )
-      .limit(limit);
-    return Promise.all(
-      rows.map(async ({ id, provider, sandboxId, providerConfigId }) => {
-        const credentials = providerConfigId
-          ? ((await credentialsForConfig(providerConfigId)) ?? undefined)
-          : undefined;
-        return { id, provider, sandboxId, credentials };
-      }),
-    );
-  },
-
-  async liveCloudSandboxes({
-    limit = 200,
-    after,
-  }: CloudSandboxCursor = {}): Promise<CloudSandboxPage> {
-    const sandboxes = await db
-      .select({ id: runtimes.id })
-      .from(runtimes)
-      .where(
-        and(
-          inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS),
-          isNull(runtimes.revokedAt),
-          after === undefined ? undefined : gt(runtimes.id, after),
-        ),
-      )
-      .orderBy(asc(runtimes.id))
-      .limit(limit);
-    const sandboxIds = sandboxes.map(({ id }) => id);
-
-    if (sandboxIds.length === 0) return { sandboxIds, threads: [] };
-
-    const rows = await db
-      .select({ runtimeId: threads.runtimeId, threadId: threads.id, updatedAt: threads.updatedAt })
-      .from(threads)
-      .where(and(inArray(threads.runtimeId, sandboxIds), ne(threads.state, "archived")));
-
-    return { sandboxIds, threads: rows };
-  },
-
   async openThreadsOn(runtimeId: string) {
     const [row] = await db
       .select({ total: count() })
@@ -314,14 +240,6 @@ export const runtimesService = {
       .where(and(eq(threads.runtimeId, runtimeId), ne(threads.state, "archived")));
 
     return row?.total ?? 0;
-  },
-
-  async expireCloudSandbox(id: string) {
-    await db
-      .update(runtimes)
-      .set({ boatSandboxId: null })
-      .where(and(eq(runtimes.id, id), inArray(runtimes.parentRuntimeId, CLOUD_TEMPLATE_IDS)));
-    await cloudSandboxStore.markAbsent(id);
   },
 
   async list(organizationId: string, userId: string) {
@@ -476,7 +394,7 @@ export const runtimesService = {
   },
 
   async authenticate(token: string) {
-    if (!token.startsWith(TOKEN_PREFIX)) return null;
+    if (!token.startsWith(RUNNER_TOKEN_PREFIX)) return null;
 
     if (sameToken(token, localToken)) {
       const [local] = await db.select().from(runtimes).where(eq(runtimes.id, LOCAL_RUNTIME_ID));

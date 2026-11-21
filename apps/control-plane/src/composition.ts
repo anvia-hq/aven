@@ -59,11 +59,7 @@ import { followUpDecider, jevModel } from "./modules/decision-model/jev";
 import { createThreadMessages } from "./modules/threads/messages";
 import { syncPullRequest } from "./modules/threads/pull-request";
 import { createPutAwayThread } from "./modules/threads/put-away";
-import { createCloudExpiry } from "./modules/runtimes/cloud-expiry";
 import { createCloudReconciler } from "./modules/cloud-lifecycle/reconciler";
-import { createEnvironmentExpiry } from "./modules/environments/expiry";
-import { environmentsService } from "./modules/environments/service";
-import { createCloudIdle } from "./modules/runtimes/cloud-idle";
 import { createThreadRetention } from "./modules/threads/retention";
 import { threadsService } from "./modules/threads/service";
 
@@ -311,21 +307,6 @@ export const threadRetention = createThreadRetention({
   },
   isRunning: (threadId) => runsService.isRunning(threadId),
   intervalMs: 60 * 60_000,
-});
-
-export const cloudExpiry = createCloudExpiry({ intervalMs: 10 * 60_000 });
-
-export const environmentExpiry = createEnvironmentExpiry({
-  intervalMs: 60 * 60_000,
-  expired: (before) => environmentsService.expired(before),
-  remove: (row) => environmentsService.forget(row),
-});
-
-export const cloudIdle = createCloudIdle({
-  intervalMs: idleCheckMs(),
-  hub: runtimeHub,
-  running: (threadId) => runsService.isRunning(threadId),
-  lastEventAt: (threadId) => runsService.activity(threadId)?.lastEventAt,
 });
 
 export const cloudReconciler = createCloudReconciler({
