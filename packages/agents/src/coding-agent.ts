@@ -13,6 +13,7 @@ import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { lensObservability } from "./lens";
 import { skillsInstructions } from "./skills";
+import { withStrictToolOutput } from "./strict-tool-output";
 import { createWebSearchTool } from "./tools/web-search";
 import type { MachineProvider, McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type { RunLens, RunMemory, RunWebSearch } from "@aven/protocol/types";
@@ -68,7 +69,7 @@ export function createCodingAgent(options: CodingAgentOptions) {
     ),
     maxTurns,
     observability: lensObservability(options.lens),
-    tools,
+    tools: tools.map(withStrictToolOutput),
   });
 
   return {
