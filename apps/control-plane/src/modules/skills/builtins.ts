@@ -1,8 +1,7 @@
 import { join } from "node:path";
+import { packSkill, readFolder } from "@aven/agents/skill-package";
 import { readSkillFolders } from "@aven/agents/skills";
-
-import { packSkill, readFolder } from "./package";
-import type { PackedSkill } from "./types";
+import type { PackedSkill } from "@aven/agents/types";
 
 export const BUILTIN_SKILLS_DIR = join(import.meta.dir, "../../../skills");
 

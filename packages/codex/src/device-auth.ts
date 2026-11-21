@@ -1,23 +1,12 @@
-import { UnprocessableError } from "@aven/server-kit/errors";
-
 import type { CodexAuthFile } from "@aven/protocol/types";
+import type { CodexDeviceCode, CodexDevicePoll } from "./types";
 
 const ISSUER = "https://auth.openai.com";
 const CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann";
 
-export type CodexDeviceCode = {
-  deviceAuthId: string;
-  userCode: string;
-  verificationUrl: string;
-  intervalSeconds: number;
-  expiresAt: string | null;
-};
-
-export type CodexDevicePoll = { status: "pending" } | { status: "done"; auth: string };
-
 type Fetch = typeof fetch;
 
-class CodexDeviceError extends UnprocessableError {}
+export class CodexDeviceError extends Error {}
 
 const json = { "Content-Type": "application/json" };
 

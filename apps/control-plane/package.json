@@ -16,6 +16,7 @@
     "@anvia/memory-drizzle": "^1.2.1",
     "@aven/agent-backend": "workspace:*",
     "@aven/agents": "workspace:*",
+    "@aven/codex": "workspace:*",
     "@aven/db": "workspace:*",
     "@aven/github": "workspace:*",
     "@aven/protocol": "workspace:*",
