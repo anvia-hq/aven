@@ -1290,3 +1290,22 @@ export type Webhook = {
 };
 
 export type WebhookCreated = Webhook & { token: string; urlPath: string };
+
+export type AnnouncementTemplate = "waves" | "violet" | "pink" | "amber";
+
+export type SandboxProviderName = "boat" | "spaces" | "lizard";
+
+export type DecisionKind = "jev" | "jev-openrouter";
+
+export type SmallModelProvider = "anthropic" | "openai" | "gemini";
+
+export type PlatformConfig = {
+  registrationEnabled: boolean;
+  githubLogin: boolean;
+  emailLogin: boolean;
+  claudeBackend: boolean;
+  codexBackend: boolean;
+  lens: boolean;
+  isOwner: boolean;
+  platformSettings: boolean;
+};

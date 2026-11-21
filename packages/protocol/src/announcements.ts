@@ -3,3 +3,5 @@ export const ANNOUNCEMENT_TITLE_MAX = 60;
 export const ANNOUNCEMENT_SUMMARY_MAX = 160;
 
 export const ANNOUNCEMENT_DETAILS_MAX = 4000;
+
+export const ANNOUNCEMENT_TEMPLATES = ["waves", "violet", "pink", "amber"] as const;

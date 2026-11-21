@@ -1,4 +1,5 @@
 import { asRecord } from "@aven/agents/values";
+import { SEMVER_RE } from "@aven/protocol/release";
 import { DIFF_SCOPES, MACHINE_OPS } from "@aven/protocol/runtime-wire";
 import type {
   ArtifactsReadParams,
@@ -86,7 +87,7 @@ export function runnerUpdateParams(params: unknown): RunnerUpdateParams {
 
   if (release === undefined || release === null) return {};
 
-  if (typeof release !== "string" || !/^\d+\.\d+\.\d+$/.test(release)) throw invalid();
+  if (typeof release !== "string" || !SEMVER_RE.test(release)) throw invalid();
 
   return { release };
 }
