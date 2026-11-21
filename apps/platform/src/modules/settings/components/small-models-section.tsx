@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";

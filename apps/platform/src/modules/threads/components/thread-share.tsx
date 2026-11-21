@@ -1,7 +1,6 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
 import { IconCheck, IconLink, IconShare, IconWorld } from "@tabler/icons-react";
 import { Link as RouterLink } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
 import {
@@ -15,7 +14,7 @@ import {
 import { Label } from "@aven/ui/label";
 import { RadioGroup, RadioGroupItem } from "@aven/ui/radio-group";
 import { Switch } from "@aven/ui/switch";
-import { toast } from "@aven/ui/toast";
+import { useClipboard } from "@aven/ui/use-clipboard";
 
 import { useDecisionModelReady } from "@/modules/decision-model/hooks/use-decision-model-ready";
 
@@ -64,21 +63,12 @@ export function ThreadShare({
   const share = useShareThread();
   const drive = useDriveThread();
   const driving = isDriving(thread.drivingUntil);
-  const [copied, setCopied] = useState(false);
+  const { copied, copy } = useClipboard();
   const shared = thread.visibility === "workspace";
   const decisionModelSet = useDecisionModelReady(shared);
   const needsDecisionModel = !driving && decisionModelSet === false;
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/threads/${thread.id}`);
-    } catch {
-      toast.add({ title: "Could not copy the link", type: "error" });
-      return;
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
+  const copyLink = () => copy(`${window.location.origin}/threads/${thread.id}`);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { DecisionModelSection } from "@/modules/decision-model/components/decision-model-section";
 
 export const Route = createFileRoute("/_authed/settings/decision-model")({

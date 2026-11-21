@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { McpServerDialog } from "@/modules/mcp/components/mcp-server-dialog";
 import { McpServersList } from "@/modules/mcp/components/mcp-servers-list";
 

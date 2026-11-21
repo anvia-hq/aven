@@ -1,7 +1,7 @@
 import { IconX } from "@tabler/icons-react";
 import type { ComponentType, ReactNode } from "react";
 
-import { Button } from "@aven/ui/button";
+import { Button } from "./button";
 
 type Props = {
   title: string;

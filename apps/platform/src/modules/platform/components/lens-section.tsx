@@ -6,7 +6,7 @@ import { Form } from "@aven/ui/form";
 import { LabeledSelect } from "@aven/ui/labeled-select";
 import { TextField } from "@aven/ui/text-field";
 
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 
 import { useLensSettings } from "../hooks/use-lens-settings";
 import { LENS_CAPTURE_MODE_LABELS } from "../types";

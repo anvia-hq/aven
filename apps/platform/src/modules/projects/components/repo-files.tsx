@@ -2,7 +2,7 @@ import { IconChevronRight, IconExternalLink, IconFolder } from "@tabler/icons-re
 import { FileIcon } from "@/modules/files/components/file-icon";
 import { Link } from "@tanstack/react-router";
 
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { Skeleton } from "@aven/ui/skeleton";
 
 import { useProjectFolder } from "../hooks/use-project-folder";

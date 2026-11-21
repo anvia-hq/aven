@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
 import { NotFound } from "@/components/not-found";
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { ProjectAbout } from "@/modules/projects/components/project-about";
 import { ProjectHeader } from "@/modules/projects/components/project-header";
 import { ProjectTitle } from "@/modules/projects/components/project-title";

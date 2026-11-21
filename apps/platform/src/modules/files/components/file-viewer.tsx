@@ -2,7 +2,7 @@ import { IconCode, IconEye } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { MarkdownDocument } from "@/components/markdown-document";
-import { PanelNotice } from "@/components/panel-notice";
+import { PanelNotice } from "@aven/ui/panel-notice";
 import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
 

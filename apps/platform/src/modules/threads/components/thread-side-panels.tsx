@@ -1,10 +1,14 @@
 import { Fragment, type ReactNode } from "react";
-import { useDefaultLayout } from "react-resizable-panels";
 
-import { PANEL_EXIT_MS, PanelEnter } from "@/components/panel-enter";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
-import { useHeldList } from "@/hooks/use-held";
-import { safeStorage } from "@/hooks/use-local-storage";
+import { PANEL_EXIT_MS, PanelEnter } from "@aven/ui/panel-enter";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
+import { useHeldList } from "@aven/ui/use-held";
+import { safeStorage } from "@aven/ui/use-local-storage";
 import { threadComputer } from "@/modules/computer/computer";
 import { DiffPanel } from "@/modules/diff/components/diff-panel";
 import { FilesPanel } from "@/modules/files/components/files-panel";

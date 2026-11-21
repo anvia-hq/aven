@@ -1,7 +1,7 @@
 import { IconPower } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
-import { PanelNotice } from "@/components/panel-notice";
+import { PanelNotice } from "@aven/ui/panel-notice";
 import { Spinner } from "@aven/ui/spinner";
 
 import { useWorkspaceExists } from "../hooks/use-workspace-exists";

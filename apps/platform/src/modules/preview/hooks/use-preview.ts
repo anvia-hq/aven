@@ -1,10 +1,11 @@
 import { useState } from "react";
 
 import { toast } from "@aven/ui/toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 import { errorMessage, postJson } from "@/lib/api";
 import { forgetStoredKeys, registerUserState } from "@/lib/user-state";
 
+import { parsePort } from "../port";
 import type { PreviewAnswer, PreviewSession } from "../types";
 
 const PORT_KEY = "aven.preview-port";
@@ -60,5 +61,16 @@ export function usePreview(runtimeId: string) {
     }
   }
 
-  return { port, setPort, session, problem, opening, open, openInTab };
+  function parseRequestedPort() {
+    const parsed = parsePort(port);
+
+    if (parsed === null) {
+      toast.add({ title: "Enter an address such as localhost:3000", type: "error" });
+      return null;
+    }
+
+    return parsed;
+  }
+
+  return { port, setPort, session, problem, opening, open, openInTab, parseRequestedPort };
 }

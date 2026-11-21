@@ -1,6 +1,6 @@
 import { IconCheck, IconCopy } from "@tabler/icons-react";
 import { Button } from "@aven/ui/button";
-import { useClipboard } from "@/hooks/use-clipboard";
+import { useClipboard } from "@aven/ui/use-clipboard";
 
 type Props = {
   token: string;

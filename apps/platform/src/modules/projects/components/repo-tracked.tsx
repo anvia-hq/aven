@@ -10,7 +10,7 @@ import { useState } from "react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { Skeleton } from "@aven/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@aven/ui/toggle-group";

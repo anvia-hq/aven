@@ -1,4 +1,4 @@
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 
 import { usePlatformConfig } from "../hooks/use-platform-config";

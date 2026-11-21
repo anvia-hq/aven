@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { NewRuntimeDialog } from "@/modules/runtimes/components/new-runtime-dialog";
 import { RuntimesList } from "@/modules/runtimes/components/runtimes-list";
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { InviteMemberDialog } from "@/modules/settings/components/invite-member-dialog";
 import { MembersTable } from "@/modules/settings/components/members-table";
 

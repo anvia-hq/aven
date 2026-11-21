@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
-import { toast } from "@aven/ui/toast";
-import { copyToClipboard } from "@/lib/clipboard";
+import { copyToClipboard } from "./clipboard";
+import { toast } from "./toast";
 
 const COPIED_MS = 2000;
 

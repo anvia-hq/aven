@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@aven/ui/dropdown-menu";
-import { PanelToggle } from "@/components/panel-toggle";
+import { PanelToggle } from "@aven/ui/panel-toggle";
 
 import { useRenameThread } from "../hooks/use-rename-thread";
 import type { Thread, ThreadPanels } from "../types";

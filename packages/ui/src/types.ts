@@ -11,3 +11,5 @@ export type ChartConfig = Record<
     | { color?: never; theme: Record<keyof typeof THEMES, string> }
   )
 >;
+
+export type Held<T> = { item: T; leaving: boolean };

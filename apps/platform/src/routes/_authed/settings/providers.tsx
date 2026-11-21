@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { ProvidersList } from "@/modules/providers/components/providers-list";
 
 export const Route = createFileRoute("/_authed/settings/providers")({

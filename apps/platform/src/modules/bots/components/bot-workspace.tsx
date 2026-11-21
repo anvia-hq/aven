@@ -1,11 +1,14 @@
-import { useDefaultLayout } from "react-resizable-panels";
-
-import { PANEL_EXIT_MS, PanelEnter } from "@/components/panel-enter";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
-import { useHeldValue } from "@/hooks/use-held";
-import { safeStorage } from "@/hooks/use-local-storage";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { GAP_HANDLE } from "@/lib/panel-layout";
+import { PANEL_EXIT_MS, PanelEnter } from "@aven/ui/panel-enter";
+import {
+  GAP_HANDLE,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
+import { useHeldValue } from "@aven/ui/use-held";
+import { safeStorage } from "@aven/ui/use-local-storage";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { useDefaultTimezone } from "@/modules/settings/hooks/use-default-timezone";
 
 import { artifactGroups, findArtifact } from "../artifacts";

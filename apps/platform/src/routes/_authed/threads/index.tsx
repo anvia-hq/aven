@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { ProjectMenu } from "@/modules/projects/components/project-menu";
 import { projectFits } from "@/modules/projects/project-fits";
 import { recentProjects } from "@/modules/projects/recent-projects";

@@ -1,7 +1,7 @@
 import { BOT_COMPACT_TOKENS } from "@aven/protocol/bots";
 
 import { Input } from "@aven/ui/input";
-import { SettingsRow } from "@/components/settings-section";
+import { SettingsRow } from "@aven/ui/settings-section";
 import { isSubscription } from "@/modules/providers/types";
 
 import { useBotCompaction } from "../hooks/use-bot-compaction";

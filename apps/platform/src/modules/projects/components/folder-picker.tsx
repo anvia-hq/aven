@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
-import { PanelNotice } from "@/components/panel-notice";
+import { PanelNotice } from "@aven/ui/panel-notice";
 import { Skeleton } from "@aven/ui/skeleton";
 
 import { useFolderBrowser } from "../hooks/use-folder-browser";

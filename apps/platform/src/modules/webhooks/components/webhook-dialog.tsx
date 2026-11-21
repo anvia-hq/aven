@@ -14,7 +14,7 @@ import {
 } from "@aven/ui/dialog";
 import { Form } from "@aven/ui/form";
 import { TextField } from "@aven/ui/text-field";
-import { useClipboard } from "@/hooks/use-clipboard";
+import { useClipboard } from "@aven/ui/use-clipboard";
 
 import { useWebhooks } from "../hooks/use-webhooks";
 import type { WebhookCreated } from "../types";

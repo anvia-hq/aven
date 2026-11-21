@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage, SettingsSection } from "@/components/settings-section";
+import { SettingsPage, SettingsSection } from "@aven/ui/settings-section";
 import { PreferencesSection } from "@/modules/settings/components/preferences-section";
 import { SmallModelsSection } from "@/modules/settings/components/small-models-section";
 import { ProfileForm } from "@/modules/settings/components/profile-form";

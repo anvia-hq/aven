@@ -3,8 +3,8 @@ import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
-import { PanelNotice } from "@/components/panel-notice";
-import { SidePanel } from "@/components/side-panel";
+import { PanelNotice } from "@aven/ui/panel-notice";
+import { SidePanel } from "@aven/ui/side-panel";
 
 import { useExplorerState } from "../hooks/use-explorer-state";
 import { useWorkspaceTree } from "../hooks/use-workspace-tree";

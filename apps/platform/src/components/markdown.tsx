@@ -6,7 +6,7 @@ import type { Components } from "react-markdown";
 import { CodeBlock } from "@/modules/files/components/code-block";
 
 import { GithubMark } from "./brand-icons";
-import { MarkdownTable } from "./markdown-table";
+import { MarkdownTable } from "@aven/ui/markdown-table";
 
 const PULL_REQUEST_URL = /^https:\/\/github\.com\/[^/]+\/[^/]+\/pull\/\d+/;
 

@@ -1,4 +1,4 @@
-import { safeStorage } from "@/hooks/use-local-storage";
+import { safeStorage } from "@aven/ui/use-local-storage";
 import { forgetStoredKeysStartingWith, registerUserState } from "@/lib/user-state";
 
 import type { DraftFile, DraftFileMeta, DraftRecord, StoredDraftFile } from "./types";

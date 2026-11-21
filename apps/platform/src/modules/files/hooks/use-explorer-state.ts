@@ -1,4 +1,4 @@
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 
 import type { ExplorerState } from "../types";
 

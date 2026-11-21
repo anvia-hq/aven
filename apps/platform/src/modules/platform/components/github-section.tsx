@@ -2,7 +2,7 @@ import { GithubMark } from "@/components/brand-icons";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 import { TextField } from "@aven/ui/text-field";
 import { useRequest } from "@/hooks/use-request";

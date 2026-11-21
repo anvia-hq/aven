@@ -2,9 +2,7 @@ import { IconMaximize, IconMinimize } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import type { ComponentProps } from "react";
 
-import { cn } from "cn";
-
-import { Button } from "@aven/ui/button";
+import { Button } from "./button";
 
 const BORDER = 2;
 

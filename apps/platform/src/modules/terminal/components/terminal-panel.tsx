@@ -1,7 +1,7 @@
 import { IconCodeblock } from "@tabler/icons-react";
 
-import { PanelNotice } from "@/components/panel-notice";
-import { SidePanel } from "@/components/side-panel";
+import { PanelNotice } from "@aven/ui/panel-notice";
+import { SidePanel } from "@aven/ui/side-panel";
 import { Skeleton } from "@aven/ui/skeleton";
 import { ComputerAsleepNotice } from "@/modules/computer/components/computer-asleep-notice";
 import { computerView } from "@/modules/computer/computer-view";

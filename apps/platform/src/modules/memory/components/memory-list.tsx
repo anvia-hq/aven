@@ -2,7 +2,7 @@ import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
-import { SettingsSection } from "@/components/settings-section";
+import { SettingsSection } from "@aven/ui/settings-section";
 import { timeAgo } from "@/lib/format";
 
 import { useMemory } from "../hooks/use-memory";

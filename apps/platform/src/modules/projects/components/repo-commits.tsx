@@ -10,7 +10,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { Skeleton } from "@aven/ui/skeleton";
 import { timeAgo } from "@/lib/format";
 

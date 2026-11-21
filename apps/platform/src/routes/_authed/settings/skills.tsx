@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { SkillsList } from "@/modules/skills/components/skills-list";
 
 export const Route = createFileRoute("/_authed/settings/skills")({

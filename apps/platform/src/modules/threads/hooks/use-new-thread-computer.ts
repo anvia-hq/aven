@@ -1,4 +1,4 @@
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 import { defaultRuntimeId, runtimeChoices } from "@/modules/runtimes/choice";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 

@@ -1,10 +1,13 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useDefaultLayout } from "react-resizable-panels";
-
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
-import { safeStorage } from "@/hooks/use-local-storage";
-import { GAP_HANDLE } from "@/lib/panel-layout";
+import {
+  GAP_HANDLE,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
+import { safeStorage } from "@aven/ui/use-local-storage";
 
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { ThreadPane } from "./thread-pane";
