@@ -1,9 +1,9 @@
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { stringFlag } from "./args";
 import { projectName, recordProject } from "./compose";
-import { newServerEnv, parseEnv, setEnv } from "./env-file";
+import { newServerEnv, parseEnv, setEnv, writePrivateFile } from "./env-file";
 import type { Args, ServerEnvOptions } from "./types";
 
 type EnvChange = { key: string; from: string | undefined; to: string };
@@ -66,7 +66,7 @@ export async function writeServerFiles(
   projects?: Parameters<typeof recordProject>[1],
 ): Promise<{ created: boolean; changed: EnvChange[] }> {
   await mkdir(dir, { recursive: true });
-  recordProject(dir, projects);
+  await recordProject(dir, projects);
   await writeFile(join(dir, "docker-compose.yml"), files.compose);
 
   const envPath = join(dir, ".env");
@@ -76,8 +76,7 @@ export async function writeServerFiles(
     const fresh = setEnv(newServerEnv(files.envTemplate, options), {
       COMPOSE_PROJECT_NAME: projectName(dirname(resolve(dir))),
     });
-    await writeFile(envPath, fresh, { mode: 0o600 });
-    await chmod(envPath, 0o600);
+    await writePrivateFile(envPath, fresh);
     return { created: true, changed: [] };
   }
 
@@ -88,10 +87,7 @@ export async function writeServerFiles(
     after[key] !== before[key] ? [{ key, from: before[key], to: after[key]! }] : [],
   );
 
-  if (changed.length > 0) {
-    await writeFile(envPath, updated);
-    await chmod(envPath, 0o600);
-  }
+  if (changed.length > 0) await writePrivateFile(envPath, updated);
 
   return { created: false, changed };
 }

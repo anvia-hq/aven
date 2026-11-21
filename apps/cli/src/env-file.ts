@@ -1,8 +1,15 @@
 import { generateKeyPairSync, randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
 import { RUNNER_TOKEN_PREFIX } from "@aven/protocol/runtimes";
 
 import type { ServerEnvOptions } from "./types";
+
+export async function writePrivateFile(file: string, content: string) {
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, content, { mode: 0o600 });
+  await chmod(file, 0o600);
+}
 
 export function parseEnv(text: string) {
   const values: Record<string, string> = {};

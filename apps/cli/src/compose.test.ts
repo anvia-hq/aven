@@ -32,8 +32,8 @@ test("names each home's project after AVEN_HOME", () => {
   expect(projectName("/tmp/aven-test/.aven")).not.toBe(projectName("/home/me/.aven"));
 });
 
-test("points compose at the install's directory and file, under the home's own project", () => {
-  expect(composeCommand(join(home, "server"), ["up", "-d"], [])).toEqual([
+test("points compose at the install's directory and file, under the home's own project", async () => {
+  expect(await composeCommand(join(home, "server"), ["up", "-d"], [])).toEqual([
     "docker",
     "compose",
     "--project-name",
@@ -47,37 +47,39 @@ test("points compose at the install's directory and file, under the home's own p
   ]);
 });
 
-test("gives a second install on the same machine a project of its own", () => {
-  expect(composeProject(dir, [legacy])).toBe(projectName(home));
+test("gives a second install on the same machine a project of its own", async () => {
+  expect(await composeProject(dir, [legacy])).toBe(projectName(home));
 });
 
 test("reads no fixed project name from the compose file an install writes, so a fresh one has its own", async () => {
   await installFile("${COMPOSE_PROJECT_NAME:-aven}");
-  expect(composeProject(dir, [])).toBe(projectName(home));
+  expect(await composeProject(dir, [])).toBe(projectName(home));
 });
 
 test("keeps the aven project of an install that is already at this home, past an update of its file too", async () => {
-  expect(composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven");
+  expect(await composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven");
   await installFile("${COMPOSE_PROJECT_NAME:-aven}");
-  expect(composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven");
+  expect(await composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven");
 });
 
-test("follows the project a home's containers are already in, whatever its name", () => {
+test("follows the project a home's containers are already in, whatever its name", async () => {
   expect(
-    composeProject(dir, [{ Name: "aven-0a1b2c3d", ConfigFiles: `${composeFile()},other.yml` }]),
+    await composeProject(dir, [
+      { Name: "aven-0a1b2c3d", ConfigFiles: `${composeFile()},other.yml` },
+    ]),
   ).toBe("aven-0a1b2c3d");
 });
 
 test("adopts the fixed name of a compose file written before projects were per home, when Docker cannot be asked", async () => {
   await installFile("aven");
-  expect(composeProject(dir, [])).toBe("aven");
+  expect(await composeProject(dir, [])).toBe("aven");
   await installFile('"aven"');
-  expect(composeProject(dir, [])).toBe("aven");
+  expect(await composeProject(dir, [])).toBe("aven");
 });
 
 test("has a project of its own before an install writes any compose file", async () => {
   expect(await Bun.file(composeFile()).exists()).toBe(false);
-  expect(composeProject(dir, [])).toBe(projectName(home));
+  expect(await composeProject(dir, [])).toBe(projectName(home));
 });
 
 const writeEnv = (text: string) => writeFile(join(dir, ".env"), text);
@@ -86,39 +88,41 @@ const readEnv = () => Bun.file(join(dir, ".env")).text();
 test("keeps aven for an install that is stopped, whose compose file an update has already replaced", async () => {
   await writeEnv("POSTGRES_PASSWORD=x\n");
   await installFile("${COMPOSE_PROJECT_NAME:-aven}");
-  expect(composeProject(dir, [])).toBe("aven");
+  expect(await composeProject(dir, [])).toBe("aven");
 });
 
 test("takes the project an install's .env records over what Docker or the file say", async () => {
   await writeEnv("COMPOSE_PROJECT_NAME=aven-0a1b2c3d\n");
   await installFile("aven");
-  expect(composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe("aven-0a1b2c3d");
+  expect(await composeProject(dir, [{ ...legacy, ConfigFiles: composeFile() }])).toBe(
+    "aven-0a1b2c3d",
+  );
 });
 
 test("records the project an existing install is in, once, before its compose file is replaced", async () => {
   await writeEnv("POSTGRES_PASSWORD=x\n");
   await installFile("aven");
-  recordProject(dir, []);
+  await recordProject(dir, []);
   expect(await readEnv()).toBe("POSTGRES_PASSWORD=x\nCOMPOSE_PROJECT_NAME=aven\n");
   await installFile("${COMPOSE_PROJECT_NAME:-aven}");
-  recordProject(dir, [{ Name: "other", ConfigFiles: composeFile() }]);
+  await recordProject(dir, [{ Name: "other", ConfigFiles: composeFile() }]);
   expect(await readEnv()).toBe("POSTGRES_PASSWORD=x\nCOMPOSE_PROJECT_NAME=aven\n");
 });
 
-test("records nothing where no install has been made", () => {
-  recordProject(dir, []);
+test("records nothing where no install has been made", async () => {
+  await recordProject(dir, []);
   expect(Bun.file(join(dir, ".env")).size).toBe(0);
 });
 
 test("takes the keys of the install's .env out of the environment compose is run in", async () => {
   await writeFile(join(dir, ".env"), "AVEN_VERSION=0.8.18\nAVEN_PORT=2836\n# AVEN_BIND=x\n");
-  const keys = serverEnvKeys(dir);
+  const keys = await serverEnvKeys(dir);
   expect(keys).toEqual(["AVEN_VERSION", "AVEN_PORT"]);
   expect(without({ AVEN_VERSION: "0.8.18", PATH: "/bin", DOCKER_HOST: "unix:///x" }, keys)).toEqual(
     { PATH: "/bin", DOCKER_HOST: "unix:///x" },
   );
 });
 
-test("has no keys to take out where there is no .env", () => {
-  expect(serverEnvKeys(dir)).toEqual([]);
+test("has no keys to take out where there is no .env", async () => {
+  expect(await serverEnvKeys(dir)).toEqual([]);
 });

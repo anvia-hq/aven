@@ -1,7 +1,7 @@
-import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
-import { delimiter, dirname } from "node:path";
+import { readFile } from "node:fs/promises";
+import { delimiter } from "node:path";
 
-import { parseEnv, setEnv } from "./env-file";
+import { parseEnv, setEnv, writePrivateFile } from "./env-file";
 import type { RunnerSettings } from "./types";
 
 const HEADER = `# The settings of this machine's Aven runner, written by \`aven runner install\`.
@@ -16,10 +16,7 @@ export async function writeRunnerEnv(file: string, settings: RunnerSettings) {
     AVEN_RUNTIME_TOKEN: settings.token,
     AVEN_DIRS: settings.dirs.join(delimiter),
   };
-  const text = setEnv(existing, values);
-  await mkdir(dirname(file), { recursive: true });
-  await writeFile(file, text, { mode: 0o600 });
-  await chmod(file, 0o600);
+  await writePrivateFile(file, setEnv(existing, values));
 }
 
 export async function loadRunnerEnv(
