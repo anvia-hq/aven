@@ -31,11 +31,20 @@ const isDiffScope = (value: unknown): value is DiffScope =>
   (DIFF_SCOPES as readonly unknown[]).includes(value);
 
 export function diffGetParams(params: unknown): DiffGetParams {
-  const { threadId, scope } = asRecord(params);
+  const { threadId, scope, summaryOnly, branchOnly } = asRecord(params);
 
   if (typeof threadId !== "string" || !isDiffScope(scope)) throw invalid();
 
-  return { threadId, scope };
+  if (summaryOnly !== undefined && typeof summaryOnly !== "boolean") throw invalid();
+
+  if (branchOnly !== undefined && typeof branchOnly !== "boolean") throw invalid();
+
+  return {
+    threadId,
+    scope,
+    summaryOnly: summaryOnly === true ? true : undefined,
+    branchOnly: branchOnly === true ? true : undefined,
+  };
 }
 
 export function filesCallParams(params: unknown): FilesCallParams {

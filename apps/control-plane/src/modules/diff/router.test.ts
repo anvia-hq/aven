@@ -76,4 +76,26 @@ run("a thread's changes (real postgres, real WebSocket)", async () => {
     );
     expect(calls).toEqual([]);
   });
+
+  test("passes summaryOnly when summary=1 is requested and returns summary", async () => {
+    const { thread, calls } = await setup(() => ({
+      ok: true,
+      result: {
+        patch: "",
+        truncated: false,
+        branch: "aven/demo",
+        summary: { files: 3, additions: 10, deletions: 4 },
+      },
+    }));
+    const response = await get(`/threads/${thread.id}/diff?scope=unshipped&summary=1`, owner.token);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      available: true,
+      patch: "",
+      truncated: false,
+      branch: "aven/demo",
+      summary: { files: 3, additions: 10, deletions: 4 },
+    });
+    expect(calls).toEqual([{ threadId: thread.id, scope: "unshipped", summaryOnly: true }]);
+  });
 });

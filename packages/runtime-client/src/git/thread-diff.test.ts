@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { git } from "./git-clone";
-import { currentBranch, markTurn, threadDiff } from "./thread-diff";
+import { currentBranch, markTurn, readThreadDiff, threadDiff } from "./thread-diff";
 import type { Git } from "../types";
 
 const roots: string[] = [];
@@ -409,5 +409,59 @@ describe("a thread's changes", () => {
     await sh(root, "fetch", "-q", "origin", "feat/my-pr");
 
     expect((await threadDiff(root, "all"))?.patch).toContain("+++ b/mine.txt");
+  });
+
+  test("summaryOnly returns file and line counts without building a patch, and branchOnly reads only the branch", async () => {
+    const { root, sh } = await workspace();
+    await writeFile(join(root, "a.txt"), "one\nthree\nfour\n");
+    await writeFile(join(root, "b.txt"), "new\n");
+
+    const summary = await readThreadDiff(root, "all", { summaryOnly: true });
+    expect(summary).toEqual({
+      patch: "",
+      truncated: false,
+      branch: "aven/test",
+      summary: { files: 2, additions: 3, deletions: 1 },
+    });
+
+    const ran: string[][] = [];
+    const recorded: Git = (args, options) => {
+      ran.push(args);
+      return git(args, options);
+    };
+    const branchOnly = await readThreadDiff(root, "all", { run: recorded, branchOnly: true });
+    expect(branchOnly).toEqual({
+      patch: "",
+      truncated: false,
+      branch: "aven/test",
+    });
+    expect(ran.some((args) => args.includes("add") || args.includes("diff"))).toBe(false);
+
+    await sh(root, "checkout", "-q", "--detach");
+    expect(await readThreadDiff(root, "all", { branchOnly: true })).toEqual({
+      patch: "",
+      truncated: false,
+      branch: null,
+    });
+  });
+
+  test("stat-cached working tree snapshot still ignores staged changes in the real index", async () => {
+    const { root, sh } = await workspace();
+    await writeFile(join(root, "a.txt"), "staged\n");
+    await sh(root, "add", "a.txt");
+    await writeFile(join(root, "a.txt"), "one\ntwo\n");
+
+    expect((await threadDiff(root, "all"))?.patch).toBe("");
+    const staged = await git(["diff", "--cached", "--name-only"], { cwd: root });
+    expect(staged.stdout.trim()).toBe("a.txt");
+  });
+
+  test("falls back cleanly when the workspace uses git split-index", async () => {
+    const { root, sh } = await workspace();
+    await sh(root, "update-index", "--split-index");
+    await writeFile(join(root, "b.txt"), "split\n");
+
+    const diff = await threadDiff(root, "all");
+    expect(diff?.patch).toContain("+++ b/b.txt");
   });
 });

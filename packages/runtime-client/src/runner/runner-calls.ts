@@ -21,7 +21,7 @@ import {
 import { createFolder, listFolders } from "../files/folder-browser";
 import { createMachineCalls } from "./machine-calls";
 import { listCommits, listFiles, readReadme } from "../files/folder-contents";
-import { currentBranch, threadDiff } from "../git/thread-diff";
+import { readThreadDiff } from "../git/thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "../files/workspace-files";
 import type {
   FilesCallMethod,
@@ -45,12 +45,27 @@ export function createRunnerCalls({
   clone,
 }: RunnerCallsContext) {
   const machineCall = createMachineCalls({ sandbox, boxes, idle, machineProcesses });
+  const inFlightDiffs = new Map<
+    string,
+    { token: symbol; promise: Promise<Awaited<ReturnType<typeof readThreadDiff>>> }
+  >();
 
   async function diffOf(params: unknown) {
-    const { threadId, scope } = diffGetParams(params);
-    const root = await sandbox.workspace(threadId);
-    const diff = root ? await threadDiff(root, scope) : null;
-    return root && diff ? { ...diff, branch: await currentBranch(root) } : null;
+    const { threadId, scope, summaryOnly, branchOnly } = diffGetParams(params);
+    const key = `${threadId}:${scope}:${summaryOnly ? "s" : ""}:${branchOnly ? "b" : ""}`;
+    const existing = inFlightDiffs.get(key);
+
+    if (existing) return existing.promise;
+
+    const token = Symbol();
+    const promise = (async () => {
+      const root = await sandbox.workspace(threadId);
+      return root ? readThreadDiff(root, scope, { summaryOnly, branchOnly }) : null;
+    })().finally(() => {
+      if (inFlightDiffs.get(key)?.token === token) inFlightDiffs.delete(key);
+    });
+    inFlightDiffs.set(key, { token, promise });
+    return promise;
   }
 
   async function filesOf(method: Exclude<FilesCallMethod, "files.search">, params: unknown) {

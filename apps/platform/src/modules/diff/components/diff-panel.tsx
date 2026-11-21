@@ -1,6 +1,15 @@
-import { IconColumns2, IconGitCompare } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import {
+  IconChevronsDown,
+  IconChevronsUp,
+  IconColumns2,
+  IconGitBranch,
+  IconGitCompare,
+  IconRefresh,
+} from "@tabler/icons-react";
+import { cn } from "cn";
+import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "@aven/ui/button";
 import { PanelNotice } from "@aven/ui/panel-notice";
 import { SidePanel } from "@aven/ui/side-panel";
 import { Skeleton } from "@aven/ui/skeleton";
@@ -9,9 +18,9 @@ import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { useDiffPreferences } from "../hooks/use-diff-preferences";
 import { useThreadDiff } from "../hooks/use-thread-diff";
 import { isDiffLayout, isDiffScope, type DiffScope } from "../types";
-import { flatten } from "../flatten";
+import { flatten, startsOpen } from "../flatten";
+import { DiffFilePicker } from "./diff-file-picker";
 import { DiffVirtualList } from "./diff-virtual-list";
-import { DiffStat } from "./diff-stat";
 
 type Props = {
   threadId: string;
@@ -27,14 +36,42 @@ const EMPTY: Record<DiffScope, string> = {
 
 export function DiffPanel({ threadId, running, onClose }: Props) {
   const { scope, setScope, layout, setLayout } = useDiffPreferences();
-  const { loaded, problem, available, truncated, files, additions, deletions } = useThreadDiff(
-    threadId,
-    scope,
-    running,
-  );
-  const counted = additions > 0 || deletions > 0;
+  const {
+    loaded,
+    problem,
+    refreshing,
+    available,
+    truncated,
+    branch,
+    files,
+    additions,
+    deletions,
+    refresh,
+  } = useThreadDiff(threadId, scope, running);
   const [opened, setOpened] = useState<Record<string, boolean>>({});
+  const [scrollTo, setScrollTo] = useState<{ path: string; seq: number } | null>(null);
+
+  useEffect(() => {
+    setOpened({});
+    setScrollTo(null);
+  }, [threadId]);
+
   const items = useMemo(() => flatten(files, layout, opened), [files, layout, opened]);
+  const anyOpen = useMemo(
+    () => files.some((file) => opened[file.path] ?? startsOpen(file)),
+    [files, opened],
+  );
+
+  const toggleAll = () => {
+    const next: Record<string, boolean> = {};
+    for (const file of files) next[file.path] = !anyOpen;
+    setOpened(next);
+  };
+
+  const jumpToFile = (path: string) => {
+    setOpened((now) => (now[path] === true ? now : { ...now, [path]: true }));
+    setScrollTo((prev) => ({ path, seq: (prev?.seq ?? 0) + 1 }));
+  };
 
   return (
     <SidePanel
@@ -43,13 +80,36 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
       onClose={onClose}
       actions={
         <>
+          <div className="min-w-0 flex-1">
+            {files.length > 0 && (
+              <DiffFilePicker
+                files={files}
+                additions={additions}
+                deletions={deletions}
+                onSelect={jumpToFile}
+              />
+            )}
+          </div>
           {files.length > 0 && (
-            <p className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
-              {files.length} {files.length === 1 ? "file" : "files"}{" "}
-              {counted && <DiffStat additions={additions} deletions={deletions} />}
-            </p>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={anyOpen ? "Collapse all files" : "Expand all files"}
+              title={anyOpen ? "Collapse all files" : "Expand all files"}
+              onClick={toggleAll}
+            >
+              {anyOpen ? <IconChevronsUp /> : <IconChevronsDown />}
+            </Button>
           )}
-          {files.length === 0 && <span className="flex-1" />}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Refresh changes"
+            title="Refresh changes"
+            onClick={refresh}
+          >
+            <IconRefresh className={cn(refreshing && "animate-spin")} />
+          </Button>
           <Tabs value={layout} onValueChange={(next) => isDiffLayout(next) && setLayout(next)}>
             <TabsList aria-label="Layout">
               <TabsTrigger value="unified" aria-label="Unified">
@@ -63,7 +123,7 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
         </>
       }
     >
-      <div className="shrink-0 border-b px-4 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b px-4 py-2">
         <Tabs value={scope} onValueChange={(next) => isDiffScope(next) && setScope(next)}>
           <TabsList>
             <TabsTrigger value="turn">Last turn</TabsTrigger>
@@ -71,10 +131,20 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
             <TabsTrigger value="all">Full diff</TabsTrigger>
           </TabsList>
         </Tabs>
+        {branch && (
+          <span
+            className="flex min-w-0 items-center gap-1 truncate font-mono text-xs text-muted-foreground"
+            title={branch}
+          >
+            <IconGitBranch className="size-3.5 shrink-0" />
+            <span className="truncate">{branch}</span>
+          </span>
+        )}
       </div>
       {files.length > 0 ? (
         <DiffVirtualList
           items={items}
+          scrollTo={scrollTo}
           onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
           footer={
             truncated

@@ -497,10 +497,17 @@ export type DiffCallMethod = "diff.get";
 
 export type DiffScope = (typeof DIFF_SCOPES)[number];
 
+export type DiffSummary = {
+  files: number;
+  additions: number;
+  deletions: number;
+};
+
 export type ThreadDiff = {
   patch: string;
   truncated: boolean;
   branch?: string | null;
+  summary?: DiffSummary;
 };
 
 export type FilesCallMethod = "files.list" | "files.read" | "files.search";
@@ -640,7 +647,12 @@ export type RunnerCallMethod =
   | ProcessWatchCallMethod
   | RunnerSelfCallMethod;
 
-export type DiffGetParams = { threadId: string; scope: DiffScope };
+export type DiffGetParams = {
+  threadId: string;
+  scope: DiffScope;
+  summaryOnly?: boolean;
+  branchOnly?: boolean;
+};
 
 export type FilesCallParams = { threadId: string; path: string };
 

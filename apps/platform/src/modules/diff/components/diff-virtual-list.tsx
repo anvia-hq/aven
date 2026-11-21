@@ -26,6 +26,7 @@ const statusLabel: Record<DiffFile["status"], string | null> = {
 type Props = {
   items: DiffItem[];
   onToggle: (file: DiffFile, open: boolean) => void;
+  scrollTo?: { path: string; seq: number } | null;
   footer?: string;
 };
 
@@ -65,7 +66,7 @@ function FileHeader({
   );
 }
 
-export function DiffVirtualList({ items, onToggle, footer }: Props) {
+export function DiffVirtualList({ items, onToggle, scrollTo, footer }: Props) {
   const scroller = useRef<HTMLDivElement>(null);
   const virtual = useVirtualizer({
     count: items.length,
@@ -79,6 +80,18 @@ export function DiffVirtualList({ items, onToggle, footer }: Props) {
       return `${item.file.path}:${index}`;
     },
   });
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
+  useEffect(() => {
+    if (!scrollTo) return;
+
+    const index = itemsRef.current.findIndex(
+      (item) => item.kind === "file" && item.file.path === scrollTo.path,
+    );
+
+    if (index >= 0) virtual.scrollToIndex(index, { align: "start" });
+  }, [scrollTo, virtual]);
   const rows = virtual.getVirtualItems();
   const visibleFiles = useMemo(
     () => [...new Set(rows.map((row) => items[row.index]?.file))].filter((file) => !!file),

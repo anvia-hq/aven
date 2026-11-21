@@ -150,9 +150,9 @@ The `<machine>` section of the coding instructions (`instruction.ts`) tells the 
 
 ### Unshipped is the nearer of the pushed copy and the default branch (decision 0232)
 
-`threadDiff` (`packages/runtime-client/src/thread-diff.ts`) refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`) and gives the unshipped scope as the smaller of the working tree against the branch's pushed copy and against its branch point from the default branch.
+`readThreadDiff` / `threadDiff` (`packages/runtime-client/src/git/thread-diff.ts`) runs inside a single `withHostGit` shadow session (`host-git.ts`), seeds its scratch index from `.git/index` so Git's stat cache is preserved, refreshes `origin/<default>` from the folder when `origin` is one (`refresh-base.ts`, with network upstream fetches running in the background), prunes ancestor branch points, ranks remaining candidate trees with `git diff --numstat` before formatting at most one unified patch, and supports optional `summaryOnly` and `branchOnly` parameters. Concurrent `diff.get` requests are coalesced on both the runner (`runner-calls.ts`) and the control plane (`apps/control-plane/src/modules/diff/service.ts`).
 
-The Changes panel (`apps/platform/src/modules/diff`) draws one virtual list (`@tanstack/react-virtual`, `components/diff-virtual-list.tsx`) of the items `flatten.ts` makes from the files, highlights only files in view (`hooks/use-file-colours.ts`), and keeps a file's object across polls when it did not change (`same-file.ts`). Decision 0249.
+The Changes panel (`apps/platform/src/modules/diff`) shares a Jotai diff cache (`atoms/thread-diff-atom.ts`) with chained non-overlapping polling (`hooks/use-thread-diff.ts`), requests `summary=1` for `ChangesBadge` and `useShipAction`, draws one virtual list (`@tanstack/react-virtual`, `components/diff-virtual-list.tsx`) of the items `flatten.ts` makes from the files, batches syntax highlighting for files in view (`hooks/use-file-colours.ts`), keeps unchanged file objects across polls (`same-file.ts`), and provides a branch indicator, manual refresh, expand/collapse all, and a jump-to-file picker (`components/diff-file-picker.tsx`). Decision 0249.
 
 ### A thread compares its changes with every branch it pushed (decision 0233)
 

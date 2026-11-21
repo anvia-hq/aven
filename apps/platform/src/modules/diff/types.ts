@@ -4,9 +4,25 @@ import type { HighlightedLine } from "@/modules/files/types";
 
 export type { DiffScope };
 
+export type DiffSummary = {
+  files: number;
+  additions: number;
+  deletions: number;
+};
+
 export type ThreadDiffResponse =
   | { available: false }
-  | { available: true; patch: string; truncated: boolean };
+  | {
+      available: true;
+      patch: string;
+      truncated: boolean;
+      branch?: string | null;
+      summary?: DiffSummary;
+    };
+
+export type DiffCacheEntry = {
+  loaded: ThreadDiffResponse | string;
+};
 
 export type ThreadDiffScope = DiffScope;
 
@@ -47,11 +63,15 @@ export type SplitRow = { old?: DiffRow; new?: DiffRow };
 export type ThreadDiff = {
   loaded: boolean;
   problem: string | null;
+  refreshing: boolean;
   available: boolean | null;
   truncated: boolean;
+  branch: string | null;
   files: DiffFile[];
+  fileCount: number;
   additions: number;
   deletions: number;
+  refresh: () => void;
 };
 
 export type DiffItem =

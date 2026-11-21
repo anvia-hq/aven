@@ -11,7 +11,7 @@ export function ChangesBadge({ diff, onOpen }: Props) {
 
   if (diff.available === false) return null;
 
-  if (diff.files.length === 0) return null;
+  if (diff.fileCount === 0) return null;
 
   const counted = diff.additions > 0 || diff.deletions > 0;
   return (
@@ -26,7 +26,7 @@ export function ChangesBadge({ diff, onOpen }: Props) {
       {counted ? (
         <DiffStat additions={diff.additions} deletions={diff.deletions} />
       ) : (
-        fileCount(diff.files.length)
+        fileCount(diff.fileCount)
       )}
     </Button>
   );
