@@ -1,6 +1,4 @@
-import { join } from "node:path";
-
-import { hostGit } from "./host-git";
+import { hostGit, safeGitConfig } from "./host-git";
 import { defaultBranchOf, remoteBase } from "./remote-base";
 import { threadBranchFamily } from "./thread-branches";
 import type { Git } from "../types";
@@ -16,8 +14,8 @@ const upstreamInFlight = new Map<string, Promise<void>>();
 
 const isFolder = (url: string) => url.startsWith("/") || url.startsWith("file://");
 
-async function folderDefaultBranch(path: string, fallback: string, run: Git) {
-  const head = await run(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], { cwd: path });
+async function folderDefaultBranch(path: string, fallback: string, host: Git) {
+  const head = await host(["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"], { cwd: path });
 
   if (head.code !== 0) return fallback;
 
@@ -28,23 +26,18 @@ async function folderDefaultBranch(path: string, fallback: string, run: Git) {
     : fallback;
 }
 
-async function fetchUpstream(root: string, folder: string, branch: string, head: string, run: Git) {
-  const path = folder.startsWith("file://") ? folder.slice("file://".length) : folder;
-  const read = await run(
-    ["config", "--file", join(path, ".git", "config"), "--get", "remote.origin.url"],
-    {
-      cwd: root,
-    },
-  );
-  const url = read.stdout.trim();
-
-  if (read.code !== 0 || !UPSTREAM_URL.test(url)) {
-    upstreamFetched.set(root, { at: Date.now(), head, ok: false });
-    return;
-  }
-
-  const targetBranch = await folderDefaultBranch(path, branch, run);
-  const fetched = await run(
+async function fetchUpstream(
+  root: string,
+  path: string,
+  url: string,
+  branch: string,
+  head: string,
+  run: Git,
+  host: Git,
+) {
+  const targetBranch = await folderDefaultBranch(path, branch, host);
+  const fetchRun = url.startsWith("ssh://") || url.startsWith("git@") ? run : host;
+  const fetched = await fetchRun(
     ["fetch", "--no-tags", "--", url, `+refs/heads/${targetBranch}:${UPSTREAM_REF}`],
     {
       cwd: root,
@@ -61,49 +54,84 @@ async function refreshUpstream(
   branch: string,
   head: string,
   run: Git,
+  host: Git,
 ) {
   const pending = upstreamInFlight.get(root);
 
-  if (pending) return pending;
+  if (pending) return;
 
   const last = upstreamFetched.get(root);
   const fresh = last !== undefined && Date.now() - last.at < UPSTREAM_FRESH_MS;
 
   if (fresh && (!last.ok || last.head === head)) return;
 
-  const task = fetchUpstream(root, folder, branch, head, run).finally(() => {
-    upstreamInFlight.delete(root);
-  });
+  const path = folder.startsWith("file://") ? folder.slice("file://".length) : folder;
+  const read = await safeGitConfig(run, path, ["--get", "remote.origin.url"]);
+  const url = read.stdout.trim();
+
+  if (read.code !== 0 || !UPSTREAM_URL.test(url)) {
+    upstreamFetched.set(root, { at: Date.now(), head, ok: false });
+    return;
+  }
+
+  const local = isFolder(url);
+  const targetHost = local ? host : hostGit(run);
+  const task = fetchUpstream(root, path, url, branch, head, run, targetHost)
+    .catch(() => {
+      upstreamFetched.set(root, { at: Date.now(), head, ok: false });
+    })
+    .finally(() => {
+      upstreamInFlight.delete(root);
+    });
   upstreamInFlight.set(root, task);
-  return task;
+
+  if (local) await task;
 }
 
-export async function refreshBase(root: string, run: Git) {
-  const url = await run(["config", "--get", "remote.origin.url"], { cwd: root });
+export async function refreshBase(
+  root: string,
+  run: Git,
+  known?: {
+    host?: Git;
+    base?: string | null;
+    branch?: string | null;
+    currentBranch?: string | null;
+    head?: string;
+  },
+) {
+  const url = await safeGitConfig(run, root, ["--get", "remote.origin.url"]);
   const folder = url.stdout.trim();
 
   if (url.code !== 0 || !isFolder(folder)) return;
 
-  const host = hostGit(run);
-  const base = await remoteBase(root, host);
-  const branch = await defaultBranchOf(root, base, host);
+  const host = known?.host ?? hostGit(run);
+  const base = known?.base !== undefined ? known.base : await remoteBase(root, host);
+  const branch =
+    known?.branch !== undefined ? known.branch : await defaultBranchOf(root, base, host);
 
   if (!branch) return;
 
-  const fetch = (refspec: string) =>
-    host(["fetch", "--no-tags", "--", folder, refspec], {
-      cwd: root,
-      timeoutMs: REFRESH_TIMEOUT_MS,
-    });
+  const current =
+    known?.currentBranch !== undefined
+      ? known.currentBranch
+      : await host(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root }).then((found) =>
+          found.code === 0 ? found.stdout.trim() : null,
+        );
+  const family = current ? threadBranchFamily(current) : null;
+  const refspecs = [`+refs/heads/${branch}:refs/remotes/origin/${branch}`];
 
-  await fetch(`+refs/heads/${branch}:refs/remotes/origin/${branch}`);
+  if (family) refspecs.push(`+refs/heads/${family}*:refs/remotes/origin/${family}*`);
 
-  const rev = await host(["rev-parse", "--verify", "--quiet", "HEAD"], { cwd: root });
-  const head = rev.code === 0 ? rev.stdout.trim() : "";
-  await refreshUpstream(root, folder, branch, head, run);
+  await host(["fetch", "--no-tags", "--", folder, ...refspecs], {
+    cwd: root,
+    timeoutMs: REFRESH_TIMEOUT_MS,
+  });
 
-  const current = await host(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root });
-  const family = current.code === 0 ? threadBranchFamily(current.stdout.trim()) : null;
-
-  if (family) await fetch(`+refs/heads/${family}*:refs/remotes/origin/${family}*`);
+  const head =
+    known?.head !== undefined
+      ? known.head
+      : await host(["rev-parse", "--verify", "--quiet", "HEAD"], { cwd: root }).then((rev) =>
+          rev.code === 0 ? rev.stdout.trim() : "",
+        );
+  await refreshUpstream(root, folder, branch, head, run, host);
 }

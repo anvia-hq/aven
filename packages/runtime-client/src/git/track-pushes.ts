@@ -1,11 +1,27 @@
+import { safeGitConfig } from "./host-git";
 import type { Git } from "../types";
 
 const REFSPEC = "+refs/heads/aven/*:refs/remotes/origin/aven/*";
+const MAX_TRACKED = 500;
+const tracked = new Set<string>();
 
 export async function trackPushes(root: string, run: Git) {
-  const known = await run(["config", "--get-all", "remote.origin.fetch"], { cwd: root });
+  if (tracked.has(root)) return;
 
-  if (known.stdout.split("\n").includes(REFSPEC)) return;
+  const known = await safeGitConfig(run, root, ["--get-all", "remote.origin.fetch"]);
 
-  await run(["config", "--add", "remote.origin.fetch", REFSPEC], { cwd: root });
+  if (known.code === 0 && known.stdout.split("\n").includes(REFSPEC)) {
+    if (tracked.size >= MAX_TRACKED) tracked.clear();
+
+    tracked.add(root);
+    return;
+  }
+
+  const added = await run(["config", "--add", "remote.origin.fetch", REFSPEC], { cwd: root });
+
+  if (added.code === 0) {
+    if (tracked.size >= MAX_TRACKED) tracked.clear();
+
+    tracked.add(root);
+  }
 }
