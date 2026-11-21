@@ -266,4 +266,148 @@ describe("a thread's changes", () => {
     await writeFile(join(root, "b.txt"), "x\n");
     expect(await threadDiff(root, "turn")).toEqual({ patch: "", truncated: false });
   });
+
+  test("rebasing onto a fetched remote main hides remote commits even when origin is unreachable and after FETCH_HEAD changes", async () => {
+    const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
+    roots.push(base);
+    const upstream = join(base, "upstream");
+    const root = join(base, "thread");
+    const sh = async (cwd: string, ...args: string[]) => {
+      const result = await git(args, { cwd });
+
+      if (result.code !== 0) throw new Error(result.stderr);
+    };
+    const commit = (cwd: string, message: string) =>
+      sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await Bun.$`mkdir ${upstream}`;
+    await sh(upstream, "init", "-q", "-b", "main");
+    await writeFile(join(upstream, "a.txt"), "one\n");
+    await sh(upstream, "add", ".");
+    await commit(upstream, "first");
+    await sh(base, "clone", "-q", "--single-branch", "--branch", "main", upstream, root);
+    await sh(root, "checkout", "-q", "-b", "feat/custom-branch");
+    await sh(root, "remote", "set-url", "origin", "https://127.0.0.1:9/never.git");
+
+    await writeFile(join(root, "mine.txt"), "my feature\n");
+    await sh(root, "add", ".");
+    await commit(root, "my feature");
+
+    await writeFile(join(upstream, "others.txt"), "many upstream commits\n");
+    await sh(upstream, "add", ".");
+    await commit(upstream, "upstream main work");
+
+    await sh(root, "fetch", "-q", "--", upstream, "main");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "rebase", "-q", "FETCH_HEAD");
+
+    const afterRebase = (await threadDiff(root, "all"))?.patch ?? "";
+    expect(afterRebase).toContain("+++ b/mine.txt");
+    expect(afterRebase).not.toContain("others.txt");
+    const unshipped = (await threadDiff(root, "unshipped"))?.patch ?? "";
+    expect(unshipped).toContain("+++ b/mine.txt");
+    expect(unshipped).not.toContain("others.txt");
+
+    await sh(upstream, "checkout", "-q", "-b", "feat/unrelated");
+    await writeFile(join(upstream, "other-branch.txt"), "side\n");
+    await sh(upstream, "add", ".");
+    await commit(upstream, "side branch");
+    await sh(root, "fetch", "-q", "--", upstream, "feat/unrelated");
+
+    const afterOtherFetch = (await threadDiff(root, "all"))?.patch ?? "";
+    expect(afterOtherFetch).toContain("+++ b/mine.txt");
+    expect(afterOtherFetch).not.toContain("others.txt");
+  });
+
+  test("rebasing onto a second remote's main branch does not show that remote's commits", async () => {
+    const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
+    roots.push(base);
+    const github = join(base, "github");
+    const folder = join(base, "folder");
+    const root = join(base, "thread");
+    const sh = async (cwd: string, ...args: string[]) => {
+      const result = await git(args, { cwd });
+
+      if (result.code !== 0) throw new Error(result.stderr);
+    };
+    const commit = (cwd: string, message: string) =>
+      sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await Bun.$`mkdir ${github}`;
+    await sh(github, "init", "-q", "-b", "main");
+    await writeFile(join(github, "a.txt"), "one\n");
+    await sh(github, "add", ".");
+    await commit(github, "first");
+    await sh(base, "clone", "-q", github, folder);
+    await sh(base, "clone", "-q", "--single-branch", "--branch", "main", folder, root);
+    await sh(root, "checkout", "-q", "-b", "feat/comment-per-run");
+
+    await writeFile(join(root, "mine.txt"), "my feature\n");
+    await sh(root, "add", ".");
+    await commit(root, "my feature");
+
+    await writeFile(join(github, "others.txt"), "upstream work\n");
+    await sh(github, "add", ".");
+    await commit(github, "upstream work");
+
+    await sh(root, "remote", "add", "upstream", github);
+    await sh(root, "fetch", "-q", "upstream", "main");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "rebase", "-q", "upstream/main");
+    await rm(join(root, ".git", "FETCH_HEAD"), { force: true });
+
+    const whole = (await threadDiff(root, "all"))?.patch ?? "";
+    expect(whole).toContain("+++ b/mine.txt");
+    expect(whole).not.toContain("others.txt");
+  });
+
+  test("rebasing onto GitHub's main still measures cleanly when the local folder was on another branch", async () => {
+    const base = await mkdtemp(join(tmpdir(), "aven-thread-diff-"));
+    roots.push(base);
+    const github = join(base, "github");
+    const folder = join(base, "folder");
+    const root = join(base, "thread");
+    const sh = async (cwd: string, ...args: string[]) => {
+      const result = await git(args, { cwd });
+
+      if (result.code !== 0) throw new Error(result.stderr);
+    };
+    const commit = (cwd: string, message: string) =>
+      sh(cwd, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await Bun.$`mkdir ${github}`;
+    await sh(github, "init", "-q", "-b", "main");
+    await writeFile(join(github, "a.txt"), "one\n");
+    await sh(github, "add", ".");
+    await commit(github, "first");
+    await sh(base, "clone", "-q", github, folder);
+    await sh(folder, "checkout", "-q", "-b", "feat/local-wip");
+    await sh(base, "clone", "-q", "--single-branch", "--branch", "feat/local-wip", folder, root);
+    await sh(root, "checkout", "-q", "-b", "aven/test");
+
+    await writeFile(join(root, "mine.txt"), "my feature\n");
+    await sh(root, "add", ".");
+    await commit(root, "my feature");
+
+    await writeFile(join(github, "others.txt"), "merged to main\n");
+    await sh(github, "add", ".");
+    await commit(github, "merged to main");
+
+    await sh(root, "fetch", "-q", "--", github, "main");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "rebase", "-q", "FETCH_HEAD");
+    await rm(join(root, ".git", "FETCH_HEAD"), { force: true });
+
+    const whole = (await threadDiff(root, "all"))?.patch ?? "";
+    expect(whole).toContain("+++ b/mine.txt");
+    expect(whole).not.toContain("others.txt");
+  });
+
+  test("fetching the thread's own feature branch does not hide its commits from the whole branch diff", async () => {
+    const { root, sh } = await workspace({ branchClone: true });
+    const commit = (message: string) =>
+      sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", message);
+    await sh(root, "checkout", "-q", "-b", "feat/my-pr");
+    await writeFile(join(root, "mine.txt"), "feature\n");
+    await sh(root, "add", ".");
+    await commit("feature");
+    await sh(root, "push", "-q", "-u", "origin", "HEAD");
+    await sh(root, "fetch", "-q", "origin", "feat/my-pr");
+
+    expect((await threadDiff(root, "all"))?.patch).toContain("+++ b/mine.txt");
+  });
 });

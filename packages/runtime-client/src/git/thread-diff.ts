@@ -5,7 +5,12 @@ import { join } from "node:path";
 import { git } from "./git-clone";
 import { hostGit } from "./host-git";
 import { refreshBase, UPSTREAM_REF } from "./refresh-base";
-import { remoteBase } from "./remote-base";
+import {
+  defaultBranchOf,
+  fetchedMainlineCommits,
+  remoteBase,
+  remoteMainlineRefs,
+} from "./remote-base";
 import { threadBranchFamily } from "./thread-branches";
 import { trackPushes } from "./track-pushes";
 import type { DiffScope, ThreadDiff } from "@aven/protocol/types";
@@ -13,6 +18,7 @@ import type { Git } from "../types";
 
 const TURN_REF = "refs/aven/turn";
 const FORK_REF = "refs/aven/fork-base";
+const FETCHED_BASE_REF = "refs/aven/fetched-base";
 const MAX_PATCH_BYTES = 2 * 1024 * 1024;
 const IDENTITY = {
   GIT_AUTHOR_NAME: "Aven",
@@ -56,9 +62,39 @@ export const markTurn = (root: string, run: Git = git) =>
 export const markFork = (root: string, run: Git = git) =>
   markTree(root, FORK_REF, "Start of a fork", run);
 
+async function rememberFetchedBase(root: string, commits: readonly string[], run: Git) {
+  for (const sha of commits) {
+    const ancestor = await run(["merge-base", "--is-ancestor", sha, "HEAD"], { cwd: root });
+
+    if (ancestor.code !== 0) continue;
+
+    const already = await run(["merge-base", "--is-ancestor", sha, FETCHED_BASE_REF], {
+      cwd: root,
+    });
+
+    if (already.code !== 0) await run(["update-ref", FETCHED_BASE_REF, sha], { cwd: root });
+
+    return;
+  }
+}
+
 async function branchPoints(root: string, run: Git) {
   const remote = await remoteBase(root, run);
-  const targets = [remote, UPSTREAM_REF].filter((target) => target !== null);
+  const defaultBranch = await defaultBranchOf(root, remote, run);
+  const [remoteRefs, fetched] = await Promise.all([
+    remoteMainlineRefs(root, defaultBranch, run),
+    fetchedMainlineCommits(root, defaultBranch),
+  ]);
+
+  if (fetched.length > 0) await rememberFetchedBase(root, fetched, run);
+
+  const targets = [
+    ...new Set(
+      [remote, UPSTREAM_REF, FETCHED_BASE_REF, ...remoteRefs, ...fetched].filter(
+        (target) => target !== null,
+      ),
+    ),
+  ];
   const found = await Promise.all(
     targets.map(async (target) => {
       const base = await run(["merge-base", "HEAD", target], { cwd: root });
