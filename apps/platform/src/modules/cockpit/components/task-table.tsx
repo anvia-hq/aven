@@ -6,7 +6,7 @@ import { timeAgo } from "@/lib/format";
 import { useTasks } from "../hooks/use-tasks";
 import type { CockpitTask, TaskPriority, TaskStatus } from "../types";
 import { DueDate, PriorityFlag, StatusDot } from "./task-badges";
-import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
+import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "../task-fields";
 import { TagList } from "./tag-list";
 
 const statusOrder = (status: TaskStatus) => STATUSES.indexOf(status);

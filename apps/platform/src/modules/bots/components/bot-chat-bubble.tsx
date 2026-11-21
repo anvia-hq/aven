@@ -10,7 +10,7 @@ import { cn } from "cn";
 
 import { titleOf } from "../artifacts";
 import { avatarFor, parseAvatarSetting } from "../avatar";
-import { bubbleInk, bubbleStyle } from "../bubble-tint";
+import { bubbleInk, bubbleStyle } from "@/lib/bubble-tint";
 import { botIdOfHref, linkBotMentions } from "../mentions";
 import { quoteAuthor } from "../quote";
 import type { Bot, BotChatMessage, BotChatQuote, MessageAttachment } from "../types";

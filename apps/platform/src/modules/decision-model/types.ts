@@ -1,4 +1,6 @@
-export type DecisionKind = "jev" | "jev-openrouter";
+import type { DecisionKind } from "@aven/protocol/types";
+
+export type { DecisionKind };
 
 export type DecisionModel = {
   kind: DecisionKind;

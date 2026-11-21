@@ -1,6 +1,6 @@
 import { TASK_PRIORITIES, TASK_STATUSES } from "@aven/protocol/cockpit";
 
-import type { TaskPriority, TaskStatus } from "../types";
+import type { TaskPriority, TaskStatus } from "./types";
 
 export const STATUS_LABELS: Record<TaskStatus, string> = {
   backlog: "Backlog",

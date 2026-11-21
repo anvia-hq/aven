@@ -1,12 +1,12 @@
+import { DIFF_SCOPES } from "@aven/protocol/runtime-wire";
+import type { DiffScope } from "@aven/protocol/types";
 import type { HighlightedLine } from "@/modules/files/types";
+
+export type { DiffScope };
 
 export type ThreadDiffResponse =
   | { available: false }
   | { available: true; patch: string; truncated: boolean };
-
-const DIFF_SCOPES = ["turn", "unshipped", "all"] as const;
-
-export type DiffScope = (typeof DIFF_SCOPES)[number];
 
 export type ThreadDiffScope = DiffScope;
 

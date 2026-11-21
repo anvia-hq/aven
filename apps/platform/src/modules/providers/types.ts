@@ -1,3 +1,4 @@
+import { isSubscriptionProvider } from "@aven/protocol/providers";
 import type {
   AgentBackendKind,
   CompatibleVendorId,
@@ -49,7 +50,7 @@ export type Provider = {
 export type ModelChoice = { provider: Provider; modelId: string; label: string };
 
 export const isSubscription = (provider: { kind: ProviderKind }) =>
-  provider.kind === "claude-subscription" || provider.kind === "codex-subscription";
+  isSubscriptionProvider(provider.kind);
 
 export type ProviderPatch = {
   name?: string;
@@ -91,3 +92,17 @@ export type ModelsState = {
   labels?: Record<string, string>;
   error?: string;
 };
+
+export type CodexDeviceCode = {
+  deviceAuthId: string;
+  userCode: string;
+  verificationUrl: string;
+  intervalSeconds: number;
+  expiresAt: string | null;
+};
+
+export type CodexSignInState =
+  | { status: "idle" }
+  | { status: "starting" }
+  | { status: "waiting"; code: CodexDeviceCode }
+  | { status: "failed"; error: string };

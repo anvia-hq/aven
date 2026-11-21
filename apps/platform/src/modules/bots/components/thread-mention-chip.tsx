@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 
-import { bubbleInk, bubbleStyle } from "../bubble-tint";
+import { bubbleInk, bubbleStyle } from "@/lib/bubble-tint";
 
 import { ThreadMentionMark } from "./thread-mention-mark";
 

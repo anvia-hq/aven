@@ -2,6 +2,16 @@ import { IconTag } from "@tabler/icons-react";
 import { useBlocker } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@aven/ui/alert-dialog";
 import { Button } from "@aven/ui/button";
 
 import { useInbox } from "../hooks/use-inbox";
@@ -33,9 +43,10 @@ export function InboxDraft({
   const ready = title.trim() !== "" && !busy;
   const settled = useRef(false);
   const written = title.trim() !== "" || body !== "";
-  useBlocker({
-    shouldBlockFn: () => written && !settled.current && !window.confirm("Discard this new item?"),
+  const blocker = useBlocker({
+    shouldBlockFn: () => written && !settled.current,
     enableBeforeUnload: () => written && !settled.current,
+    withResolver: true,
   });
   const cancel = () => {
     settled.current = true;
@@ -101,6 +112,31 @@ export function InboxDraft({
           onChange={setBody}
         />
       </div>
+      <AlertDialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(next) => {
+          if (!next) blocker.reset?.();
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this new item?</AlertDialogTitle>
+            <AlertDialogDescription>Your unsaved draft will be lost.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset?.()}>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                settled.current = true;
+                blocker.proceed?.();
+              }}
+            >
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DocumentPage>
   );
 }

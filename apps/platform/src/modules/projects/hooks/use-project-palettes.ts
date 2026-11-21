@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { tilePalettes } from "../tile";
+import { tilePalettes } from "@/lib/tile";
 import { useProjects } from "./use-projects";
 
 export function useProjectPalettes() {

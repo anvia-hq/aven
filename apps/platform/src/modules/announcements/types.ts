@@ -1,4 +1,6 @@
-export type AnnouncementTemplate = "waves" | "violet" | "pink" | "amber";
+import type { AnnouncementTemplate } from "@aven/protocol/types";
+
+export type { AnnouncementTemplate };
 
 export type Announcement = {
   id: string;

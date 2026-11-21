@@ -1,7 +1,7 @@
 import { IconCodeblock, IconFile } from "@tabler/icons-react";
 import { cn } from "cn";
 import type { Mentionable } from "../types";
-import { bubbleInk, bubbleStyle } from "@/modules/bots/bubble-tint";
+import { bubbleInk, bubbleStyle } from "@/lib/bubble-tint";
 
 export function MentionChip({ type, name, color }: Mentionable & { color?: string }) {
   return (

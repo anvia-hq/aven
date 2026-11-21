@@ -1,11 +1,12 @@
 import { IconBook } from "@tabler/icons-react";
 
 import { Markdown } from "@/components/markdown";
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { Skeleton } from "@aven/ui/skeleton";
 
+import { isAbsoluteUrl } from "@/lib/url";
 import { useProjectReadme } from "../hooks/use-project-readme";
-import { isAbsoluteUrl, resolveRepoUrl } from "../repo-links";
+import { resolveRepoUrl } from "../repo-links";
 import type { Project } from "../types";
 
 export function RepoReadme({ project }: { project: Project }) {

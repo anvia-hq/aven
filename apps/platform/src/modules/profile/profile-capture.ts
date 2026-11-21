@@ -11,8 +11,8 @@ import {
   seriesOf,
   spanLabel,
   WINDOW_DAYS,
-} from "../activity";
-import type { ProfileStats } from "../types";
+} from "./activity";
+import type { ProfileStats } from "./types";
 
 const CARD_WIDTH = 1080;
 const CARD_HEIGHT = 1350;

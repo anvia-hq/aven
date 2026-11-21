@@ -1,6 +1,6 @@
 import { cn } from "cn";
 
-import { bubbleInk, bubbleStyle } from "../bubble-tint";
+import { bubbleInk, bubbleStyle } from "@/lib/bubble-tint";
 import { BotAvatar } from "./bot-avatar";
 
 export function BotMentionChip({

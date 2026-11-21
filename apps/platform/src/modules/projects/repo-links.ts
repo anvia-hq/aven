@@ -1,3 +1,5 @@
+import { isAbsoluteUrl } from "@/lib/url";
+
 const GITHUB = "https://github.com";
 
 export const repoUrl = (repo: string) => `${GITHUB}/${repo}`;
@@ -8,8 +10,6 @@ export const blobUrl = (repo: string, branch: string, path: string) =>
   `${repoUrl(repo)}/blob/${branch}/${encodePath(path)}`;
 
 export const commitUrl = (repo: string, sha: string) => `${repoUrl(repo)}/commit/${sha}`;
-
-export const isAbsoluteUrl = (href: string) => /^([a-z][a-z0-9+.-]*:|\/\/|#)/i.test(href);
 
 export function resolveRepoUrl(href: string, repo: string, branch: string, kind: "link" | "image") {
   if (isAbsoluteUrl(href)) return href;

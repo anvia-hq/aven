@@ -10,7 +10,7 @@ import {
   shortDay,
   STATUS_DOT,
   STATUS_LABELS,
-} from "./task-fields";
+} from "../task-fields";
 
 export function StatusDot({ status, className }: { status: TaskStatus; className?: string }) {
   return (
