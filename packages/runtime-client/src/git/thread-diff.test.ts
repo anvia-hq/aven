@@ -455,4 +455,13 @@ describe("a thread's changes", () => {
     const staged = await git(["diff", "--cached", "--name-only"], { cwd: root });
     expect(staged.stdout.trim()).toBe("a.txt");
   });
+
+  test("falls back cleanly when the workspace uses git split-index", async () => {
+    const { root, sh } = await workspace();
+    await sh(root, "update-index", "--split-index");
+    await writeFile(join(root, "b.txt"), "split\n");
+
+    const diff = await threadDiff(root, "all");
+    expect(diff?.patch).toContain("+++ b/b.txt");
+  });
 });

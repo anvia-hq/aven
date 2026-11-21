@@ -56,7 +56,6 @@ export function useFileColours(visible: DiffFile[]) {
 
     for (const file of batch) pending.add(file);
 
-    let alive = true;
     void import("@/modules/files/highlight")
       .then(({ highlight }) =>
         Promise.all(
@@ -83,12 +82,8 @@ export function useFileColours(visible: DiffFile[]) {
         }
       })
       .finally(() => {
-        if (alive) setTick((count) => count + 1);
+        setTick((count) => count + 1);
       });
-
-    return () => {
-      alive = false;
-    };
   }, [wanted]);
 
   return (file: DiffFile, row: DiffRow): HighlightedLine | null => {

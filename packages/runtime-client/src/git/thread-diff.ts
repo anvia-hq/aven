@@ -33,13 +33,15 @@ async function seedIndex(root: string, destination: string) {
   const flags = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
   const source = await open(join(root, ".git", "index"), flags).catch(() => null);
 
-  if (!source) return;
+  if (!source) return false;
 
   try {
-    if (!(await source.stat()).isFile()) return;
+    if (!(await source.stat()).isFile()) return false;
 
     await writeFile(destination, await source.readFile());
+    return true;
   } catch {
+    return false;
   } finally {
     await source.close();
   }
@@ -49,8 +51,13 @@ async function workingTree(root: string, run: Git) {
   const index = join(root, ".git", `aven-index-${randomUUID()}`);
   const env = { GIT_INDEX_FILE: index };
   try {
-    await seedIndex(root, index);
-    const added = await run(["add", "--all"], { cwd: root, env });
+    const seeded = await seedIndex(root, index);
+    let added = await run(["add", "--all"], { cwd: root, env });
+
+    if (added.code !== 0 && seeded) {
+      await rm(index, { force: true });
+      added = await run(["add", "--all"], { cwd: root, env });
+    }
 
     if (added.code !== 0) return null;
 
