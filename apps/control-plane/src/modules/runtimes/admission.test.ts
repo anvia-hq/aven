@@ -148,4 +148,37 @@ describe("admitting an Aven Cloud computer to start", () => {
 
     await expect(admission.admit(start)).rejects.toThrow("monthly spend limit");
   });
+
+  test("omits Settings > Sandbox guidance when platform settings are hidden", async () => {
+    const admission = createAdmission({
+      settings: async () => ({ ...OPEN, monthlyBudgetCents: 2000 }),
+      running: async () => 0,
+      hidePlatformSettings: () => true,
+      spend: async () => ({
+        state: "hard_stop",
+        usedMicros: 20_000_000,
+        budgetMicros: 20_000_000,
+        percent: 100,
+      }),
+    });
+
+    await expect(admission.admit(start)).rejects.toThrow("contact support");
+    await expect(admission.preflight(start)).rejects.not.toThrow("Settings > Sandbox");
+  });
+
+  test("preflight enforces spend and edition gates without consuming start burst tokens", async () => {
+    const extra: ComputerStart[] = [];
+    const admission = createAdmission({
+      settings: async () => ({ ...OPEN, startBurst: 1, startEveryMinutes: 15 }),
+      running: async () => 0,
+      extra: async (each) => {
+        extra.push(each);
+      },
+    });
+
+    await admission.preflight(start);
+    await admission.admit(start);
+
+    expect(extra).toEqual([start, start]);
+  });
 });
