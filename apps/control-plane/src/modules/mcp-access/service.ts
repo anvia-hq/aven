@@ -1,18 +1,17 @@
-import { createHash, randomBytes } from "node:crypto";
-
 import { db } from "@aven/db/client";
 import { mcpAccessTokens } from "@aven/db/schema/mcp-access-tokens";
 import { ACCESS_LIMIT, ACCESS_TOKEN_PREFIX } from "@aven/protocol/mcp-access";
 import { and, asc, count, eq } from "drizzle-orm";
 
 import { ConflictError } from "@aven/server-kit/errors";
+import { hashOpaqueToken, issueOpaqueToken } from "@aven/server-kit/tokens";
 import type { CreateAccessTokenBody } from "./schema";
 import type { McpCaller } from "./types";
 import type { AccessPermission, AccessToken, AccessTokenCreated } from "@aven/protocol/types";
 
 const TOUCH_EVERY_MS = 60_000;
 
-const hashOf = (token: string) => createHash("sha256").update(token).digest("hex");
+const hashOf = hashOpaqueToken;
 
 const PERMISSIONS = new Set<string>(["read", "change", "destructive"]);
 
@@ -50,14 +49,14 @@ export const mcpAccessService = {
       throw new ConflictError(`You can have ${ACCESS_LIMIT} access tokens; remove one first`);
     }
 
-    const token = `${ACCESS_TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+    const { token, tokenHash, tokenHint } = issueOpaqueToken(ACCESS_TOKEN_PREFIX);
     const [row] = await db
       .insert(mcpAccessTokens)
       .values({
         userId,
         name: body.name,
-        tokenHash: hashOf(token),
-        tokenHint: token.slice(-4),
+        tokenHash,
+        tokenHint,
         permissions: [...new Set(body.permissions)],
       })
       .returning();

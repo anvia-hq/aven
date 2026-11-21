@@ -1,6 +1,6 @@
+import { bearerToken } from "@aven/server-kit/tokens";
 import { Elysia, status } from "elysia";
 
-import { bearerToken } from "../runtimes/bearer";
 import { runIdentities } from "./grants";
 import { issuer } from "./issuer";
 import { mintTokenBody } from "./schema";

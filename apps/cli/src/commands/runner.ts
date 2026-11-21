@@ -1,22 +1,22 @@
-import { startDetachedUpdate } from "../detached-update";
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, isAbsolute, join, resolve } from "node:path";
+import { RUNNER_TOKEN_PREFIX } from "@aven/protocol/runtimes";
 
 import { stringFlag } from "../args";
-import { capture, run } from "../compose";
+import { startDetachedUpdate } from "../detached-update";
+import { readEnvFile } from "../env-file";
 import { waitForHealthy } from "../health";
 import { logsDir, runnerEnvFile } from "../home";
-import { parseEnv } from "../env-file";
+import { capture, run } from "../process";
 import { loadRunnerEnv, writeRunnerEnv } from "../runner-config";
 import { selfCommand } from "../self";
 import { serviceManager } from "../service-manager";
-import { serviceUnitState } from "../service-unit";
+import { RUNNER_SERVICE_NAMES, serviceUnitState } from "../service-unit";
 import { version } from "../version";
 import type { Args, ServiceDefinition } from "../types";
 
-const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
-const manager = () => serviceManager(names);
+const manager = () => serviceManager(RUNNER_SERVICE_NAMES);
 const logFile = () => join(logsDir(), "runner.log");
 
 function serviceDefinition(): ServiceDefinition {
@@ -27,7 +27,7 @@ function serviceDefinition(): ServiceDefinition {
   for (const key of ["AVEN_HOME", "DOCKER_HOST", "DOCKER_CONFIG"])
     if (process.env[key]) env[key] = process.env[key]!;
   return {
-    label: names.launchdLabel,
+    label: RUNNER_SERVICE_NAMES.launchdLabel,
     command: [...selfCommand(), "runner", "run"],
     env,
     logFile: logFile(),
@@ -35,28 +35,24 @@ function serviceDefinition(): ServiceDefinition {
 }
 
 async function storedSettings() {
-  const text = await readFile(runnerEnvFile(), "utf8").catch(() => undefined);
+  const env = await readEnvFile(runnerEnvFile());
 
-  if (text === undefined) return undefined;
-
-  const env = parseEnv(text);
-
-  if (!env.AVEN_URL || !env.AVEN_RUNTIME_TOKEN) return undefined;
+  if (!env || !env.AVEN_URL || !env.AVEN_RUNTIME_TOKEN) return undefined;
 
   return { url: env.AVEN_URL, token: env.AVEN_RUNTIME_TOKEN, dirs: env.AVEN_DIRS };
 }
 
-function folders(value: string | undefined) {
-  const dirs = (value ?? "").split(delimiter).flatMap((dir) => {
+export function folders(value: string | undefined) {
+  const raw = (value ?? "").split(delimiter).flatMap((dir) => {
     const trimmed = dir.trim();
-    return trimmed ? [resolve(trimmed)] : [];
+    return trimmed ? [trimmed] : [];
   });
 
-  if (dirs.length === 0) return [homedir()];
+  if (raw.length === 0) return [homedir()];
 
-  if (dirs.some((dir) => !isAbsolute(dir))) throw new Error("--dir needs absolute folders");
+  if (raw.some((dir) => !isAbsolute(dir))) throw new Error("--dir needs absolute folders");
 
-  return dirs;
+  return raw.map((dir) => resolve(dir));
 }
 
 export async function runnerInstall(args: Args) {
@@ -71,9 +67,9 @@ export async function runnerInstall(args: Args) {
 
   if (!/^https?:\/\//.test(url)) throw new Error("--url must start with http:// or https://");
 
-  if (!token.startsWith("avrt_"))
+  if (!token.startsWith(RUNNER_TOKEN_PREFIX))
     throw new Error(
-      "--token is not a runner token (they start with avrt_). Create one in Settings > Runtimes.",
+      `--token is not a runner token (they start with ${RUNNER_TOKEN_PREFIX}). Create one in Settings > Runtimes.`,
     );
 
   if ((await capture(["git", "--version"])) === undefined)
@@ -90,7 +86,7 @@ export async function runnerInstall(args: Args) {
   const logSize = (await stat(logFile()).catch(() => undefined))?.size ?? 0;
   const unit = await serviceUnitState({
     platform: process.platform,
-    names,
+    names: RUNNER_SERVICE_NAMES,
     execPath: process.execPath,
   });
 
@@ -101,10 +97,14 @@ export async function runnerInstall(args: Args) {
   console.log(await outcome(logSize));
 }
 
+export function logSliceFrom(bytes: Buffer, from: number) {
+  return bytes.subarray(from).toString("utf8");
+}
+
 async function outcome(from: number) {
   for (let i = 0; i < 30; i++) {
-    const log = await readFile(logFile(), "utf8").catch(() => "");
-    const lines = log.slice(from).split("\n");
+    const bytes = await readFile(logFile()).catch(() => Buffer.alloc(0));
+    const lines = logSliceFrom(bytes, from).split("\n");
     const last = lines.findLast((line) =>
       /runtime connected|refused|not available|required/.test(line),
     );

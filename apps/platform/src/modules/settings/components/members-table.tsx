@@ -3,7 +3,7 @@ import { IconCopy, IconTrash } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@aven/ui/avatar";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
-import { SettingsList, SettingsRow } from "@/components/settings-section";
+import { SettingsList, SettingsRow } from "@aven/ui/settings-section";
 import { initials } from "@/lib/format";
 
 import { useMembers } from "../hooks/use-members";

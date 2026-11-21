@@ -5,7 +5,7 @@ import { Form } from "@aven/ui/form";
 import { LabeledSelect } from "@aven/ui/labeled-select";
 import { TextField } from "@aven/ui/text-field";
 
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 
 import { useCloudSettings } from "../hooks/use-cloud-settings";
 import { SANDBOX_PROVIDER_LABELS, SANDBOX_PROVIDERS } from "../types";

@@ -4,7 +4,7 @@ import { FieldLabel, FieldRoot } from "@aven/ui/base-field";
 import { Button } from "@aven/ui/button";
 import { Form as DecisionForm } from "@aven/ui/form";
 import { NativeSelect, NativeSelectOption } from "@aven/ui/native-select";
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { TextField } from "@aven/ui/text-field";
 
 import { useCanChangeDecisionModel } from "../hooks/use-can-change-decision-model";

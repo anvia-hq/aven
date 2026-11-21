@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
 import { useTheme } from "../hooks/use-theme";
-import { THEMES } from "../types";
+import { THEMES } from "../catalog";
 import type { Theme } from "../types";
 
 export function ModePicker() {

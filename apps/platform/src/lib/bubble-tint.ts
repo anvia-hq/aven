@@ -1,6 +1,20 @@
 import type { CSSProperties } from "react";
 
-import { isLightTint } from "./avatar";
+const LIGHT_TINT = 0.18;
+
+function channel(value: number) {
+  const unit = value / 255;
+  return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+}
+
+export function isLightTint(tint: string) {
+  const value = Number.parseInt(tint.slice(1), 16);
+  const luminance =
+    0.2126 * channel((value >> 16) & 0xff) +
+    0.7152 * channel((value >> 8) & 0xff) +
+    0.0722 * channel(value & 0xff);
+  return luminance >= LIGHT_TINT;
+}
 
 export function bubbleStyle(tint: string | undefined): CSSProperties | undefined {
   if (tint === undefined) return undefined;

@@ -1,4 +1,8 @@
+import type { FolderFileEntry } from "@aven/protocol/types";
+import type { OrbColors } from "@/modules/marks/types";
 import type { Thread } from "@/modules/threads/types";
+
+export type { OrbColors };
 
 import type { useAddProject } from "./hooks/use-add-project";
 
@@ -57,7 +61,7 @@ export type GithubStatus = {
 
 export type GithubAccount = { connected: boolean; login: string | null };
 
-export type RepoEntry = { name: string; path: string; type: "file" | "directory" };
+export type RepoEntry = FolderFileEntry;
 
 export type RepoReadme = { name: string; path: string; text: string; truncated: boolean };
 
@@ -91,8 +95,6 @@ export type TrackedItem = {
 export type TrackedPage = { items: TrackedItem[]; total: number; hasMore: boolean };
 
 export type AddProjectState = ReturnType<typeof useAddProject>;
-
-export type OrbColors = readonly [string, string, string];
 
 export type Rgb = readonly [number, number, number];
 

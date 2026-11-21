@@ -1,21 +1,22 @@
 import { readFile, stat } from "node:fs/promises";
-import { delimiter, join } from "node:path";
+import { join } from "node:path";
+import type { PlatformConfig } from "@aven/protocol/types";
+import { servedFolders } from "@aven/runtime-client/run-runner";
 
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
-import { capture, dockerProblem } from "../compose";
-import { parseEnv } from "../env-file";
+import { dockerProblem } from "../compose";
+import { readEnvFile } from "../env-file";
 import { describeExposure, describeSignups } from "../exposure";
 import { waitForHealthy } from "../health";
 import { avenHome, runnerEnvFile, serverDir } from "../home";
 import { pendingUpdateFile, readPendingUpdate } from "../pending-update";
+import { capture } from "../process";
 import { serviceManager } from "../service-manager";
-import { serviceUnitState } from "../service-unit";
-import { API_PORT } from "../server-plan";
+import { RUNNER_SERVICE_NAMES, serviceUnitState } from "../service-unit";
+import { apiBaseUrl, healthUrl } from "../server-plan";
 import { version } from "../version";
 
 type Check = { name: string; ok: boolean; detail: string; warn?: boolean };
-
-const names = { launchdLabel: "dev.anvia.aven-runner", systemdUnit: "aven-runner" };
 
 export async function doctor() {
   const checks = await diagnose();
@@ -61,13 +62,13 @@ export async function diagnose(
   add("git", git !== undefined, git ?? "Not installed. A runner works on its folders with it.");
 
   const dir = serverDir(home);
-  const serverEnv = await readEnv(join(dir, ".env"));
+  const serverEnv = await readEnvFile(join(dir, ".env"));
 
   if (serverEnv) {
     const docker = options.checkDocker ? await options.checkDocker() : await dockerProblem();
     add("docker", docker === undefined, docker ?? (await capture(["docker", "--version"])) ?? "");
     for (const check of await releaseChecks(dir, serverEnv, binary)) checks.push(check);
-    const url = `http://localhost:${serverEnv.AVEN_API_PORT || API_PORT}/health`;
+    const url = healthUrl(serverEnv);
     const answers = await waitForHealthy(url, { timeoutMs: 0 });
     add(
       "server",
@@ -86,16 +87,16 @@ export async function diagnose(
     }
   }
 
-  const runnerEnv = await readEnv(runnerEnvFile(home));
+  const runnerEnv = await readEnvFile(runnerEnvFile(home));
 
   if (runnerEnv) {
-    const status = await serviceManager(names).status();
+    const status = await serviceManager(RUNNER_SERVICE_NAMES).status();
     add("runner", status.startsWith("running"), `${status}, connects to ${runnerEnv.AVEN_URL}`);
     const unit = await runnerUnitCheck({ platform, execPath, unitHome: options.unitHome });
 
     if (unit) checks.push(unit);
 
-    const dirs = (runnerEnv.AVEN_DIRS ?? "").split(delimiter).filter(Boolean);
+    const dirs = servedFolders(runnerEnv.AVEN_DIRS);
 
     if (dirs.length === 0) {
       warnUnless("folders", false, "The runner serves no folder: set AVEN_DIRS in its settings");
@@ -162,7 +163,7 @@ async function runnerUnitCheck(options: {
 }): Promise<Check | undefined> {
   const state = await serviceUnitState({
     platform: options.platform,
-    names,
+    names: RUNNER_SERVICE_NAMES,
     execPath: options.execPath,
     home: options.unitHome,
   });
@@ -187,20 +188,12 @@ function pendingUpdateDetail(pending: { to: string; at: string }) {
 
 async function registrationIsOpen(env: Record<string, string>) {
   try {
-    const response = await fetch(
-      `http://localhost:${env.AVEN_API_PORT || API_PORT}/platform/config`,
-      {
-        signal: AbortSignal.timeout(3000),
-      },
-    );
-    const body = (await response.json()) as { registrationEnabled?: unknown };
+    const response = await fetch(`${apiBaseUrl(env)}/platform/config`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    const body = (await response.json()) as Partial<PlatformConfig>;
     return typeof body.registrationEnabled === "boolean" ? body.registrationEnabled : undefined;
   } catch {
     return undefined;
   }
-}
-
-async function readEnv(file: string) {
-  const text = await readFile(file, "utf8").catch(() => undefined);
-  return text === undefined ? undefined : parseEnv(text);
 }

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "@aven/ui/toast";
 
 import { handleOf } from "../activity";
-import { renderProfileCapture } from "../components/profile-capture";
+import { renderProfileCapture } from "../profile-capture";
 import type { ProfileStats } from "../types";
 
 type ExportProfile = {

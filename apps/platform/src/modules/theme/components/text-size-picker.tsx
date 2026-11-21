@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
 import { useTextSize } from "../hooks/use-text-size";
-import { TEXT_SIZES } from "../types";
+import { TEXT_SIZES } from "../catalog";
 import type { TextSize, TextSizeScope } from "../types";
 
 export function TextSizePicker({ scope, label }: { scope: TextSizeScope; label: string }) {

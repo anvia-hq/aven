@@ -65,11 +65,7 @@ export const threadsRouter = (
     )
     .get(
       "/:id",
-      async ({ params, organizationId, user }) => {
-        const thread = await threadsService.readable(
-          { organizationId, userId: user.id },
-          params.id,
-        );
+      async ({ thread }) => {
         const shown = await runs.latest(thread);
         return {
           ...thread,
@@ -82,11 +78,7 @@ export const threadsRouter = (
     )
     .get(
       "/:id/export",
-      async ({ params, query, organizationId, user }) => {
-        const thread = await threadsService.readable(
-          { organizationId, userId: user.id },
-          params.id,
-        );
+      async ({ query, thread }) => {
         const format = exportFormat(query.format);
         const body = renderExport(format, thread.title, await runs.history(thread));
         return new Response(body, {
@@ -95,17 +87,11 @@ export const threadsRouter = (
       },
       { thread: "read", params: threadParams, query: exportQuery },
     )
-    .get(
-      "/:id/messages",
-      async ({ params, query, organizationId, user }) => {
-        const thread = await threadsService.readable(
-          { organizationId, userId: user.id },
-          params.id,
-        );
-        return runs.before(thread, query.before);
-      },
-      { thread: "read", params: threadParams, query: messagesBeforeQuery },
-    )
+    .get("/:id/messages", async ({ query, thread }) => runs.before(thread, query.before), {
+      thread: "read",
+      params: threadParams,
+      query: messagesBeforeQuery,
+    })
     .patch(
       "/:id",
       async ({ params, body, organizationId, user }) => {
@@ -193,11 +179,7 @@ export const threadsRouter = (
     })
     .get(
       "/:id/events",
-      async function* ({ params, organizationId, user, request }) {
-        const thread = await threadsService.readable(
-          { organizationId, userId: user.id },
-          params.id,
-        );
+      async function* ({ thread, request }) {
         for await (const event of runs.events(thread, request.signal)) {
           yield event ? sse({ data: event }) : sse({ event: "ping", data: "" });
         }

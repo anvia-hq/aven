@@ -1,9 +1,9 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { db } from "@aven/db/client";
 import { githubInstallations } from "@aven/db/schema/github-installations";
 import { and, desc, eq } from "drizzle-orm";
 
 import { NotFoundError, UnprocessableError } from "@aven/server-kit/errors";
+import { signHmacJson, verifyHmacJson } from "@aven/server-kit/tokens";
 import {
   github,
   GithubCreateNotGrantedError,
@@ -30,12 +30,12 @@ export class InstallationNotFoundError extends NotFoundError {
 
 const STATE_TTL_MS = 60 * 60_000;
 
-function sign(payload: string) {
+function stateSecret() {
   const secret = process.env.BETTER_AUTH_SECRET;
 
   if (!secret) throw new Error("BETTER_AUTH_SECRET is not set");
 
-  return createHmac("sha256", secret).update(`github-install:${payload}`).digest("base64url");
+  return secret;
 }
 
 export function createState(
@@ -51,8 +51,7 @@ export function createState(
 
   if (installationId !== undefined) claims.push(installationId ?? null);
 
-  const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
-  return `${payload}.${sign(payload)}`;
+  return signHmacJson(stateSecret(), claims, "github-install");
 }
 
 export function readState(
@@ -61,31 +60,20 @@ export function readState(
   userId: string,
   now = Date.now(),
 ): { next: string | null; installationId: number | null } | null {
-  const [payload, signature] = state.split(".");
+  const parsed = verifyHmacJson(stateSecret(), state, "github-install");
 
-  if (!payload || !signature) return null;
+  if (!Array.isArray(parsed)) return null;
 
-  const expected = Buffer.from(sign(payload));
-  const given = Buffer.from(signature);
+  const [org, user, issuedAt, next, installationId] = parsed as unknown[];
+  const fresh =
+    typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
 
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  if (org !== organizationId || user !== userId || !fresh) return null;
 
-  try {
-    const [org, user, issuedAt, next, installationId] = JSON.parse(
-      Buffer.from(payload, "base64url").toString(),
-    ) as unknown[];
-    const fresh =
-      typeof issuedAt === "number" && now - issuedAt >= 0 && now - issuedAt < STATE_TTL_MS;
-
-    if (org !== organizationId || user !== userId || !fresh) return null;
-
-    return {
-      next: typeof next === "string" && isLocalPath(next) ? next : null,
-      installationId: typeof installationId === "number" ? installationId : null,
-    };
-  } catch {
-    return null;
-  }
+  return {
+    next: typeof next === "string" && isLocalPath(next) ? next : null,
+    installationId: typeof installationId === "number" ? installationId : null,
+  };
 }
 
 export function createGithubService(

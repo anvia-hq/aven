@@ -1,4 +1,4 @@
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 
 export function usePanel(key: string, initial: boolean) {
   const [open, setOpen] = useLocalStorage(key, initial);

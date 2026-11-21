@@ -1,6 +1,8 @@
-export const SANDBOX_PROVIDERS = ["boat", "spaces", "lizard"] as const;
+import { SANDBOX_PROVIDERS } from "@aven/protocol/runtimes";
+import type { SandboxProviderName } from "@aven/protocol/types";
 
-export type SandboxProviderName = (typeof SANDBOX_PROVIDERS)[number];
+export { SANDBOX_PROVIDERS };
+export type { SandboxProviderName };
 
 export type SandboxSettings = {
   provider: SandboxProviderName;

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 import { useRequest } from "@/hooks/use-request";
 import { toast } from "@aven/ui/toast";
 import { attempt, postJson } from "@/lib/api";

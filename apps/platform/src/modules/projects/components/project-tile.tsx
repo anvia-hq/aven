@@ -1,11 +1,10 @@
 import { useCallback, useMemo } from "react";
 
+import { tileColors, tileSeed } from "@/lib/tile";
 import { MarkCanvas } from "@/modules/marks/components/mark-canvas";
-import type { MarkFrame } from "@/modules/marks/types";
+import type { MarkFrame, OrbColors } from "@/modules/marks/types";
 
 import { orbShape, paintOrb } from "../orb-art";
-import type { OrbColors } from "../types";
-import { tileColors, tileSeed } from "../tile";
 
 type Props = {
   projectId: string;

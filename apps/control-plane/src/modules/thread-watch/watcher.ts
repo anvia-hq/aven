@@ -1,4 +1,5 @@
 import { describeError } from "@aven/server-kit/errors";
+import { createPoller } from "@aven/server-kit/poller";
 import { fenced, NOT_AN_INSTRUCTION, titleOf } from "./fence";
 import { threadWatchService } from "./service";
 import type { RunEnding } from "../runs/types";
@@ -85,8 +86,6 @@ export function createThreadWatcher(options: {
   now?: () => number;
 }) {
   const { get, lastError, activity, wake, intervalMs, now = Date.now } = options;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<void> | undefined;
   const alerted = new Map<string, WatchedRun>();
   const ending = new Set<string>();
 
@@ -199,27 +198,11 @@ export function createThreadWatcher(options: {
     }
   }
 
-  const guarded = () => {
-    ticking ??= tick()
-      .catch((error: unknown) => console.warn("A thread watch tick failed:", describeError(error)))
-      .finally(() => (ticking = undefined));
-    return ticking;
-  };
+  const poller = createPoller({
+    intervalMs,
+    run: tick,
+    onError: (error) => console.warn("A thread watch tick failed:", describeError(error)),
+  });
 
-  return {
-    ended,
-    tick,
-    start() {
-      if (timer) return;
-
-      void guarded();
-      timer = setInterval(() => void guarded(), intervalMs);
-      timer.unref();
-    },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+  return { ended, tick, start: poller.start, close: poller.close };
 }

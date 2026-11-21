@@ -1,4 +1,4 @@
-import type { OrbColors } from "./types";
+import type { OrbColors } from "@/modules/marks/types";
 
 type Palette = OrbColors;
 

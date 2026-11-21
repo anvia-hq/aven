@@ -1,4 +1,4 @@
-import { SettingsRow } from "@/components/settings-section";
+import { SettingsRow } from "@aven/ui/settings-section";
 import { EffortSlider } from "@/modules/threads/components/effort-slider";
 
 import { useBotEffort } from "../hooks/use-bot-effort";

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { AccessTokenDialog } from "@/modules/mcp-access/components/access-token-dialog";
 import { AccessTokensList } from "@/modules/mcp-access/components/access-tokens-list";
 

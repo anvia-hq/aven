@@ -1,8 +1,8 @@
 import { IconColumns2, IconGitCompare } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 
-import { PanelNotice } from "@/components/panel-notice";
-import { SidePanel } from "@/components/side-panel";
+import { PanelNotice } from "@aven/ui/panel-notice";
+import { SidePanel } from "@aven/ui/side-panel";
 import { Skeleton } from "@aven/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 

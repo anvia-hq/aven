@@ -1,15 +1,13 @@
 import { choice, decide } from "@anvia/core/decision";
 import { JevClient } from "@anvia/jev";
+import { DECISION_DEFAULT_MODELS } from "@aven/protocol/decision-model";
 import { TypeSafeClient } from "@typesafe-ai/sdk";
 
 import type { AddressingDecider, AddressingModel, DecisionConfig, FollowUpDecider } from "./types";
 
 export const OPENROUTER_BASE = "https://openrouter.ai/api";
 export const DECISION_TIMEOUT_MS = 3000;
-export const DEFAULT_MODEL: Record<DecisionConfig["kind"], string> = {
-  jev: "jev-latest",
-  "jev-openrouter": "typesafe/jev-1.13",
-};
+export const DEFAULT_MODEL = DECISION_DEFAULT_MODELS;
 
 const bufferedFetch = async (url: string | URL | Request, init?: RequestInit) => {
   const res = await fetch(url, init);

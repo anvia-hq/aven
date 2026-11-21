@@ -1,4 +1,4 @@
-import { safeStorage } from "@/hooks/use-local-storage";
+import { safeStorage } from "@aven/ui/use-local-storage";
 
 const KEY = "aven.finished-sound";
 

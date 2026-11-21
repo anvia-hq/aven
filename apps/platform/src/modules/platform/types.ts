@@ -1,17 +1,13 @@
-import type { LensCaptureMode } from "@aven/protocol/types";
+import { SANDBOX_PROVIDERS } from "@aven/protocol/runtimes";
+import type {
+  LensCaptureMode,
+  PlatformConfig,
+  SandboxProviderName,
+  SmallModelProvider,
+} from "@aven/protocol/types";
 
-export type { LensCaptureMode };
-
-export type PlatformConfig = {
-  registrationEnabled: boolean;
-  githubLogin: boolean;
-  emailLogin: boolean;
-  claudeBackend: boolean;
-  codexBackend: boolean;
-  lens: boolean;
-  isOwner: boolean;
-  platformSettings: boolean;
-};
+export { SANDBOX_PROVIDERS };
+export type { LensCaptureMode, PlatformConfig, SmallModelProvider };
 
 export type PlatformPerson = {
   id: string;
@@ -47,9 +43,7 @@ export type ServerModelOption = {
   keyLabel: string;
 };
 
-export const SANDBOX_PROVIDERS = ["spaces", "boat", "lizard"] as const;
-
-export type SandboxProvider = (typeof SANDBOX_PROVIDERS)[number];
+export type SandboxProvider = SandboxProviderName;
 
 export const SANDBOX_PROVIDER_LABELS: Record<SandboxProvider, string> = {
   spaces: "Spaces",

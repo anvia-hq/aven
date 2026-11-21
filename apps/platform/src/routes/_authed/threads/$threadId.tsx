@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { useMediaQuery } from "@/hooks/use-media-query";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { SplitDropZone } from "@/modules/threads/components/split-drop-zone";
 import { SplitThreads } from "@/modules/threads/components/split-threads";
 import { ThreadPane } from "@/modules/threads/components/thread-pane";

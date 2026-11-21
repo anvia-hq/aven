@@ -3,6 +3,7 @@ import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 
 import { parseEnv, setEnv } from "./env-file";
+import { capture, captured, run } from "./process";
 
 const LEGACY_PROJECT = "aven";
 const PROJECT_HASH_LENGTH = 8;
@@ -25,15 +26,6 @@ export const projectName = (home: string) =>
     .update(resolve(home))
     .digest("hex")
     .slice(0, PROJECT_HASH_LENGTH)}`;
-
-function captured(command: string[]) {
-  try {
-    const child = Bun.spawnSync({ cmd: command, stdout: "pipe", stderr: "ignore" });
-    return child.exitCode === 0 ? child.stdout.toString().trim() : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 const isComposeProject = (value: unknown): value is ComposeProject =>
   typeof value === "object" &&
@@ -124,14 +116,6 @@ export const composeCommand = (dir: string, args: string[], projects?: ComposePr
   ...args,
 ];
 
-export function without(env: Record<string, string | undefined>, keys: readonly string[]) {
-  const kept = { ...env };
-
-  for (const key of keys) delete kept[key];
-
-  return kept;
-}
-
 export function serverEnvKeys(dir: string) {
   try {
     return Object.keys(parseEnv(readFileSync(envFile(dir), "utf8")));
@@ -140,30 +124,8 @@ export function serverEnvKeys(dir: string) {
   }
 }
 
-export async function run(
-  command: string[],
-  env?: Record<string, string>,
-  drop: readonly string[] = [],
-) {
-  const child = Bun.spawn(command, {
-    stdio: ["inherit", "inherit", "inherit"],
-    env: { ...without(process.env, drop), ...env },
-  });
-  return child.exited;
-}
-
 export const runCompose = (dir: string, args: string[]) =>
   run(composeCommand(dir, args), undefined, serverEnvKeys(dir));
-
-export async function capture(command: string[]) {
-  try {
-    const child = Bun.spawn(command, { stdout: "pipe", stderr: "ignore" });
-    const [out, code] = await Promise.all([new Response(child.stdout).text(), child.exited]);
-    return code === 0 ? out.trim() : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export async function dockerProblem() {
   if ((await capture(["docker", "--version"])) === undefined)
@@ -176,18 +138,4 @@ export async function dockerProblem() {
     return "Docker is installed but not running. Start it, then try again.";
 
   return undefined;
-}
-
-export async function exec(command: string[], env?: Record<string, string | undefined>) {
-  try {
-    const child = Bun.spawn(command, { stdout: "pipe", stderr: "pipe", env });
-    const [out, err, code] = await Promise.all([
-      new Response(child.stdout).text(),
-      new Response(child.stderr).text(),
-      child.exited,
-    ]);
-    return { code, out: `${out}${err}`.trim() };
-  } catch (error) {
-    return { code: 127, out: error instanceof Error ? error.message : String(error) };
-  }
 }

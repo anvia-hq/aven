@@ -2,11 +2,11 @@ import { createHmac } from "node:crypto";
 
 import { errorMessage } from "@aven/agents/values";
 
-import { assertProviderAddress } from "../providers/address-guard";
+import { assertProviderAddress } from "@aven/server-kit/address-guard";
+import { bearerToken } from "@aven/server-kit/tokens";
 import { defaultModelId } from "../providers/default-model";
 import { GoogleAuthError, googleAccessToken } from "../providers/google-auth";
 import { ENV_KEYS, ModelUnavailableError } from "../providers/resolve-model";
-import { bearerToken } from "./bearer";
 import type { ModelConfig } from "@aven/agents/types";
 import type { ModelApi, RunModel } from "@aven/protocol/types";
 

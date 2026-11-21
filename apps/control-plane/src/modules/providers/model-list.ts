@@ -1,7 +1,7 @@
 import { reasoningControlsFor } from "@aven/agents/model";
 
 import { UnprocessableError } from "@aven/server-kit/errors";
-import { assertProviderAddress } from "./address-guard";
+import { assertProviderAddress } from "@aven/server-kit/address-guard";
 import { compatibleModelFacts } from "./model-facts";
 import { modelCatalog } from "./model-catalog";
 import { azureEndpoint, bedrockEndpoint } from "./schema";

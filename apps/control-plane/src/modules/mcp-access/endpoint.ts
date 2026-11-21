@@ -1,3 +1,4 @@
+import { bearerToken } from "@aven/server-kit/tokens";
 import { Elysia } from "elysia";
 
 import { createMcpServer } from "./rpc";
@@ -9,11 +10,6 @@ const UNAUTHORIZED = {
   headers: { "www-authenticate": 'Bearer realm="aven"', "content-type": "application/json" },
 };
 
-const bearerOf = (request: Request) => {
-  const header = request.headers.get("authorization") ?? "";
-  return /^Bearer\s+(\S+)$/i.exec(header)?.[1];
-};
-
 export const mcpEndpoint = (api: McpApi, version: string) => {
   const server = createMcpServer({ api, version });
 
@@ -21,7 +17,7 @@ export const mcpEndpoint = (api: McpApi, version: string) => {
     .post(
       "/",
       async ({ request }) => {
-        const token = bearerOf(request);
+        const token = bearerToken(request.headers.get("authorization"));
         const caller = token ? await mcpAccessService.authenticate(token) : undefined;
 
         if (!caller) {

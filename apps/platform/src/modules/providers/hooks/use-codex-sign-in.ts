@@ -3,24 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "@aven/ui/toast";
 import { errorMessage, postJson } from "@/lib/api";
 
-import type { Provider } from "../types";
+import type { CodexDeviceCode, CodexSignInState, Provider } from "../types";
 import { useProviders } from "./use-providers";
 
-type DeviceCode = {
-  deviceAuthId: string;
-  userCode: string;
-  verificationUrl: string;
-  intervalSeconds: number;
-  expiresAt: string | null;
-};
-
 type Polled = { status: "pending" } | { status: "done"; provider: Provider };
-
-export type CodexSignInState =
-  | { status: "idle" }
-  | { status: "starting" }
-  | { status: "waiting"; code: DeviceCode }
-  | { status: "failed"; error: string };
 
 const GIVE_UP_MS = 15 * 60_000;
 
@@ -43,7 +29,7 @@ export function useCodexSignIn(
 
   useEffect(() => stop, []);
 
-  async function poll(code: DeviceCode, mine: number, startedAt: number) {
+  async function poll(code: CodexDeviceCode, mine: number, startedAt: number) {
     if (mine !== attempt.current) return;
 
     if (Date.now() - startedAt > GIVE_UP_MS) {
@@ -83,7 +69,7 @@ export function useCodexSignIn(
     const mine = attempt.current;
     setState({ status: "starting" });
     try {
-      const code = await postJson<DeviceCode>("/providers/codex-device", {});
+      const code = await postJson<CodexDeviceCode>("/providers/codex-device", {});
 
       if (mine !== attempt.current) return;
 

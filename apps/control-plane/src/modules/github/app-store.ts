@@ -2,10 +2,9 @@ import { db } from "@aven/db/client";
 import { platformSettings } from "@aven/db/schema/platform-settings";
 import { eq } from "drizzle-orm";
 
+import { githubUrlsFromEnv } from "@aven/github/app-manifest";
+import type { GithubConfig, GithubUrls } from "@aven/github/types";
 import { decryptSecret, encryptSecret } from "@aven/server-kit/crypto";
-import { githubUrlsFromEnv } from "./app-manifest";
-import type { GithubUrls } from "./types";
-import type { GithubConfig } from "@aven/github/types";
 
 const KEY = "github_app";
 

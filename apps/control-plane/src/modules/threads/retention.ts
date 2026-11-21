@@ -3,6 +3,7 @@ import { threadPins } from "@aven/db/schema/thread-pins";
 import { threads } from "@aven/db/schema/threads";
 import { THREAD_ARCHIVE_AFTER_DAYS } from "@aven/protocol/threads";
 import { describeError } from "@aven/server-kit/errors";
+import { createPoller } from "@aven/server-kit/poller";
 import { and, asc, eq, isNull, lt, notExists } from "drizzle-orm";
 
 import type { ThreadRetentionOptions } from "./types";
@@ -17,9 +18,6 @@ export function createThreadRetention({
   afterMs = THREAD_ARCHIVE_AFTER_DAYS * DAY_MS,
   limit = SWEPT_AT_MOST,
 }: ThreadRetentionOptions) {
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<unknown> | undefined;
-
   async function sweep(now = new Date()) {
     const stale = await db
       .select({
@@ -58,31 +56,13 @@ export function createThreadRetention({
     return archived;
   }
 
-  const guarded = () => {
-    if (ticking) return;
-
-    ticking = sweep()
-      .catch((error: unknown) =>
-        console.warn("A sweep for stale threads failed:", describeError(error)),
-      )
-      .finally(() => {
-        ticking = undefined;
-      });
-  };
-
-  return {
-    sweep,
-    start() {
-      if (timer) return;
-
-      guarded();
-      timer = setInterval(guarded, intervalMs);
-      timer.unref();
+  const poller = createPoller({
+    intervalMs,
+    run: async () => {
+      await sweep();
     },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+    onError: (error) => console.warn("A sweep for stale threads failed:", describeError(error)),
+  });
+
+  return { sweep, start: poller.start, close: poller.close };
 }

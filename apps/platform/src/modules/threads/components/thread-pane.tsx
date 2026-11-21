@@ -1,34 +1,38 @@
-import { useDefaultLayout } from "react-resizable-panels";
-
 import { backendSupports } from "@aven/protocol/runtime-wire";
+import { PANEL_EXIT_MS } from "@aven/ui/panel-enter";
+import {
+  GAP_HANDLE,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
+import { useHeldValue } from "@aven/ui/use-held";
+import { safeStorage } from "@aven/ui/use-local-storage";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { cn } from "cn";
 
 import { NotFound } from "@/components/not-found";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@aven/ui/resizable";
-import { useHeldValue } from "@/hooks/use-held";
-import { safeStorage } from "@/hooks/use-local-storage";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { GAP_HANDLE } from "@/lib/panel-layout";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
 import { OverviewColumn } from "@/modules/overview/components/overview-column";
-import { ProjectInfo } from "@/modules/projects/components/project-info";
-import { PromptInput } from "@/modules/threads/components/prompt-input";
-import { AnswerForm } from "@/modules/threads/components/answer-form";
-import { SharedNotice } from "@/modules/threads/components/shared-notice";
-import { ShipBar } from "@/modules/threads/components/ship-bar";
-import { FollowUpChips } from "@/modules/threads/components/follow-up-chips";
-import { ThreadHeader } from "@/modules/threads/components/thread-header";
-import { ThreadMessages } from "@/modules/threads/components/thread-messages";
-import { PANEL_EXIT_MS } from "@/components/panel-enter";
-import { ThreadSidePanels } from "@/modules/threads/components/thread-side-panels";
-import { useCompactThread } from "@/modules/threads/hooks/use-compact-thread";
-import { useElementHeight } from "@/modules/threads/hooks/use-element-height";
-import { useFirstPrompt } from "@/modules/threads/hooks/use-first-prompt";
-import { useFollowUps } from "@/modules/threads/hooks/use-follow-ups";
-import { useModelSelection } from "@/modules/threads/hooks/use-model-selection";
-import { useThread } from "@/modules/threads/hooks/use-thread";
 import { usePreviewOffer } from "@/modules/preview/hooks/use-preview-offer";
-import { useThreadPanels } from "@/modules/threads/hooks/use-thread-panels";
+import { ProjectInfo } from "@/modules/projects/components/project-info";
+
+import { useCompactThread } from "../hooks/use-compact-thread";
+import { useElementHeight } from "../hooks/use-element-height";
+import { useFirstPrompt } from "../hooks/use-first-prompt";
+import { useFollowUps } from "../hooks/use-follow-ups";
+import { useModelSelection } from "../hooks/use-model-selection";
+import { useThread } from "../hooks/use-thread";
+import { useThreadPanels } from "../hooks/use-thread-panels";
+import { AnswerForm } from "./answer-form";
+import { FollowUpChips } from "./follow-up-chips";
+import { PromptInput } from "./prompt-input";
+import { SharedNotice } from "./shared-notice";
+import { ShipBar } from "./ship-bar";
+import { ThreadHeader } from "./thread-header";
+import { ThreadMessages } from "./thread-messages";
+import { ThreadSidePanels } from "./thread-side-panels";
 
 type Props = { threadId: string; split?: boolean; onClose?: () => void };
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { parseCodexAuth } from "@aven/protocol/codex-auth";
-import { createCodexDevice } from "./codex-device";
+import { createCodexDevice } from "./device-auth";
 
 const claims = Buffer.from(
   JSON.stringify({ "https://api.openai.com/auth": { chatgpt_account_id: "acct-1" } }),

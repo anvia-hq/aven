@@ -3,11 +3,11 @@ import { describe, expect, test } from "bun:test";
 import {
   appManifest,
   convertManifest,
-  createSetupState,
   githubUrlsFromEnv,
   newAppUrl,
-  readSetupState,
-} from "./app-manifest";
+} from "@aven/github/app-manifest";
+
+import { createSetupState, readSetupState } from "./app-manifest";
 
 const urls = { apiUrl: "https://api.github.com", webUrl: "https://github.com" };
 

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { WebhookDialog } from "@/modules/webhooks/components/webhook-dialog";
 import { WebhooksList } from "@/modules/webhooks/components/webhooks-list";
 

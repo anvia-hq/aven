@@ -62,12 +62,8 @@ export type RunExtras = Pick<
 
 export type RunMemoryInput = { caller: MemoryCaller; index: RunMemory };
 
-export type StartRunInput = {
+export type RunSharedInput = {
   thread: RunThread;
-  prompt: string;
-  compact?: boolean;
-  attachments?: RunAttachment[];
-  mentions?: MessageMention[];
   skills?: RunSkill[];
   mcp?: RunMcpServer[];
   github?: RunGithub;
@@ -86,26 +82,16 @@ export type StartRunInput = {
   codexEffort?: string;
 };
 
-export type ResumeRunInput = {
-  thread: RunThread;
+export type StartRunInput = RunSharedInput & {
+  prompt: string;
+  compact?: boolean;
+  attachments?: RunAttachment[];
+  mentions?: MessageMention[];
+};
+
+export type ResumeRunInput = RunSharedInput & {
   continuation: unknown;
   response: unknown;
-  skills?: RunSkill[];
-  mcp?: RunMcpServer[];
-  github?: RunGithub;
-  env?: RunEnvVar[];
-  identity?: RunIdentity;
-  webSearch?: RunWebSearch;
-  lens?: RunLens;
-  memory?: RunMemoryInput;
-  cockpit?: CockpitCaller;
-  model?: ModelConfig;
-  claudeToken?: string;
-  claudeModel?: string;
-  claudeEffort?: string;
-  codexToken?: string;
-  codexModel?: string;
-  codexEffort?: string;
 };
 
 export type RunResult = { type: RunOutcome; continuation?: unknown };

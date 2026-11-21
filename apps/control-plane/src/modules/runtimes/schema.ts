@@ -1,3 +1,4 @@
+import { SEMVER_RE } from "@aven/protocol/release";
 import { RUNTIME_GITHUB_MODES } from "@aven/protocol/runtime-wire";
 import { RUNTIME_NAME_MAX } from "@aven/protocol/runtimes";
 import { z } from "zod";
@@ -20,10 +21,7 @@ export type CreateRuntimeBody = z.infer<typeof createRuntimeBody>;
 
 export const updateRuntimeBody = z
   .object({
-    release: z
-      .string()
-      .regex(/^\d+\.\d+\.\d+$/)
-      .optional(),
+    release: z.string().regex(SEMVER_RE).optional(),
   })
   .optional();
 

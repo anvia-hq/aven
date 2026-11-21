@@ -2,7 +2,7 @@ import { IconChevronDown } from "@tabler/icons-react";
 import type { ReactNode } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 
 type Props = {
   id: string;

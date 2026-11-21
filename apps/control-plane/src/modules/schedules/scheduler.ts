@@ -3,8 +3,9 @@ import { botSchedules } from "@aven/db/schema/bot-schedules";
 import { SCHEDULE_CATCH_UP_MS } from "@aven/protocol/schedules";
 import { and, asc, eq, isNotNull, lte } from "drizzle-orm";
 
+import { describeTime, nextRun } from "@aven/server-kit/cron";
 import { describeError } from "@aven/server-kit/errors";
-import { describeTime, nextRun } from "./cron";
+import { createPoller } from "@aven/server-kit/poller";
 import type { BotScheduleRow } from "@aven/db/schema/types";
 import type { ScheduleStatus } from "@aven/protocol/types";
 
@@ -30,8 +31,6 @@ export function createScheduler(options: {
   intervalMs: number;
 }) {
   const { fire, isBusy, intervalMs } = options;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<void> | undefined;
 
   async function handle(schedule: BotScheduleRow, now: Date) {
     const due = schedule.nextRunAt!;
@@ -85,26 +84,11 @@ export function createScheduler(options: {
     }
   }
 
-  const guarded = () => {
-    ticking ??= tick()
-      .catch((error: unknown) => console.warn("A schedule tick failed:", describeError(error)))
-      .finally(() => (ticking = undefined));
-    return ticking;
-  };
+  const poller = createPoller({
+    intervalMs,
+    run: tick,
+    onError: (error) => console.warn("A schedule tick failed:", describeError(error)),
+  });
 
-  return {
-    tick,
-    start() {
-      if (timer) return;
-
-      void guarded();
-      timer = setInterval(() => void guarded(), intervalMs);
-      timer.unref();
-    },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+  return { tick, start: poller.start, close: poller.close };
 }

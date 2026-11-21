@@ -6,7 +6,7 @@ import { paletteAtom } from "../atoms/palette-atom";
 import { textSizeAtoms } from "../atoms/text-size-atoms";
 import { themeAtom } from "../atoms/theme-atom";
 import { scaleOf } from "./use-text-size";
-import { DEFAULT_PALETTE, PALETTES, SANS_FONTS } from "../types";
+import { DEFAULT_PALETTE, PALETTES, SANS_FONTS } from "../catalog";
 import type { Theme } from "../types";
 
 const FONT_LINK_ID = "aven-font";

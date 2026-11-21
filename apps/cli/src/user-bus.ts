@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 
-type Env = Record<string, string | undefined>;
+import type { Env } from "./types";
 
 export function withUserBus(
   env: Env,

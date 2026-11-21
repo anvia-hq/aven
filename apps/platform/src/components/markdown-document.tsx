@@ -4,7 +4,7 @@ import rehypeRaw from "rehype-raw";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-import { isAbsoluteUrl } from "@/modules/projects/repo-links";
+import { isAbsoluteUrl } from "@/lib/url";
 
 import { MARKDOWN_CLASS, settled } from "./markdown";
 

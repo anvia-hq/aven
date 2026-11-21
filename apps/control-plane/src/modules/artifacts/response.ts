@@ -1,7 +1,7 @@
 import type { ArtifactContent } from "@aven/protocol/types";
 
 import { HTML_HEADERS, framedHtml } from "./html-frame";
-import { byteRange } from "./range";
+import { byteRange } from "@aven/server-kit/range";
 
 const IMAGE_HEADERS = {
   "cache-control": "private, max-age=31536000, immutable",

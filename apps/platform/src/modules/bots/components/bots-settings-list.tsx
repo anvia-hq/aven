@@ -1,4 +1,4 @@
-import { SettingsEmpty, SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsEmpty, SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 
 import { useBots } from "../hooks/use-bots";
 import { BotAvatar } from "./bot-avatar";

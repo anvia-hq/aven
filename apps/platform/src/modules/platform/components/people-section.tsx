@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback } from "@aven/ui/avatar";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
-import { SettingsList, SettingsRow } from "@/components/settings-section";
+import { SettingsList, SettingsRow } from "@aven/ui/settings-section";
 import { authClient } from "@/lib/auth-client";
 import { initials, timeAgo } from "@/lib/format";
 

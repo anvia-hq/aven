@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 
-import { exec } from "./compose";
+import { exec } from "./process";
 import {
   assetName,
   downloadVerified,

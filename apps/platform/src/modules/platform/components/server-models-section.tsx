@@ -1,4 +1,4 @@
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { DECISION_KINDS } from "@/modules/decision-model/kinds";
 
 import { useServerModels } from "../hooks/use-server-models";

@@ -1,4 +1,4 @@
-import { SettingsRow } from "@/components/settings-section";
+import { SettingsRow } from "@aven/ui/settings-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 

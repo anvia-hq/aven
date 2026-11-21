@@ -1,9 +1,10 @@
+import { InvalidSkillError, packSkill, skillFolder } from "@aven/agents/skill-package";
 import { db } from "@aven/db/client";
 import { skills } from "@aven/db/schema/skills";
+import { UnprocessableError } from "@aven/server-kit/errors";
 import { and, asc, eq } from "drizzle-orm";
 
 import { builtinSkills } from "./builtins";
-import { packSkill, skillFolder } from "./package";
 import type { UploadSkillBody } from "./schema";
 import type { SkillView } from "./types";
 import type { SkillRow } from "@aven/db/schema/types";
@@ -47,7 +48,14 @@ export const skillsService = {
   },
 
   async upload(userId: string, body: UploadSkillBody) {
-    const packed = await packSkill(skillFolder(body.files));
+    let packed;
+    try {
+      packed = await packSkill(skillFolder(body.files));
+    } catch (error) {
+      if (error instanceof InvalidSkillError) throw new UnprocessableError(error.message);
+
+      throw error;
+    }
     const values = {
       name: packed.name,
       description: packed.description,

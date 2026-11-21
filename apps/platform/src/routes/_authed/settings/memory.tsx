@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { MemoryHistoryDialog } from "@/modules/memory/components/memory-history-dialog";
 import { MemoryList } from "@/modules/memory/components/memory-list";
 import { AddNoteDialog } from "@/modules/memory/components/memory-note-dialog";

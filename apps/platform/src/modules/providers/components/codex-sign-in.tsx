@@ -1,6 +1,6 @@
 import { Button } from "@aven/ui/button";
 
-import type { CodexSignInState } from "../hooks/use-codex-sign-in";
+import type { CodexSignInState } from "../types";
 
 type Props = {
   state: CodexSignInState;

@@ -1,6 +1,6 @@
 import { useAtom } from "jotai";
 
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 
 import { diffScopeAtom } from "../atoms/diff-scope-atom";
 import type { DiffLayout } from "../types";

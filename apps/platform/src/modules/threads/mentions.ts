@@ -1,14 +1,15 @@
 import { mentionToken } from "@aven/protocol/events";
+import { AGENT_HANDLE } from "@aven/protocol/threads";
 
 import type { Mentionable, MentionPerson, MessageMention } from "./types";
+
+export { AGENT_HANDLE };
 
 export const COMPACT_COMMAND = "/compact";
 
 export const PERSON_PREFIX = "user:";
 
 export const AGENT_ENTITY = "agent:self";
-
-export const AGENT_HANDLE = "@agent";
 
 const PERSON_TOKEN = /@\[([^\]\n`]{1,80})\]\(user:[\w-]{1,64}\)/g;
 

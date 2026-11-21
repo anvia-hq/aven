@@ -5,7 +5,12 @@
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
+    "./clipboard": "./src/clipboard.ts",
     "./types": "./src/types.ts",
+    "./use-clipboard": "./src/use-clipboard.ts",
+    "./use-held": "./src/use-held.ts",
+    "./use-local-storage": "./src/use-local-storage.ts",
+    "./use-media-query": "./src/use-media-query.ts",
     "./use-mobile": "./src/use-mobile.ts",
     "./*": "./src/*.tsx"
   },

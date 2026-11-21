@@ -4,7 +4,7 @@ import { Button } from "@aven/ui/button";
 import { Form } from "@aven/ui/form";
 import { TextField } from "@aven/ui/text-field";
 
-import { SettingsSection } from "@/components/settings-section";
+import { SettingsSection } from "@aven/ui/settings-section";
 
 import { useCloudLifecycle } from "../hooks/use-cloud-lifecycle";
 import type { CloudLifecycle } from "../types";

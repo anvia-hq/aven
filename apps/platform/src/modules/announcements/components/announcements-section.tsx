@@ -12,7 +12,7 @@ import {
   SettingsList,
   SettingsRow,
   SettingsSection,
-} from "@/components/settings-section";
+} from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 import { Textarea } from "@aven/ui/textarea";
 import { TextField } from "@aven/ui/text-field";

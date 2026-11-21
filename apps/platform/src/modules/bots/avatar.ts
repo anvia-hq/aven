@@ -1,5 +1,8 @@
+import { isLightTint } from "@/lib/bubble-tint";
 import { SHAPES } from "./avatar-shapes";
 import type { Avatar, AvatarSetting } from "./types";
+
+export { isLightTint };
 
 export const families: readonly string[] = SHAPES.map((shape) => shape.name);
 
@@ -17,22 +20,6 @@ export const colors: readonly string[] = [
   "#ff9500",
   "#ffc400",
 ];
-
-const LIGHT_TINT = 0.18;
-
-function channel(value: number) {
-  const unit = value / 255;
-  return unit <= 0.04045 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
-}
-
-export function isLightTint(tint: string) {
-  const value = Number.parseInt(tint.slice(1), 16);
-  const luminance =
-    0.2126 * channel((value >> 16) & 0xff) +
-    0.7152 * channel((value >> 8) & 0xff) +
-    0.0722 * channel(value & 0xff);
-  return luminance >= LIGHT_TINT;
-}
 
 function hash(seed: string) {
   let value = 0x811c9dc5;

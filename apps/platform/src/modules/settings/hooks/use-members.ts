@@ -1,6 +1,6 @@
 import { toast } from "@aven/ui/toast";
 import { authClient } from "@/lib/auth-client";
-import { copyToClipboard } from "@/lib/clipboard";
+import { copyToClipboard } from "@aven/ui/clipboard";
 
 import type { InvitableRole, Member } from "../types";
 

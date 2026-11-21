@@ -11,6 +11,7 @@ import {
 } from "@aven/sandbox/lifecycle";
 import type { LifecyclePolicy, ProviderCredentials } from "@aven/sandbox/types";
 import { describeError } from "@aven/server-kit/errors";
+import { createPoller } from "@aven/server-kit/poller";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { cloudSettingsService } from "../cloud-settings/service";
@@ -71,9 +72,6 @@ export function createCloudReconciler({
   pageSize = SANDBOX_PAGE,
   now = Date.now,
 }: ReconcilerOptions) {
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<unknown> | undefined;
-
   async function credentialsFor(row: CloudSandboxRow): Promise<ProviderCredentials | undefined> {
     if (!row.providerConfigId) return undefined;
 
@@ -369,31 +367,14 @@ export function createCloudReconciler({
     return acted;
   }
 
-  const guarded = () => {
-    if (ticking) return;
-
-    ticking = sweep()
-      .catch((error: unknown) =>
-        console.warn("A cloud lifecycle reconciliation sweep failed:", describeError(error)),
-      )
-      .finally(() => {
-        ticking = undefined;
-      });
-  };
-
-  return {
-    sweep,
-    start() {
-      if (timer) return;
-
-      guarded();
-      timer = setInterval(guarded, intervalMs);
-      timer.unref();
+  const poller = createPoller({
+    intervalMs,
+    run: async () => {
+      await sweep();
     },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+    onError: (error) =>
+      console.warn("A cloud lifecycle reconciliation sweep failed:", describeError(error)),
+  });
+
+  return { sweep, start: poller.start, close: poller.close };
 }

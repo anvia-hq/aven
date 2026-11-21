@@ -14,13 +14,12 @@ import {
 import { Button } from "@aven/ui/button";
 import { Form } from "@aven/ui/form";
 import { Input } from "@aven/ui/input";
-import { PanelNotice } from "@/components/panel-notice";
-import { SidePanel } from "@/components/side-panel";
-import { toast } from "@aven/ui/toast";
+import { PanelNotice } from "@aven/ui/panel-notice";
+import { SidePanel } from "@aven/ui/side-panel";
 
 import type { PreviewOffer } from "../types";
 import { usePreview } from "../hooks/use-preview";
-import { addressOf, parsePort } from "../port";
+import { addressOf } from "../port";
 
 type Props = {
   runtimeId: string;
@@ -33,7 +32,8 @@ const SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads";
 
 export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
-  const { port, setPort, session, problem, opening, open, openInTab } = usePreview(runtimeId);
+  const { port, setPort, session, problem, opening, open, openInTab, parseRequestedPort } =
+    usePreview(runtimeId);
   const [asking, setAsking] = useState<number | null>(null);
 
   useEffect(() => {
@@ -45,14 +45,9 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
   }, [offer]);
 
   function ask() {
-    const parsed = parsePort(port);
+    const parsed = parseRequestedPort();
 
-    if (parsed === null) {
-      toast.add({ title: "Enter an address such as localhost:3000", type: "error" });
-      return;
-    }
-
-    setAsking(parsed);
+    if (parsed !== null) setAsking(parsed);
   }
 
   function confirm() {

@@ -16,6 +16,7 @@ import type {
   Placement,
   ResumeRunInput,
   RunResult,
+  RunSharedInput,
   RunThread,
   Runtime,
   RuntimeRun,
@@ -94,43 +95,9 @@ export class RemoteRuntime implements Runtime {
     private agentOnControlPlane = true,
   ) {}
 
-  async start({
-    thread,
-    prompt,
-    compact,
-    attachments,
-    mentions,
-    skills,
-    mcp,
-    github,
-    env,
-    identity,
-    webSearch,
-    lens,
-    memory,
-    cockpit,
-    model,
-    claudeToken,
-    claudeModel,
-    claudeEffort,
-    codexToken,
-    codexModel,
-    codexEffort,
-  }: StartRunInput): Promise<RuntimeRun> {
-    const extras = {
-      skills,
-      mcp,
-      identity,
-      memory,
-      cockpit,
-      github,
-      env,
-      webSearch,
-      lens,
-      claudeToken,
-      codexToken,
-    };
-    return this.#launch(thread, model, extras, undefined, (runId, runModel, credential, placed) => {
+  async start(input: StartRunInput): Promise<RuntimeRun> {
+    const { thread, prompt, compact, attachments, mentions, model } = input;
+    return this.#launch(thread, model, input, undefined, (runId, runModel, credential, placed) => {
       const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
         type: "run.start",
         runId,
@@ -139,109 +106,31 @@ export class RemoteRuntime implements Runtime {
         compact: compact || undefined,
         attachments: attachments?.length ? attachments : undefined,
         mentions: mentions?.length ? mentions : undefined,
-        skills: skills?.length ? skills : undefined,
-        mcp: mcp?.length ? mcp : undefined,
-        github,
-        env: env?.length ? env : undefined,
-        identity: credential,
-        webSearch,
-        lens: nativeLens(lens, thread),
-        memory: memory?.index,
-        cockpit: cockpit?.access,
-        backend: threadBackend(thread),
+        ...sharedRunFields(input, credential),
       };
 
       if (runModel) message.model = runModel;
-
-      if (claudeToken) message.claudeToken = claudeToken;
-
-      if (claudeModel) message.claudeModel = claudeModel;
-
-      if (claudeEffort) message.claudeEffort = claudeEffort;
-
-      if (codexToken) message.codexToken = codexToken;
-
-      if (codexModel) message.codexModel = codexModel;
-
-      if (codexEffort) message.codexEffort = codexEffort;
 
       return message;
     });
   }
 
-  async resume({
-    thread,
-    continuation,
-    response,
-    skills,
-    mcp,
-    github,
-    env,
-    identity,
-    webSearch,
-    lens,
-    memory,
-    cockpit,
-    model,
-    claudeToken,
-    claudeModel,
-    claudeEffort,
-    codexToken,
-    codexModel,
-    codexEffort,
-  }: ResumeRunInput): Promise<RuntimeRun> {
-    const extras = {
-      skills,
-      mcp,
-      identity,
-      memory,
-      cockpit,
-      github,
-      env,
-      webSearch,
-      lens,
-      claudeToken,
-      codexToken,
-    };
+  async resume(input: ResumeRunInput): Promise<RuntimeRun> {
+    const { thread, continuation, response, model } = input;
     return this.#launch(
       thread,
       model,
-      extras,
+      input,
       askedBy(continuation),
-      (runId, runModel, credential, placed) => {
-        const message: Extract<ControlPlaneToRuntime, { type: "run.resume" }> = {
-          type: "run.resume",
-          runId,
-          thread: placed,
-          continuation,
-          response,
-          skills: skills?.length ? skills : undefined,
-          mcp: mcp?.length ? mcp : undefined,
-          github,
-          env: env?.length ? env : undefined,
-          identity: credential,
-          webSearch,
-          lens: nativeLens(lens, thread),
-          memory: memory?.index,
-          cockpit: cockpit?.access,
-          model: runModel,
-          backend: threadBackend(thread),
-        };
-
-        if (claudeToken) message.claudeToken = claudeToken;
-
-        if (claudeModel) message.claudeModel = claudeModel;
-
-        if (claudeEffort) message.claudeEffort = claudeEffort;
-
-        if (codexToken) message.codexToken = codexToken;
-
-        if (codexModel) message.codexModel = codexModel;
-
-        if (codexEffort) message.codexEffort = codexEffort;
-
-        return message;
-      },
+      (runId, runModel, credential, placed) => ({
+        type: "run.resume",
+        runId,
+        thread: placed,
+        continuation,
+        response,
+        model: runModel,
+        ...sharedRunFields(input, credential),
+      }),
     );
   }
 
@@ -395,6 +284,69 @@ export class RemoteRuntime implements Runtime {
 }
 
 const ASKING_AGENT = /^run-(.+)$/;
+
+function sharedRunFields(input: RunSharedInput, credential: RunIdentityCredential | undefined) {
+  const {
+    thread,
+    skills,
+    mcp,
+    github,
+    env,
+    webSearch,
+    lens,
+    memory,
+    cockpit,
+    claudeToken,
+    claudeModel,
+    claudeEffort,
+    codexToken,
+    codexModel,
+    codexEffort,
+  } = input;
+  const fields: {
+    skills?: RunSharedInput["skills"];
+    mcp?: RunSharedInput["mcp"];
+    github?: RunSharedInput["github"];
+    env?: RunSharedInput["env"];
+    identity?: RunIdentityCredential;
+    webSearch?: RunSharedInput["webSearch"];
+    lens?: RunSharedInput["lens"];
+    memory?: NonNullable<RunSharedInput["memory"]>["index"];
+    cockpit?: NonNullable<RunSharedInput["cockpit"]>["access"];
+    backend: ReturnType<typeof threadBackend>;
+    claudeToken?: string;
+    claudeModel?: string;
+    claudeEffort?: string;
+    codexToken?: string;
+    codexModel?: string;
+    codexEffort?: string;
+  } = {
+    skills: skills?.length ? skills : undefined,
+    mcp: mcp?.length ? mcp : undefined,
+    github,
+    env: env?.length ? env : undefined,
+    identity: credential,
+    webSearch,
+    lens: nativeLens(lens, thread),
+    memory: memory?.index,
+    cockpit: cockpit?.access,
+    backend: threadBackend(thread),
+  };
+
+  if (claudeToken) fields.claudeToken = claudeToken;
+
+  if (claudeModel) fields.claudeModel = claudeModel;
+
+  if (claudeEffort) fields.claudeEffort = claudeEffort;
+
+  if (codexToken) fields.codexToken = codexToken;
+
+  if (codexModel) fields.codexModel = codexModel;
+
+  if (codexEffort) fields.codexEffort = codexEffort;
+
+  return fields;
+}
 
 function nativeLens(lens: StartRunInput["lens"], thread: RunThread) {
   return threadBackend(thread) === "native" ? lens : undefined;

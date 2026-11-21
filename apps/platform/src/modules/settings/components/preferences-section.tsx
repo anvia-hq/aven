@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { SettingsRow, SettingsSection } from "@/components/settings-section";
+import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { Switch } from "@aven/ui/switch";
 

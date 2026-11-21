@@ -1,14 +1,7 @@
 import { assertAgentInteractionResponse } from "@anvia/core/agent/interactions";
-import { messagesToChat } from "@aven/agents/projection";
 import { latestMessages, messagesBefore } from "@aven/protocol/message-window";
 import { usageFromHistory } from "@aven/agents/usage";
-import {
-  applyEvent,
-  applyLimits,
-  applyUsage,
-  withSenders,
-  withWorkedTimes,
-} from "@aven/protocol/events";
+import { applyEvent, applyLimits, applyUsage } from "@aven/protocol/events";
 
 import { withoutBytes } from "@aven/server-kit/attachments";
 import {
@@ -17,8 +10,9 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
-import { withContextSplit } from "./context-split";
+import { followStream } from "@aven/server-kit/event-stream";
 import { parseSaved } from "./continuation";
+import { ThreadHistory } from "./history";
 import type { ConversationStore } from "../../types";
 import type {
   ContinuationStore,
@@ -80,15 +74,11 @@ const DRAIN_POLL_MS = 250;
 
 export class RunManager {
   #channels = new Map<string, Channel>();
-  #store: ConversationStore;
+  #history: ThreadHistory;
   #runtime: Runtime;
   #onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
-  #workedTimes: WorkedTimeStore;
-  #senders: SenderStore;
-  #limits: LimitStore;
-  #splits: ContextSplitStore | undefined;
   #draining = false;
 
   constructor(deps: {
@@ -102,15 +92,17 @@ export class RunManager {
     limits: LimitStore;
     splits?: ContextSplitStore;
   }) {
-    this.#store = deps.store;
+    this.#history = new ThreadHistory(
+      deps.store,
+      deps.workedTimes,
+      deps.senders,
+      deps.limits,
+      deps.splits,
+    );
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
     this.#continuations = deps.continuations;
     this.#failures = deps.failures;
-    this.#workedTimes = deps.workedTimes;
-    this.#senders = deps.senders;
-    this.#limits = deps.limits;
-    this.#splits = deps.splits;
   }
 
   runningCount() {
@@ -233,7 +225,7 @@ export class RunManager {
         throw new UnprocessableError(errorMessage(error));
       }
 
-      await this.#store.load({ scope: this.#scope(thread) }).catch((error: unknown) => {
+      await this.#history.loadRaw(thread).catch((error: unknown) => {
         console.warn(`Could not load the history of thread ${thread.id}:`, error);
         throw new UnavailableError("The thread's history could not be loaded; try again shortly");
       });
@@ -299,20 +291,11 @@ export class RunManager {
       finished: Promise.withResolvers<void>(),
     };
     channel.run = run;
-    const loaded = Promise.all([
-      this.#store.load({ scope: this.#scope(thread) }),
-      this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
-      this.#senders.read(thread.id).catch(() => new Map<number, string>()),
-      this.#storedLimits(thread.id),
-      this.#storedSplit(thread.id),
-    ])
-      .then(([history, times, senders, stored, split]) => {
-        run.messages = withSenders(withWorkedTimes(messagesToChat(history), times), senders);
-        const base = {
-          ...withContextSplit(usageFromHistory(history), split),
-          limits: stored.length > 0 ? stored : undefined,
-        };
-        run.usage = run.usage.limits ? applyLimits(base, run.usage.limits) : base;
+    const loaded = this.#history
+      .loadState(thread)
+      .then(({ messages, usage }) => {
+        run.messages = messages;
+        run.usage = run.usage.limits ? applyLimits(usage, run.usage.limits) : usage;
       })
       .then(prepare);
     run.ready = loaded.catch(() => undefined);
@@ -326,7 +309,9 @@ export class RunManager {
       throw new UnavailableError("The thread's history could not be loaded; try again shortly");
     }
 
-    if (opening.type === "run_start") this.#recordSender(channel, run, opening.senderId);
+    if (opening.type === "run_start") {
+      this.#history.recordSender(channel.thread.id, run.messages.length, opening.senderId);
+    }
 
     this.#emit(channel, opening);
     run.markAtStart = answerMark(run.messages);
@@ -382,58 +367,24 @@ export class RunManager {
     return "ended";
   }
 
-  async *events(thread: RunThread, signal: AbortSignal): AsyncGenerator<RunEvent | null> {
+  events(thread: RunThread, signal: AbortSignal): AsyncGenerator<RunEvent | null> {
     const channel = this.#channel(thread);
-    const queue: RunEvent[] = [];
-    let wake: (() => void) | undefined;
-    const listener = (event: RunEvent) => {
-      queue.push(event);
-      wake?.();
-    };
-    channel.subscribers.add(listener);
-    const aborted = new Promise<undefined>((resolve) => {
-      signal.addEventListener("abort", () => resolve(undefined), { once: true });
+    return followStream<RunEvent>({
+      attach: (listener) => {
+        channel.subscribers.add(listener);
+        return () => {
+          channel.subscribers.delete(listener);
+          this.#release(channel);
+        };
+      },
+      initial: async (queue) => ({ type: "snapshot", ...(await this.#attach(channel, queue)) }),
+      signal,
+      pingMs: PING_MS,
     });
-    try {
-      const snapshot = await this.#attach(channel, queue);
-      yield { type: "snapshot", ...snapshot };
-      while (!signal.aborted) {
-        const event = queue.shift();
-
-        if (event) {
-          yield event;
-          continue;
-        }
-
-        const timer = Bun.sleep(PING_MS).then(() => null);
-        const arrived = new Promise<undefined>((resolve) => {
-          wake = () => resolve(undefined);
-        });
-        const woke = await Promise.race([arrived, aborted, timer]);
-        wake = undefined;
-
-        if (woke === null && queue.length === 0 && !signal.aborted) yield null;
-      }
-    } finally {
-      channel.subscribers.delete(listener);
-      this.#release(channel);
-    }
   }
 
   async note(thread: RunThread, prompt: string, senderId?: string) {
-    const at = senderId ? (await this.#stored(thread)).length : 0;
-    await this.#store.append({
-      scope: this.#scope(thread),
-      runId: crypto.randomUUID(),
-      turn: 0,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    if (senderId) {
-      await this.#senders.record(thread.id, at, senderId).catch((error: unknown) => {
-        console.warn(`Could not keep who sent a message of thread ${thread.id}:`, error);
-      });
-    }
+    await this.#history.appendNote(thread, prompt, senderId);
 
     const channel = this.#channels.get(thread.id);
 
@@ -447,16 +398,7 @@ export class RunManager {
 
     if (run) return run.messages;
 
-    return this.#stored(thread);
-  }
-
-  async #stored(thread: RunThread) {
-    const [history, times, senders] = await Promise.all([
-      this.#store.load({ scope: this.#scope(thread) }),
-      this.#workedTimes.read(thread.id).catch(() => new Map<number, number>()),
-      this.#senders.read(thread.id).catch(() => new Map<number, string>()),
-    ]);
-    return withSenders(withWorkedTimes(messagesToChat(history), times), senders);
+    return this.#history.loadMessages(thread);
   }
 
   async latest(thread: RunThread) {
@@ -470,20 +412,6 @@ export class RunManager {
   dispose() {
     for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
     this.#runtime.dispose();
-  }
-
-  async #storedSplit(threadId: string) {
-    return (await this.#splits?.read(threadId).catch(() => null)) ?? null;
-  }
-
-  async #storedLimits(threadId: string) {
-    const stored = await this.#limits.read(threadId).catch(() => []);
-    const now = Date.now();
-    return stored.filter((limit) => limit.resetsAt === undefined || limit.resetsAt > now);
-  }
-
-  #scope(thread: RunThread) {
-    return { sessionId: thread.id, metadata: { organizationId: thread.organizationId } };
   }
 
   #channel(thread: RunThread): Channel {
@@ -526,29 +454,20 @@ export class RunManager {
         };
       }
 
-      const [history, times, senders, failure, stored, split] = await Promise.all([
-        this.#store.load({ scope: this.#scope(channel.thread) }),
-        this.#workedTimes.read(channel.thread.id).catch(() => new Map<number, number>()),
-        this.#senders.read(channel.thread.id).catch(() => new Map<number, string>()),
+      const [state, failure] = await Promise.all([
+        this.#history.loadState(channel.thread),
         this.#failure(channel),
-        this.#storedLimits(channel.thread.id),
-        this.#storedSplit(channel.thread.id),
       ]);
 
       if (channel.run) continue;
 
       queue.length = 0;
-      const shown = latestMessages(
-        withSenders(withWorkedTimes(messagesToChat(history), times), senders),
-      );
+      const shown = latestMessages(state.messages);
       const snapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
         messages: shown.messages,
         hidden: shown.hidden,
         running: false,
-        usage: {
-          ...withContextSplit(usageFromHistory(history), split),
-          limits: stored.length > 0 ? stored : undefined,
-        },
+        usage: state.usage,
       };
 
       if (failure) snapshot.error = failure;
@@ -567,18 +486,17 @@ export class RunManager {
 
     if (event.type === "usage" && run) run.usage = applyUsage(run.usage, event);
 
-    if (event.type === "usage" && event.context?.segments)
-      void this.#splits
-        ?.record(channel.thread.id, {
-          usedTokens: event.context.usedTokens,
-          segments: event.context.segments,
-        })
-        .catch(() => undefined);
+    if (event.type === "usage" && event.context?.segments) {
+      this.#history.recordSplit(
+        channel.thread.id,
+        event.context.usedTokens,
+        event.context.segments,
+      );
+    }
 
     if (event.type === "limits" && run) run.usage = applyLimits(run.usage, event.limits);
 
-    if (event.type === "limits")
-      void this.#limits.record(channel.thread.id, event.limits).catch(() => undefined);
+    if (event.type === "limits") this.#history.recordLimits(channel.thread.id, event.limits);
 
     for (const subscriber of channel.subscribers) subscriber(event);
   }
@@ -621,18 +539,8 @@ export class RunManager {
     if (!message) return;
 
     run.steers.delete(id);
-    this.#recordSender(channel, run, message.senderId);
+    this.#history.recordSender(channel.thread.id, run.messages.length, message.senderId);
     this.#emit(channel, { type: "steer", ...message });
-  }
-
-  #recordSender(channel: Channel, run: ActiveRun, senderId: string | undefined) {
-    if (!senderId) return;
-
-    this.#senders
-      .record(channel.thread.id, run.messages.length, senderId)
-      .catch((error: unknown) => {
-        console.warn(`Could not keep who sent a message of thread ${channel.thread.id}:`, error);
-      });
   }
 
   #reject(channel: Channel, run: ActiveRun, id: string, reason?: string) {
@@ -670,11 +578,7 @@ export class RunManager {
     } else {
       this.#emit(channel, produced ? { type: "done", workedMs } : { type: "done" });
 
-      if (produced) {
-        this.#workedTimes.record(channel.thread.id, answered, workedMs).catch((error: unknown) => {
-          console.warn(`Could not keep how long a run of thread ${channel.thread.id} took:`, error);
-        });
-      }
+      if (produced) this.#history.recordWorkedTime(channel.thread.id, answered, workedMs);
     }
 
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);

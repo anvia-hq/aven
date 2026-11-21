@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
 import { useTheme } from "../hooks/use-theme";
-import { PALETTES } from "../types";
+import { PALETTES } from "../catalog";
 import type { Palette } from "../types";
 
 export function PalettePicker() {

@@ -1,18 +1,11 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { SettingsPage } from "@/components/settings-section";
-import { api } from "@/lib/api";
+import { SettingsPage } from "@aven/ui/settings-section";
 import { PeopleSection } from "@/modules/platform/components/people-section";
-import type { PlatformConfig } from "@/modules/platform/types";
+import { requireOwnerSettings } from "@/modules/platform/require-owner-settings";
 
 export const Route = createFileRoute("/_authed/settings/people")({
-  beforeLoad: async () => {
-    const config = await api<PlatformConfig>("/platform/config");
-
-    if (!config.isOwner || config.platformSettings === false) {
-      throw redirect({ to: "/settings/general" });
-    }
-  },
+  beforeLoad: requireOwnerSettings,
   component: People,
 });
 

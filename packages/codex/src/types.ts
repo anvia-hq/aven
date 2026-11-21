@@ -108,3 +108,13 @@ export type CodexLoader = (options: {
   config: CodexClientConfig;
   codexPathOverride?: string;
 }) => Promise<CodexLike>;
+
+export type CodexDeviceCode = {
+  deviceAuthId: string;
+  userCode: string;
+  verificationUrl: string;
+  intervalSeconds: number;
+  expiresAt: string | null;
+};
+
+export type CodexDevicePoll = { status: "pending" } | { status: "done"; auth: string };

@@ -8,6 +8,16 @@ import {
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@aven/ui/alert-dialog";
 import { Button } from "@aven/ui/button";
 import { Drawer, DrawerClose, DrawerContent, DrawerTitle } from "@aven/ui/drawer";
 import { DropdownMenuItem } from "@aven/ui/dropdown-menu";
@@ -29,7 +39,7 @@ import {
   Property,
 } from "./document-page";
 import { PriorityFlag, StatusDot } from "./task-badges";
-import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "./task-fields";
+import { PRIORITIES, PRIORITY_LABELS, STATUSES, STATUS_LABELS, taskKey } from "../task-fields";
 import { TagInput } from "./tag-input";
 
 type Fields = {
@@ -50,6 +60,13 @@ function DueInput({
   onChange: (value: string | null) => void;
 }) {
   const [typed, setTyped] = useState(value ?? "");
+  const [synced, setSynced] = useState(value);
+
+  if (synced !== value) {
+    setSynced(value);
+    setTyped(value ?? "");
+  }
+
   return (
     <Input
       aria-label="Due date"
@@ -293,6 +310,7 @@ const STRAY = new Set(["outside-press", "swipe", "escape-key", "close-watcher", 
 
 export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: () => void }) {
   const { tasks } = useTasks();
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const written = useRef(false);
   const onWritten = useCallback((value: boolean) => {
     written.current = value;
@@ -306,31 +324,56 @@ export function TaskDrawer({ open, onClose }: { open: TaskOpen | null; onClose: 
   const isOpen = open !== null && (open.kind === "new" || task !== undefined);
 
   return (
-    <Drawer
-      open={isOpen}
-      onOpenChange={(next, details) => {
-        if (next) return;
+    <>
+      <Drawer
+        open={isOpen}
+        onOpenChange={(next, details) => {
+          if (next) return;
 
-        const draft = shown?.kind === "new" && written.current;
+          const draft = shown?.kind === "new" && written.current;
 
-        if (draft && STRAY.has(details.reason) && !window.confirm("Discard this new task?")) {
-          return details.cancel();
-        }
+          if (draft && STRAY.has(details.reason)) {
+            details.cancel();
+            setConfirmDiscard(true);
+            return;
+          }
 
-        written.current = false;
-        onClose();
-      }}
-      swipeDirection="right"
-    >
-      <DrawerContent className="[--doc-surface:var(--color-popover)] data-[swipe-axis=x]:[--drawer-content-width:100%] data-[swipe-axis=x]:sm:[--drawer-content-width:min(44rem,90vw)]">
-        <DrawerTitle className="sr-only">{task ? taskKey(task) : "New task"}</DrawerTitle>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {shown?.kind === "new" && (
-            <NewTaskPage initial={shown.initial} onDone={onClose} onWritten={onWritten} />
-          )}
-          {task && <TaskPage key={task.id} task={task} onClose={onClose} />}
-        </div>
-      </DrawerContent>
-    </Drawer>
+          written.current = false;
+          onClose();
+        }}
+        swipeDirection="right"
+      >
+        <DrawerContent className="[--doc-surface:var(--color-popover)] data-[swipe-axis=x]:[--drawer-content-width:100%] data-[swipe-axis=x]:sm:[--drawer-content-width:min(44rem,90vw)]">
+          <DrawerTitle className="sr-only">{task ? taskKey(task) : "New task"}</DrawerTitle>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            {shown?.kind === "new" && (
+              <NewTaskPage initial={shown.initial} onDone={onClose} onWritten={onWritten} />
+            )}
+            {task && <TaskPage key={task.id} task={task} onClose={onClose} />}
+          </div>
+        </DrawerContent>
+      </Drawer>
+      <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this new task?</AlertDialogTitle>
+            <AlertDialogDescription>Your unsaved task draft will be lost.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                written.current = false;
+                setConfirmDiscard(false);
+                onClose();
+              }}
+            >
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

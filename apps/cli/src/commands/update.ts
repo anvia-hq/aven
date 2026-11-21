@@ -1,5 +1,7 @@
+import { isValidRelease } from "@aven/protocol/release";
+
 import { stringFlag } from "../args";
-import { run } from "../compose";
+import { run } from "../process";
 import {
   clearPendingUpdate,
   pendingUpdateFile,
@@ -34,7 +36,12 @@ export async function update(args: Args) {
   if (version === "dev")
     throw new Error("This is a development build of aven and cannot update itself.");
 
-  const wanted = stringFlag(args, "release")?.replace(/^v/, "") ?? (await latestVersion());
+  const explicit = stringFlag(args, "release")?.replace(/^v/, "");
+
+  if (explicit !== undefined && !isValidRelease(explicit))
+    throw new Error(`--release must be a release version such as 0.1.0, got "${explicit}"`);
+
+  const wanted = explicit ?? (await latestVersion());
   const marker = pendingUpdateFile();
   const pending = await readPendingUpdate(marker);
   const step = updateStep({ version, wanted, force: Boolean(args.flags.force), pending });

@@ -138,25 +138,14 @@ function createStage(): Stage {
   fill.position.set(5, 1, 4);
   scene.add(key, fill, new HemisphereLight(0xffffff, 0xc4d4f0, 0.55));
 
-  window.addEventListener("pointermove", (event) => {
+  const onPointerMove = (event: PointerEvent) => {
     pointer.x = event.clientX;
     pointer.y = event.clientY;
     pointer.moved = true;
-  });
+  };
+  window.addEventListener("pointermove", onPointerMove, { passive: true });
 
   const entries = new Set<Entry>();
-
-  renderer.domElement.addEventListener("webglcontextlost", (event) => {
-    event.preventDefault();
-    stage = null;
-
-    for (const entry of entries) {
-      entry.visible = false;
-      drawFallback(entry.canvas, entry.color);
-    }
-
-    entries.clear();
-  });
 
   const observer =
     typeof IntersectionObserver === "undefined"
@@ -174,7 +163,7 @@ function createStage(): Stage {
           schedule();
         });
 
-  return {
+  const created: Stage = {
     renderer,
     scene,
     camera,
@@ -187,6 +176,27 @@ function createStage(): Stage {
     time: 0,
     reduced: window.matchMedia("(prefers-reduced-motion: reduce)"),
   };
+
+  renderer.domElement.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    window.removeEventListener("pointermove", onPointerMove);
+
+    if (created.frame !== null) {
+      cancelAnimationFrame(created.frame);
+      created.frame = null;
+    }
+
+    stage = null;
+
+    for (const entry of entries) {
+      entry.visible = false;
+      drawFallback(entry.canvas, entry.color);
+    }
+
+    entries.clear();
+  });
+
+  return created;
 }
 
 function ensureStage() {
@@ -331,6 +341,11 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
       current.entries.delete(entry);
       current.scene.remove(model.root);
       model.dispose();
+
+      if (current.entries.size === 0 && current.frame !== null) {
+        cancelAnimationFrame(current.frame);
+        current.frame = null;
+      }
     },
   };
 }

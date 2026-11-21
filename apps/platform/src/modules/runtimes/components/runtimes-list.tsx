@@ -3,7 +3,7 @@ import { cn } from "cn";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
-import { SettingsEmpty } from "@/components/settings-section";
+import { SettingsEmpty } from "@aven/ui/settings-section";
 import { timeAgo } from "@/lib/format";
 
 import { githubModeNote } from "../github-mode";

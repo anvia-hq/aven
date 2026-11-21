@@ -1,11 +1,10 @@
 import type { MemoryStore } from "@anvia/core";
-import { BOT_MESSAGE_MAX, BOT_MESSAGES_PER_REPLY, parseBotPrompt } from "@aven/protocol/bots";
 import { isGoalRoundNote } from "@aven/protocol/goals";
 import type { RunGateway } from "../runtimes/gateway";
 import { RuntimeOfflineError, type RuntimeHub } from "../runtimes/hub";
 import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { answerBotMemory } from "./memory-answer";
-import { replyHosts } from "./reply-hosts";
+import { prepareBotReply, replyAbortError } from "./reply-setup";
 import { TalkBotReplier } from "./talk-replier";
 import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
@@ -21,7 +20,7 @@ import type {
 import type { BotMcp } from "../mcp/types";
 import type { BotProviders, BotRunChoice } from "../providers/types";
 import type { BotThreads } from "../threads/types";
-import { describeError, UnavailableError } from "@aven/server-kit/errors";
+import { UnavailableError } from "@aven/server-kit/errors";
 import type {
   AgentBackendKind,
   Bot,
@@ -30,7 +29,6 @@ import type {
   BotMcped,
   BotMcpParams,
   BotNotesParams,
-  BotPeer,
   BotProjected,
   BotProjectParams,
   BotProvided,
@@ -51,18 +49,6 @@ import type {
   BotThreadParams,
   BotUpdateParams,
 } from "@aven/protocol/types";
-
-function relayedQuestion(bot: Bot, questions: BotQuestionParams["questions"]) {
-  const line = (text: string) => text.replace(/\s+/g, " ").trim();
-  const asked = questions
-    .map((question) => {
-      const choices = question.choices?.map((choice) => line(choice.label)).join(", ");
-      return `- id "${line(question.id)}": ${line(question.text)}${choices ? ` (choices: ${choices})` : ""}`;
-    })
-    .join("\n");
-  const text = `${line(bot.name)} (${bot.handle}) needs a decision from the person to go on. Ask the person with ask_question, offering the same choices, and when they answer, send it to ${bot.handle} with send_message. The questions:\n${asked}`;
-  return text.slice(0, BOT_MESSAGE_MAX);
-}
 
 function backendName(backend: AgentBackendKind) {
   return backend === "claude" ? "the Claude agent" : "the Codex agent";
@@ -125,11 +111,8 @@ export class RemoteBotReplier implements BotReplier {
       choice,
       prompt,
       attachments,
-      hops,
       onPersonsWord,
-      aboutThread,
       say,
-      ask,
       react,
       activity,
       signal,
@@ -142,66 +125,26 @@ export class RemoteBotReplier implements BotReplier {
 
     if (bot.runtimeId) await this.bots.usableRuntime(userId, bot.runtimeId);
 
-    const peers = await this.#peersOf(userId, bot.id);
-    const timezone = await this.bots.timezone(userId);
-    const skills = await this.skills.forRun(userId);
-    const mcpServers = await this.mcp.forRun(userId);
+    const [skills, mcpServers, setup] = await Promise.all([
+      this.skills.forRun(userId),
+      this.mcp.forRun(userId),
+      prepareBotReply(input, {
+        bots: this.bots,
+        mcp: this.mcp,
+        providers: this.providers,
+        threads: this.threads,
+        notes: this.notes,
+        world: this.world,
+      }),
+    ]);
     const givenMcp = new Set(mcpServers.map((server) => server.id));
-    const world = await this.world.forReply(userId);
-    const memoryOwner = {
-      userId,
-      botId: bot.id,
-      readProjects: world.projects.map(({ id, slug }) => ({ id, slug })),
-    };
-    const keepsNotes = onPersonsWord;
-    await this.notes
-      .keepDigest(userId, bot.id)
-      .catch((error: unknown) =>
-        console.warn(`Could not keep the activity digest of bot ${bot.id}:`, describeError(error)),
-      );
-    const folders = await this.notes.folders(memoryOwner);
-    signal.throwIfAborted();
+    const { peers, timezone, world, folders, hosts, sendToBot, askQuestion, makesBotsOnTheirWord } =
+      setup;
     const runtimeId = this.#runtimeOf(bot);
     const { connection, machine } = this.#place(runtimeId);
     const replyId = crypto.randomUUID();
     const runModel = choice.model ? this.gateway.issue(replyId, choice.model) : undefined;
     const ended = Promise.withResolvers<void>();
-    const { from, note } = parseBotPrompt(prompt);
-    const makesBotsOnTheirWord = onPersonsWord && from === undefined;
-    const hosts = replyHosts({
-      bot,
-      userId,
-      prompt,
-      hops,
-      onPersonsWord,
-      aboutThread,
-      memoryOwner,
-      ask,
-      bots: this.bots,
-      mcp: this.mcp,
-      providers: this.providers,
-      threads: this.threads,
-      notes: this.notes,
-      world: this.world,
-    });
-    let written = 0;
-    const sendToBot = async (to: string, text: string) => {
-      if (written >= BOT_MESSAGES_PER_REPLY) {
-        throw new Error(
-          `You have written to bots ${BOT_MESSAGES_PER_REPLY} times in this reply. Tell the person instead.`,
-        );
-      }
-
-      written += 1;
-      return this.bots.deliver({
-        userId,
-        from: bot,
-        hops,
-        handle: to,
-        text,
-        relaysPersonsWord: bot.isMain && onPersonsWord,
-      });
-    };
     const sink = {
       say,
       activity: (label: string | null) => activity?.(label),
@@ -215,29 +158,8 @@ export class RemoteBotReplier implements BotReplier {
       delete: async ({ handle }: Omit<BotDeleteParams, "replyId">): Promise<BotDeleted> =>
         hosts.deleteBot({ handle }),
       send: ({ to, text }: Omit<BotSendParams, "replyId">) => sendToBot(to, text),
-      question: async ({
-        questions,
-      }: Omit<BotQuestionParams, "replyId">): Promise<BotQuestioned> => {
-        if (note) throw new Error("Nobody is there to answer: this was not the person's message");
-
-        if (hosts.asked())
-          throw new Error("You have already asked. Stop now and wait for the answer.");
-
-        hosts.takeAsked();
-
-        if (bot.isMain || from === undefined) {
-          ask(questions);
-          return {};
-        }
-
-        const main = (await this.bots.list(userId)).find((other) => other.isMain);
-
-        if (!main) throw new Error("There is no main bot to ask the person");
-
-        const text = relayedQuestion(bot, questions);
-        const sent = await sendToBot(main.handle, text);
-        return { relayed: { handle: sent.handle, name: sent.name, text } };
-      },
+      question: ({ questions }: Omit<BotQuestionParams, "replyId">): Promise<BotQuestioned> =>
+        askQuestion(questions),
       schedule: async (params: BotScheduleParams): Promise<BotScheduled> => {
         if (params.op === "list") return hosts.schedules.list();
 
@@ -403,7 +325,7 @@ export class RemoteBotReplier implements BotReplier {
           attachments: attachments?.length ? attachments : undefined,
           skills: skills.length ? skills : undefined,
           mcp: mcpServers.length ? mcpServers : undefined,
-          memory: { folders, writable: keepsNotes },
+          memory: { folders, writable: onPersonsWord },
           cockpit: "write",
           context: world.context,
           projects: world.projects.length ? world.projects : undefined,
@@ -419,13 +341,6 @@ export class RemoteBotReplier implements BotReplier {
       signal.removeEventListener("abort", cancel);
       this.gateway.revoke(replyId);
     }
-  }
-
-  async #peersOf(userId: string, selfId: string): Promise<BotPeer[]> {
-    const bots = await this.bots.list(userId);
-    return bots.flatMap(({ id, handle, name, description }) =>
-      id === selfId ? [] : [{ handle, name, description }],
-    );
   }
 
   #runtimeOf(bot: Pick<Bot, "runtimeId">) {
@@ -451,10 +366,7 @@ export class RemoteBotReplier implements BotReplier {
 
   #cancel(replyId: string, signal: AbortSignal, runtimeId: string) {
     try {
-      this.#place(runtimeId).connection.cancelBotReply(replyId, errorOf(signal));
+      this.#place(runtimeId).connection.cancelBotReply(replyId, replyAbortError(signal).message);
     } catch {}
   }
 }
-
-const errorOf = (signal: AbortSignal) =>
-  signal.reason instanceof Error ? signal.reason.message : "The reply was cancelled";

@@ -2,7 +2,7 @@ import { useAtom } from "jotai";
 import type { CSSProperties } from "react";
 
 import { textSizeAtoms } from "../atoms/text-size-atoms";
-import { TEXT_SIZES } from "../types";
+import { TEXT_SIZES } from "../catalog";
 import type { TextSizeScope } from "../types";
 
 export const scaleOf = (id: string) => TEXT_SIZES.find((option) => option.id === id)?.scale ?? 1;

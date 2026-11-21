@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { signHmacJson, verifyHmacJson } from "@aven/server-kit/tokens";
 import { z } from "zod";
 
 import type { PreviewClaims, PreviewTokenKind } from "./types";
@@ -10,9 +10,6 @@ const payload = z.object({
   exp: z.number(),
 });
 
-const signature = (secret: Uint8Array, body: string) =>
-  createHmac("sha256", secret).update(body).digest("base64url");
-
 export function signPreviewToken(
   secret: Uint8Array,
   kind: PreviewTokenKind,
@@ -20,10 +17,12 @@ export function signPreviewToken(
   ttlMs: number,
   now = Date.now(),
 ) {
-  const body = Buffer.from(
-    JSON.stringify({ k: kind, runtimeId: claims.runtimeId, port: claims.port, exp: now + ttlMs }),
-  ).toString("base64url");
-  return `${body}.${signature(secret, body)}`;
+  return signHmacJson(secret, {
+    k: kind,
+    runtimeId: claims.runtimeId,
+    port: claims.port,
+    exp: now + ttlMs,
+  });
 }
 
 export function verifyPreviewToken(
@@ -32,28 +31,17 @@ export function verifyPreviewToken(
   token: string,
   now = Date.now(),
 ): { claims: PreviewClaims; expiresAt: number } | null {
-  const [body, given, extra] = token.split(".");
+  const raw = verifyHmacJson(secret, token);
 
-  if (!body || !given || extra !== undefined) return null;
+  if (raw === null) return null;
 
-  const expected = Buffer.from(signature(secret, body));
-  const actual = Buffer.from(given);
+  const parsed = payload.safeParse(raw);
 
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
-
-  let parsed: z.infer<typeof payload>;
-
-  try {
-    parsed = payload.parse(JSON.parse(Buffer.from(body, "base64url").toString()));
-  } catch {
-    return null;
-  }
-
-  if (parsed.k !== kind || parsed.exp <= now) return null;
+  if (!parsed.success || parsed.data.k !== kind || parsed.data.exp <= now) return null;
 
   return {
-    claims: { runtimeId: parsed.runtimeId, port: parsed.port },
-    expiresAt: parsed.exp,
+    claims: { runtimeId: parsed.data.runtimeId, port: parsed.data.port },
+    expiresAt: parsed.data.exp,
   };
 }
 

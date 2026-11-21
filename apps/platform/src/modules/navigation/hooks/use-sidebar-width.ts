@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent, type PointerEvent } from "react";
 
-import { useLocalStorage } from "@/hooks/use-local-storage";
+import { useLocalStorage } from "@aven/ui/use-local-storage";
 
 const STORAGE_KEY = "aven.sidebar-width";
 const DEFAULT_WIDTH = 240;

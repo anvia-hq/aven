@@ -1,4 +1,4 @@
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { timeAgo } from "@/lib/format";
 
 import type { Project } from "../types";

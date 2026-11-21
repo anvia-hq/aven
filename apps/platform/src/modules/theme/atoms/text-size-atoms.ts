@@ -1,6 +1,7 @@
 import { atomWithStorage } from "jotai/utils";
 
-import { DEFAULT_TEXT_SIZE, TEXT_SIZE_STORAGE_KEYS, type TextSize } from "../types";
+import { DEFAULT_TEXT_SIZE, TEXT_SIZE_STORAGE_KEYS } from "../catalog";
+import type { TextSize } from "../types";
 
 export const textSizeAtoms = {
   interface: atomWithStorage<TextSize>(TEXT_SIZE_STORAGE_KEYS.interface, DEFAULT_TEXT_SIZE),

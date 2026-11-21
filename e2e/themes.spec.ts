@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { DEFAULT_PALETTE, PALETTES } from "../apps/platform/src/modules/theme/types";
+import { DEFAULT_PALETTE, PALETTES } from "../apps/platform/src/modules/theme/catalog";
 import { registerUser } from "./helpers";
 
 async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {

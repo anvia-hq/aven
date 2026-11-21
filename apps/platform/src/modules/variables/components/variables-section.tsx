@@ -4,7 +4,7 @@ import { Badge } from "@aven/ui/badge";
 import { cn } from "cn";
 
 import { Button } from "@aven/ui/button";
-import { SectionCard } from "@/components/section-card";
+import { SectionCard } from "@aven/ui/section-card";
 import { MAX_VARIABLES } from "@aven/protocol/variables";
 
 import { useCanChangeVariables } from "../hooks/use-can-change-variables";

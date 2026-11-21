@@ -4,7 +4,7 @@ import { useRef, useState, type DragEvent } from "react";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
-import { SettingsSection } from "@/components/settings-section";
+import { SettingsSection } from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 import { fileSize } from "@/lib/format";
 

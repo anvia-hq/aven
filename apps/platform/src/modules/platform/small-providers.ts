@@ -1,6 +1,8 @@
-import type { ServerModelOption } from "./types";
+import type { ServerModelOption, SmallModelProvider } from "./types";
 
-export const SMALL_PROVIDERS: ServerModelOption[] = [
+type SmallProviderOption = ServerModelOption & { id: SmallModelProvider };
+
+export const SMALL_PROVIDERS: SmallProviderOption[] = [
   {
     id: "anthropic",
     label: "Anthropic",

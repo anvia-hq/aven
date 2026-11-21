@@ -1,22 +1,24 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
-import { homedir, userInfo } from "node:os";
-import { dirname, join } from "node:path";
+import { userInfo } from "node:os";
+import { dirname } from "node:path";
 
-import { exec } from "./compose";
+import { exec } from "./process";
 import { launchdPlist, systemdUnit } from "./service-files";
+import { serviceFile } from "./service-unit";
 import { withUserBus } from "./user-bus";
-import type { ServiceManager } from "./types";
+import type { Env, ServiceManager, ServiceNames } from "./types";
 
-async function mustRun(command: string[], env?: Record<string, string | undefined>) {
+async function mustRun(command: string[], env?: Env) {
   const { code, out } = await exec(command, env);
 
   if (code !== 0) throw new Error(`${command.slice(0, 2).join(" ")} failed: ${out}`);
 }
 
-function launchd(label: string): ServiceManager {
+function launchd(names: ServiceNames): ServiceManager {
+  const label = names.launchdLabel;
   const domain = `gui/${process.getuid?.() ?? 501}`;
   const target = `${domain}/${label}`;
-  const plist = join(homedir(), "Library", "LaunchAgents", `${label}.plist`);
+  const plist = serviceFile("darwin", names)!;
   const loaded = async () => (await exec(["launchctl", "print", target])).code === 0;
   const unload = async () => {
     await exec(["launchctl", "bootout", target]);
@@ -54,8 +56,9 @@ function launchd(label: string): ServiceManager {
   };
 }
 
-function systemd(unit: string): ServiceManager {
-  const file = join(homedir(), ".config", "systemd", "user", `${unit}.service`);
+function systemd(names: ServiceNames): ServiceManager {
+  const unit = names.systemdUnit;
+  const file = serviceFile("linux", names)!;
   const env = () => withUserBus(process.env, process.getuid?.());
   const ctl = (...args: string[]) => ["systemctl", "--user", ...args];
   const run = (...args: string[]) => mustRun(ctl(...args), env());
@@ -68,7 +71,7 @@ function systemd(unit: string): ServiceManager {
       await run("daemon-reload");
       await run("enable", unit);
       await run("restart", unit);
-      await exec(["loginctl", "enable-linger", process.env.USER ?? userInfo().username]);
+      await exec(["loginctl", "enable-linger", process.env.USER ?? userInfo().username], env());
     },
     async uninstall() {
       await attempt("disable", "--now", unit);
@@ -85,13 +88,10 @@ function systemd(unit: string): ServiceManager {
   };
 }
 
-export function serviceManager(names: {
-  launchdLabel: string;
-  systemdUnit: string;
-}): ServiceManager {
-  if (process.platform === "darwin") return launchd(names.launchdLabel);
+export function serviceManager(names: ServiceNames): ServiceManager {
+  if (process.platform === "darwin") return launchd(names);
 
-  if (process.platform === "linux") return systemd(names.systemdUnit);
+  if (process.platform === "linux") return systemd(names);
 
   throw new Error(
     `Running a service is not supported on ${process.platform} yet; run \`aven runner run\` in a terminal.`,

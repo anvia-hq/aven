@@ -144,7 +144,7 @@ export function DiffVirtualList({ items, onToggle, footer }: Props) {
 
       if (node.scrollLeft !== want) write(node, want);
     }
-  });
+  }, [rows]);
 
   const mirrorCodeScroll = (event: UIEvent<HTMLDivElement>) => {
     const node = event.target as HTMLElement;

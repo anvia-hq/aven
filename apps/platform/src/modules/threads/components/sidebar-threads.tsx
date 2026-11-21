@@ -1,7 +1,7 @@
 import { IconGitBranch, IconShare } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
 import { dragThread } from "@/lib/thread-drag";
@@ -10,18 +10,19 @@ import { useProjects } from "@/modules/projects/hooks/use-projects";
 import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 
-import { nestForks } from "../fork-nesting";
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
+import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { usePinThread } from "../hooks/use-pin-thread";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useRestoreThread } from "../hooks/use-restore-thread";
-import { useThreads } from "../hooks/use-threads";
+import { useRunningThreadsPoll } from "../hooks/use-running-threads-poll";
 import { useSplitPairs } from "../hooks/use-split-pairs";
-import { useMentionedThreads } from "../hooks/use-mentioned-threads";
+import { useThreads } from "../hooks/use-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
 import { splitPinned, withoutPinned } from "../pinned-threads";
 import { recencyGroups } from "../recency-groups";
+import { buildSidebarRows } from "../sidebar-rows";
 import { crowdOf } from "../thread-crowd";
 import { statusOfPair, threadStatus } from "../thread-status";
 import type { Thread, ThreadStatus } from "../types";
@@ -30,8 +31,6 @@ import { SidebarSection } from "./sidebar-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadMark } from "./thread-mark";
 import { ThreadTitleField } from "./thread-title-field";
-
-const RUNNING_REFRESH_MS = 5000;
 
 function SidebarThreadMark({
   thread,
@@ -187,16 +186,20 @@ export function SidebarThreads() {
   const groups = withoutPinned(recencyGroups(threads), pinnedIds);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  const anyRunning = [...own, ...others].some((thread) => thread.running);
-  useEffect(() => {
-    if (!anyRunning) return;
+  const projectsById = useMemo(
+    () => new Map(projects.map((project) => [project.id, project])),
+    [projects],
+  );
+  const runtimesById = useMemo(
+    () => new Map(runtimes.map((runtime) => [runtime.id, runtime])),
+    [runtimes],
+  );
 
-    const timer = setInterval(() => void refresh(), RUNNING_REFRESH_MS);
-    return () => clearInterval(timer);
-  }, [anyRunning, refresh]);
+  const anyRunning = [...own, ...others].some((thread) => thread.running);
+  useRunningThreadsPoll(anyRunning, refresh);
 
   function hostLabel(thread: Thread) {
-    const host = runtimes.find((runtime) => runtime.id === thread.runtimeId)?.name ?? "a runner";
+    const host = runtimesById.get(thread.runtimeId)?.name ?? "a runner";
     return `${thread.running ? "Running" : "Hosted"} on ${host}`;
   }
 
@@ -225,7 +228,7 @@ export function SidebarThreads() {
         >
           <SidebarThreadMark
             thread={thread}
-            project={projects.find((candidate) => candidate.id === thread.projectId)}
+            project={projectsById.get(thread.projectId)}
             palette={palettes.get(thread.projectId)}
           />
           <SharedMark thread={thread} />
@@ -279,7 +282,7 @@ export function SidebarThreads() {
               <SidebarThreadMark
                 key={thread.id}
                 thread={thread}
-                project={projects.find((candidate) => candidate.id === thread.projectId)}
+                project={projectsById.get(thread.projectId)}
                 palette={palettes.get(thread.projectId)}
               />
             ))}
@@ -299,34 +302,12 @@ export function SidebarThreads() {
     );
   }
 
-  function pairedWith(id: string, list: Thread[]) {
-    const partner = list.find((thread) => thread.id === partnerOf(id));
-    return partner && partner.id !== id ? partner : undefined;
-  }
-
   function rows(list: Thread[]) {
-    return nestForks(list).map(({ thread, nested }, index, all) => {
-      const partner = pairedWith(thread.id, list);
-
-      if (partner) {
-        const first =
-          all.findIndex((each) => each.thread.id === thread.id) <
-          all.findIndex((each) => each.thread.id === partner.id);
-
-        if (!first) return null;
-
-        const ordered: [Thread, Thread] = pairs.some(([left]) => left === partner.id)
-          ? [partner, thread]
-          : [thread, partner];
-        return pairRow(ordered);
-      }
-
-      const joins = (at: number) => {
-        const neighbour = all[at];
-        return neighbour?.nested === true && !pairedWith(neighbour.thread.id, list);
-      };
-      return row(thread, { nested, first: !joins(index - 1), last: !joins(index + 1) });
-    });
+    return buildSidebarRows(list, pairs, partnerOf).map((entry) =>
+      entry.kind === "pair"
+        ? pairRow(entry.pair)
+        : row(entry.thread, { nested: entry.nested, first: entry.first, last: entry.last }),
+    );
   }
 
   return (
@@ -373,7 +354,7 @@ export function SidebarThreads() {
                 >
                   <SidebarThreadMark
                     thread={thread}
-                    project={projects.find((candidate) => candidate.id === thread.projectId)}
+                    project={projectsById.get(thread.projectId)}
                     palette={palettes.get(thread.projectId)}
                   />
                   <SharedMark thread={thread} />

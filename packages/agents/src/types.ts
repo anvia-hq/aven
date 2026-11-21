@@ -58,3 +58,14 @@ export type BotFiles = {
   readFile(options: { path: string; abortSignal?: AbortSignal | undefined }): Promise<Uint8Array>;
   save(bytes: Uint8Array, mediaType: string): Promise<string>;
 };
+
+export type SkillFiles = Map<string, Uint8Array>;
+
+export type PackedSkill = {
+  name: string;
+  description: string;
+  archive: Uint8Array;
+  digest: string;
+  size: number;
+  fileCount: number;
+};

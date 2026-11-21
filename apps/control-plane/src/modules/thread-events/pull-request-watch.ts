@@ -1,4 +1,5 @@
 import { describeError } from "@aven/server-kit/errors";
+import { createPoller } from "@aven/server-kit/poller";
 
 import type { ThreadEventNotes } from "./event-notes";
 import type { PullWatchSource, WatchedPull } from "./types";
@@ -12,8 +13,6 @@ export function createPullRequestWatch(options: {
   intervalMs?: number;
 }) {
   const { source, notes, intervalMs = PULL_WATCH_INTERVAL_MS } = options;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<void> | undefined;
 
   async function check(pull: WatchedPull) {
     const detail = await source.inspect(pull);
@@ -52,27 +51,12 @@ export function createPullRequestWatch(options: {
     }
   }
 
-  const guarded = () => {
-    ticking ??= tick()
-      .catch((error: unknown) =>
-        console.warn("A pull request watch tick failed:", describeError(error)),
-      )
-      .finally(() => (ticking = undefined));
-    return ticking;
-  };
+  const poller = createPoller({
+    intervalMs,
+    run: tick,
+    onError: (error) => console.warn("A pull request watch tick failed:", describeError(error)),
+    immediate: false,
+  });
 
-  return {
-    tick,
-    start() {
-      if (timer) return;
-
-      timer = setInterval(() => void guarded(), intervalMs);
-      timer.unref();
-    },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
-  };
+  return { tick, start: poller.start, close: poller.close };
 }

@@ -25,11 +25,9 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@aven/ui/dropdown-menu";
-import { toast } from "@aven/ui/toast";
-
-import { copyToClipboard } from "@/lib/clipboard";
 
 import { EXPORT_FORMATS } from "../export-formats";
+import { useCopyThreadUrl } from "../hooks/use-copy-thread-url";
 import { useExportThread } from "../hooks/use-export-thread";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useThreadColors } from "../hooks/use-thread-colors";
@@ -162,15 +160,7 @@ export function ThreadOptionsMenu({
 }: Props) {
   const handingOff = useRef(false);
   const { exportThread } = useExportThread();
-
-  async function copyThreadUrl() {
-    const copied = await copyToClipboard(`${window.location.origin}/threads/${thread.id}`);
-    toast.add(
-      copied
-        ? { title: "Thread URL copied", type: "success" }
-        : { title: "Could not copy the thread URL", type: "error" },
-    );
-  }
+  const { copyThreadUrl } = useCopyThreadUrl();
 
   function handleOpenChange(open: boolean) {
     if (open) handingOff.current = false;
@@ -186,7 +176,7 @@ export function ThreadOptionsMenu({
         className="w-auto min-w-[300px]"
         finalFocus={() => !handingOff.current}
       >
-        <DropdownMenuItem onClick={() => void copyThreadUrl()}>
+        <DropdownMenuItem onClick={() => void copyThreadUrl(thread.id)}>
           <IconCopy />
           Copy Thread URL
         </DropdownMenuItem>

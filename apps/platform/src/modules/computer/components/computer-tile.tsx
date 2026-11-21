@@ -1,9 +1,8 @@
 import { useCallback, useMemo } from "react";
 
+import { tileColors, tileSeed } from "@/lib/tile";
 import { MarkCanvas } from "@/modules/marks/components/mark-canvas";
-import type { MarkFrame } from "@/modules/marks/types";
-import type { OrbColors } from "@/modules/projects/types";
-import { tileColors, tileSeed } from "@/modules/projects/tile";
+import type { MarkFrame, OrbColors } from "@/modules/marks/types";
 
 import { boxRotation, boxShape, paintBox } from "../box-art";
 

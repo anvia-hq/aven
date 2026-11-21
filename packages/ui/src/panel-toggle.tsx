@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 
 import { cn } from "cn";
 
-import { Button } from "@aven/ui/button";
+import { Button } from "./button";
 
 type Props = {
   label: string;

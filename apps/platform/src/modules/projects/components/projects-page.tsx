@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
 import { Button, buttonVariants } from "@aven/ui/button";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@aven/ui/page-header";
 import { Skeleton } from "@aven/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { authClient } from "@/lib/auth-client";

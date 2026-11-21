@@ -1,11 +1,12 @@
 import type { CloudLifecycle } from "../cloud-lifecycle/types";
-import type { RuntimeConnection } from "./hub";
+import type { RuntimeConnection } from "./connection";
 import type { runnerVia } from "./ask-runner";
 import type { MODES } from "./local";
 import type { MemoryStore } from "@anvia/core";
 import type { MemoryCaller } from "../memory/types";
 import type { CockpitCaller } from "../cockpit/types";
-import type { ThreadForks } from "../threads/types";
+import type { ProcessEnds, ThreadForks } from "../threads/types";
+import type { MachineProcessWatch } from "./machine-process-watch";
 import type {
   ToolArtifact,
   BotCockpitParams,
@@ -42,6 +43,7 @@ import type {
   RepoAccess,
   RunEvent,
   RunOutcome,
+  RunSecrets,
   RunThreadInfo,
   RuntimeProviderKind,
 } from "@aven/protocol/types";
@@ -177,4 +179,39 @@ export type AdmissionOptions = {
   sleep?: (ms: number) => Promise<void>;
   pollMs?: number;
   maxWaitMs?: number;
+};
+
+export type TrackedRun = {
+  thread: RunThreadInfo;
+  sink: RunSink;
+  lastSeq: number;
+  appended: Set<number>;
+  skills: Set<string>;
+  mcp: Set<string>;
+  memory?: MemoryCaller;
+  cockpit?: CockpitCaller;
+  secrets?: RunSecrets;
+  cancel?: string;
+};
+
+export type RuntimeHelloInfo = {
+  host: boolean;
+  dirs: string[];
+};
+
+export type RuntimeHubHost = {
+  readonly store: MemoryStore;
+  readonly repoAccess: (threadId: string) => Promise<RepoAccess>;
+  readonly folderOf: (threadId: string) => Promise<string | null>;
+  readonly skillArchive: (digest: string) => Promise<Uint8Array | undefined>;
+  readonly mcpReport: (results: McpConnectResult[]) => Promise<void>;
+  readonly machineWatches: MachineProcessWatch;
+  forks: ThreadForks;
+  processEnds: ProcessEnds;
+  machines: MachineRelay;
+  onHello(runtimeId: string, info: RuntimeHelloInfo): void;
+  reclaim(connection: RuntimeConnection, reported: string[]): void;
+  runsOnMachine(machineId: string, threadId: string): boolean | undefined;
+  hold(runtimeId: string, runs: [string, TrackedRun][]): void;
+  detach(connection: RuntimeConnection): void;
 };

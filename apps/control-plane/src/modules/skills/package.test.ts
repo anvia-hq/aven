@@ -3,8 +3,8 @@ import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { packSkill, skillFolder } from "@aven/agents/skill-package";
 import { BUILTIN_SKILLS_DIR, builtinSkills } from "./builtins";
-import { packSkill, skillFolder } from "./package";
 
 const b64 = (text: string) => new TextEncoder().encode(text).toBase64();
 const skillMd = (name: string, description = "Does a thing. Use when asked.") =>

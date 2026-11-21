@@ -7,6 +7,10 @@ describe("parseEnv", () => {
   test("reads values, keeping what follows the first =", () => {
     expect(parseEnv("# c\n\nA=1\nB=x=y==\nbad line\nC=")).toEqual({ A: "1", B: "x=y==", C: "" });
   });
+
+  test("strips carriage returns from CRLF lines", () => {
+    expect(parseEnv("A=1\r\nB=two\r\n")).toEqual({ A: "1", B: "two" });
+  });
 });
 
 describe("setEnv", () => {
@@ -17,6 +21,10 @@ describe("setEnv", () => {
 
   test("does not touch a key that only starts the same", () => {
     expect(setEnv("AB=1\n", { A: "2" })).toBe("AB=1\nA=2\n");
+  });
+
+  test("rejects values containing newlines", () => {
+    expect(() => setEnv("A=1\n", { A: "1\nB=2" })).toThrow("must not contain a newline");
   });
 });
 

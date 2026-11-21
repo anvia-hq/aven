@@ -1,3 +1,5 @@
+export type GithubUrls = { apiUrl: string; webUrl: string };
+
 export type GithubFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
 export type GithubBranchSummary = {

@@ -2,7 +2,12 @@ import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-type ServiceNames = { launchdLabel: string; systemdUnit: string };
+import type { ServiceNames } from "./types";
+
+export const RUNNER_SERVICE_NAMES: ServiceNames = {
+  launchdLabel: "dev.anvia.aven-runner",
+  systemdUnit: "aven-runner",
+};
 
 type ServiceState = { file: string; program: string | undefined; problem: string | undefined };
 

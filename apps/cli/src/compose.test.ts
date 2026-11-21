@@ -9,8 +9,8 @@ import {
   projectName,
   recordProject,
   serverEnvKeys,
-  without,
 } from "./compose";
+import { without } from "./process";
 
 const legacy = { Name: "aven", ConfigFiles: "/home/me/.aven/server/docker-compose.yml" };
 

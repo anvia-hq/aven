@@ -1,13 +1,19 @@
 import { isIPv4 } from "node:net";
-import type { ServerEnvOptions, ServerPlanInput } from "./types";
+import type { Env, ServerEnvOptions, ServerPlanInput } from "./types";
 
 export const WEB_PORT = 2836;
 export const API_PORT = 2837;
 export const HTTPS_PORT = 2838;
 const LAST_PORT = 2899;
 
+export const isLoopback = (address: string) => address.startsWith("127.");
+
+export const apiBaseUrl = (env: Env) => `http://localhost:${env.AVEN_API_PORT || API_PORT}`;
+
+export const healthUrl = (env: Env) => `${apiBaseUrl(env)}/health`;
+
 export function isExposed(input: Pick<ServerPlanInput, "domain" | "bind">) {
-  return input.domain !== undefined || (input.bind !== undefined && !input.bind.startsWith("127."));
+  return input.domain !== undefined || (input.bind !== undefined && !isLoopback(input.bind));
 }
 
 function portNumber(value: string | undefined, fallback: number, flag: string) {
@@ -53,7 +59,7 @@ export function planServer(input: ServerPlanInput, isFree: (port: number) => boo
       `Sign-ups start closed: only ${input.ownerEmail?.trim()} can make the first account. Invite people from Settings > Members; Settings > Platform opens sign-ups.`,
     );
 
-  if (!domain && !bind.startsWith("127."))
+  if (!domain && !isLoopback(bind))
     notes.push(
       `Plain HTTP will be open to ${bind === "0.0.0.0" ? "every network this machine is on" : bind}: ` +
         "sign-ins are not encrypted on the way. Use --domain for HTTPS, or a VPN or a proxy that serves HTTPS.",

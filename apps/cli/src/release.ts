@@ -1,10 +1,11 @@
 import { chmod, mkdtemp, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { parseReleaseTag, releasesUrl } from "@aven/protocol/release";
 
-import { exec } from "./compose";
+import { exec } from "./process";
 
-const releasesUrl = () =>
-  (process.env.AVEN_RELEASES_URL ?? "https://github.com/anvia-hq/aven/releases").replace(/\/$/, "");
+const FETCH_TIMEOUT_MS = 30_000;
+const LATEST_TIMEOUT_MS = 10_000;
 
 export function platformName(os: string = process.platform, arch: string = process.arch) {
   const names: Record<string, string> = { x64: "amd64", arm64: "arm64" };
@@ -22,8 +23,11 @@ const downloadUrl = (version: string, file: string) =>
   `${releasesUrl()}/download/v${version}/${file}`;
 
 export async function latestVersion(fetchFn: typeof fetch = fetch) {
-  const response = await fetchFn(`${releasesUrl()}/latest`, { redirect: "manual" });
-  const tag = /\/tag\/v?([^/?#]+)$/.exec(response.headers.get("location") ?? "")?.[1];
+  const response = await fetchFn(`${releasesUrl()}/latest`, {
+    redirect: "manual",
+    signal: AbortSignal.timeout(LATEST_TIMEOUT_MS),
+  });
+  const tag = parseReleaseTag(response.headers.get("location"));
 
   if (!tag) throw new Error(`Could not find the latest release at ${releasesUrl()}.`);
 
@@ -49,7 +53,9 @@ export async function downloadVerified(
 ) {
   const file = assetName(version, platform);
   const get = async (name: string) => {
-    const response = await fetchFn(downloadUrl(version, name));
+    const response = await fetchFn(downloadUrl(version, name), {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
 
     if (!response.ok)
       throw new Error(

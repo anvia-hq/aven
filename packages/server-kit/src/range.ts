@@ -1,4 +1,9 @@
-export function byteRange(header: string | null | undefined, size: number) {
+import type { ByteRange } from "./types";
+
+export function byteRange(
+  header: string | null | undefined,
+  size: number,
+): ByteRange | "unsatisfiable" | null {
   const match = /^bytes=(\d*)-(\d*)$/.exec(header?.trim() ?? "");
 
   if (!match || (match[1] === "" && match[2] === "")) return null;

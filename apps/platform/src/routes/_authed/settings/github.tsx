@@ -2,17 +2,16 @@ import { GithubMark } from "@/components/brand-icons";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
-import { SettingsPage, SettingsRow, SettingsSection } from "@/components/settings-section";
-import { useRequest } from "@/hooks/use-request";
+import { SettingsPage, SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { useGithubAccount } from "@/modules/projects/hooks/use-github-account";
-import type { GithubStatus } from "@/modules/projects/types";
+import { useGithubStatus } from "@/modules/projects/hooks/use-github-status";
 
 export const Route = createFileRoute("/_authed/settings/github")({
   component: GithubSettings,
 });
 
 function GithubSettings() {
-  const status = useRequest<GithubStatus>("/github");
+  const status = useGithubStatus();
   const account = useGithubAccount();
   const github = status?.data;
 

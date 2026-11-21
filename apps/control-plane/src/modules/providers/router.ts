@@ -1,9 +1,9 @@
+import { CodexDeviceError, codexDevice } from "@aven/codex/device-auth";
+import { isModelApi } from "@aven/protocol/providers";
+import { NotFoundError, UnprocessableError, orNotFound } from "@aven/server-kit/errors";
 import { Elysia } from "elysia";
 
-import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
 import { authRouter } from "../auth/router";
-import { isModelApi } from "@aven/protocol/providers";
-import { codexDevice } from "./codex-device";
 import {
   codexDevicePollBody,
   createProviderBody,
@@ -14,6 +14,16 @@ import {
 import { labelsByModel, listAgentModels } from "./model-list";
 import { listedModels, providersService } from "./service";
 
+async function withCodexDevice<T>(fn: () => Promise<T>) {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof CodexDeviceError) throw new UnprocessableError(error.message);
+
+    throw error;
+  }
+}
+
 export const providersRouter = new Elysia({ prefix: "/providers" })
   .use(authRouter)
   .get("/", ({ user }) => providersService.list(user.id), { auth: true })
@@ -21,11 +31,13 @@ export const providersRouter = new Elysia({ prefix: "/providers" })
     auth: true,
     body: createProviderBody,
   })
-  .post("/codex-device", () => codexDevice.start(), { auth: true })
+  .post("/codex-device", () => withCodexDevice(() => codexDevice.start()), { auth: true })
   .post(
     "/codex-device/poll",
     async ({ body, user }) => {
-      const polled = await codexDevice.poll(body.deviceAuthId, body.userCode);
+      const polled = await withCodexDevice(() =>
+        codexDevice.poll(body.deviceAuthId, body.userCode),
+      );
 
       if (polled.status === "pending") return polled;
 

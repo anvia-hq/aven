@@ -1,7 +1,7 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 
 import { useTheme } from "../hooks/use-theme";
-import { SANS_FONTS } from "../types";
+import { SANS_FONTS } from "../catalog";
 import type { SansFont } from "../types";
 
 export function FontPicker() {
