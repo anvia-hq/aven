@@ -273,7 +273,7 @@ run("createBotChats (postgres)", async () => {
       relaysPersonsWord: true,
     });
     expect(sent).toEqual({ handle: "scout", name: "Scout" });
-    await Bun.sleep(30);
+    for (let tries = 0; heard.length < 2 && tries < 2000; tries++) await Bun.sleep(1);
 
     expect(heard).toEqual(["bot to: do A", "user from: Scout did A"]);
     expect(await chatOf(runner, scout.id, alice)).toEqual([
