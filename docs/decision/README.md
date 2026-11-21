@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-392 decisions: 300 are the answer, 39 are superseded and 53 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+393 decisions: 300 are the answer, 39 are superseded and 54 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -62,7 +62,7 @@ These describe something that is gone. Read what replaced them.
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 | 0391     | The e2e suite runs before the push that makes a branch                                       | 0394                         |
 
-## Superseded in part (53)
+## Superseded in part (54)
 
 These hold, except for the part named.
 
@@ -113,6 +113,7 @@ These hold, except for the part named.
 | 0229     | A persistent runner ships with its own GitHub login                     | 0276                             |
 | 0242     | The Claude agent runs on a setup token                                  | 0309                             |
 | 0248     | Dismissible notices are kept per person in the database                 | 0288                             |
+| 0292     | Aven is the default theme                                               | 0396                             |
 | 0297     | A boat.dev sandbox is a runtime                                         | 0299                             |
 | 0299     | Aven Cloud is a sandbox per thread, and a repository is a project       | 0308, 0328, 0348 and 0392        |
 | 0300     | The Claude agent is behind a flag                                       | 0309                             |

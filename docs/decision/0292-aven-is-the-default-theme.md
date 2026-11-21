@@ -1,6 +1,6 @@
 # Aven is the default theme
 
-Status: accepted. Builds on 0155.
+Status: accepted. Builds on 0155. Superseded in part by 0396: Mint's dark surfaces come up a step, and the rest stands.
 
 Mint was the default palette: the base `:root` and `.dark` tokens, with no `data-theme` on `<html>`. The dark Mint was very dark and teal; the wanted default is lighter and gray.
 
