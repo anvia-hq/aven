@@ -5,6 +5,7 @@ import { activityLabelOf, THINKING_LABEL } from "./bot-activity";
 import { botInstructions } from "./bot-instruction";
 import { lensObservability } from "./lens";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
+import { withStrictToolOutput } from "./strict-tool-output";
 import { createApiTools } from "./tools/api";
 import { createAskQuestionTool } from "./tools/ask-question";
 import { createCreateBotTool } from "./tools/create-bot";
@@ -172,7 +173,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...workingCockpit(cockpit),
       ...readingProjects(projectFiles),
       ...searching(webSearch),
-    ],
+    ].map(withStrictToolOutput),
   };
 }
 
