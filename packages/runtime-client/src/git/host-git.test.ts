@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { git } from "./git-clone";
-import { hostGit } from "./host-git";
+import { hostGit, withHostGit } from "./host-git";
 import { markTurn, threadDiff } from "./thread-diff";
 import { searchWorkspace } from "../files/workspace-files";
 
@@ -195,5 +195,33 @@ describe("git the runner runs on a workspace", () => {
     await rm(join(root, ".git", "FETCH_HEAD"));
     await Bun.spawn(["mkfifo", join(root, ".git", "FETCH_HEAD")]).exited;
     expect((await threadDiff(root, "all"))?.patch).toContain("+two");
+  });
+
+  test("withHostGit reuses one shadow session across multiple commands and rejects unsafe repos", async () => {
+    const { base, root } = await workspace();
+    const seenDirs = new Set<string>();
+    const recorded: typeof git = (args, options) => {
+      if (options.env?.GIT_DIR) seenDirs.add(options.env.GIT_DIR);
+
+      return git(args, options);
+    };
+
+    const result = await withHostGit(
+      root,
+      async (host) => {
+        const rev = await host(["rev-parse", "HEAD"], { cwd: root });
+        const branch = await host(["symbolic-ref", "--short", "HEAD"], { cwd: root });
+        return { rev: rev.stdout.trim(), branch: branch.stdout.trim() };
+      },
+      recorded,
+    );
+
+    expect(result?.branch).toBe("main");
+    expect(result?.rev).toMatch(/^[0-9a-f]{40}$/);
+    expect(seenDirs.size).toBe(1);
+
+    const notRepo = join(base, "plain");
+    await mkdir(notRepo);
+    expect(await withHostGit(notRepo, async () => "ok")).toBeNull();
   });
 });

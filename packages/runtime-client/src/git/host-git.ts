@@ -174,32 +174,58 @@ async function returnReplaced(shadow: string, linked: string[], repo: string, he
   await rename(moved, join(repo, "HEAD"));
 }
 
+export async function withHostGit<T>(
+  root: string,
+  fn: (host: Git) => Promise<T>,
+  run: Git = git,
+): Promise<T | null> {
+  const repo = join(root, ".git");
+
+  if (!(await isSafeRepository(repo))) return null;
+
+  const shadowed = await shadowOf(repo, run);
+
+  if (!shadowed) return null;
+
+  const { shadow, linked, head } = shadowed;
+  const session: Git = (args, options) => {
+    if (options.cwd !== root) return hostGit(run)(args, options);
+
+    const env = {
+      ...SAFE_ENV,
+      GIT_DIR: shadow,
+      GIT_WORK_TREE: root,
+      GIT_INDEX_FILE: join(repo, "index"),
+      ...options.env,
+    };
+    return run([...SAFE_CONFIG, ...args], { ...options, env });
+  };
+  try {
+    const value = await fn(session);
+    await returnReplaced(shadow, linked, repo, head);
+    return value;
+  } finally {
+    await rm(shadow, { recursive: true, force: true });
+  }
+}
+
 export function hostGit(run: Git = git): Git {
   return async (args, options) => {
-    const repo = join(options.cwd, ".git");
-
-    if (!(await isSafeRepository(repo))) return NOT_A_REPOSITORY;
-
-    const shadowed = await shadowOf(repo, run);
-
-    if (!shadowed) return NOT_A_REPOSITORY;
-
-    const { shadow, linked, head } = shadowed;
-    try {
-      const env = {
-        ...SAFE_ENV,
-        GIT_DIR: shadow,
-        GIT_WORK_TREE: options.cwd,
-        GIT_INDEX_FILE: join(repo, "index"),
-        ...options.env,
-      };
-      const result = await run([...SAFE_CONFIG, ...args], { ...options, env });
-      await returnReplaced(shadow, linked, repo, head);
-      return result;
-    } finally {
-      await rm(shadow, { recursive: true, force: true });
-    }
+    const result = await withHostGit(options.cwd, (host) => host(args, options), run);
+    return result ?? NOT_A_REPOSITORY;
   };
+}
+
+export async function safeGitConfig(run: Git, root: string, args: string[]) {
+  const repo = join(root, ".git");
+
+  if (!(await isSafeRepository(repo))) return NOT_A_REPOSITORY;
+
+  return run([...SAFE_CONFIG, "config", "--file", join(repo, "config"), ...args], {
+    cwd: tmpdir(),
+    env: SAFE_ENV,
+    timeoutMs: CONFIG_TIMEOUT_MS,
+  });
 }
 
 export function gitFailure(what: string, output: { stderr: string; stdout: string }, token = "") {
