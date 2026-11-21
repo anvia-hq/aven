@@ -77,7 +77,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     !split && (diff.open || files.open || (owned && (terminal.open || preview.open)));
   const sideOpen = useHeldValue(sideWanted || null, PANEL_EXIT_MS).shown !== null;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
-  const unshipped = useThreadDiff(threadId, "unshipped", running);
+  const unshipped = useThreadDiff(threadId, "unshipped", running, true, { summaryOnly: true });
   const layout = useDefaultLayout({
     id: `aven.thread.${threadId}.panels.${wide ? "row" : "column"}`,
     panelIds,

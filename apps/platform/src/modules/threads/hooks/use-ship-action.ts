@@ -33,7 +33,7 @@ export function useShipAction(
     loaded: unshipped.loaded,
     available: unshipped.available,
     problem: unshipped.problem,
-    any: unshipped.files.length > 0,
+    any: unshipped.fileCount > 0,
   };
   const needsBranch =
     connected === true &&
@@ -44,7 +44,9 @@ export function useShipAction(
     changes.available !== false &&
     !changes.any &&
     thread.pullRequests.length === 0;
-  const branch = useThreadDiff(thread.id, "all", thread.running, needsBranch);
+  const branch = useThreadDiff(thread.id, "all", thread.running, needsBranch, {
+    summaryOnly: true,
+  });
   const branchPulls = useBranchPullRequests(
     thread.id,
     connected === true &&
@@ -52,7 +54,7 @@ export function useShipAction(
       thread.pullRequests.length === 0 &&
       branch.loaded &&
       branch.problem === null &&
-      branch.files.length > 0,
+      branch.fileCount > 0,
     thread.running,
   );
   const { refresh } = useThreads();
@@ -69,7 +71,7 @@ export function useShipAction(
       loaded: branch.loaded,
       available: branch.available,
       problem: branch.problem,
-      any: branch.files.length > 0,
+      any: branch.fileCount > 0,
     },
     branchPulls,
     pullRequests: thread.pullRequests,

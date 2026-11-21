@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { HighlightedLine } from "@/modules/files/types";
 
@@ -42,29 +42,54 @@ const placesOf = (file: DiffFile) => {
 
 export function useFileColours(visible: DiffFile[]) {
   const [, setTick] = useState(0);
-  const wanted = visible.filter((file) => !made.has(file));
+  const wanted = useMemo(
+    () => visible.filter((file) => !made.has(file) && !pending.has(file)),
+    [visible],
+  );
 
   useEffect(() => {
-    for (const file of wanted) {
-      if (pending.has(file)) continue;
+    if (wanted.length === 0) return;
 
-      pending.add(file);
-      const { oldText, newText } = placesOf(file);
-      import("@/modules/files/highlight")
-        .then(async ({ highlight }) => {
-          const [old, next] = await Promise.all([
-            highlight(oldText, file.path),
-            highlight(newText, file.path),
-          ]);
-          made.set(file, { old, new: next });
-        })
-        .catch(() => made.set(file, { old: null, new: null }))
-        .finally(() => {
+    const batch = wanted.filter((file) => !made.has(file) && !pending.has(file));
+
+    if (batch.length === 0) return;
+
+    for (const file of batch) pending.add(file);
+
+    let alive = true;
+    void import("@/modules/files/highlight")
+      .then(({ highlight }) =>
+        Promise.all(
+          batch.map(async (file) => {
+            try {
+              const { oldText, newText } = placesOf(file);
+              const [old, next] = await Promise.all([
+                highlight(oldText, file.path),
+                highlight(newText, file.path),
+              ]);
+              made.set(file, { old, new: next });
+            } catch {
+              made.set(file, { old: null, new: null });
+            } finally {
+              pending.delete(file);
+            }
+          }),
+        ),
+      )
+      .catch(() => {
+        for (const file of batch) {
+          made.set(file, { old: null, new: null });
           pending.delete(file);
-          setTick((count) => count + 1);
-        });
-    }
-  });
+        }
+      })
+      .finally(() => {
+        if (alive) setTick((count) => count + 1);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [wanted]);
 
   return (file: DiffFile, row: DiffRow): HighlightedLine | null => {
     const coloured = made.get(file);

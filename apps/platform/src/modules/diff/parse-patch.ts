@@ -3,6 +3,25 @@ import type { DiffFile, DiffHunk, DiffRow, SplitRow } from "./types";
 const FILE_HEADER = /^diff --git a\/(.*) b\/(.*)$/;
 const HUNK_HEADER = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/;
 
+function parseDiffHeaderPath(line: string): string | null {
+  if (!line.startsWith("diff --git a/")) return null;
+
+  const rest = line.slice("diff --git ".length);
+  const mid = (rest.length - 5) / 2;
+
+  if (
+    Number.isInteger(mid) &&
+    mid > 0 &&
+    rest.slice(2 + mid, 5 + mid) === " b/" &&
+    rest.slice(2, 2 + mid) === rest.slice(5 + mid)
+  ) {
+    return rest.slice(2, 2 + mid);
+  }
+
+  const header = FILE_HEADER.exec(line);
+  return header ? header[2]! : null;
+}
+
 export function parsePatch(patch: string): DiffFile[] {
   const files: DiffFile[] = [];
   let file: DiffFile | undefined;
@@ -39,12 +58,12 @@ export function parsePatch(patch: string): DiffFile[] {
       if (line.startsWith("\\")) continue;
     }
 
-    const header = FILE_HEADER.exec(line);
+    const path = parseDiffHeaderPath(line);
 
-    if (header) {
+    if (path !== null) {
       hunk = undefined;
       file = {
-        path: header[2]!,
+        path,
         status: "modified",
         binary: false,
         additions: 0,
@@ -66,7 +85,8 @@ export function parsePatch(patch: string): DiffFile[] {
       newLeft = Number(opening[4] ?? 1);
       hunk = { header: line, rows: [] };
       file.hunks.push(hunk);
-    } else if (line.startsWith("new file mode")) file.status = "added";
+    } else if (line.startsWith("+++ b/")) file.path = line.slice("+++ b/".length);
+    else if (line.startsWith("new file mode")) file.status = "added";
     else if (line.startsWith("deleted file mode")) file.status = "deleted";
     else if (line.startsWith("rename from ")) {
       file.status = "renamed";

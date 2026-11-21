@@ -95,6 +95,20 @@ Binary files a/logo.png and b/logo.png differ
   test("an empty patch has no files", () => {
     expect(parsePatch("")).toEqual([]);
   });
+
+  test("keeps paths containing spaces and ' b/' intact", () => {
+    const [file] = parsePatch(`diff --git a/dir b/file name.ts b/dir b/file name.ts
+index 1111111..2222222 100644
+--- a/dir b/file name.ts
++++ b/dir b/file name.ts
+@@ -1 +1 @@
+-old
++new
+`);
+    expect(file?.path).toBe("dir b/file name.ts");
+    expect(file?.additions).toBe(1);
+    expect(file?.deletions).toBe(1);
+  });
 });
 
 describe("splitRows", () => {
