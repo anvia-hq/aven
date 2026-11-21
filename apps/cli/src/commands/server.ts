@@ -1,29 +1,26 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
 import { stringFlag } from "../args";
 import { runCompose as composeIn, dockerProblem, recordProject } from "../compose";
-import { addMissingKeys, parseEnv, setEnv } from "../env-file";
+import { addMissingKeys, readEnvFile, setEnv } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
-import { API_PORT, planServer } from "../server-plan";
+import { healthUrl, planServer } from "../server-plan";
 import { envChangeLines, installEnvValues, writeServerFiles } from "../server-files";
 import { version } from "../version";
 import type { Args } from "../types";
 
 async function readServerEnv(dir: string) {
-  const text = await readFile(join(dir, ".env"), "utf8").catch(() => undefined);
+  const env = await readEnvFile(join(dir, ".env"));
 
-  if (text === undefined)
+  if (env === undefined)
     throw new Error(`No server is installed in ${dir}. Run: aven server install`);
 
-  return parseEnv(text);
+  return env;
 }
-
-const healthUrl = (env: Record<string, string>) =>
-  `http://localhost:${env.AVEN_API_PORT || API_PORT}/health`;
 
 async function runCompose(dir: string, args: string[]) {
   const code = await composeIn(dir, args);
@@ -137,7 +134,9 @@ export async function serverUpgrade(release: string) {
   await writeFile(
     envPath,
     setEnv(addMissingKeys(existing, envTemplate), { AVEN_VERSION: release }),
+    { mode: 0o600 },
   );
+  await chmod(envPath, 0o600);
 
   if (release === "latest") await runCompose(dir, ["pull"]);
 

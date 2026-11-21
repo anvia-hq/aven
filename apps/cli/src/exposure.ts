@@ -1,8 +1,5 @@
-import type { ExposureReport } from "./types";
-
-type Env = Record<string, string | undefined>;
-
-const isLoopback = (address: string) => address.startsWith("127.");
+import { WEB_PORT, isLoopback } from "./server-plan";
+import type { Env, ExposureReport } from "./types";
 
 export const serveDomain = (env: Env) => {
   const address = env.AVEN_SITE_ADDRESS?.trim() ?? "";
@@ -29,7 +26,7 @@ export function describeExposure(env: Env): ExposureReport {
   return {
     ok: false,
     detail:
-      `plain HTTP on port ${env.AVEN_PORT ?? "2836"} is open to ${open}: sign-ins are not encrypted on the way. ` +
+      `plain HTTP on port ${env.AVEN_PORT ?? WEB_PORT} is open to ${open}: sign-ins are not encrypted on the way. ` +
       "For this machine only set AVEN_BIND=127.0.0.1 and run: aven restart. For a server, install with --domain, or put a VPN or an HTTPS proxy in front.",
   };
 }

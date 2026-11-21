@@ -1,3 +1,7 @@
+export type Env = Record<string, string | undefined>;
+
+export type ServiceNames = { launchdLabel: string; systemdUnit: string };
+
 export type Args = {
   positionals: string[];
   flags: Record<string, string | true>;

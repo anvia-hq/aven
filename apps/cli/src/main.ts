@@ -65,7 +65,7 @@ Other:
 
 const follows = (args: Args) => Boolean(args.flags.follow || args.flags.f);
 
-async function main(argv: string[]) {
+export async function runCli(argv: string[], log: (text: string) => void = console.log) {
   const args = parseArgs(argv, [
     "port",
     "https-port",
@@ -75,21 +75,29 @@ async function main(argv: string[]) {
     "release",
     "url",
     "token",
-    "image",
     "dir",
     "owner-email",
     "bind",
   ]);
   const [command, sub] = args.positionals;
 
+  if (args.flags.version || args.flags.v) {
+    log(version);
+    return;
+  }
+
+  if (args.flags.help || args.flags.h) {
+    log(usage);
+    return;
+  }
+
   switch (command) {
     case "version":
-    case "--version":
-      console.log(version);
+      log(version);
       return;
     case undefined:
     case "help":
-      console.log(usage);
+      log(usage);
       return;
     case "server":
       if (sub === "install") return serverInstall(args);
@@ -146,9 +154,11 @@ async function main(argv: string[]) {
   }
 }
 
-try {
-  await main(process.argv.slice(2));
-} catch (error) {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+if (import.meta.main) {
+  try {
+    await runCli(process.argv.slice(2));
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exit(1);
+  }
 }

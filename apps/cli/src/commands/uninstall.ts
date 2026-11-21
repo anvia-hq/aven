@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { runCompose } from "../compose";
 import { avenHome, serverDir } from "../home";
 import { serviceManager } from "../service-manager";
+import { RUNNER_SERVICE_NAMES } from "../service-unit";
 import type { Args } from "../types";
 
 export async function uninstall(args: Args) {
@@ -18,10 +19,7 @@ export async function uninstall(args: Args) {
       throw new Error("Nothing was removed. --purge needs --yes, or to be run in a terminal.");
   }
 
-  const runner = serviceManager({
-    launchdLabel: "dev.anvia.aven-runner",
-    systemdUnit: "aven-runner",
-  });
+  const runner = serviceManager(RUNNER_SERVICE_NAMES);
   await runner.uninstall();
   console.log("The runner service is removed.");
 
