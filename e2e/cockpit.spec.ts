@@ -302,8 +302,10 @@ test.describe("Cockpit", () => {
     await expect(page.locator(".bn-suggestion-menu")).toHaveCount(0);
     await expect(drawer).toBeVisible();
 
-    page.once("dialog", (dialog) => void dialog.dismiss());
     await page.keyboard.press("Escape");
+    const confirmTask = page.getByRole("alertdialog", { name: "Discard this new task?" });
+    await expect(confirmTask).toBeVisible();
+    await confirmTask.getByRole("button", { name: "Keep editing" }).click();
     await expect(drawer).toBeVisible();
     await expect(drawer.getByRole("textbox", { name: "Title" })).toHaveValue("Keep me");
     await drawer.getByRole("button", { name: "Create task" }).click();
@@ -334,11 +336,13 @@ test.describe("Cockpit", () => {
     await page.getByRole("button", { name: "New item" }).click();
     await expect(draft.getByRole("textbox", { name: "Title" })).toBeFocused();
     await page.keyboard.type("Half written");
-    page.once("dialog", (dialog) => void dialog.dismiss());
     await page
       .getByRole("list", { name: "Open items" })
       .getByRole("button", { name: /First/ })
       .click();
+    const confirmItem = page.getByRole("alertdialog", { name: "Discard this new item?" });
+    await expect(confirmItem).toBeVisible();
+    await confirmItem.getByRole("button", { name: "Keep editing" }).click();
     await expect(page.getByRole("article", { name: "New item" })).toBeVisible();
     await expect(
       page.getByRole("article", { name: "New item" }).getByRole("textbox", { name: "Title" }),
