@@ -2,7 +2,7 @@ import { applyEvent, applyLimits, applyUsage, isRunning, messageId } from "@aven
 import type { RunEvent } from "@aven/protocol/types";
 
 import { handoffOf, settlePending, withoutPending } from "./pending-messages";
-import type { QueuedSteer, ThreadStreamAction, ThreadStreamState } from "./types";
+import type { ThreadStreamAction, ThreadStreamState } from "./types";
 
 export const INITIAL_THREAD_STREAM_STATE: ThreadStreamState = {
   messages: [],
@@ -16,17 +16,8 @@ export const INITIAL_THREAD_STREAM_STATE: ThreadStreamState = {
   error: null,
   steers: [],
   pending: [],
+  rejectedNotice: null,
 };
-
-export function rejectedSteerNotice(steers: readonly QueuedSteer[], event: RunEvent) {
-  if (event.type !== "steer_rejected" || !event.reason) return null;
-
-  const lost = steers.find(({ id }) => id === event.id);
-
-  if (!lost) return null;
-
-  return { prompt: lost.prompt, reason: event.reason };
-}
 
 export function reduceThreadStream(
   state: ThreadStreamState,
@@ -86,8 +77,18 @@ function applyStreamEvent(
           : [...state.steers, { id: event.id, prompt: event.prompt, mentions: event.mentions }],
       };
     case "steer":
-    case "steer_rejected":
       return { ...next, steers: state.steers.filter(({ id }) => id !== event.id) };
+    case "steer_rejected": {
+      const lost = event.reason ? state.steers.find(({ id }) => id === event.id) : undefined;
+      return {
+        ...next,
+        steers: state.steers.filter(({ id }) => id !== event.id),
+        rejectedNotice:
+          lost && event.reason
+            ? { id: event.id, prompt: lost.prompt, reason: event.reason }
+            : state.rejectedNotice,
+      };
+    }
     case "snapshot":
       return {
         ...next,

@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  INITIAL_THREAD_STREAM_STATE,
-  reduceThreadStream,
-  rejectedSteerNotice,
-} from "./thread-stream-state";
+import { INITIAL_THREAD_STREAM_STATE, reduceThreadStream } from "./thread-stream-state";
 
 describe("reduceThreadStream", () => {
   test("hydrates snapshot state and preserves prior limits when snapshot omits them", () => {
@@ -67,7 +63,7 @@ describe("reduceThreadStream", () => {
     expect(fresh.earlier).toHaveLength(1);
   });
 
-  test("queues and rejects steers and reports rejection notice", () => {
+  test("queues and rejects steers in sequence and records rejection notice in reducer state", () => {
     const queued = reduceThreadStream(INITIAL_THREAD_STREAM_STATE, {
       type: "event",
       now: 1000,
@@ -75,13 +71,16 @@ describe("reduceThreadStream", () => {
     });
     expect(queued.steers).toHaveLength(1);
 
-    const rejection = { type: "steer_rejected" as const, id: "s1", reason: "Run ended" };
-    expect(rejectedSteerNotice(queued.steers, rejection)).toEqual({
+    const after = reduceThreadStream(queued, {
+      type: "event",
+      now: 2000,
+      event: { type: "steer_rejected", id: "s1", reason: "Run ended" },
+    });
+    expect(after.steers).toEqual([]);
+    expect(after.rejectedNotice).toEqual({
+      id: "s1",
       prompt: "stop and check",
       reason: "Run ended",
     });
-
-    const after = reduceThreadStream(queued, { type: "event", now: 2000, event: rejection });
-    expect(after.steers).toEqual([]);
   });
 });

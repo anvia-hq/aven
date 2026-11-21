@@ -9,11 +9,7 @@ import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
 import { pendingMessage, pendingShip } from "../pending-messages";
-import {
-  INITIAL_THREAD_STREAM_STATE,
-  reduceThreadStream,
-  rejectedSteerNotice,
-} from "../thread-stream-state";
+import { INITIAL_THREAD_STREAM_STATE, reduceThreadStream } from "../thread-stream-state";
 import type {
   OutgoingMessage,
   QuestionAnswer,
@@ -62,6 +58,16 @@ export function useThread(threadId: string) {
   stateRef.current = state;
 
   useEffect(() => {
+    if (!state.rejectedNotice) return;
+
+    toast.add({
+      title: "A message was not delivered",
+      description: `${state.rejectedNotice.reason}: “${state.rejectedNotice.prompt}”`,
+      type: "error",
+    });
+  }, [state.rejectedNotice]);
+
+  useEffect(() => {
     dispatch({ type: "reset" });
 
     const source = new EventSource(`/api/threads/${threadId}/events`);
@@ -70,16 +76,6 @@ export function useThread(threadId: string) {
       const event = parseEvent(message.data);
 
       if (!event) return;
-
-      const rejected = rejectedSteerNotice(stateRef.current.steers, event);
-
-      if (rejected) {
-        toast.add({
-          title: "A message was not delivered",
-          description: `${rejected.reason}: “${rejected.prompt}”`,
-          type: "error",
-        });
-      }
 
       dispatch({ type: "event", event, now: Date.now() });
 

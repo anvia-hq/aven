@@ -215,6 +215,8 @@ export type SidebarRow =
   | { kind: "pair"; pair: [Thread, Thread] }
   | { kind: "thread"; thread: Thread; nested: boolean; first: boolean; last: boolean };
 
+export type RejectedSteerNotice = { id: string; prompt: string; reason: string };
+
 export type ThreadStreamState = {
   messages: ChatMessage[];
   handoffs: Record<string, Handoff>;
@@ -227,6 +229,7 @@ export type ThreadStreamState = {
   error: string | null;
   steers: QueuedSteer[];
   pending: PendingMessage[];
+  rejectedNotice: RejectedSteerNotice | null;
 };
 
 export type ThreadStreamAction =
