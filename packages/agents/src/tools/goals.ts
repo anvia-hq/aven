@@ -32,7 +32,6 @@ const startSchema = z.object({
       "Shell commands, run on your computer, that pass only when the work is done. May be empty.",
     ),
   maxRounds: z
-    .number()
     .int()
     .min(1)
     .max(GOAL_MAX_ROUNDS)

@@ -25,6 +25,7 @@ import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "../schedules";
 import { BOT_THREAD_PROMPT_MAX, THREAD_TITLE_MAX } from "../threads";
 import type {
   BotApiParams,
+  BotCockpitParams,
   BotCreateParams,
   BotDeleteParams,
   BotGoalParams,
@@ -41,7 +42,14 @@ import type {
   BotThreadParams,
   BotUpdateParams,
 } from "../types";
-import { mcpConnectResults, memoryCommand, parseParams, replyId, runId } from "./shared";
+import {
+  cockpitCommand,
+  mcpConnectResults,
+  memoryCommand,
+  parseParams,
+  replyId,
+  runId,
+} from "./shared";
 
 const anvia = z.custom<object>((value) => typeof value === "object" && value !== null);
 
@@ -233,7 +241,10 @@ const botNotesParams = z.object({
   command: memoryCommand,
 }) satisfies z.ZodType<BotNotesParams>;
 
-const botCockpitParams = z.object({ replyId, command: z.unknown() });
+const botCockpitParams = z.object({
+  replyId,
+  command: cockpitCommand,
+}) satisfies z.ZodType<BotCockpitParams>;
 
 const botApiParams = z.discriminatedUnion("op", [
   z.object({ replyId, op: z.literal("search"), query: z.string().trim().max(200).optional() }),
@@ -347,4 +358,5 @@ export const parseBotNotesParams = (params: unknown): BotNotesParams =>
   parseParams(botNotesParams, params);
 export const parseBotApiParams = (params: unknown): BotApiParams =>
   parseParams(botApiParams, params);
-export const parseBotCockpitParams = (params: unknown) => parseParams(botCockpitParams, params);
+export const parseBotCockpitParams = (params: unknown): BotCockpitParams =>
+  parseParams(botCockpitParams, params);

@@ -2,6 +2,7 @@ import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
 import { userAvatars } from "@aven/db/schema/user-avatars";
 import { users } from "@aven/db/schema/users";
+import { imageType } from "@aven/protocol/image-type";
 import { and, eq } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
@@ -10,29 +11,12 @@ import { UnprocessableError } from "@aven/server-kit/errors";
 import { AVATAR_MAX_BYTES } from "./body";
 import type { AvatarImage } from "./types";
 
-const SIGNATURES: { contentType: string; matches: (bytes: Uint8Array) => boolean }[] = [
-  {
-    contentType: "image/png",
-    matches: (bytes) =>
-      [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((byte, at) => bytes[at] === byte),
-  },
-  {
-    contentType: "image/jpeg",
-    matches: (bytes) => bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff,
-  },
-  {
-    contentType: "image/webp",
-    matches: (bytes) =>
-      [0x52, 0x49, 0x46, 0x46].every((byte, at) => bytes[at] === byte) &&
-      [0x57, 0x45, 0x42, 0x50].every((byte, at) => bytes[8 + at] === byte),
-  },
-];
-
 export const avatarUrl = (userId: string, version: number) =>
   `/api/users/${encodeURIComponent(userId)}/avatar?v=${version}`;
 
 export function imageTypeOf(bytes: Uint8Array) {
-  return SIGNATURES.find((signature) => signature.matches(bytes))?.contentType;
+  const detected = imageType(bytes);
+  return detected && detected !== "image/gif" ? detected : undefined;
 }
 
 export const avatarsService = {

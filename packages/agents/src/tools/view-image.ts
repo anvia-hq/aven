@@ -1,9 +1,9 @@
 import { createTool } from "@anvia/core";
 import { ToolOutput } from "@anvia/core/tool";
 import { VIEW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
+import { imageType } from "@aven/protocol/image-type";
 import { z } from "zod";
 
-import { imageType } from "../image-type";
 import type { ImageFiles } from "./types";
 
 export const MAX_VIEW_IMAGE_BYTES = 5 * 1024 * 1024;

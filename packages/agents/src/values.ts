@@ -1,5 +1,8 @@
+export const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
 export const asRecord = (value: unknown): Record<string, unknown> =>
-  typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  isPlainObject(value) ? value : {};
 
 export function errorMessage(error: unknown): string {
   if (!(error instanceof Error)) return String(error);

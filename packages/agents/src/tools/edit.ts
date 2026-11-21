@@ -1,7 +1,7 @@
-import { posix } from "node:path";
-
 import { createTool } from "@anvia/core";
 import { z } from "zod";
+
+import { resolveWorkspacePath } from "../internal/search-paths";
 import type { EditableFiles } from "./types";
 
 export const EDIT_TOOL_NAME = "edit";
@@ -12,17 +12,6 @@ function countOccurrences(text: string, search: string) {
     count++;
   }
   return count;
-}
-
-function workspacePath(workdir: string, input: string) {
-  const normalized = posix.normalize(input.replaceAll("\\", "/"));
-  const relative = posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) : normalized;
-
-  if (relative === "" || relative === "." || relative === ".." || relative.startsWith("../")) {
-    throw new Error(`Path is not a file inside the workspace: ${input}`);
-  }
-
-  return relative;
 }
 
 export function createEditTool(files: EditableFiles) {
@@ -43,7 +32,7 @@ export function createEditTool(files: EditableFiles) {
 
       if (oldString === newString) throw new Error("oldString and newString are identical");
 
-      const target = workspacePath(files.workdir, path);
+      const target = resolveWorkspacePath(files.workdir, path);
       const abortSignal = context?.abortSignal;
       const text = await files.readTextFile({ path: target, abortSignal });
 

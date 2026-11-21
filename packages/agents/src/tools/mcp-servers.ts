@@ -1,11 +1,6 @@
 import { createTool } from "@anvia/core";
-import {
-  MCP_MAX_HEADER_VALUE,
-  MCP_MAX_HEADERS,
-  MCP_MAX_NAME,
-  MCP_MAX_URL,
-  MCP_TARGETS,
-} from "@aven/protocol/mcp";
+import { MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
+import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "@aven/protocol/mcp-schema";
 import { z } from "zod";
 import type { McpServersHost } from "./types";
 
@@ -14,28 +9,19 @@ export const ADD_MCP_SERVER_TOOL_NAME = "add_mcp_server";
 export const UPDATE_MCP_SERVER_TOOL_NAME = "update_mcp_server";
 export const REMOVE_MCP_SERVER_TOOL_NAME = "remove_mcp_server";
 
-const name = z
-  .string()
-  .trim()
-  .min(1)
-  .max(MCP_MAX_NAME)
-  .describe(
-    "A short name: letters, digits, spaces, dashes and underscores. The server's tools are named after it.",
-  );
-const url = z
-  .string()
-  .trim()
-  .max(MCP_MAX_URL)
-  .describe("The server's http or https address, with no user name or password in it.");
+const name = mcpName.describe(
+  "A short name: letters, digits, spaces, dashes and underscores. The server's tools are named after it.",
+);
+const url = mcpUrl.describe(
+  "The server's http or https address, with no user name or password in it.",
+);
 const headers = z
   .array(
     z.object({
-      name: z.string().trim().min(1).describe("The header's name, such as Authorization."),
-      value: z
-        .string()
-        .min(1)
-        .max(MCP_MAX_HEADER_VALUE)
-        .describe("The header's value, such as `Bearer <token>`. It is a secret."),
+      name: mcpHeaderName.describe("The header's name, such as Authorization."),
+      value: mcpHeaderValue.describe(
+        "The header's value, such as `Bearer <token>`. It is a secret.",
+      ),
     }),
   )
   .max(MCP_MAX_HEADERS);

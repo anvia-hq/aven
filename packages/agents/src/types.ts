@@ -1,7 +1,12 @@
 import type { AssistantContentPart, CompletionModel, CompletionRequest } from "@anvia/core";
 import type { SANDBOX_TOOL_NAMES } from "./sandbox-tools";
 import type { SUBAGENT_TYPES } from "./subagents";
-import type { MessageAttachment, MessageMention, ModelApi } from "@aven/protocol/types";
+import type {
+  MessageAttachment,
+  MessageMention,
+  ModelApi,
+  SandboxProviderName,
+} from "@aven/protocol/types";
 
 export type ModelSource = ModelConfig | { model: CompletionModel };
 
@@ -13,7 +18,7 @@ export type SandboxPaths = {
   skills: string;
 };
 
-export type MachineProvider = "boat" | "spaces" | "lizard";
+export type MachineProvider = SandboxProviderName;
 
 export type SentExtras = {
   paths?: SandboxPaths;

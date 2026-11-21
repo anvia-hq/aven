@@ -1,4 +1,4 @@
-import { imageType } from "./image-type";
+import { imageType } from "@aven/protocol/image-type";
 import { ascii, startsWith } from "./internal/bytes";
 
 const contains = (bytes: Uint8Array, text: string, within: number) => {

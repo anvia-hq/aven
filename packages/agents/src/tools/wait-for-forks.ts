@@ -21,9 +21,8 @@ export function createWaitForForksTool(
     name: WAIT_FOR_FORKS_TOOL_NAME,
     description: `Wait for forks of this thread (from fork_thread) to stop working. It returns as soon as none of the forks given is working any more (done, failed, or stopped to ask the user something), or after \`timeoutSeconds\` (up to ${MAX_WAIT_SECONDS}), whichever is first; if some are still working then, call it again. Use it when the user asked you to take the forks' work or open pull requests: wait, then take each one's changes with take_fork_changes. Do not wait with \`sleep\` in a command.`,
     inputSchema: z.object({
-      ids: z.array(z.string().uuid()).min(1).max(12).describe("The ids fork_thread gave you."),
+      ids: z.array(z.uuid()).min(1).max(12).describe("The ids fork_thread gave you."),
       timeoutSeconds: z
-        .number()
         .int()
         .min(1)
         .max(MAX_WAIT_SECONDS)
