@@ -15,12 +15,20 @@ export function useScrollToBottom(count: number, outgoing = 0) {
   const cancelGlide = useRef<(() => void) | null>(null);
 
   const stick = useCallback((element: HTMLDivElement, resume = false) => {
+    if (gliding.current) {
+      if (resume) following.current = true;
+
+      if (following.current) element.scrollTo({ top: element.scrollHeight, behavior: "smooth" });
+
+      return;
+    }
+
     const end = Math.min(lastEnd.current, element.scrollHeight - element.clientHeight);
 
     if (resume) following.current = true;
     else if (end - element.scrollTop > FOLLOW_DISTANCE) following.current = false;
 
-    if (!following.current || gliding.current) return;
+    if (!following.current) return;
 
     element.scrollTop = element.scrollHeight;
     lastEnd.current = element.scrollHeight - element.clientHeight;
@@ -58,7 +66,9 @@ export function useScrollToBottom(count: number, outgoing = 0) {
     seen.current = count;
     seenOutgoing.current = outgoing;
 
-    if (!sent || prefersReducedMotion()) {
+    const distance = element.scrollHeight - element.clientHeight - element.scrollTop;
+
+    if (!sent || prefersReducedMotion() || distance <= 1) {
       stick(element, added);
       return;
     }

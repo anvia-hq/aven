@@ -1950,6 +1950,24 @@
   }
 }
 
+/* A working or typing indicator fades into its reserved slot without shifting layout. */
+@keyframes indicator-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility indicator-in {
+  animation: indicator-in 200ms var(--ease-out-strong) 60ms backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 @layer base {
   /* Thin themed scrollbars; the native light track is jarring on the dark theme. */
   * {

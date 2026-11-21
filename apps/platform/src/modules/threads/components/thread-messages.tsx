@@ -147,7 +147,7 @@ export function ThreadMessages({
                 />
               </RiseIn>
             ))}
-            <div className={cn(working.space, "empty:hidden")}>
+            <div className={cn(working.space, error && !running ? "empty:hidden" : "min-h-7")}>
               <WorkingIndicator
                 running={running}
                 threadId={threadId}
