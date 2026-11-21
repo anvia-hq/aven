@@ -3,200 +3,42 @@ import { db } from "@aven/db/client";
 import { bots } from "@aven/db/schema/bots";
 import { providers } from "@aven/db/schema/providers";
 import { threads } from "@aven/db/schema/threads";
-import { isModelApi, providerBackend, providerNeedsKey } from "@aven/protocol/providers";
+import { isModelApi, providerNeedsKey } from "@aven/protocol/providers";
 import { MODEL_APIS } from "@aven/protocol/runtime-wire";
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 
-import { UnprocessableError } from "@aven/server-kit/errors";
-import { encryptSecret } from "@aven/server-kit/crypto";
 import { editionInUse } from "../../edition/current";
-import type { GrantedProvider } from "../../edition/types";
+import { hostedKindOf } from "./backends";
+import {
+  assertProviderOffered,
+  changedBaseUrl,
+  checkProviderCredential,
+  filterAllowedModels,
+  grantedProviderView,
+  grantedToRow,
+  hasBaseUrl,
+  InvalidProviderError,
+  keyColumns,
+  providerView,
+  refreshDigest,
+  secretColumns,
+  SINGLE_CREDENTIAL,
+} from "./credentials";
 import { readKey } from "./crypto";
-import { hostedKindOf, HOSTED_BACKENDS } from "./backends";
-import { parseServiceAccount } from "./google-auth";
 import { effortsByModel, labelsByModel, listAgentModels, ModelListError } from "./model-list";
 import { subscriptionCatalog } from "./subscription-models";
-import {
-  azureEndpoint,
-  bedrockEndpoint,
-  credentialFor,
-  vertexEndpoint,
-  type CreateProviderBody,
-  type KeylessProviderBody,
-  type UpdateProviderBody,
-} from "./schema";
-import type { ModelSource, ProviderCatalog, ProviderView, RunnableProvider } from "./types";
+import type { CreateProviderBody, KeylessProviderBody, UpdateProviderBody } from "./schema";
+import type { ModelSource, ProviderCatalog, RunnableProvider } from "./types";
 import type { Provider } from "@aven/protocol/types";
 import type { ProviderRow } from "@aven/db/schema/types";
 
-class InvalidProviderError extends UnprocessableError {}
-
-const SINGLE_CREDENTIAL = new Set<Provider>([
-  "openai",
-  "anthropic",
-  "gemini",
-  "azure",
-  "claude-subscription",
-  "codex-subscription",
-]);
-
-const hasBaseUrl = (kind: Provider): kind is "azure" | "bedrock" | "vertex" | "openai-compatible" =>
-  kind === "openai-compatible" || kind === "azure" || kind === "bedrock" || kind === "vertex";
-
-function view({
-  apiKeyEncrypted,
-  keyDigest: _keyDigest,
-  userId: _userId,
-  ...row
-}: ProviderRow): ProviderView {
-  return { ...row, hasKey: apiKeyEncrypted !== null, backend: providerBackend(row.kind) };
-}
-
-function grantedView(granted: GrantedProvider): ProviderView {
-  return {
-    id: granted.id,
-    kind: granted.kind,
-    name: granted.name,
-    baseUrl: granted.baseUrl,
-    modelId: granted.modelId,
-    keyHint: granted.keyHint,
-    isDefault: false,
-    createdAt: granted.createdAt,
-    updatedAt: granted.createdAt,
-    hasKey: granted.apiKeyEncrypted !== null,
-    backend: providerBackend(granted.kind),
-    managed: true,
-  };
-}
-
-function grantedToRow(userId: string, granted: GrantedProvider): RunnableProvider {
-  return {
-    id: granted.id,
-    userId,
-    kind: granted.kind,
-    name: granted.name,
-    baseUrl: granted.baseUrl,
-    modelId: granted.modelId,
-    apiKeyEncrypted: granted.apiKeyEncrypted,
-    keyHint: granted.keyHint,
-    keyDigest: null,
-    isDefault: false,
-    createdAt: granted.createdAt,
-    updatedAt: granted.createdAt,
-    allowedModels: granted.allowedModels,
-  };
-}
-
-function filterAllowedModels<E>(
-  catalog: { models: string[]; labels: Record<string, string>; efforts: Record<string, E> },
-  allowed: string[] | null,
-) {
-  if (!allowed || allowed.length === 0) return catalog;
-
-  const set = new Set(allowed);
-  const models = catalog.models.filter((model) => set.has(model));
-  const labels: Record<string, string> = {};
-  const efforts: Record<string, E> = {};
-
-  for (const model of models) {
-    if (catalog.labels[model]) labels[model] = catalog.labels[model];
-
-    if (catalog.efforts[model]) efforts[model] = catalog.efforts[model];
-  }
-
-  return { models, labels, efforts };
-}
-
-function offered(kind: Provider) {
-  const hosted = HOSTED_BACKENDS.find((candidate) => candidate.kind === kind);
-
-  if (hosted && !hosted.offered()) throw new InvalidProviderError(hosted.off);
-
-  return hosted !== undefined;
-}
+export { refreshDigest };
 
 export function listedModels(kind: Provider): ProviderCatalog | undefined {
   return subscriptionCatalog(kind);
 }
 
-function azureEndpointOf(value: string) {
-  const parsed = azureEndpoint.safeParse(value);
-
-  if (!parsed.success) throw new InvalidProviderError("An Azure resource URL must be https");
-
-  return parsed.data;
-}
-
-function bedrockEndpointOf(value: string) {
-  const parsed = bedrockEndpoint.safeParse(value);
-
-  if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
-
-  return parsed.data;
-}
-
-function vertexEndpointOf(value: string) {
-  const parsed = vertexEndpoint.safeParse(value);
-
-  if (!parsed.success) throw new InvalidProviderError(parsed.error.issues[0]!.message);
-
-  return parsed.data;
-}
-
 export const invalidBotModel = (message: string) => new InvalidProviderError(message);
-
-function checkCredential(kind: Provider, apiKey: string) {
-  if (kind !== "vertex" && apiKey.length > 4096)
-    throw new InvalidProviderError("An API key is at most 4096 characters");
-
-  const parsed = credentialFor(kind).safeParse(apiKey);
-
-  if (!parsed.success)
-    throw new InvalidProviderError(parsed.error.issues[0]?.message ?? "That is not a usable key");
-}
-
-function changedBaseUrl(kind: Provider, baseUrl: string | undefined) {
-  if (baseUrl === undefined) return undefined;
-
-  if (kind === "azure") return azureEndpointOf(baseUrl);
-
-  if (kind === "bedrock") return bedrockEndpointOf(baseUrl);
-
-  if (kind === "vertex") return vertexEndpointOf(baseUrl);
-
-  return baseUrl;
-}
-
-function hint(apiKey: string) {
-  const codex = parseCodexAuth(apiKey);
-
-  if (codex) return codex.tokens.refresh_token.slice(-4);
-
-  const account = parseServiceAccount(apiKey);
-  return account ? (account.private_key_id ?? "json").slice(-4) : apiKey.slice(-4);
-}
-
-export const refreshDigest = (refreshToken: string) =>
-  new Bun.CryptoHasher("sha256").update(refreshToken).digest("hex");
-
-function digestOf(apiKey: string) {
-  const codex = parseCodexAuth(apiKey);
-
-  return codex ? refreshDigest(codex.tokens.refresh_token) : null;
-}
-
-const secretColumns = (apiKey: string | undefined) =>
-  apiKey
-    ? { apiKeyEncrypted: encryptSecret(apiKey), keyHint: hint(apiKey), keyDigest: digestOf(apiKey) }
-    : {};
-
-function keyColumns(apiKey: string | undefined, dropKey: boolean) {
-  if (apiKey) return secretColumns(apiKey);
-
-  if (dropKey) return { apiKeyEncrypted: null, keyHint: null, keyDigest: null };
-
-  return {};
-}
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -219,11 +61,11 @@ export const providersService = {
         .orderBy(asc(providers.createdAt)),
       editionInUse.current.providers?.list(userId) ?? Promise.resolve([]),
     ]);
-    return [...rows.map(view), ...granted.map(grantedView)];
+    return [...rows.map(providerView), ...granted.map(grantedProviderView)];
   },
 
   async create(userId: string, body: CreateProviderBody | KeylessProviderBody) {
-    offered(body.kind);
+    assertProviderOffered(body.kind);
 
     return db.transaction(async (tx) => {
       const existing = await tx
@@ -260,7 +102,7 @@ export const providersService = {
           isDefault,
         })
         .returning();
-      return view(row!);
+      return providerView(row!);
     });
   },
 
@@ -287,7 +129,7 @@ export const providersService = {
 
       const baseUrl = changedBaseUrl(current.kind, body.baseUrl);
 
-      if (body.apiKey !== undefined) checkCredential(current.kind, body.apiKey);
+      if (body.apiKey !== undefined) checkProviderCredential(current.kind, body.apiKey);
 
       const keyed = body.apiKey !== undefined || (current.apiKeyEncrypted !== null && !dropKey);
 
@@ -310,7 +152,7 @@ export const providersService = {
         })
         .where(ownProvider(userId, id))
         .returning();
-      return view(row!);
+      return providerView(row!);
     });
   },
 

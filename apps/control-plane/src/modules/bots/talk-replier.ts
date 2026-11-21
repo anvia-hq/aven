@@ -7,7 +7,7 @@ import { UnavailableError } from "@aven/server-kit/errors";
 
 import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
-import { replyHosts } from "./reply-hosts";
+import { prepareBotReply, replyAbortError } from "./reply-setup";
 import type {
   BotMemoryNotes,
   BotReplyBots,
@@ -19,7 +19,7 @@ import type { BotMcp } from "../mcp/types";
 import type { BotProviders, BotRunChoice } from "../providers/types";
 import type { BotThreads } from "../threads/types";
 import type { ModelConfig } from "@aven/agents/types";
-import type { Bot, BotPeer, RunAttachment } from "@aven/protocol/types";
+import type { Bot, RunAttachment } from "@aven/protocol/types";
 
 export const NO_COMPUTER = "This bot has no computer";
 
@@ -65,53 +65,11 @@ export class TalkBotReplier implements BotReplier {
   }
 
   async #talk(input: BotReplyInput, model: ModelConfig) {
-    const {
-      bot,
-      userId,
-      prompt,
-      attachments,
-      hops,
-      onPersonsWord,
-      aboutThread,
-      say,
-      ask,
-      react,
-      activity,
-      signal,
-    } = input;
+    const { bot, userId, prompt, attachments, onPersonsWord, say, react, activity, signal } = input;
     signal.throwIfAborted();
-    const { store, bots, world, notes } = this.options;
-    const peers = await this.#peers(userId, bot.id);
-    const brief = await world.forReply(userId);
-    const memoryOwner = {
-      userId,
-      botId: bot.id,
-      readProjects: brief.projects.map(({ id, slug }) => ({ id, slug })),
-    };
-    await notes
-      .keepDigest(userId, bot.id)
-      .catch((error: unknown) =>
-        console.warn(`Could not keep the activity digest of bot ${bot.id}:`, error),
-      );
-    const folders = await notes.folders(memoryOwner);
-    const timezone = await bots.timezone(userId);
-    signal.throwIfAborted();
-    const hosts = replyHosts({
-      bot,
-      userId,
-      prompt,
-      hops,
-      onPersonsWord,
-      aboutThread,
-      memoryOwner,
-      ask,
-      bots,
-      mcp: this.options.mcp,
-      providers: this.options.providers,
-      threads: this.options.threads,
-      notes,
-      world,
-    });
+    const { store } = this.options;
+    const { peers, timezone, world, folders, hosts, sendToBot, askQuestion } =
+      await prepareBotReply(input, this.options);
     const asked = sentPrompt(prompt, {
       attachments: (attachments ?? []).map(held),
       images: imagesOf(attachments),
@@ -126,8 +84,8 @@ export class TalkBotReplier implements BotReplier {
       description: bot.description,
       compactAfterTokens: bot.compactAfterTokens ?? undefined,
       peers,
-      context: brief.context,
-      projects: brief.projects,
+      context: world.context,
+      projects: world.projects,
       projectFiles: hosts.projectFiles,
       webSearch: webSearchForRun,
       lens: await lensSettingsService.forRun(),
@@ -137,14 +95,7 @@ export class TalkBotReplier implements BotReplier {
         if (files?.length) throw new Error(`${NO_COMPUTER}, so it cannot send a file`);
 
         if (to !== USER_HANDLE) {
-          const sent = await bots.deliver({
-            userId,
-            from: bot,
-            hops,
-            handle: to,
-            text,
-            relaysPersonsWord: bot.isMain && onPersonsWord,
-          });
+          const sent = await sendToBot(to, text);
           return `Sent to ${sent.name} (${sent.handle}).`;
         }
 
@@ -156,28 +107,21 @@ export class TalkBotReplier implements BotReplier {
         react(messageId, emoji);
         return `Reacted to ${messageId} with ${emoji}.`;
       },
-      askQuestion: async (questions) => {
-        if (hosts.asked())
-          throw new Error("You have already asked. Stop now and wait for the answer.");
-
-        hosts.takeAsked();
-        ask(questions);
-        return {};
-      },
+      askQuestion,
       createBot: bot.isMain
-        ? async (input) => {
-            const created = await hosts.createBot(input);
+        ? async (createdInput) => {
+            const created = await hosts.createBot(createdInput);
             peers.push({
               handle: created.handle,
               name: created.name,
-              description: input.description ?? "",
+              description: createdInput.description ?? "",
             });
             return created;
           }
         : undefined,
       deleteBot: bot.isMain
-        ? async (input) => {
-            const deleted = await hosts.deleteBot(input);
+        ? async (deleteInput) => {
+            const deleted = await hosts.deleteBot(deleteInput);
             const at = peers.findIndex((peer) => peer.handle === deleted.handle);
 
             if (at >= 0) peers.splice(at, 1);
@@ -199,13 +143,6 @@ export class TalkBotReplier implements BotReplier {
       session: { sessionId: bot.id, userId },
       abortSignal: signal,
     });
-  }
-
-  async #peers(userId: string, selfId: string): Promise<BotPeer[]> {
-    const listed = await this.options.bots.list(userId);
-    return listed.flatMap(({ id, handle, name, description }) =>
-      id === selfId ? [] : [{ handle, name, description }],
-    );
   }
 }
 
@@ -231,7 +168,7 @@ function imagesOf(attachments: RunAttachment[] | undefined) {
 const pause: Wait = (ms, signal) =>
   new Promise<void>((resolve, reject) => {
     if (signal?.aborted) {
-      reject(signal.reason instanceof Error ? signal.reason : new Error("The reply was cancelled"));
+      reject(replyAbortError(signal));
       return;
     }
 
@@ -240,9 +177,7 @@ const pause: Wait = (ms, signal) =>
       "abort",
       () => {
         clearTimeout(timer);
-        reject(
-          signal.reason instanceof Error ? signal.reason : new Error("The reply was cancelled"),
-        );
+        reject(replyAbortError(signal));
       },
       { once: true },
     );

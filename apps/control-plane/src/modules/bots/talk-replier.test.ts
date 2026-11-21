@@ -3,6 +3,7 @@ import type { MemoryStore, Message } from "@anvia/core";
 import { createBotAgent } from "@aven/agents/bot-agent";
 import { scriptedModel, text, toolCall } from "@aven/agents/testing/scripted-model";
 
+import { botNote, botPrompt } from "@aven/protocol/bots";
 import { UnavailableError } from "@aven/server-kit/errors";
 import { noWorld } from "../../testing/no-world";
 import { TalkBotReplier } from "./talk-replier";
@@ -225,5 +226,59 @@ describe("a bot with no computer", () => {
     const quiet = replier([]);
     expect(() => quiet.ready({ backend: "claude", token: "t" }, bot)).toThrow(UnavailableError);
     expect(() => quiet.ready({ backend: "native" }, bot)).toThrow("no model");
+  });
+
+  test("relays a non-main bot's question through the main bot when triggered by another bot", async () => {
+    const delivered: { handle: string; text: string }[] = [];
+    const scout: Bot = { ...bot, id: "b2", name: "Scout", handle: "scout", isMain: false };
+    const bots = replyBots({
+      list: async () => [bot, scout],
+      deliver: async (letter) => {
+        delivered.push({ handle: letter.handle, text: letter.text });
+        return { handle: bot.handle, name: bot.name };
+      },
+    });
+    await replier(
+      [
+        [
+          toolCall("ask_question", {
+            questions: [
+              {
+                id: "q1",
+                text: "Ship now?",
+                choices: [{ label: "Yes" }, { label: "No" }],
+              },
+            ],
+          }),
+        ],
+        [text("")],
+      ],
+      bots,
+    ).answer({
+      ...input(() => undefined, scout),
+      prompt: botPrompt("main", "Check if we should ship."),
+    });
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]!.handle).toBe("main");
+    expect(delivered[0]!.text).toContain("Ship now?");
+  });
+
+  test("refuses ask_question on a system note", async () => {
+    let seen = "";
+    await replier([
+      [
+        toolCall("ask_question", {
+          questions: [{ id: "q1", text: "Continue?" }],
+        }),
+      ],
+      (request) => {
+        seen = JSON.stringify(request);
+        return [text("")];
+      },
+    ]).answer({
+      ...input(() => undefined),
+      prompt: botNote("A schedule fired."),
+    });
+    expect(seen).toContain("Nobody is there to answer");
   });
 });
