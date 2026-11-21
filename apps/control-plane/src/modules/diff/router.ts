@@ -13,10 +13,7 @@ import { createDiffService } from "./service";
 export const diffRouter = (hub: RuntimeHub) => {
   const service = createDiffService(hub);
   const branchPullRequests = createBranchPullRequests({
-    branch: async (organizationId, threadId) => {
-      const diff = await service.get(organizationId, threadId, "all");
-      return diff.available ? (diff.branch ?? null) : null;
-    },
+    branch: (organizationId, threadId) => service.branch(organizationId, threadId),
     project: async (organizationId, threadId) => {
       const thread = await threadsService.get(organizationId, threadId);
       return thread ? projectsService.get(organizationId, thread.projectId) : null;
@@ -29,7 +26,10 @@ export const diffRouter = (hub: RuntimeHub) => {
     .use(threadAccess)
     .get(
       "/:id/diff",
-      ({ params, query, organizationId }) => service.get(organizationId, params.id, query.scope),
+      ({ params, query, organizationId }) =>
+        service.get(organizationId, params.id, query.scope, {
+          summaryOnly: query.summary === "1" || query.summary === "true",
+        }),
       {
         thread: "read",
         params: threadParams,
