@@ -37,9 +37,38 @@ const argvOf = ({ command, args }: { command: string; args?: readonly string[] }
   args === undefined ? ["/bin/bash", "-c", command] : [command, ...args];
 
 const MAX_PROCESS_LOG_BYTES = 1024 * 1024;
+const MAX_EXEC_OUTPUT_BYTES = 16 * 1024 * 1024;
 const MAX_EXITED_PROCESSES = 50;
 
 type LogBuffer = { chunks: Buffer[]; bytes: number; truncated: boolean };
+
+async function collectBounded(stream: ReadableStream, limit: number) {
+  const chunks: Buffer[] = [];
+  let bytes = 0;
+  let truncated = false;
+  for await (const raw of stream) {
+    const chunk = Buffer.from(raw);
+
+    if (chunk.length === 0) continue;
+
+    if (bytes >= limit) {
+      truncated = true;
+      continue;
+    }
+
+    const remaining = limit - bytes;
+
+    if (chunk.length > remaining) {
+      chunks.push(chunk.subarray(0, remaining));
+      bytes = limit;
+      truncated = true;
+    } else {
+      chunks.push(chunk);
+      bytes += chunk.length;
+    }
+  }
+  return { bytes: new Uint8Array(Buffer.concat(chunks)), truncated };
+}
 
 type Managed = {
   info: SandboxProcessInfo;
@@ -85,6 +114,7 @@ export class DirectorySandbox implements SandboxRuntime {
   readonly provider = "directory";
   readonly publishedPorts = [] as const;
   #processes = new Map<string, Managed>();
+  #activeExecs = new Set<Spawned>();
 
   constructor(
     readonly id: string,
@@ -134,6 +164,7 @@ export class DirectorySandbox implements SandboxRuntime {
   async exec(options: SandboxExecOptions): Promise<SandboxExecResult> {
     const started = Date.now();
     const proc = this.#spawn(options);
+    this.#activeExecs.add(proc);
     let timedOut = false;
     const timer = options.timeoutMs
       ? setTimeout(() => {
@@ -148,21 +179,22 @@ export class DirectorySandbox implements SandboxRuntime {
 
     try {
       const [stdout, stderr, exitCode] = await Promise.all([
-        new Response(proc.stdout as ReadableStream).bytes(),
-        new Response(proc.stderr as ReadableStream).bytes(),
+        collectBounded(proc.stdout as ReadableStream, MAX_EXEC_OUTPUT_BYTES),
+        collectBounded(proc.stderr as ReadableStream, MAX_EXEC_OUTPUT_BYTES),
         proc.exited,
       ]);
       const result = {
-        stdout,
-        stderr,
+        stdout: stdout.bytes,
+        stderr: stderr.bytes,
         durationMs: Date.now() - started,
-        stdoutTruncated: false,
-        stderrTruncated: false,
+        stdoutTruncated: stdout.truncated,
+        stderrTruncated: stderr.truncated,
       };
       return timedOut
         ? { ...result, status: "timed_out" }
         : { ...result, status: "exited", exitCode };
     } finally {
+      this.#activeExecs.delete(proc);
       clearTimeout(timer);
       options.abortSignal?.removeEventListener("abort", abort);
     }
@@ -325,8 +357,9 @@ export class DirectorySandbox implements SandboxRuntime {
   }
 
   async dispose() {
-    await Promise.all([...this.#processes.values()].map(({ proc }) => this.#kill(proc)));
-    await Promise.all([...this.#processes.values()].map(({ proc }) => proc.exited));
+    const active = [...[...this.#processes.values()].map(({ proc }) => proc), ...this.#activeExecs];
+    await Promise.all(active.map((proc) => this.#kill(proc)));
+    await Promise.all(active.map((proc) => proc.exited));
   }
 
   #get(processId: string) {

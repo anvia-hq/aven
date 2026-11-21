@@ -10,10 +10,21 @@ function statusOf(who: number | "self") {
   }
 }
 
+function processAlive(pid: number) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
 export function runnerHoldsLease(pid: number) {
   const own = statusOf("self");
 
-  if (!own) return true;
+  if (!own) return processAlive(pid);
 
   const holder = statusOf(pid);
 

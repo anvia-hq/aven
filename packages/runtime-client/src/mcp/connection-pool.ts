@@ -19,8 +19,10 @@ export function mcpConfigKey(configs: readonly RunMcpServer[]) {
 
 export class McpConnectionPool {
   #entries = new Map<string, { key: string; connected: ConnectedMcp }>();
+  #connecting = new Map<string, { key: string; token: symbol; promise: Promise<ConnectedMcp> }>();
   #inUse: ((threadId: string) => boolean) | undefined;
   #sweeper: ReturnType<typeof setInterval> | undefined;
+  #closed = false;
 
   constructor(options?: {
     inUse?: (threadId: string) => boolean;
@@ -60,17 +62,49 @@ export class McpConnectionPool {
       return kept.connected;
     }
 
-    await this.closeThread(threadId);
-    const connected = await open(configs);
-    this.#entries.set(threadId, { key, connected });
-    return connected;
+    const pending = this.#connecting.get(threadId);
+
+    if (pending && pending.key === key) return pending.promise;
+
+    if (pending) await pending.promise.catch(() => undefined);
+
+    const refreshed = this.#entries.get(threadId);
+
+    if (
+      refreshed &&
+      refreshed.key === key &&
+      refreshed.connected.results.every((result) => !result.error)
+    ) {
+      return refreshed.connected;
+    }
+
+    const token = Symbol();
+    const opening = (async () => {
+      await this.closeThread(threadId);
+      const connected = await open(configs);
+
+      if (this.#closed || this.#connecting.get(threadId)?.token !== token) {
+        await connected.close().catch(() => undefined);
+        return connected;
+      }
+
+      this.#entries.set(threadId, { key, connected });
+      return connected;
+    })().finally(() => {
+      if (this.#connecting.get(threadId)?.token === token) {
+        this.#connecting.delete(threadId);
+      }
+    });
+
+    this.#connecting.set(threadId, { key, token, promise: opening });
+    return opening;
   }
 
   async sweep(exceptThreadId: string) {
     if (!this.#inUse) return;
 
     for (const [id, entry] of this.#entries) {
-      if (id === exceptThreadId || this.#inUse(id)) continue;
+      if (id === exceptThreadId || this.#inUse(id) || this.#connecting.has(id)) continue;
 
       this.#entries.delete(id);
       await entry.connected.close().catch(() => undefined);
@@ -84,10 +118,20 @@ export class McpConnectionPool {
   }
 
   async close() {
+    this.#closed = true;
     this.#stopSweeper();
     const entries = [...this.#entries.values()];
     this.#entries.clear();
-    await Promise.all(entries.map(({ connected }) => connected.close().catch(() => undefined)));
+    const inflight = [...this.#connecting.values()];
+    this.#connecting.clear();
+    await Promise.all([
+      ...entries.map(({ connected }) => connected.close().catch(() => undefined)),
+      ...inflight.map(({ promise }) =>
+        promise
+          .then((connected) => connected.close().catch(() => undefined))
+          .catch(() => undefined),
+      ),
+    ]);
   }
 
   #stopSweeper() {

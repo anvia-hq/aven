@@ -64,17 +64,26 @@ export async function runCommand(
             proc.kill("SIGKILL");
           }
         }, timeoutMs);
+  let pipeTimer: ReturnType<typeof setTimeout> | undefined;
   const exited = proc.exited.then((code) => {
     clearTimeout(timer);
-    setTimeout(stopReading, PIPE_GRACE_MS);
+    pipeTimer = setTimeout(stopReading, PIPE_GRACE_MS);
     return code;
   });
 
-  const [stdout, stderr, code] = await Promise.all([
-    collect(proc.stdout, stdoutStop.promise),
-    collect(proc.stderr, stderrStop.promise),
-    exited,
-  ]);
+  let stdout: string;
+  let stderr: string;
+  let code: number;
+  try {
+    [stdout, stderr, code] = await Promise.all([
+      collect(proc.stdout, stdoutStop.promise),
+      collect(proc.stderr, stderrStop.promise),
+      exited,
+    ]);
+  } finally {
+    clearTimeout(timer);
+    clearTimeout(pipeTimer);
+  }
 
   if (!timedOut) return { code, stdout, stderr };
 

@@ -22,16 +22,31 @@ import type {
   ThreadWorkspaces,
 } from "../types";
 
+type RemoteThreadState = {
+  paths?: SandboxPaths;
+  env?: Readonly<Record<string, string>>;
+  images?: Map<string, ArtifactContent>;
+  waiting?: Waiting[];
+  delivering?: Promise<void>;
+  placed?: Map<string, string>;
+  pending?: string[];
+};
+
 export class RemoteWorkspaces implements ThreadWorkspaces {
-  #paths = new Map<string, SandboxPaths>();
-  #env = new Map<string, Readonly<Record<string, string>>>();
-  #images = new Map<string, Map<string, ArtifactContent>>();
-  #waiting = new Map<string, Waiting[]>();
-  #delivering = new Map<string, Promise<void>>();
-  #placed = new Map<string, Map<string, string>>();
-  #pending = new Map<string, string[]>();
+  #threads = new Map<string, RemoteThreadState>();
 
   constructor(private callFor: (threadId: string) => MachineCall) {}
+
+  #thread(threadId: string): RemoteThreadState {
+    let state = this.#threads.get(threadId);
+
+    if (!state) {
+      state = {};
+      this.#threads.set(threadId, state);
+    }
+
+    return state;
+  }
 
   call(threadId: string) {
     return this.callFor(threadId);
@@ -54,7 +69,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
       }
     },
     settle: (threadId: string) => this.#settle(threadId),
-    placed: (threadId: string, name: string) => this.#placed.get(threadId)?.get(name),
+    placed: (threadId: string, name: string) => this.#threads.get(threadId)?.placed?.get(name),
     claim: (threadId: string, name: string) => this.#claim(threadId, name),
     placedNote: (threadId: string) => this.#placedNote(threadId),
   };
@@ -79,38 +94,41 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
         this.#wait(threadId, { op: "artifacts.keep", args: { name, data } }),
       );
     },
-    read: async (threadId: string, name: string) => this.#images.get(threadId)?.get(name) ?? null,
+    read: async (threadId: string, name: string) =>
+      this.#threads.get(threadId)?.images?.get(name) ?? null,
   };
 
   #image(threadId: string, name: string, content: ArtifactContent) {
-    const images = this.#images.get(threadId) ?? new Map<string, ArtifactContent>();
-    images.set(name, content);
-    this.#images.set(threadId, images);
+    const state = this.#thread(threadId);
+    state.images ??= new Map<string, ArtifactContent>();
+    state.images.set(name, content);
   }
 
   #wait(threadId: string, waiting: Waiting) {
-    const list = this.#waiting.get(threadId) ?? [];
-    list.push(waiting);
-    this.#waiting.set(threadId, list);
+    const state = this.#thread(threadId);
+    state.waiting ??= [];
+    state.waiting.push(waiting);
   }
 
   #deliver(threadId: string, call: MachineCall) {
-    const earlier = this.#delivering.get(threadId) ?? Promise.resolve();
+    const state = this.#thread(threadId);
+    const earlier = state.delivering ?? Promise.resolve();
     const delivery = earlier.catch(() => undefined).then(() => this.#drain(threadId, call));
-    this.#delivering.set(threadId, delivery);
+    state.delivering = delivery;
     return delivery.finally(() => {
-      if (this.#delivering.get(threadId) === delivery) this.#delivering.delete(threadId);
+      if (state.delivering === delivery) state.delivering = undefined;
     });
   }
 
   async #settle(threadId: string) {
-    if (!this.#waiting.get(threadId)?.length) return;
+    if (!this.#threads.get(threadId)?.waiting?.length) return;
 
     await this.#deliver(threadId, this.callFor(threadId)).catch(() => undefined);
   }
 
   async #drain(threadId: string, call: MachineCall) {
-    const waiting = this.#waiting.get(threadId);
+    const state = this.#threads.get(threadId);
+    const waiting = state?.waiting;
     while (waiting?.length) {
       const next = waiting[0]!;
       const result = await call(next.op, next.args);
@@ -119,7 +137,8 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
       waiting.shift();
     }
-    this.#waiting.delete(threadId);
+
+    if (state) state.waiting = undefined;
   }
 
   #placedUpload(threadId: string, result: unknown) {
@@ -131,35 +150,30 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
 
     if (!name) return;
 
-    const placed = this.#placed.get(threadId) ?? new Map<string, string>();
-    placed.set(name, path);
-    this.#placed.set(threadId, placed);
-    const pending = this.#pending.get(threadId) ?? [];
-    pending.push(path);
-    this.#pending.set(threadId, pending);
+    const state = this.#thread(threadId);
+    state.placed ??= new Map<string, string>();
+    state.placed.set(name, path);
+    state.pending ??= [];
+    state.pending.push(path);
   }
 
   #claim(threadId: string, name: string) {
-    const path = this.#placed.get(threadId)?.get(name);
+    const state = this.#threads.get(threadId);
+    const path = state?.placed?.get(name);
 
-    if (!path) return;
+    if (!path || !state?.pending) return;
 
-    const pending = this.#pending.get(threadId);
-
-    if (!pending) return;
-
-    const left = pending.filter((item) => item !== path);
-
-    if (left.length === 0) this.#pending.delete(threadId);
-    else this.#pending.set(threadId, left);
+    const left = state.pending.filter((item) => item !== path);
+    state.pending = left.length === 0 ? undefined : left;
   }
 
   #placedNote(threadId: string) {
-    const pending = this.#pending.get(threadId);
+    const state = this.#threads.get(threadId);
+    const pending = state?.pending;
 
-    if (!pending?.length) return;
+    if (!state || !pending?.length) return;
 
-    this.#pending.delete(threadId);
+    state.pending = undefined;
 
     if (pending.length === 1) return `An attached file is now on the computer at ${pending[0]}.`;
 
@@ -167,7 +181,9 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   }
 
   #flush(threadId: string, call: MachineCall) {
-    if (!this.#waiting.has(threadId) || this.#delivering.has(threadId)) return;
+    const state = this.#threads.get(threadId);
+
+    if (!state?.waiting?.length || state.delivering) return;
 
     this.#deliver(threadId, call).catch((error: unknown) => {
       console.warn(`Files kept for ${threadId} are still waiting:`, errorMessage(error));
@@ -211,7 +227,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
           folder: directory,
         })) as { paths: SandboxPaths | null };
 
-        if (prepared.paths) this.#paths.set(thread.id, prepared.paths);
+        if (prepared.paths) this.#thread(thread.id).paths = prepared.paths;
 
         await this.#deliver(thread.id, raw);
       })().catch((error: unknown) => {
@@ -219,14 +235,21 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
         throw error;
       }));
 
-    if (!this.#paths.has(thread.id)) {
+    if (!this.#threads.get(thread.id)?.paths) {
       const paths = (await call("paths").catch(() => null)) as SandboxPaths | null;
 
-      if (paths) this.#paths.set(thread.id, paths);
+      if (paths) this.#thread(thread.id).paths = paths;
     }
 
-    const remote = new RemoteSandbox(thread.id, call, () => this.#paths.get(thread.id)?.workspace);
-    const runtime = withProjectEnv(startedOnUse(remote, start), () => this.#env.get(thread.id));
+    const remote = new RemoteSandbox(
+      thread.id,
+      call,
+      () => this.#threads.get(thread.id)?.paths?.workspace,
+    );
+    const runtime = withProjectEnv(
+      startedOnUse(remote, start),
+      () => this.#threads.get(thread.id)?.env,
+    );
     return {
       tools: sandboxTools(runtime, { id: thread.id, artifacts: this.artifacts }),
       runtime,
@@ -245,7 +268,7 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   }
 
   paths(threadId: string) {
-    return this.#paths.get(threadId);
+    return this.#threads.get(threadId)?.paths;
   }
 
   async markTurn(threadId: string) {
@@ -261,26 +284,17 @@ export class RemoteWorkspaces implements ThreadWorkspaces {
   }
 
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
-    if (env?.length) this.#env.set(threadId, envOf(env));
-    else this.#env.delete(threadId);
-
+    const state = this.#thread(threadId);
+    state.env = env?.length ? envOf(env) : undefined;
     void this.callFor(threadId)("setProjectEnv", { env }).catch(() => undefined);
   }
 
   async release(threadId: string) {
-    this.#env.delete(threadId);
-    this.#images.delete(threadId);
-    this.#placed.delete(threadId);
-    this.#pending.delete(threadId);
+    this.#threads.delete(threadId);
   }
 
   async dispose() {
-    this.#paths.clear();
-    this.#env.clear();
-    this.#images.clear();
-    this.#waiting.clear();
-    this.#placed.clear();
-    this.#pending.clear();
+    this.#threads.clear();
   }
 }
 

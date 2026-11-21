@@ -1,9 +1,9 @@
 import { codexAuthSecrets, parseCodexAuth } from "@aven/protocol/codex-auth";
 import type { HostedRunContext, RunInput } from "@aven/agent-backend/types";
-import type { RunEnvVar } from "@aven/protocol/types";
+import type { RunEnvVar, RunSecrets } from "@aven/protocol/types";
 
 import { renewCodexAuth } from "./codex-auth-renewal";
-import { secretRedactor } from "../security/secret-redaction";
+import { collectRunSecretVariables, secretRedactor } from "../security/secret-redaction";
 
 type HostedKind = "claude" | "codex";
 
@@ -15,24 +15,17 @@ export function createHostedRunInput(
   kind: HostedKind,
   input: Omit<HostedRunContext, "redact" | "renewed" | "env"> & {
     env?: readonly RunEnvVar[];
+    secrets?: RunSecrets;
     caller?: RenewCaller;
   },
 ): RunInput {
-  const { env = [], caller, ...rest } = input;
-  const variables = [...env];
-  const auth = kind === "codex" && rest.token ? parseCodexAuth(rest.token) : undefined;
-
-  if (auth) {
-    codexAuthSecrets(auth).forEach((value, index) =>
-      variables.push({ name: `CODEX_AUTH_${index}`, value, secret: true }),
-    );
-  } else if (rest.token) {
-    variables.push({
-      name: kind === "claude" ? "CLAUDE_CODE_OAUTH_TOKEN" : "CODEX_API_KEY",
-      value: rest.token,
-      secret: true,
-    });
-  }
+  const { env = [], secrets, caller, ...rest } = input;
+  const variables = collectRunSecretVariables({
+    ...secrets,
+    env: secrets?.env ?? [...env],
+    claudeToken: kind === "claude" ? (rest.token ?? secrets?.claudeToken) : secrets?.claudeToken,
+    codexToken: kind === "codex" ? (rest.token ?? secrets?.codexToken) : secrets?.codexToken,
+  });
 
   let redact = secretRedactor(variables);
   const hosted: HostedRunContext = {

@@ -32,6 +32,17 @@ import type {
   ThreadWorkspaces,
 } from "./types";
 
+type HostThreadState = {
+  root?: Promise<string>;
+  sandbox?: DirectorySandbox;
+  projectEnv?: Readonly<Record<string, string>>;
+  projectVars?: readonly RunEnvVar[];
+  githubEnv?: Readonly<Record<string, string>>;
+  githubToken?: string;
+  redactor?: ReturnType<typeof secretRedactor>;
+  claim?: Promise<void>;
+};
+
 export class HostSandboxes implements ThreadWorkspaces {
   readonly artifacts: ArtifactStore;
   readonly uploads: UploadStore;
@@ -40,13 +51,7 @@ export class HostSandboxes implements ThreadWorkspaces {
   #home: string;
   #dirs: string[];
   #reposDir: string;
-  #roots = new Map<string, Promise<string>>();
-  #sandboxes = new Map<string, DirectorySandbox>();
-  #projectEnv = new Map<string, Readonly<Record<string, string>>>();
-  #projectVars = new Map<string, readonly RunEnvVar[]>();
-  #githubEnv = new Map<string, Readonly<Record<string, string>>>();
-  #githubToken = new Map<string, string>();
-  #redactors = new Map<string, ReturnType<typeof secretRedactor>>();
+  #threads = new Map<string, HostThreadState>();
 
   private constructor(config: HostSandboxConfig) {
     this.#config = config;
@@ -91,16 +96,27 @@ export class HostSandboxes implements ThreadWorkspaces {
     return existsSync(bot) ? bot : join(this.#home, "workspaces", threadId);
   }
 
-  #claims = new Map<string, Promise<void>>();
+  #thread(id: string): HostThreadState {
+    let state = this.#threads.get(id);
+
+    if (!state) {
+      state = {};
+      this.#threads.set(id, state);
+    }
+
+    return state;
+  }
 
   #claimBotFolder(id: string) {
-    const known = this.#claims.get(id);
+    const state = this.#thread(id);
 
-    if (known) return known;
+    if (state.claim) return state.claim;
 
     const moving = this.#moveBotFolder(id);
-    this.#claims.set(id, moving);
-    moving.catch(() => this.#claims.delete(id));
+    state.claim = moving;
+    moving.catch(() => {
+      if (state.claim === moving) state.claim = undefined;
+    });
     return moving;
   }
 
@@ -110,7 +126,10 @@ export class HostSandboxes implements ThreadWorkspaces {
     if (existsSync(folder)) return;
 
     const legacy = join(this.#home, "workspaces", id);
-    this.#roots.delete(id);
+    const state = this.#threads.get(id);
+
+    if (state) state.root = undefined;
+
     await mkdir(dirname(folder), { recursive: true });
 
     if (!existsSync(legacy)) {
@@ -138,13 +157,15 @@ export class HostSandboxes implements ThreadWorkspaces {
     repo?: () => Promise<RepoAccess>,
     folder?: () => Promise<string | null>,
   ) {
-    const known = this.#roots.get(thread.id);
+    const state = this.#thread(thread.id);
 
-    if (known) return known;
+    if (state.root) return state.root;
 
     const preparing = this.#fill(thread, repo, folder);
-    this.#roots.set(thread.id, preparing);
-    preparing.catch(() => this.#roots.delete(thread.id));
+    state.root = preparing;
+    preparing.catch(() => {
+      if (state.root === preparing) state.root = undefined;
+    });
     return preparing;
   }
 
@@ -250,7 +271,8 @@ export class HostSandboxes implements ThreadWorkspaces {
 
     const dir = this.#workspaceDir(thread.id);
     await mkdir(dir, { recursive: true });
-    const existing = this.#sandboxes.get(thread.id);
+    const state = this.#thread(thread.id);
+    const existing = state.sandbox;
     let sandbox: DirectorySandbox;
 
     if (existing && existing.root === dir) {
@@ -259,7 +281,7 @@ export class HostSandboxes implements ThreadWorkspaces {
       if (existing) await existing.dispose();
 
       sandbox = new DirectorySandbox(thread.id, dir);
-      this.#sandboxes.set(thread.id, sandbox);
+      state.sandbox = sandbox;
     }
 
     const runtime = withProjectEnv(startedOnUse(sandbox, start), () => this.#envOf(thread.id));
@@ -270,7 +292,7 @@ export class HostSandboxes implements ThreadWorkspaces {
       processes: threadProcesses(
         runtime,
         () => true,
-        () => this.#redactors.get(thread.id),
+        () => this.#threads.get(thread.id)?.redactor,
       ),
       start,
       state: () => this.computerState(thread.id),
@@ -313,7 +335,11 @@ export class HostSandboxes implements ThreadWorkspaces {
   }
 
   running() {
-    return this.#sandboxes.size;
+    let count = 0;
+    for (const state of this.#threads.values()) {
+      if (state.sandbox) count++;
+    }
+    return count;
   }
 
   async markTurn(threadId: string) {
@@ -330,59 +356,55 @@ export class HostSandboxes implements ThreadWorkspaces {
   }
 
   async release(threadId: string) {
-    await this.#sandboxes.get(threadId)?.dispose();
-    this.#sandboxes.delete(threadId);
-    this.#roots.delete(threadId);
-    this.#projectEnv.delete(threadId);
-    this.#projectVars.delete(threadId);
-    this.#githubEnv.delete(threadId);
-    this.#githubToken.delete(threadId);
-    this.#redactors.delete(threadId);
+    const state = this.#threads.get(threadId);
+    this.#threads.delete(threadId);
+    await state?.sandbox?.dispose();
   }
 
   setProjectEnv(threadId: string, env: readonly RunEnvVar[] | undefined) {
-    if (env?.length) this.#projectEnv.set(threadId, envOf(env));
-    else this.#projectEnv.delete(threadId);
-
-    if (env?.length) this.#projectVars.set(threadId, env);
-    else this.#projectVars.delete(threadId);
-
+    const state = this.#thread(threadId);
+    state.projectEnv = env?.length ? envOf(env) : undefined;
+    state.projectVars = env?.length ? env : undefined;
     this.#redact(threadId);
   }
 
   async signInGithub(threadId: string, github: RunGithub | undefined) {
-    this.#githubEnv.delete(threadId);
-    this.#githubToken.delete(threadId);
+    const state = this.#thread(threadId);
+    state.githubEnv = undefined;
+    state.githubToken = undefined;
     this.#redact(threadId);
 
     if (!github) return;
 
     const configDir = join(this.#home, "gh-config", threadId);
     await mkdir(configDir, { recursive: true });
-    this.#githubEnv.set(threadId, githubRunEnv(github, configDir));
-    this.#githubToken.set(threadId, github.token);
+    state.githubEnv = githubRunEnv(github, configDir);
+    state.githubToken = github.token;
     this.#redact(threadId);
   }
 
   #envOf(threadId: string): Record<string, string> {
-    return Object.assign({}, this.#projectEnv.get(threadId), this.#githubEnv.get(threadId));
+    const state = this.#threads.get(threadId);
+    return Object.assign({}, state?.projectEnv, state?.githubEnv);
   }
 
   #redact(threadId: string) {
-    const token = this.#githubToken.get(threadId);
-    const variables = Array.from(this.#projectVars.get(threadId) ?? []);
+    const state = this.#threads.get(threadId);
 
-    if (token !== undefined) variables.push({ name: "GH_TOKEN", value: token, secret: true });
+    if (!state) return;
 
-    const redact = secretRedactor(variables);
+    const variables = Array.from(state.projectVars ?? []);
 
-    if (redact) this.#redactors.set(threadId, redact);
-    else this.#redactors.delete(threadId);
+    if (state.githubToken !== undefined) {
+      variables.push({ name: "GH_TOKEN", value: state.githubToken, secret: true });
+    }
+
+    state.redactor = secretRedactor(variables);
   }
 
   async dispose() {
     await Promise.all(
-      [...this.#sandboxes.keys()].map((id) =>
+      [...this.#threads.keys()].map((id) =>
         this.release(id).catch((error: unknown) => {
           console.error(`Could not stop thread ${id}:`, error);
         }),

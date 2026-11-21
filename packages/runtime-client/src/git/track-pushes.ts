@@ -17,7 +17,7 @@ export async function trackPushes(root: string, run: Git) {
     return;
   }
 
-  const added = await run(["config", "--add", "remote.origin.fetch", REFSPEC], { cwd: root });
+  const added = await safeGitConfig(run, root, ["--add", "remote.origin.fetch", REFSPEC]);
 
   if (added.code === 0) {
     if (tracked.size >= MAX_TRACKED) tracked.clear();

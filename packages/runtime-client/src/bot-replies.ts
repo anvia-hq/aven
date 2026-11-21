@@ -122,6 +122,7 @@ type Reply = { botId: string; abort: AbortController; spoke: boolean; machine?: 
 
 export class BotReplies {
   #live = new Map<string, Reply>();
+  #tasks = new Set<Promise<void>>();
   #context: BotRepliesContext;
   #pause: NonNullable<BotRepliesContext["pause"]>;
 
@@ -153,7 +154,9 @@ export class BotReplies {
       spoke: false,
       machine: message.machine || undefined,
     });
-    void this.#answer(message, abort);
+    const task = this.#answer(message, abort);
+    this.#tasks.add(task);
+    void task.finally(() => this.#tasks.delete(task));
   }
 
   cancel(replyId: string, reason: string) {
@@ -162,6 +165,11 @@ export class BotReplies {
 
   abortAll(reason: string) {
     for (const reply of this.#live.values()) reply.abort.abort(new Error(reason));
+  }
+
+  async close(reason = "The runner is stopping") {
+    this.abortAll(reason);
+    await Promise.allSettled(this.#tasks);
   }
 
   async #answer(message: BotReplyMessage, abort: AbortController) {

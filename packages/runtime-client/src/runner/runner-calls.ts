@@ -43,8 +43,9 @@ export function createRunnerCalls({
   steer,
   dirs = [],
   clone,
+  stopped,
 }: RunnerCallsContext) {
-  const machineCall = createMachineCalls({ sandbox, boxes, idle, machineProcesses });
+  const machineCall = createMachineCalls({ sandbox, boxes, idle, machineProcesses, stopped });
   const inFlightDiffs = new Map<
     string,
     { token: symbol; promise: Promise<Awaited<ReturnType<typeof readThreadDiff>>> }

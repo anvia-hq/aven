@@ -9,5 +9,6 @@ At the end of the two weeks, delete every test file whose failures were purely c
 
 **Never delete tests for authorization, privacy, migrations, or concurrency.**
 
-| Date | Test file | Kind (`caught regression` / `change detector`) | PR / Commit | Notes |
-| ---- | --------- | ---------------------------------------------- | ----------- | ----- |
+| Date       | Test file                                    | Kind (`caught regression` / `change detector`) | PR / Commit                   | Notes                                                                                                                                                                    |
+| ---------- | -------------------------------------------- | ---------------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-11-21 | `packages/runtime-client/src/runner.test.ts` | `caught regression`                            | `refactor/code-quality-audit` | `run-driver.close()` cancelled live durable runs instead of letting `backends.close()` shut down the runtime cleanly, breaking runner-restart resumption across 3 tests. |

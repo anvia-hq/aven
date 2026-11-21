@@ -69,10 +69,14 @@ export function createMachineCalls({
   boxes,
   idle,
   machineProcesses,
+  stopped: isStopped,
 }: MachineCallsContext) {
   const running = new Map<string, AbortController>();
   const stopped = new Set<string>();
-  const mcps = new McpConnectionPool();
+  const mcps = new McpConnectionPool({
+    inUse: (threadId) => boxes.has(threadId) || machineProcesses.has(threadId),
+    stopped: isStopped,
+  });
 
   async function closeMcp(threadId: string) {
     await mcps.closeThread(threadId);
