@@ -3,6 +3,7 @@ import { Elysia, status } from "elysia";
 import { WEBHOOK_BODY_MAX } from "@aven/protocol/webhooks";
 
 import { NotFoundError, orNotFound } from "@aven/server-kit/errors";
+import { bearerToken } from "@aven/server-kit/tokens";
 import { authRouter } from "../auth/router";
 import { WEBHOOK_HEADERS } from "./note";
 import {
@@ -15,14 +16,12 @@ import type { Webhooks } from "./types";
 
 const TOKEN_HEADER = "x-aven-webhook-token";
 
-const BEARER = /^Bearer\s+(\S+)$/i;
-
 function tokenOf(request: Request) {
   const header = request.headers.get(TOKEN_HEADER)?.trim();
 
   if (header) return header;
 
-  return BEARER.exec(request.headers.get("authorization") ?? "")?.[1];
+  return bearerToken(request.headers.get("authorization"));
 }
 
 function headersOf(request: Request) {

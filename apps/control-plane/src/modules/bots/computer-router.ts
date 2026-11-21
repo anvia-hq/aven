@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 
 import { authRouter } from "../auth/router";
+import { artifactResponse } from "../artifacts/response";
 import { createArtifactsService } from "../artifacts/service";
 import { createComputerService } from "../computer/service";
 import type { RuntimeHub } from "../runtimes/hub";
@@ -20,8 +21,11 @@ export const botComputerRouter = (
     .use(authRouter)
     .get(
       "/:id/artifacts/:name",
-      ({ params, user, request }) =>
-        artifacts.read(user.id, params.id, params.name, request.headers.get("range")),
+      async ({ params, user, request }) =>
+        artifactResponse(
+          await artifacts.read(user.id, params.id, params.name),
+          request.headers.get("range"),
+        ),
       {
         auth: true,
         params: botArtifactParams,

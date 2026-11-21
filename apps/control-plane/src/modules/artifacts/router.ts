@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { threadAccess } from "../threads/access";
 import { runnerFor } from "../runtimes/ask-runner";
 import type { RuntimeHub } from "../runtimes/hub";
+import { artifactResponse } from "./response";
 import { artifactParams } from "./schema";
 import { createArtifactsService } from "./service";
 
@@ -12,8 +13,11 @@ export const artifactsRouter = (hub: RuntimeHub) => {
     .use(threadAccess)
     .get(
       "/:id/artifacts/:name",
-      ({ params, organizationId, request }) =>
-        service.read(organizationId, params.id, params.name, request.headers.get("range")),
+      async ({ params, organizationId, request }) =>
+        artifactResponse(
+          await service.read(organizationId, params.id, params.name),
+          request.headers.get("range"),
+        ),
       { thread: "read", params: artifactParams },
     );
 };

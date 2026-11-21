@@ -1,5 +1,3 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
-
 import { db } from "@aven/db/client";
 import { botWebhooks } from "@aven/db/schema/bot-webhooks";
 import { WEBHOOKS_LIMIT, WEBHOOK_TOKEN_PREFIX } from "@aven/protocol/webhooks";
@@ -11,6 +9,7 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
+import { issueOpaqueToken, verifyOpaqueTokenHash } from "@aven/server-kit/tokens";
 import { botsService } from "../bots/service";
 import { webhookNote } from "./note";
 import type { CreateWebhookBody } from "./schema";
@@ -20,13 +19,7 @@ import type { Webhook, WebhookCreated, WebhookStatus } from "@aven/protocol/type
 
 const STATUSES = new Set<string>(["delivered", "busy", "failed"]);
 
-const hashOf = (token: string) => createHash("sha256").update(token).digest("hex");
-
-function sameToken(token: string, stored: string) {
-  const given = Buffer.from(hashOf(token), "hex");
-  const kept = Buffer.from(stored, "hex");
-  return given.length === kept.length && timingSafeEqual(given, kept);
-}
+const sameToken = verifyOpaqueTokenHash;
 
 const statusOf = (stored: string | null): WebhookStatus | null =>
   stored && STATUSES.has(stored) ? (stored as WebhookStatus) : null;
@@ -65,7 +58,7 @@ export function createWebhooks({ fire }: { fire: WebhookFire }) {
     },
 
     async create(userId: string, { name }: CreateWebhookBody): Promise<WebhookCreated> {
-      const token = `${WEBHOOK_TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+      const { token, tokenHash, tokenHint } = issueOpaqueToken(WEBHOOK_TOKEN_PREFIX);
       const row = await db.transaction(async (tx) => {
         await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`webhooks:${userId}`}))`);
         const [owned] = await tx
@@ -82,8 +75,8 @@ export function createWebhooks({ fire }: { fire: WebhookFire }) {
           .values({
             userId,
             name,
-            tokenHash: hashOf(token),
-            tokenHint: token.slice(-4),
+            tokenHash,
+            tokenHint,
           })
           .returning();
         return made!;

@@ -1,4 +1,4 @@
-import { Elysia } from "elysia";
+import { Elysia, status } from "elysia";
 
 import { ForbiddenError, orNotFound } from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
@@ -25,6 +25,16 @@ import { stopCloudRuntime } from "./providers";
 import { isCloudTemplate } from "@aven/sandbox/cloud-config";
 import { LOCAL_RUNTIME_ID, runtimesService } from "./service";
 import type { LatestRelease } from "./types";
+
+async function canManageRuntime(
+  runtime: { id: string; ownerId: string | null },
+  organizationId: string,
+  user: { id: string; email: string },
+) {
+  return runtime.id === LOCAL_RUNTIME_ID
+    ? platformService.isOwner(user)
+    : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
+}
 
 export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) => {
   const folders = runnerFolders(hub);
@@ -77,12 +87,8 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           await runtimesService.get(organizationId, params.id),
           "Runtime not found",
         );
-        const allowed =
-          runtime.id === LOCAL_RUNTIME_ID
-            ? await platformService.isOwner(user)
-            : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
 
-        if (!allowed) {
+        if (!(await canManageRuntime(runtime, organizationId, user))) {
           throw new ForbiddenError(
             runtime.id === LOCAL_RUNTIME_ID
               ? "Only a platform owner can rename the built-in runner"
@@ -104,12 +110,8 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           await runtimesService.get(organizationId, params.id),
           "Runtime not found",
         );
-        const allowed =
-          runtime.id === LOCAL_RUNTIME_ID
-            ? await platformService.isOwner(user)
-            : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
 
-        if (!allowed) {
+        if (!(await canManageRuntime(runtime, organizationId, user))) {
           throw new ForbiddenError(
             "Only the runner's owner, an owner or an admin can change which GitHub it uses",
           );
@@ -136,7 +138,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
     )
     .post(
       "/:id/update",
-      async ({ params, body, organizationId, user, set }) => {
+      async ({ params, body, organizationId, user }) => {
         if (!(await isOwnerOrAdmin(organizationId, user.id)))
           throw new ForbiddenError("Only an owner or an admin can update a runner");
 
@@ -150,8 +152,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           latest,
         );
         const result = await requestUpdate(hub, runtime.id, release, body?.release);
-        set.status = 202;
-        return result;
+        return status(202, result);
       },
       { auth: true, org: true, params: runtimeParams, body: updateRuntimeBody },
     )

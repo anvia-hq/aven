@@ -1,7 +1,6 @@
-import { startRuntime } from "@aven/runtime-client/runner";
-import { delimiter } from "node:path";
-
 import { HostSandboxes } from "@aven/runtime-client/host-sandboxes";
+import { servedFolders } from "@aven/runtime-client/run-runner";
+import { startRuntime } from "@aven/runtime-client/runner";
 import { journalPathIn } from "@aven/runtime-client/runtime-home";
 
 import { describeError } from "@aven/server-kit/errors";
@@ -36,7 +35,7 @@ export async function startLocalRunner(port: number) {
   try {
     const sandbox = await HostSandboxes.start({
       home,
-      dirs: (process.env.AVEN_DIRS ?? "").split(delimiter).filter(Boolean),
+      dirs: servedFolders(process.env.AVEN_DIRS),
     });
     return startRuntime({
       url: `ws://localhost:${port}/runtimes/connect`,

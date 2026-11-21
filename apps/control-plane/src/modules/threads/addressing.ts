@@ -1,8 +1,9 @@
 import { parseDriverPrompt } from "@aven/protocol/drivers";
+import { AGENT_HANDLE } from "@aven/protocol/threads";
 
 import type { Addressing, AddressingScores, PersonMention } from "./types";
 
-export const AGENT_HANDLE = "@agent";
+export { AGENT_HANDLE };
 export const PERSON_AT_LEAST = 0.6;
 
 const PERSON_MENTION = /@\[([^\]\n]{1,80})\]\(user:([\w-]{1,64})\)/g;

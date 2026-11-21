@@ -6,7 +6,7 @@ import {
   type DrizzleMemoryDatabaseLike,
 } from "@anvia/memory-drizzle";
 
-import { withoutNul } from "./without-nul";
+import { withoutNul } from "@aven/server-kit/without-nul";
 
 class NulFreeMemoryStore extends DrizzleMemoryStore {
   override append(input: MemoryAppendOptions) {

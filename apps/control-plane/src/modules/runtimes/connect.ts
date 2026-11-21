@@ -2,8 +2,8 @@ import { CloseCode } from "@aven/protocol/runtime-wire";
 import { Elysia } from "elysia";
 
 import { bytesOf } from "@aven/server-kit/bytes";
+import { bearerToken } from "@aven/server-kit/tokens";
 import { cloudSandboxStore } from "../cloud-lifecycle/sandbox-store";
-import { bearerToken } from "./bearer";
 import { computerUsageService } from "./computer-usage";
 import type { RuntimeConnection, RuntimeHub } from "./hub";
 import { runtimesService } from "./service";

@@ -1,7 +1,7 @@
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 
-import { UnprocessableError } from "@aven/server-kit/errors";
+import { UnprocessableError } from "./errors";
 
 export class ProviderAddressError extends UnprocessableError {}
 

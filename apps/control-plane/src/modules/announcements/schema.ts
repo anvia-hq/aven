@@ -1,11 +1,10 @@
 import {
   ANNOUNCEMENT_DETAILS_MAX,
   ANNOUNCEMENT_SUMMARY_MAX,
+  ANNOUNCEMENT_TEMPLATES,
   ANNOUNCEMENT_TITLE_MAX,
 } from "@aven/protocol/announcements";
 import { z } from "zod";
-
-export const ANNOUNCEMENT_TEMPLATES = ["waves", "violet", "pink", "amber"] as const;
 
 const fields = {
   title: z.string().trim().min(1).max(ANNOUNCEMENT_TITLE_MAX),

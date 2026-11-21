@@ -19,6 +19,7 @@ import {
   UnavailableError,
   UnprocessableError,
 } from "@aven/server-kit/errors";
+import { followStream } from "@aven/server-kit/event-stream";
 import type { BotDelivery, BotReplier, BotReplyInput, BotSaid, BotSettled } from "./types";
 import type { BotRunChoice } from "../providers/types";
 import type {
@@ -248,43 +249,17 @@ export class BotRunner {
     );
   }
 
-  async *#follow<T>(
+  #follow<T>(
     attach: (listener: (item: T) => void) => () => void,
     first: T,
     signal: AbortSignal,
   ): AsyncGenerator<T | null> {
-    const queue: T[] = [];
-    let wake: (() => void) | undefined;
-    let detach: (() => void) | undefined;
-    try {
-      detach = attach((item) => {
-        queue.push(item);
-        wake?.();
-      });
-      const aborted = new Promise<undefined>((resolve) => {
-        signal.addEventListener("abort", () => resolve(undefined), { once: true });
-      });
-      yield first;
-      while (!signal.aborted) {
-        const item = queue.shift();
-
-        if (item !== undefined) {
-          yield item;
-          continue;
-        }
-
-        const timer = Bun.sleep(PING_MS).then(() => null);
-        const arrived = new Promise<undefined>((resolve) => {
-          wake = () => resolve(undefined);
-        });
-        const woke = await Promise.race([arrived, aborted, timer]);
-        wake = undefined;
-
-        if (woke === null && queue.length === 0 && !signal.aborted) yield null;
-      }
-    } finally {
-      detach?.();
-    }
+    return followStream({
+      attach,
+      initial: () => first,
+      signal,
+      pingMs: PING_MS,
+    });
   }
 
   dispose() {

@@ -1,6 +1,7 @@
 import { GOAL_ROUND_NOTE_PREFIX, isGoalRoundNote } from "@aven/protocol/goals";
 
 import { describeError } from "@aven/server-kit/errors";
+import { createPoller } from "@aven/server-kit/poller";
 import { goalsService } from "./service";
 import type { BotGoalRow } from "@aven/db/schema/types";
 
@@ -25,8 +26,6 @@ export function createGoalDriver(options: {
   intervalMs: number;
 }) {
   const { wake, isIdle, intervalMs } = options;
-  let timer: ReturnType<typeof setInterval> | undefined;
-  let ticking: Promise<void> | undefined;
   const failing = new Set<string>();
 
   async function tell(userId: string, botId: string, reason: string) {
@@ -75,12 +74,11 @@ export function createGoalDriver(options: {
     }
   }
 
-  const guarded = () => {
-    ticking ??= tick()
-      .catch((error: unknown) => console.warn("A goal tick failed:", describeError(error)))
-      .finally(() => (ticking = undefined));
-    return ticking;
-  };
+  const poller = createPoller({
+    intervalMs,
+    run: tick,
+    onError: (error) => console.warn("A goal tick failed:", describeError(error)),
+  });
 
   return {
     advance,
@@ -96,17 +94,7 @@ export function createGoalDriver(options: {
 
       if (await goalsService.block(botId, reason)) await tell(userId, botId, reason);
     },
-    start() {
-      if (timer) return;
-
-      void guarded();
-      timer = setInterval(() => void guarded(), intervalMs);
-      timer.unref();
-    },
-    async close() {
-      clearInterval(timer);
-      timer = undefined;
-      await ticking;
-    },
+    start: poller.start,
+    close: poller.close,
   };
 }

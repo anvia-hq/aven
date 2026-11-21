@@ -1,8 +1,10 @@
-import { assertPublicProviderUrl } from "./address-guard";
+import { assertPublicProviderUrl } from "@aven/server-kit/address-guard";
+import { hashOpaqueToken } from "@aven/server-kit/tokens";
 import type { GatewayModel } from "./types";
 
 const TIMEOUT_MS = 3_000;
 const TTL_MS = 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 256;
 
 type Fetch = (url: string, init: RequestInit) => Promise<Response>;
 
@@ -115,10 +117,16 @@ export function createGatewayInfo(options: { fetch?: Fetch; now?: () => number }
     modelId: string,
   ): Promise<GatewayModel | null> {
     const base = baseUrl.replace(/\/+$/, "");
-    const key = `${base}\n${apiKey ?? ""}`;
+    const key = `${base}\n${apiKey ? hashOpaqueToken(apiKey) : ""}`;
     let entry = known.get(key);
 
     if (!entry || entry.expires <= now()) {
+      if (known.size >= MAX_CACHE_ENTRIES) {
+        const oldest = known.keys().next().value;
+
+        if (oldest !== undefined) known.delete(oldest);
+      }
+
       entry = { models: load(base, apiKey), expires: now() + TTL_MS };
       known.set(key, entry);
     }
