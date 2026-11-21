@@ -12,6 +12,7 @@ const UPSTREAM_URL = /^(https:\/\/|ssh:\/\/|git@|file:\/\/|\/)/;
 export const UPSTREAM_REF = "refs/aven/upstream";
 
 const upstreamFetched = new Map<string, { at: number; head: string; ok: boolean }>();
+const upstreamInFlight = new Map<string, Promise<void>>();
 
 const isFolder = (url: string) => url.startsWith("/") || url.startsWith("file://");
 
@@ -27,18 +28,7 @@ async function folderDefaultBranch(path: string, fallback: string, run: Git) {
     : fallback;
 }
 
-async function refreshUpstream(
-  root: string,
-  folder: string,
-  branch: string,
-  head: string,
-  run: Git,
-) {
-  const last = upstreamFetched.get(root);
-  const fresh = last !== undefined && Date.now() - last.at < UPSTREAM_FRESH_MS;
-
-  if (fresh && (!last.ok || last.head === head)) return;
-
+async function fetchUpstream(root: string, folder: string, branch: string, head: string, run: Git) {
   const path = folder.startsWith("file://") ? folder.slice("file://".length) : folder;
   const read = await run(
     ["config", "--file", join(path, ".git", "config"), "--get", "remote.origin.url"],
@@ -63,6 +53,29 @@ async function refreshUpstream(
     },
   );
   upstreamFetched.set(root, { at: Date.now(), head, ok: fetched.code === 0 });
+}
+
+async function refreshUpstream(
+  root: string,
+  folder: string,
+  branch: string,
+  head: string,
+  run: Git,
+) {
+  const pending = upstreamInFlight.get(root);
+
+  if (pending) return pending;
+
+  const last = upstreamFetched.get(root);
+  const fresh = last !== undefined && Date.now() - last.at < UPSTREAM_FRESH_MS;
+
+  if (fresh && (!last.ok || last.head === head)) return;
+
+  const task = fetchUpstream(root, folder, branch, head, run).finally(() => {
+    upstreamInFlight.delete(root);
+  });
+  upstreamInFlight.set(root, task);
+  return task;
 }
 
 export async function refreshBase(root: string, run: Git) {
