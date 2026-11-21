@@ -3,10 +3,11 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 
 import { AVEN_NOTE } from "@aven/agent-backend/hosted-helpers";
-import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
+import { hostedProcessEnv } from "@aven/agent-backend/runner-secrets";
 import type { BackendImage } from "@aven/agent-backend/types";
 import { parseCodexAuth } from "@aven/protocol/codex-auth";
 import { CODEX_DEFAULT_EFFORT, codexEffortOf, codexResolvedOf } from "@aven/protocol/codex-models";
+import { IMAGE_EXTENSIONS } from "@aven/protocol/image-type";
 import type { RunEnvVar } from "@aven/protocol/types";
 import type { Codex, ModelReasoningEffort, SandboxMode } from "@openai/codex-sdk";
 
@@ -15,16 +16,6 @@ import type { CodexClientConfig, CodexLoader, CodexQuery, CodexQueryInput } from
 const BLOCKED_ENV_PREFIXES = ["OPENAI_", "CODEX_"];
 
 export const CODEX_MCP_TOKEN_ENV = "AVEN_CODEX_MCP_TOKEN";
-
-const IMAGE_EXTENSIONS: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/gif": "gif",
-  "image/webp": "webp",
-};
-
-const isBlockedEnv = (name: string) =>
-  BLOCKED_ENV_PREFIXES.some((prefix) => name.toUpperCase().startsWith(prefix));
 
 export const CODEX_DISABLED_FEATURES = { shell_tool: false } as const;
 
@@ -37,18 +28,19 @@ export function codexProcessEnv(
   mcpToken: string,
   inherited: Record<string, string | undefined> = process.env,
 ): Record<string, string> {
-  const fromProject: Record<string, string> = {};
-  for (const { name, value } of project) {
-    if (!isBlockedEnv(name)) fromProject[name] = value;
-  }
-  const key: Record<string, string> = parseCodexAuth(token) ? {} : { CODEX_API_KEY: token };
-  return {
-    ...withoutRunnerSecrets(inherited),
-    ...fromProject,
-    ...key,
+  const overrides: Record<string, string> = {
     CODEX_HOME: codexHome,
     [CODEX_MCP_TOKEN_ENV]: mcpToken,
   };
+
+  if (!parseCodexAuth(token)) overrides.CODEX_API_KEY = token;
+
+  return hostedProcessEnv({
+    inherited,
+    project,
+    blockedPrefixes: BLOCKED_ENV_PREFIXES,
+    overrides,
+  });
 }
 
 export function codexClientConfig(mcpUrl: string): CodexClientConfig {
@@ -81,7 +73,7 @@ export async function imagePaths(home: string, images: readonly BackendImage[]) 
   const dir = join(home, "images");
   mkdirSync(dir, { recursive: true });
   for (const image of images) {
-    const extension = IMAGE_EXTENSIONS[image.mediaType];
+    const extension = IMAGE_EXTENSIONS[image.mediaType as keyof typeof IMAGE_EXTENSIONS];
 
     if (!extension) continue;
 

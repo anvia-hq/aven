@@ -1,6 +1,7 @@
 import type { Message } from "@anvia/core";
 import { TurnRecorder } from "@aven/agent-backend/turn";
 import { toolTarget } from "@aven/agents/tool-projection";
+import { asRecord } from "@aven/agents/values";
 import type { QuestionPrompt, RunEvent, TokenUsage, ToolArtifact } from "@aven/protocol/types";
 
 import { limitsFromRateLimitEvent, limitsFromUsage } from "./limits";
@@ -15,12 +16,6 @@ const STOPPED: Record<string, string> = {
 const MCP_PREFIX = "mcp__aven__";
 
 type Part = Record<string, unknown>;
-
-function recordOf(value: unknown): Part {
-  if (typeof value === "object" && value !== null && !Array.isArray(value)) return value as Part;
-
-  return {};
-}
 
 function blocksOf(content: unknown): Part[] {
   if (!Array.isArray(content)) return [];
@@ -41,7 +36,7 @@ function shownName(name: string) {
 }
 
 function targetOf(name: string, input: unknown) {
-  const args = recordOf(input);
+  const args = asRecord(input);
 
   if (typeof args.command === "string" && args.command) return args.command;
 
@@ -54,7 +49,7 @@ function targetOf(name: string, input: unknown) {
   if (shown) return shown;
 
   const items = args.items;
-  const first = Array.isArray(items) ? recordOf(items[0]) : {};
+  const first = Array.isArray(items) ? asRecord(items[0]) : {};
   return typeof first.path === "string" ? first.path : "";
 }
 
@@ -93,6 +88,10 @@ export class ClaudeTurn {
 
   get error() {
     return this.#turn.error;
+  }
+
+  redactError(message: string) {
+    return this.#turn.redactError(message);
   }
 
   take(message: ClaudeSdkMessage): RunEvent[] {

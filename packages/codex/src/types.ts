@@ -66,6 +66,7 @@ export type CodexQueryInput = {
   instructions?: string;
   model?: string;
   effort?: string;
+  maxTurns?: number;
 };
 
 export type CodexQuery = (

@@ -1,3 +1,4 @@
+import { asRecord } from "@aven/agents/values";
 import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
 
 const WINDOWS: Record<string, PlanLimitWindow> = {
@@ -8,12 +9,6 @@ const WINDOWS: Record<string, PlanLimitWindow> = {
 const STATUSES: readonly PlanLimitStatus[] = ["allowed", "allowed_warning", "rejected"];
 
 const SECONDS_BELOW = 1e11;
-
-function record(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
-}
 
 const finite = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -36,12 +31,12 @@ function limitOf(window: PlanLimitWindow, data: Record<string, unknown>): PlanLi
 }
 
 export function limitsFromRateLimitEvent(info: unknown): PlanLimit[] {
-  const data = record(info);
+  const data = asRecord(info);
   const limits: PlanLimit[] = [];
-  const windows = record(data.unifiedWindows);
+  const windows = asRecord(data.unifiedWindows);
 
   for (const [key, window] of Object.entries(WINDOWS)) {
-    const limit = limitOf(window, record(windows[key]));
+    const limit = limitOf(window, asRecord(windows[key]));
 
     if (limit) limits.push(limit);
   }
@@ -55,15 +50,15 @@ export function limitsFromRateLimitEvent(info: unknown): PlanLimit[] {
 }
 
 export function limitsFromUsage(usage: unknown): PlanLimit[] {
-  const data = record(usage);
+  const data = asRecord(usage);
 
   if (data.rate_limits_available !== true) return [];
 
-  const windows = record(data.rate_limits);
+  const windows = asRecord(data.rate_limits);
   const limits: PlanLimit[] = [];
 
   for (const [key, window] of Object.entries(WINDOWS)) {
-    const item = record(windows[key]);
+    const item = asRecord(windows[key]);
 
     if (!finite(item.utilization)) continue;
 

@@ -1,9 +1,12 @@
 import type { Message, ToolCallPart } from "@anvia/core";
 import { projectToolCall, toolTarget } from "@aven/agents/tool-projection";
+import { isPlainObject } from "@aven/agents/values";
 import {
+  addUsage,
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,
+  SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 import type {
   ContextUsage,
@@ -95,6 +98,36 @@ function redactJson(
   }
 }
 
+function parseStructuredJson(raw: string, redact: (text: string) => string): unknown | undefined {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+
+    if (!isPlainObject(parsed)) return undefined;
+
+    return redactJson(parsed, redact);
+  } catch {
+    return undefined;
+  }
+}
+
+function artifactsFromStructured(value: unknown): ToolArtifact[] | undefined {
+  if (!isPlainObject(value) || !Array.isArray(value.artifacts)) return undefined;
+
+  const kept: ToolArtifact[] = [];
+  for (const entry of value.artifacts) {
+    if (!isPlainObject(entry)) continue;
+
+    if (typeof entry.name !== "string" || typeof entry.mediaType !== "string") continue;
+
+    const artifact: ToolArtifact = { name: entry.name, mediaType: entry.mediaType };
+
+    if (typeof entry.caption === "string") artifact.caption = entry.caption;
+
+    kept.push(artifact);
+  }
+  return kept.length > 0 ? kept : undefined;
+}
+
 export class TurnRecorder {
   sessionId?: string;
   error?: string;
@@ -121,12 +154,16 @@ export class TurnRecorder {
     return this.#redact(text);
   }
 
+  redactError(message: string) {
+    return clip(this.#redact(message));
+  }
+
   fail(message: string) {
-    if (!this.error) this.error = clip(this.#redact(message));
+    if (!this.error) this.error = this.redactError(message);
   }
 
   setError(message: string) {
-    this.error = message;
+    this.error = this.redactError(message);
   }
 
   queueArtifacts(artifacts: ToolArtifact[]) {
@@ -202,8 +239,12 @@ export class TurnRecorder {
     const output = clip(this.#redact(rawOutput));
     const aliased = this.#alias.get(id) ?? id;
     this.#open.delete(aliased);
-    this.#pushTool(aliased, output, failed);
     const name = this.#names.get(aliased) ?? this.#names.get(id);
+    const structured =
+      !failed && (name === SHOW_ARTIFACT_TOOL_NAME || name === SPAWN_AGENT_TOOL_NAME)
+        ? parseStructuredJson(rawOutput, this.#redact)
+        : undefined;
+    this.#pushTool(aliased, output, failed, structured);
     const event: Extract<RunEvent, { type: "tool_end" }> = {
       type: "tool_end",
       id: aliased,
@@ -212,7 +253,8 @@ export class TurnRecorder {
     };
 
     if (name === SHOW_ARTIFACT_TOOL_NAME) {
-      const artifacts = this.#shown.shift();
+      const queued = this.#shown.shift();
+      const artifacts = queued?.length ? queued : artifactsFromStructured(structured);
 
       if (artifacts?.length) event.artifacts = artifacts;
     }
@@ -257,12 +299,7 @@ export class TurnRecorder {
   recordUsage(turn: TokenUsage, context?: ContextUsage): RunEvent {
     this.#generation = this.#generation
       ? {
-          usage: {
-            inputTokens: this.#generation.usage.inputTokens + turn.inputTokens,
-            outputTokens: this.#generation.usage.outputTokens + turn.outputTokens,
-            cacheWriteTokens: this.#generation.usage.cacheWriteTokens + turn.cacheWriteTokens,
-            cacheReadTokens: this.#generation.usage.cacheReadTokens + turn.cacheReadTokens,
-          },
+          usage: addUsage(this.#generation.usage, turn),
           context: context ?? this.#generation.context,
         }
       : { usage: turn, context };
@@ -307,27 +344,26 @@ export class TurnRecorder {
 
   #toolPart(id: string, name: string, input: unknown, target?: string): ToolPart {
     const redactedInput = redactJson(input, this.#redact);
+    const projected = projectToolCall({
+      type: "tool-call",
+      toolCallId: id,
+      toolName: name,
+      input: redactedInput as ToolCallPart["input"],
+    });
     const rawTarget =
-      target && target.length > 0 ? target : (toolTarget(name, redactedInput) ?? "");
-    const tool: ToolPart = {
-      id,
-      name,
-      target: this.#redact(rawTarget),
-      status: "running",
-    };
+      target && target.length > 0
+        ? target
+        : projected.target || (toolTarget(name, redactedInput) ?? "");
+    projected.target = this.#redact(rawTarget);
 
-    if (name === QUESTION_TOOL_NAME || name === SECRET_TOOL_NAME) {
-      const projected = projectToolCall({
-        type: "tool-call",
-        toolCallId: id,
-        toolName: name,
-        input: redactedInput as ToolCallPart["input"],
-      });
-
-      if (projected.questions?.length) tool.questions = projected.questions;
+    if (
+      (name === QUESTION_TOOL_NAME || name === SECRET_TOOL_NAME) &&
+      (!projected.questions || projected.questions.length === 0)
+    ) {
+      delete projected.questions;
     }
 
-    return tool;
+    return projected;
   }
 
   #pushCall(id: string, name: string, input: unknown) {
@@ -340,13 +376,22 @@ export class TurnRecorder {
     });
   }
 
-  #pushTool(id: string, output: string, failed: boolean) {
+  #pushTool(id: string, output: string, failed: boolean, structured?: unknown) {
     this.#flushAssistant();
+    let resultOutput:
+      | { type: "error-text"; value: string }
+      | { type: "text"; value: string }
+      | { type: "json"; value: unknown };
+
+    if (failed) resultOutput = { type: "error-text", value: output };
+    else if (structured !== undefined) resultOutput = { type: "json", value: structured };
+    else resultOutput = { type: "text", value: output };
+
     this.#tools.push({
       type: "tool-result",
       toolCallId: id,
       toolName: this.#names.get(id) ?? "tool",
-      output: failed ? { type: "error-text", value: output } : { type: "text", value: output },
+      output: resultOutput,
     });
   }
 

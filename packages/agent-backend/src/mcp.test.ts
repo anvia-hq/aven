@@ -1,4 +1,5 @@
 import { createTool } from "@anvia/core";
+import { ToolOutput } from "@anvia/core/tool";
 import { createForkTools } from "@aven/agents/tools/forks";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
@@ -295,6 +296,33 @@ describe("Aven tools on the hosted backend MCP server", () => {
       },
       required: ["query"],
       additionalProperties: true,
+    });
+  });
+
+  test("turns rich ToolOutput.content image files into MCP image content blocks", async () => {
+    const viewImage = createTool({
+      name: "view_image",
+      description: "View an image",
+      inputSchema: z.object({ path: z.string() }),
+      async handler({ path }) {
+        return ToolOutput.content([
+          { type: "text", text: `${path} (image/png, 4 bytes)` },
+          {
+            type: "file",
+            data: { type: "data", data: "QUJDRA==" },
+            mediaType: "image/png",
+            filename: "shot.png",
+          },
+        ]);
+      },
+    });
+    const tools = await backendMcpTools({ catalog: [viewImage], questions: false });
+    const result = await tools[0]!.handler({ path: "shot.png" });
+    expect(result).toEqual({
+      content: [
+        { type: "text", text: "shot.png (image/png, 4 bytes)" },
+        { type: "image", data: "QUJDRA==", mimeType: "image/png" },
+      ],
     });
   });
 });

@@ -3,8 +3,9 @@ import { mkdirSync } from "node:fs";
 import type { EffortLevel } from "@anthropic-ai/claude-agent-sdk";
 import { AVEN_NOTE } from "@aven/agent-backend/hosted-helpers";
 import { backendMcpTools } from "@aven/agent-backend/mcp";
-import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
+import { hostedProcessEnv } from "@aven/agent-backend/runner-secrets";
 import type { BackendPromptItem } from "@aven/agent-backend/types";
+import { IMAGE_MEDIA_TYPES } from "@aven/protocol/image-type";
 import type { RunEnvVar } from "@aven/protocol/types";
 
 import { claudeExecutable } from "./binary";
@@ -28,9 +29,6 @@ export const CLAUDE_DISALLOWED_TOOLS = [
 
 const BLOCKED_ENV_PREFIXES = ["ANTHROPIC_", "CLAUDE_"];
 
-const isBlockedEnv = (name: string) =>
-  BLOCKED_ENV_PREFIXES.some((prefix) => name.toUpperCase().startsWith(prefix));
-
 export function claudeProcessEnv(
   project: readonly RunEnvVar[],
   token: string,
@@ -38,18 +36,17 @@ export function claudeProcessEnv(
   inherited: Record<string, string | undefined> = process.env,
   extra: Record<string, string> = {},
 ): Record<string, string> {
-  const fromProject: Record<string, string> = {};
-  for (const { name, value } of project) {
-    if (!isBlockedEnv(name)) fromProject[name] = value;
-  }
-  return {
-    ...withoutRunnerSecrets(inherited),
-    ...fromProject,
-    CLAUDE_CODE_OAUTH_TOKEN: token,
-    CLAUDE_CONFIG_DIR: configDir,
-    CLAUDE_AGENT_SDK_CLIENT_APP: "aven",
-    ...extra,
-  };
+  return hostedProcessEnv({
+    inherited,
+    project,
+    blockedPrefixes: BLOCKED_ENV_PREFIXES,
+    overrides: {
+      CLAUDE_CODE_OAUTH_TOKEN: token,
+      CLAUDE_CONFIG_DIR: configDir,
+      CLAUDE_AGENT_SDK_CLIENT_APP: "aven",
+      ...extra,
+    },
+  });
 }
 
 type UserBlock =
@@ -58,14 +55,12 @@ type UserBlock =
       type: "image";
       source: {
         type: "base64";
-        media_type: "image/png" | "image/jpeg" | "image/gif" | "image/webp";
+        media_type: (typeof IMAGE_MEDIA_TYPES)[number];
         data: string;
       };
     };
 
-const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
-
-const imageType = (mediaType: string) => IMAGE_TYPES.find((type) => type === mediaType);
+const imageType = (mediaType: string) => IMAGE_MEDIA_TYPES.find((type) => type === mediaType);
 
 function contentOf(item: BackendPromptItem): string | UserBlock[] {
   if (typeof item === "string") return item;
