@@ -26,7 +26,7 @@ import { connectMcpServers } from "../mcp/mcp-servers";
 import { runEnvironmentResume, runEnvironmentSetup } from "../sandboxes/environment-setup";
 import { sandboxProvider } from "../sandboxes/machine-provider";
 import { envOf } from "../security/project-env";
-import { redactingTools, secretRedactor } from "../security/secret-redaction";
+import { redactingTools, runSecretsRedactor } from "../security/secret-redaction";
 import { timing } from "../timing";
 import { wakingTools } from "../tools/late-bound-tools";
 import { withPlacedUploads } from "../tools/placed-uploads";
@@ -215,6 +215,7 @@ async function saveEnvironment({
 export function createRunDriver(context: DriverContext) {
   const { records, outbox, report } = context;
   const live = new Map<string, Live>();
+  const tasks = new Set<Promise<void>>();
   const activeRun = (threadId: string) =>
     [...live.values()].find((run) => run.threadId === threadId);
   const runGoing = (threadId: string) =>
@@ -334,6 +335,7 @@ export function createRunDriver(context: DriverContext) {
         token,
         workspace: () => Promise.resolve(cwd),
         env: secrets.env,
+        secrets,
         tools: {},
         compact: true,
         questions: false,
@@ -477,7 +479,7 @@ export function createRunDriver(context: DriverContext) {
     }
 
     clock.mark("skills");
-    const redact = secretRedactor(env);
+    const redact = runSecretsRedactor(secrets);
     const noted = (tools: readonly AnyTool[]) =>
       withPlacedUploads(wakingTools(tools, wake), () =>
         context.sandbox.uploads?.placedNote?.(thread.id),
@@ -596,6 +598,7 @@ export function createRunDriver(context: DriverContext) {
         token,
         workspace: () => Promise.resolve(cwd),
         env,
+        secrets,
         caller: context,
         machine: sandboxProvider(thread),
         instructions: forPaths(
@@ -855,6 +858,12 @@ export function createRunDriver(context: DriverContext) {
     if (record) records.save({ ...record, done: true });
   }
 
+  function track(task: Promise<void>) {
+    tasks.add(task);
+    void task.finally(() => tasks.delete(task));
+    return task;
+  }
+
   return {
     live,
 
@@ -881,7 +890,7 @@ export function createRunDriver(context: DriverContext) {
       };
       outbox.open(message.runId);
       records.save(record);
-      return execute(record, message, messageSecrets(message));
+      return track(execute(record, message, messageSecrets(message)));
     },
 
     restore(runId: string, secrets?: RunSecrets) {
@@ -895,7 +904,7 @@ export function createRunDriver(context: DriverContext) {
 
       if (record.done || live.has(runId)) return;
 
-      return execute(record, undefined, secrets ?? {});
+      return track(execute(record, undefined, secrets ?? {}));
     },
 
     async steer({
@@ -959,6 +968,12 @@ export function createRunDriver(context: DriverContext) {
 
       if (!run || !record || record.done || run.drained) return;
 
+      if (record.compact || record.phase === "report") return;
+
+      const backend = await context.backend(record.backend);
+
+      if (!backend.capabilities.steering || run.drained) return;
+
       run.drained = true;
       const steerId = `drain-${runId}-${reason}`;
       const prompt = DRAIN_PROMPTS[reason];
@@ -972,10 +987,6 @@ export function createRunDriver(context: DriverContext) {
         run.steers.push({ steerId, message: prompt });
         return;
       }
-
-      const backend = await context.backend(record.backend);
-
-      if (!backend.capabilities.steering || record.compact || record.phase === "report") return;
 
       await backend.steer(record.durableId, prompt, steerId).catch(() => false);
     },
@@ -1004,8 +1015,9 @@ export function createRunDriver(context: DriverContext) {
       records.delete(runId);
     },
 
-    close() {
-      return mcpPool.close();
+    async close() {
+      await Promise.allSettled(tasks);
+      await mcpPool.close();
     },
   };
 }

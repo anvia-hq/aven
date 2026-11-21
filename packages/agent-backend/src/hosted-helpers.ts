@@ -80,6 +80,8 @@ export function subagentEventForwarder(
         index,
         event: { type: "tool_end", id: event.id, status: event.status },
       });
+    } else if (event.type === "usage") {
+      emit?.(event);
     }
   };
 }

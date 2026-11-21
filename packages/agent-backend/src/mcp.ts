@@ -1,4 +1,5 @@
 import type { AnyTool } from "@anvia/core";
+import { isRichToolOutput } from "@aven/agents/strict-tool-output";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import { createWebSearchTool, WEB_SEARCH_TOOL_NAME } from "@aven/agents/tools/web-search";
 import { asRecord, errorMessage } from "@aven/agents/values";
@@ -21,13 +22,25 @@ const choice = z.object({
 });
 
 const promptSchema = z.object({
-  id: z.string().trim().min(1),
-  text: z.string().trim().min(1),
-  choices: z.array(choice).min(1).optional(),
+  id: z.string().trim().min(1).describe("A short name for the question, such as color."),
+  text: z.string().trim().min(1).describe("The question, in one sentence."),
+  choices: z
+    .array(choice)
+    .min(1)
+    .optional()
+    .describe("Two to five choices. Leave out for a free answer."),
   allowCustom: z.boolean().optional(),
 });
 
-const questionsSchema = z.object({ questions: z.array(promptSchema).min(1).max(4) });
+const questionShape = {
+  questions: z
+    .array(promptSchema)
+    .min(1)
+    .max(4)
+    .describe("The questions to put on the person's screen."),
+};
+
+const questionsSchema = z.object(questionShape);
 
 const shown = (value: unknown) => {
   if (typeof value === "string") return value;
@@ -38,6 +51,42 @@ const shown = (value: unknown) => {
     return String(value);
   }
 };
+
+function richToolResult(output: unknown): AvenToolResult | undefined {
+  if (!isRichToolOutput(output)) return undefined;
+
+  const content = asRecord(output).content;
+
+  if (!Array.isArray(content)) return undefined;
+
+  const texts: string[] = [];
+  const images: BackendImage[] = [];
+  for (const entry of content) {
+    const part = asRecord(entry);
+
+    if (part.type === "text" && typeof part.text === "string") {
+      texts.push(part.text);
+      continue;
+    }
+
+    if (
+      part.type === "file" &&
+      typeof part.mediaType === "string" &&
+      part.mediaType.startsWith("image/")
+    ) {
+      const data = asRecord(part.data);
+
+      if (data.type === "data" && typeof data.data === "string") {
+        images.push({ mediaType: part.mediaType, data: data.data });
+      }
+    }
+  }
+  const result: AvenToolResult = { text: texts.join("\n"), isError: false };
+
+  if (images.length > 0) result.images = images;
+
+  return result;
+}
 
 function promptsOf(input: unknown): QuestionPrompt[] {
   const parsed = questionsSchema.parse(input);
@@ -77,14 +126,22 @@ function artifactsOf(value: unknown): ToolArtifact[] | undefined {
   return kept.length > 0 ? kept : undefined;
 }
 
-async function runTool(tool: AnyTool, input: unknown, host: BackendToolHost) {
+async function runToolOutput(
+  tool: AnyTool,
+  input: unknown,
+  host: BackendToolHost,
+): Promise<AvenToolResult> {
   const parsed = tool.parseInput ? tool.parseInput(input as never) : input;
   const output = await tool.call(parsed, { abortSignal: host.signal });
+  const rich = richToolResult(output);
+
+  if (rich) return rich;
+
   const artifacts = artifactsOf(output);
 
   if (artifacts) host.shown?.(artifacts);
 
-  return shown(output);
+  return { text: shown(output), isError: false };
 }
 
 async function runToolResult(
@@ -93,7 +150,7 @@ async function runToolResult(
   host: BackendToolHost,
 ): Promise<AvenToolResult> {
   try {
-    return { text: await runTool(tool, input, host), isError: false };
+    return await runToolOutput(tool, input, host);
   } catch (error) {
     return { text: errorMessage(error), isError: true };
   }
@@ -124,26 +181,20 @@ export async function callAvenToolResult(
     }
 
     if (name === SPAWN_AGENT_TOOL_NAME && host.runSubagent) {
-      return {
-        text: await runTool(createSpawnAgentTool(host.runSubagent), input, host),
-        isError: false,
-      };
+      return await runToolOutput(createSpawnAgentTool(host.runSubagent), input, host);
     }
 
     if (name === WEB_SEARCH_TOOL_NAME && host.webSearch) {
-      return {
-        text: await runTool(
-          createWebSearchTool({ apiKey: host.webSearch.apiKey, fetch: options?.fetch }),
-          input,
-          host,
-        ),
-        isError: false,
-      };
+      return await runToolOutput(
+        createWebSearchTool({ apiKey: host.webSearch.apiKey, fetch: options?.fetch }),
+        input,
+        host,
+      );
     }
 
     const tool = host.catalog?.find((item) => item.name === name);
 
-    if (tool) return { text: await runTool(tool, input, host), isError: false };
+    if (tool) return await runToolOutput(tool, input, host);
 
     if (name === "memory") {
       if (!host.memory) return { text: "This run has no memory.", isError: true };
@@ -182,27 +233,6 @@ export async function callAvenTool(
 ) {
   return (await callAvenToolResult(name, input, host, options)).text;
 }
-
-const questionShape = {
-  questions: z
-    .array(
-      z.object({
-        id: z.string().describe("A short name for the question, such as color."),
-        text: z.string().describe("The question, in one sentence."),
-        choices: z
-          .array(
-            z.object({
-              label: z.string(),
-              value: z.string().optional(),
-            }),
-          )
-          .optional()
-          .describe("Two to five choices. Leave out for a free answer."),
-        allowCustom: z.boolean().optional(),
-      }),
-    )
-    .describe("The questions to put on the person's screen."),
-};
 
 function textResult(text: string, isError = false, images: BackendImage[] = []) {
   const result: { content: BackendToolContent[]; isError?: boolean } = {
@@ -277,9 +307,10 @@ export async function backendMcpTools(
   options?: { fetch?: typeof fetch },
 ): Promise<BackendMcpTool[]> {
   const wrap = (invoke: (args: unknown) => Promise<AvenToolResult>) => async (args: unknown) => {
-    const { text, isError } = await invoke(args);
+    const { text, isError, images = [] } = await invoke(args);
     const steered = host.steered?.();
-    return textResult(steered ? `${text}\n\n${steered.text}` : text, isError, steered?.images);
+    const combinedImages = steered?.images.length ? [...images, ...steered.images] : images;
+    return textResult(steered ? `${text}\n\n${steered.text}` : text, isError, combinedImages);
   };
   const tools: BackendMcpTool[] = [];
 

@@ -1,3 +1,4 @@
+import { IMAGE_EXTENSIONS, IMAGE_MEDIA_TYPES } from "./image-type";
 import type { AgentBackendCapability } from "./types";
 
 export const MODEL_APIS = [
@@ -138,10 +139,7 @@ export const MACHINE_OPS = [
   "mcp.close",
 ] as const;
 export const ARTIFACT_MEDIA_TYPES = [
-  "image/png",
-  "image/jpeg",
-  "image/gif",
-  "image/webp",
+  ...IMAGE_MEDIA_TYPES,
   "video/mp4",
   "video/webm",
   "text/html",
@@ -152,10 +150,7 @@ export const ARTIFACT_MEDIA_TYPES = [
 ] as const;
 
 export const ARTIFACT_EXTENSIONS: Record<(typeof ARTIFACT_MEDIA_TYPES)[number], string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/gif": "gif",
-  "image/webp": "webp",
+  ...IMAGE_EXTENSIONS,
   "video/mp4": "mp4",
   "video/webm": "webm",
   "text/html": "html",

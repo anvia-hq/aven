@@ -11,7 +11,7 @@ export const webSearchInput = z.object({
     .enum(["general", "news"])
     .optional()
     .describe("Use 'news' for recent events; defaults to 'general'."),
-  maxResults: z.number().int().min(1).max(10).optional().describe("Results to return (default 5)."),
+  maxResults: z.int().min(1).max(10).optional().describe("Results to return (default 5)."),
   timeRange: z
     .enum(["day", "week", "month", "year"])
     .optional()

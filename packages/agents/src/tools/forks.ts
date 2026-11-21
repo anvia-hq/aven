@@ -10,7 +10,7 @@ export const FORK_STATUS_TOOL_NAME = "fork_status";
 export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
 export const STOP_FORK_TOOL_NAME = "stop_fork";
 
-const forkId = z.string().uuid().describe("The id fork_thread gave you.");
+const forkId = z.uuid().describe("The id fork_thread gave you.");
 
 export function createForkTools(host: ForkHost) {
   const forkThread = createTool({

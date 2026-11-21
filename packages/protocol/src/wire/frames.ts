@@ -287,9 +287,14 @@ export const frame = z.discriminatedUnion("type", [
 type Assignable<T extends U, U> = T;
 type ParamsOptional<T> = T extends { type: "call" } ? Omit<T, "params"> & { params?: unknown } : T;
 type _CheckedFrame = Assignable<z.infer<typeof frame>, ParamsOptional<RuntimeToControlPlane>>;
+type _CheckedFrameTypes = Assignable<RuntimeToControlPlane["type"], z.infer<typeof frame>["type"]>;
 type _CheckedRunEventTypes = Assignable<
   z.infer<typeof runEvent>["type"],
   (typeof ALLOWED_RUN_EVENT_TYPES)[number]
+>;
+type _CheckedRunEventTypesReverse = Assignable<
+  (typeof ALLOWED_RUN_EVENT_TYPES)[number],
+  z.infer<typeof runEvent>["type"]
 >;
 
 export function parseRuntimeFrame(raw: string): RuntimeToControlPlane | null {

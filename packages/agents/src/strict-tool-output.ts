@@ -2,7 +2,7 @@ import { isQuestionTool, type AnyTool } from "@anvia/core/tool";
 
 const RICH_TOOL_OUTPUT = Symbol.for("anvia.tool-output.content");
 
-function isRichToolOutput(value: unknown): boolean {
+export function isRichToolOutput(value: unknown): boolean {
   if (typeof value !== "object" || value === null) return false;
 
   return Object.getOwnPropertyDescriptor(value, RICH_TOOL_OUTPUT)?.value === true;

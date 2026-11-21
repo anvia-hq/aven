@@ -27,7 +27,6 @@ export function createGlobTool(files: SearchableFiles) {
         .optional()
         .describe("Folder to search, relative to the workspace (default: the workspace)."),
       maxResults: z
-        .number()
         .int()
         .min(1)
         .max(MAX_RESULTS)

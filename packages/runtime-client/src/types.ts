@@ -340,6 +340,7 @@ export type RunnerCallsContext = {
   steer(params: SteerParams): Promise<SteerResult>;
   dirs?: string[];
   clone?: (repository: string) => Promise<{ path: string }>;
+  stopped?: () => boolean;
 };
 
 export type ThreadArtifacts = Pick<ArtifactStore, "save" | "keep" | "read">;
@@ -355,7 +356,7 @@ export type MachineCall = (op: MachineOp, args?: unknown) => Promise<unknown>;
 
 export type MachineCallsContext = Pick<
   RunnerCallsContext,
-  "sandbox" | "boxes" | "idle" | "machineProcesses"
+  "sandbox" | "boxes" | "idle" | "machineProcesses" | "stopped"
 >;
 
 export type RuntimeOptions = {

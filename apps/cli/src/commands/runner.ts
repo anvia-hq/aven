@@ -1,7 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
-import { delimiter, isAbsolute, join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { RUNNER_TOKEN_PREFIX } from "@aven/protocol/runtimes";
+import { servedFolders } from "@aven/runtime-client/run-runner";
 
 import { stringFlag } from "../args";
 import { startDetachedUpdate } from "../detached-update";
@@ -43,10 +44,7 @@ async function storedSettings() {
 }
 
 export function folders(value: string | undefined) {
-  const raw = (value ?? "").split(delimiter).flatMap((dir) => {
-    const trimmed = dir.trim();
-    return trimmed ? [trimmed] : [];
-  });
+  const raw = servedFolders(value);
 
   if (raw.length === 0) return [homedir()];
 

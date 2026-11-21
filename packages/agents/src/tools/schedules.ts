@@ -13,6 +13,7 @@ const cron = z
   .string()
   .trim()
   .min(1)
+  .max(100)
   .describe(
     "Five fields: minute hour day-of-month month day-of-week, for example `0 7 * * *` (every day at 07:00) or `30 8 * * mon-fri`. Nicknames such as @daily work. Seconds are not supported, and it cannot run more than once every 15 minutes.",
   );
@@ -20,6 +21,7 @@ const timezone = z
   .string()
   .trim()
   .min(1)
+  .max(64)
   .describe(
     "An IANA timezone such as Asia/Jakarta. Leave it out to use the person's, shown in your instructions.",
   );
@@ -35,6 +37,7 @@ const bot = z
   .string()
   .trim()
   .min(1)
+  .max(64)
   .describe("The handle of the bot that runs it. Leave it out to run it yourself.");
 
 const createSchema = z.object({

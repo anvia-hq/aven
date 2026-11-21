@@ -2,19 +2,17 @@ import type { Socket } from "bun";
 
 import { errorMessage } from "@aven/agents/values";
 import { previewPortRefusal } from "@aven/protocol/preview";
-import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
+import { ViewerWriteQueue, forwardViewerChunk } from "./processes/viewer-channel";
 import type { ViewerLink } from "./types";
 
 type Tunnel = {
   socket: Socket<Tunnel> | undefined;
-  unwritten: Uint8Array[];
-  unwrittenBytes: number;
+  queue: ViewerWriteQueue;
   closing: boolean;
 };
 
 const LOOPBACK = "127.0.0.1";
-const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 const MAX_UNWRITTEN_BYTES = 8 * 1024 * 1024;
 
 export class PortTunnels {
@@ -39,8 +37,7 @@ export class PortTunnels {
 
     const tunnel: Tunnel = {
       socket: undefined,
-      unwritten: [],
-      unwrittenBytes: 0,
+      queue: new ViewerWriteQueue(MAX_UNWRITTEN_BYTES),
       closing: false,
     };
     this.#tunnels.set(viewerId, tunnel);
@@ -75,13 +72,11 @@ export class PortTunnels {
 
     if (!tunnel) return;
 
-    if (tunnel.unwrittenBytes + bytes.length > MAX_UNWRITTEN_BYTES) {
+    if (!tunnel.queue.push(bytes)) {
       this.#end(viewerId, tunnel, "The preview sent too much to carry");
       return;
     }
 
-    tunnel.unwritten.push(bytes.slice());
-    tunnel.unwrittenBytes += bytes.length;
     this.#flush(tunnel);
   }
 
@@ -102,30 +97,17 @@ export class PortTunnels {
   #flush(tunnel: Tunnel) {
     const socket = tunnel.socket;
 
-    while (socket && tunnel.unwritten.length > 0) {
-      const chunk = tunnel.unwritten[0]!;
-      const taken = socket.write(chunk);
+    if (!socket) return;
 
-      if (taken < chunk.length) {
-        tunnel.unwritten[0] = chunk.subarray(taken);
-        tunnel.unwrittenBytes -= taken;
-        return;
-      }
-
-      tunnel.unwritten.shift();
-      tunnel.unwrittenBytes -= chunk.length;
-    }
+    tunnel.queue.flush((chunk) => socket.write(chunk));
   }
 
   #fromPort(viewerId: string, tunnel: Tunnel, bytes: Uint8Array) {
     if (tunnel.closing || this.#tunnels.get(viewerId) !== tunnel) return;
 
-    if (this.link.buffered() > MAX_BUFFERED_BYTES) {
+    if (!forwardViewerChunk(this.link, viewerId, bytes)) {
       this.#end(viewerId, tunnel, "The preview was too slow to carry");
-      return;
     }
-
-    this.link.sendBinary(encodeViewerFrame(viewerId, bytes));
   }
 
   #end(viewerId: string, tunnel: Tunnel, reason: string) {

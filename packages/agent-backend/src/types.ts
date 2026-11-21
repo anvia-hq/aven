@@ -120,6 +120,52 @@ export type BackendMcpTool = {
 export type AvenToolResult = {
   text: string;
   isError: boolean;
+  images?: BackendImage[];
+};
+
+export type HostedTurnLike = {
+  readonly sessionId?: string;
+  readonly error?: string;
+  redactError(message: string): string;
+  queueArtifacts(artifacts: ToolArtifact[]): void;
+  openQuestion(name: string): string | undefined;
+  ensureQuestion(id: string, name: string, questions: QuestionPrompt[]): RunEvent | undefined;
+  release(prompt: string): Message[];
+  messages(prompt: string): Message[];
+};
+
+export type HostedLiveRun<TTurn extends HostedTurnLike> = {
+  durableId: string;
+  threadId: string;
+  agentId: string;
+  runId: string;
+  abort: AbortController;
+  unlinkAbort: () => void;
+  turn: TTurn;
+  steers: BackendSteer[];
+  gate: Gate;
+  onEvent: Emit;
+  close?(): void;
+  promptPending: boolean;
+  prompt: string;
+  images: BackendImage[];
+  cwd: string;
+};
+
+export type HostedOpenOptions<TLive> = {
+  runId: string;
+  threadId: string;
+  prompt: string;
+  images?: BackendImage[];
+  context: HostedRunContext | undefined;
+  onEvent: Emit;
+  durableId?: string;
+  sessionId?: string;
+  resumeInterrupted?: boolean;
+  rememberSession?: boolean;
+  signal?: AbortSignal;
+  onLive?: (live: TLive) => void;
+  maxTurns?: number;
 };
 
 export type BackendSessionPrefix = "claude" | "codex";

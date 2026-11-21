@@ -64,9 +64,15 @@ export function startRuntime(options: RuntimeOptions) {
   const boxes = new Map<string, ThreadSandbox>();
   let socket: WebSocket | undefined;
   let stopped = false;
+  let everOpened = false;
   let backoff = RECONNECT_MIN_MS;
   let retry: Timer | undefined;
   const connected = Promise.withResolvers<void>();
+  connected.promise.catch(() => undefined);
+
+  const rejectPendingReady = (reason: string) => {
+    if (!everOpened) connected.reject(new Error(reason));
+  };
 
   const send = (message: RuntimeToControlPlane) => {
     if (socket?.readyState !== WebSocket.OPEN) return false;
@@ -92,7 +98,8 @@ export function startRuntime(options: RuntimeOptions) {
     if (!send(message)) console.warn(`Dropped a ${message.type} message: not connected`);
   };
 
-  const { call, resend, settle } = createControlPlaneCalls({ send, timeoutMs: callTimeoutMs });
+  const calls = createControlPlaneCalls({ send, timeoutMs: callTimeoutMs });
+  const { call, resend, settle } = calls;
 
   const report: DriverContext["report"] = (runId, make, source) => {
     const message = outbox.push(runId, make, source);
@@ -209,6 +216,7 @@ export function startRuntime(options: RuntimeOptions) {
     steer: (params) => driver.steer(params),
     dirs: options.dirs,
     clone: options.clone,
+    stopped: () => stopped,
   });
 
   async function handle(message: ControlPlaneToRuntime) {
@@ -317,6 +325,7 @@ export function startRuntime(options: RuntimeOptions) {
         github: login === undefined ? undefined : { login },
       });
       resend();
+      everOpened = true;
       connected.resolve();
       clearInterval(statsTimer);
       void reportStats();
@@ -352,8 +361,10 @@ export function startRuntime(options: RuntimeOptions) {
       bots.abortAll("The connection to the control plane dropped");
 
       if (event.code === CloseCode.UnsupportedVersion || event.code === CloseCode.Revoked) {
+        const reason = event.reason || "Refused by the control plane";
         stopped = true;
-        options.onRefused?.(event.reason || "Refused by the control plane");
+        rejectPendingReady(reason);
+        options.onRefused?.(reason);
       }
 
       if (stopped) return;
@@ -370,18 +381,22 @@ export function startRuntime(options: RuntimeOptions) {
     ready: connected.promise,
     async stop() {
       stopped = true;
+      rejectPendingReady("The runner is stopping");
       clearTimeout(retry);
       clearInterval(statsTimer);
       idle.cancelAll();
       processEnds.cancelAll();
       terminals.closeAll();
       ports.closeAll();
-      bots.abortAll("The runner is stopping");
+      calls.close("The runner is stopping");
       socket?.close();
-      await idle.settled();
-      await options.sandbox.dispose();
+      bots.abortAll("The runner is stopping");
       await backends.close();
-      await driver.close();
+      await Promise.all([driver.close(), bots.close("The runner is stopping")]);
+      await idle.settled();
+      await machines.dispose();
+      await botMachines.dispose();
+      await options.sandbox.dispose();
       await callOf.close();
       await closeLens();
       state.close();

@@ -1,3 +1,12 @@
+export const IMAGE_MEDIA_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;
+
+export const IMAGE_EXTENSIONS: Record<(typeof IMAGE_MEDIA_TYPES)[number], string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/gif": "gif",
+  "image/webp": "webp",
+};
+
 function matches(bytes: Uint8Array, offset: number, signature: readonly number[]) {
   if (bytes.length < offset + signature.length) return false;
 

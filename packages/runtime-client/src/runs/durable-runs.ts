@@ -17,7 +17,7 @@ import { TODO_TOOL_NAME } from "@aven/agents/tools/todo";
 import { WEB_FETCH_TOOL_NAME } from "@aven/agents/tools/web-fetch";
 import { asRecord } from "@aven/agents/values";
 import { Database } from "bun:sqlite";
-import { existsSync, mkdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname } from "node:path";
 
@@ -185,6 +185,9 @@ export class DurableRuns implements AgentBackend {
       limits: { maxPayloadBytes: MAX_PAYLOAD_BYTES },
       onFatalError: (error) => (onFatalError ?? console.error)(error),
     });
+
+    if (databasePath !== ":memory:" && existsSync(databasePath)) chmodSync(databasePath, 0o600);
+
     let runs: DurableRuns | undefined;
     try {
       assertDurableToolConcurrency((registration) => runtime.registerAgents([registration]));

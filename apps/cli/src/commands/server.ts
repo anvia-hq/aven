@@ -1,11 +1,11 @@
-import { chmod, readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import envTemplate from "../../../../deploy/env.example" with { type: "text" };
 import { stringFlag } from "../args";
 import { runCompose as composeIn, dockerProblem, recordProject } from "../compose";
-import { addMissingKeys, readEnvFile, setEnv } from "../env-file";
+import { addMissingKeys, readEnvFile, setEnv, writePrivateFile } from "../env-file";
 import { portIsFree, waitForHealthy } from "../health";
 import { serverDir } from "../home";
 import { healthUrl, planServer } from "../server-plan";
@@ -125,18 +125,16 @@ export async function serverLogs(service: string | undefined, follow: boolean) {
 export async function serverUpgrade(release: string) {
   const dir = serverDir();
   const envPath = join(dir, ".env");
-  recordProject(dir);
+  await recordProject(dir);
   const existing = await readFile(envPath, "utf8").catch(() => undefined);
 
   if (existing === undefined) return false;
 
   await writeFile(join(dir, "docker-compose.yml"), compose);
-  await writeFile(
+  await writePrivateFile(
     envPath,
     setEnv(addMissingKeys(existing, envTemplate), { AVEN_VERSION: release }),
-    { mode: 0o600 },
   );
-  await chmod(envPath, 0o600);
 
   if (release === "latest") await runCompose(dir, ["pull"]);
 

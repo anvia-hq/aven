@@ -20,7 +20,6 @@ export const goalRequestSchema = z.object({
       "Shell commands that must all exit 0 once the work is done (tests, typecheck, build). Strongly recommended: without them the goal ends when the agent says it is done.",
     ),
   maxSessions: z
-    .number()
     .int()
     .min(1)
     .max(100)

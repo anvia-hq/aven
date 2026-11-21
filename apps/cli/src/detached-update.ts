@@ -1,4 +1,4 @@
-import { openSync } from "node:fs";
+import { closeSync, openSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -32,11 +32,15 @@ export async function startDetachedUpdate(
 
   await mkdir(logsDir(home), { recursive: true });
   const log = openSync(join(logsDir(home), "update.log"), "a");
-  Bun.spawn(command, {
-    detached: true,
-    stdin: "ignore",
-    stdout: log,
-    stderr: log,
-    env: { ...process.env, AVEN_HOME: home },
-  }).unref();
+  try {
+    Bun.spawn(command, {
+      detached: true,
+      stdin: "ignore",
+      stdout: log,
+      stderr: log,
+      env: { ...process.env, AVEN_HOME: home },
+    }).unref();
+  } finally {
+    closeSync(log);
+  }
 }

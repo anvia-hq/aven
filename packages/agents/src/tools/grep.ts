@@ -44,15 +44,8 @@ export function createGrepTool(files: SearchableFiles) {
         .boolean()
         .optional()
         .describe("Treat the pattern as plain text, not a regular expression."),
-      context: z
-        .number()
-        .int()
-        .min(0)
-        .max(5)
-        .optional()
-        .describe("Lines to show around each match."),
+      context: z.int().min(0).max(5).optional().describe("Lines to show around each match."),
       maxResults: z
-        .number()
         .int()
         .min(1)
         .max(MAX_RESULTS)

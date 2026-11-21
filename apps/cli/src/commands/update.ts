@@ -1,6 +1,7 @@
 import { isValidRelease } from "@aven/protocol/release";
 
 import { stringFlag } from "../args";
+import { CliExitError } from "../exit-error";
 import { run } from "../process";
 import {
   clearPendingUpdate,
@@ -63,10 +64,10 @@ export async function update(args: Args) {
   const code = await run([process.execPath, "update", "--finish"]);
 
   if (code !== 0) {
-    console.error(
+    throw new CliExitError(
+      code,
       `The update to aven ${wanted} stopped before it finished, so the server and the runner may still be ${version}. Run: aven update`,
     );
-    process.exit(code);
   }
 }
 

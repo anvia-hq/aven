@@ -11,12 +11,56 @@ export const CLAUDE_EFFORTS = [
 export const CLAUDE_DEFAULT_EFFORT: ClaudeEffort = "medium";
 
 export const CLAUDE_MODELS = [
-  { id: "default", family: "Sonnet", resolved: "claude-sonnet-5-5", isDefault: true },
-  { id: "sonnet", family: "Sonnet", resolved: "claude-sonnet-5-5", isDefault: false },
-  { id: "opus", family: "Opus", resolved: "claude-opus-5-5", isDefault: false },
-  { id: "fable", family: "Fable", resolved: "claude-fable-5-2", isDefault: false },
-  { id: "haiku", family: "Haiku", resolved: "claude-haiku-5-5", isDefault: false },
+  {
+    id: "default",
+    family: "Sonnet",
+    resolved: "claude-sonnet-5-5",
+    contextWindow: 200_000,
+    isDefault: true,
+  },
+  {
+    id: "sonnet",
+    family: "Sonnet",
+    resolved: "claude-sonnet-5-5",
+    contextWindow: 200_000,
+    isDefault: false,
+  },
+  {
+    id: "opus",
+    family: "Opus",
+    resolved: "claude-opus-5-5",
+    contextWindow: 200_000,
+    isDefault: false,
+  },
+  {
+    id: "fable",
+    family: "Fable",
+    resolved: "claude-fable-5-2",
+    contextWindow: 200_000,
+    isDefault: false,
+  },
+  {
+    id: "haiku",
+    family: "Haiku",
+    resolved: "claude-haiku-5-5",
+    contextWindow: 200_000,
+    isDefault: false,
+  },
 ] as const;
+
+const DEFAULT_MODEL = CLAUDE_MODELS[0];
+
+export function claudeModelOf(modelId: string | undefined) {
+  return CLAUDE_MODELS.find((item) => item.id === (modelId ?? "default")) ?? DEFAULT_MODEL;
+}
+
+export function claudeResolvedOf(modelId: string | undefined) {
+  return claudeModelOf(modelId).resolved;
+}
+
+export function claudeContextOf(modelId: string | undefined) {
+  return claudeModelOf(modelId).contextWindow;
+}
 
 export function claudeVersionOf(resolved: string) {
   return resolved.split("-").slice(2).join(".");

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { mcpInputSchema } from "@aven/agent-backend/mcp";
 import type { BackendMcpTool } from "@aven/agent-backend/types";
+import { errorMessage, isPlainObject } from "@aven/agents/values";
 
 type Rpc = {
   jsonrpc?: string;
@@ -9,10 +10,6 @@ type Rpc = {
   method?: string;
   params?: unknown;
 };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 function authorized(header: string | null, token: string): boolean {
   const expected = Buffer.from(`Bearer ${token}`);
@@ -80,7 +77,7 @@ async function answer(message: Rpc, tools: readonly BackendMcpTool[]) {
       const result = await tool.handler(args);
       return { jsonrpc: "2.0", id, result };
     } catch (error) {
-      const text = error instanceof Error ? error.message : String(error);
+      const text = errorMessage(error);
       return {
         jsonrpc: "2.0",
         id,

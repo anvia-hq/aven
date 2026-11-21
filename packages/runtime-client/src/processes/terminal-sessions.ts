@@ -1,20 +1,19 @@
 import { SHELL_ENDED } from "@aven/protocol/terminal";
 import { errorMessage } from "@aven/agents/values";
-import { encodeViewerFrame } from "@aven/protocol/viewer-frame";
 
+import { ViewerWriteQueue, forwardViewerChunk } from "./viewer-channel";
 import type { ThreadWorkspaces, ViewerLink } from "../types";
 
 type Session = {
   threadId: string;
   proc: Bun.Subprocess;
   hangup: string[];
-  unwritten: Uint8Array[];
+  queue: ViewerWriteQueue;
   closing: boolean;
 };
 
 const MAX_COLS = 500;
 const MAX_ROWS = 200;
-const MAX_BUFFERED_BYTES = 8 * 1024 * 1024;
 const MAX_UNWRITTEN_BYTES = 1024 * 1024;
 
 const NOT_RUNNING = "The sandbox is not running";
@@ -38,6 +37,10 @@ export class TerminalSessions {
   }
 
   open(viewerId: string, threadId: string, size: { cols: number; rows: number }) {
+    if (this.#sessions.has(viewerId)) {
+      return this.#refuse(viewerId, "That terminal is open already");
+    }
+
     const shell = this.sandbox.shell?.(threadId, viewerId);
 
     if (!shell) return this.#refuse(viewerId, NOT_RUNNING);
@@ -52,17 +55,20 @@ export class TerminalSessions {
           data: (_terminal, chunk) => {
             if (!session || session.closing) return;
 
-            if (this.link.buffered() > MAX_BUFFERED_BYTES) {
+            if (!forwardViewerChunk(this.link, viewerId, chunk)) {
               this.#end(viewerId, session, "The terminal's output was too fast to carry");
-              return;
             }
-
-            this.link.sendBinary(encodeViewerFrame(viewerId, chunk));
           },
           drain: () => session && this.#flush(session),
         },
       });
-      session = { threadId, proc, hangup: shell.hangup, unwritten: [], closing: false };
+      session = {
+        threadId,
+        proc,
+        hangup: shell.hangup,
+        queue: new ViewerWriteQueue(MAX_UNWRITTEN_BYTES),
+        closing: false,
+      };
     } catch (error) {
       return this.#refuse(viewerId, errorMessage(error));
     }
@@ -75,13 +81,8 @@ export class TerminalSessions {
   write(viewerId: string, bytes: Uint8Array) {
     const session = this.#sessions.get(viewerId);
 
-    if (!session) return;
+    if (!session || !session.queue.push(bytes)) return;
 
-    const held = session.unwritten.reduce((sum, chunk) => sum + chunk.length, 0);
-
-    if (held + bytes.length > MAX_UNWRITTEN_BYTES) return;
-
-    session.unwritten.push(bytes.slice());
     this.#flush(session);
   }
 
@@ -105,16 +106,10 @@ export class TerminalSessions {
 
   #flush(session: Session) {
     const terminal = session.proc.terminal;
-    while (terminal && !terminal.closed && session.unwritten.length > 0) {
-      const chunk = session.unwritten[0]!;
-      const taken = terminal.write(chunk);
 
-      if (taken >= chunk.length) session.unwritten.shift();
-      else {
-        session.unwritten[0] = chunk.subarray(taken);
-        return;
-      }
-    }
+    if (!terminal || terminal.closed) return;
+
+    session.queue.flush((chunk) => terminal.write(chunk));
   }
 
   #stop(viewerId: string, session: Session) {

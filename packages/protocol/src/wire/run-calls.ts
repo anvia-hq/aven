@@ -4,6 +4,7 @@ import { z } from "zod";
 import { FORK_TEXT_MAX } from "../forks";
 import { MACHINE_OPS, SKILL_DIGEST } from "../runtime-wire";
 import type {
+  CockpitReadParams,
   CodexAuthParams,
   EnvironmentReadParams,
   EnvironmentSaveParams,
@@ -15,7 +16,14 @@ import type {
   RepoAccessParams,
   SkillsGetParams,
 } from "../types";
-import { mcpConnectResults, memoryCommand, parseParams, replyId, runId } from "./shared";
+import {
+  cockpitCommand,
+  mcpConnectResults,
+  memoryCommand,
+  parseParams,
+  replyId,
+  runId,
+} from "./shared";
 
 const memoryParams = z.object({ runId }) satisfies z.ZodType<RepoAccessParams>;
 
@@ -46,7 +54,10 @@ const memoryNotesParams = z.object({
   command: memoryCommand,
 }) satisfies z.ZodType<MemoryNotesParams>;
 
-const cockpitReadParams = z.object({ runId, command: z.unknown() });
+const cockpitReadParams = z.object({
+  runId,
+  command: cockpitCommand,
+}) satisfies z.ZodType<CockpitReadParams>;
 
 const forkStartParams = z.object({
   runId,
@@ -75,7 +86,8 @@ export const parseMemoryParams = (params: unknown): RepoAccessParams =>
   parseParams(memoryParams, params);
 export const parseMemoryNotesParams = (params: unknown): MemoryNotesParams =>
   parseParams(memoryNotesParams, params);
-export const parseCockpitReadParams = (params: unknown) => parseParams(cockpitReadParams, params);
+export const parseCockpitReadParams = (params: unknown): CockpitReadParams =>
+  parseParams(cockpitReadParams, params);
 export const parseForkStartParams = (params: unknown): ForkStartParams =>
   parseParams(forkStartParams, params);
 export const parseForkStatusParams = (params: unknown): ForkStatusParams =>

@@ -1,6 +1,7 @@
 import type { Message } from "@anvia/core";
 import { TurnRecorder } from "@aven/agent-backend/turn";
 import { toolTarget } from "@aven/agents/tool-projection";
+import { TODO_TOOL_NAME } from "@aven/agents/tools/todo";
 import { codexContextOf, codexResolvedOf } from "@aven/protocol/codex-models";
 import type {
   ContextUsage,
@@ -67,6 +68,10 @@ export class CodexTurn {
 
   get error() {
     return this.#turn.error;
+  }
+
+  redactError(message: string) {
+    return this.#turn.redactError(message);
   }
 
   beginTurn() {
@@ -224,7 +229,7 @@ export class CodexTurn {
       const output = item.items
         .map((todo) => `${todo.completed ? "x" : " "} ${todo.text}`)
         .join("\n");
-      const events = this.#turn.ensureTool(item.id, "todo", { items: item.items }, "");
+      const events = this.#turn.ensureTool(item.id, TODO_TOOL_NAME, { items: item.items }, "");
       events.push(...this.#turn.finishTool(item.id, output, false));
       return events;
     }

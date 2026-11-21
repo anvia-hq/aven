@@ -19,7 +19,7 @@ export const memorySchema = z.object({
       `The folder or note, as ${MEMORY_ROOT}/<folder>/<name>.md; ${MEMORY_ROOT} itself lists your folders. For every command but rename.`,
     ),
   view_range: z
-    .tuple([z.number().int(), z.number().int()])
+    .tuple([z.int(), z.int()])
     .optional()
     .describe("For view of a note: the first and last line to show, -1 for the end."),
   file_text: z
@@ -29,11 +29,7 @@ export const memorySchema = z.object({
     .describe("For create: the whole note. It replaces a note of that name."),
   old_str: z.string().optional().describe("For str_replace: text that is in the note once."),
   new_str: z.string().optional().describe("For str_replace: what replaces it."),
-  insert_line: z
-    .number()
-    .int()
-    .optional()
-    .describe("For insert: the line to insert after, 0 for the top."),
+  insert_line: z.int().optional().describe("For insert: the line to insert after, 0 for the top."),
   insert_text: z.string().optional().describe("For insert: the lines to insert."),
   old_path: z.string().optional().describe("For rename: the note as it is."),
   new_path: z

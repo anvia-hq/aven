@@ -15,6 +15,7 @@ const ONCE: ReadonlySet<CallMethod> = new Set(["machine.call"]);
 
 export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsContext) {
   const pending = new Map<string, PendingCall>();
+  let closedReason: string | undefined;
 
   const call = <M extends keyof RuntimeCalls>(
     method: M,
@@ -22,6 +23,11 @@ export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsCo
     waitMs = timeoutMs,
   ) =>
     new Promise<RuntimeCalls[M]["result"]>((resolve, reject) => {
+      if (closedReason !== undefined) {
+        reject(new Error(closedReason));
+        return;
+      }
+
       const id = crypto.randomUUID();
       const timer = setTimeout(() => {
         pending.delete(id);
@@ -62,5 +68,14 @@ export function createControlPlaneCalls({ send, timeoutMs }: ControlPlaneCallsCo
     else waiting.reject(new Error(reply.error ?? "The control plane reported an error"));
   };
 
-  return { call, resend, settle };
+  const close = (reason = "The runner is stopping") => {
+    closedReason = reason;
+    const error = new Error(reason);
+    for (const [id, waiting] of pending) {
+      pending.delete(id);
+      waiting.reject(error);
+    }
+  };
+
+  return { call, resend, settle, close };
 }

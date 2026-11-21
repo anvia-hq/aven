@@ -3,19 +3,38 @@ import { dirname, join } from "node:path";
 
 import { runCommand } from "./run-command";
 
+type ClonefileFn = (from: Buffer, to: Buffer, flags: number) => number;
+
+let cachedClonefile: Promise<ClonefileFn | null> | undefined;
+
+function loadClonefile(): Promise<ClonefileFn | null> {
+  cachedClonefile ??= (async () => {
+    try {
+      const { dlopen, FFIType } = await import("bun:ffi");
+      const { symbols } = dlopen("libSystem.B.dylib", {
+        clonefile: { args: [FFIType.cstring, FFIType.cstring, FFIType.u32], returns: FFIType.i32 },
+      });
+      return symbols.clonefile as ClonefileFn;
+    } catch {
+      return null;
+    }
+  })();
+  return cachedClonefile;
+}
+
 async function cloneDirectory(from: string, to: string) {
   if (process.platform !== "darwin") return false;
 
   try {
+    const clonefile = await loadClonefile();
+
+    if (!clonefile) return false;
+
     await mkdir(dirname(to), { recursive: true });
     await rmdir(to).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== "ENOENT") throw error;
     });
-    const { dlopen, FFIType } = await import("bun:ffi");
-    const { symbols } = dlopen("libSystem.B.dylib", {
-      clonefile: { args: [FFIType.cstring, FFIType.cstring, FFIType.u32], returns: FFIType.i32 },
-    });
-    return symbols.clonefile(Buffer.from(`${from}\0`), Buffer.from(`${to}\0`), 0) === 0;
+    return clonefile(Buffer.from(`${from}\0`), Buffer.from(`${to}\0`), 0) === 0;
   } catch {
     return false;
   }

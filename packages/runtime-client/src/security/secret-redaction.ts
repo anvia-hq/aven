@@ -1,11 +1,48 @@
 import type { AnyTool } from "@anvia/core";
+import { codexAuthSecrets, parseCodexAuth } from "@aven/protocol/codex-auth";
 import { MIN_REDACTED_LENGTH } from "@aven/protocol/variables";
-import type { RunEnvVar } from "@aven/protocol/types";
+import type { RunEnvVar, RunSecrets } from "@aven/protocol/types";
 
 import { wrapTools } from "../tools/wrap-tools";
 
 export { MIN_REDACTED_LENGTH };
 export const REDACTED = "[redacted]";
+
+export function collectRunSecretVariables(secrets: RunSecrets | undefined): RunEnvVar[] {
+  const variables: RunEnvVar[] = [];
+
+  if (secrets?.env) variables.push(...secrets.env);
+
+  if (secrets?.github?.token) {
+    variables.push({ name: "GH_TOKEN", value: secrets.github.token, secret: true });
+  }
+
+  if (secrets?.gatewayToken) {
+    variables.push({ name: "AVEN_GATEWAY_TOKEN", value: secrets.gatewayToken, secret: true });
+  }
+
+  if (secrets?.claudeToken) {
+    variables.push({ name: "CLAUDE_CODE_OAUTH_TOKEN", value: secrets.claudeToken, secret: true });
+  }
+
+  if (secrets?.codexToken) {
+    const auth = parseCodexAuth(secrets.codexToken);
+
+    if (auth) {
+      codexAuthSecrets(auth).forEach((value, index) =>
+        variables.push({ name: `CODEX_AUTH_${index}`, value, secret: true }),
+      );
+    } else {
+      variables.push({ name: "CODEX_API_KEY", value: secrets.codexToken, secret: true });
+    }
+  }
+
+  return variables;
+}
+
+export function runSecretsRedactor(secrets: RunSecrets | undefined) {
+  return secretRedactor(collectRunSecretVariables(secrets));
+}
 
 export function secretRedactor(variables: readonly RunEnvVar[] | undefined) {
   const secrets = [

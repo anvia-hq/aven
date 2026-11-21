@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { access, readFile, realpath } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-import { parseEnv, setEnv } from "./env-file";
-import { capture, captured, run } from "./process";
+import { parseEnv, setEnv, writePrivateFile } from "./env-file";
+import { capture, run } from "./process";
 
 const LEGACY_PROJECT = "aven";
 const PROJECT_HASH_LENGTH = 8;
@@ -11,13 +11,7 @@ const NAME_LINE = /^name:[ \t]*(.+?)[ \t]*$/m;
 
 type ComposeProject = { Name: string; ConfigFiles: string };
 
-const absolutePath = (path: string) => {
-  try {
-    return realpathSync(path);
-  } catch {
-    return resolve(path);
-  }
-};
+const absolutePath = (path: string) => realpath(path).catch(() => resolve(path));
 
 const composeFile = (dir: string) => join(dir, "docker-compose.yml");
 
@@ -35,8 +29,8 @@ const isComposeProject = (value: unknown): value is ComposeProject =>
   typeof value.Name === "string" &&
   typeof value.ConfigFiles === "string";
 
-function composeProjects() {
-  const listed = captured(["docker", "compose", "ls", "--all", "--format", "json"]);
+async function composeProjects() {
+  const listed = await capture(["docker", "compose", "ls", "--all", "--format", "json"]);
 
   if (listed === undefined) return undefined;
 
@@ -48,84 +42,87 @@ function composeProjects() {
   }
 }
 
-const adoptedProject = (dir: string, projects: ComposeProject[] | undefined) => {
-  const file = absolutePath(composeFile(dir));
-  const here = (projects ?? []).filter((project) =>
-    project.ConfigFiles.split(",").some((one) => absolutePath(one.trim()) === file),
+async function adoptedProject(dir: string, projects: ComposeProject[] | undefined) {
+  const file = await absolutePath(composeFile(dir));
+  const matches = await Promise.all(
+    (projects ?? []).map(async (project) => {
+      const configs = await Promise.all(
+        project.ConfigFiles.split(",").map((one) => absolutePath(one.trim())),
+      );
+      return configs.includes(file) ? project : undefined;
+    }),
   );
+  const here = matches.filter((project): project is ComposeProject => project !== undefined);
   return (here.find((project) => project.Name === LEGACY_PROJECT) ?? here[0])?.Name;
-};
+}
 
-const declaredProject = (dir: string) => {
-  let text: string | undefined;
-  try {
-    text = readFileSync(composeFile(dir), "utf8");
-  } catch {
-    return undefined;
-  }
+async function declaredProject(dir: string) {
+  const text = await readFile(composeFile(dir), "utf8").catch(() => undefined);
+
+  if (text === undefined) return undefined;
+
   const declared = NAME_LINE.exec(text)?.[1]
     ?.replace(/\s+#.*$/, "")
     .replace(/^["']|["']$/g, "");
   return declared === undefined || declared.includes("${") ? undefined : declared;
-};
+}
 
 const envFile = (dir: string) => join(dir, ".env");
 
-const recordedProject = (dir: string) => {
-  try {
-    return parseEnv(readFileSync(envFile(dir), "utf8")).COMPOSE_PROJECT_NAME || undefined;
-  } catch {
-    return undefined;
-  }
-};
+async function recordedProject(dir: string) {
+  const text = await readFile(envFile(dir), "utf8").catch(() => undefined);
+  return text === undefined ? undefined : parseEnv(text).COMPOSE_PROJECT_NAME || undefined;
+}
 
-export const composeProject = (dir: string, projects?: ComposeProject[]) =>
-  recordedProject(dir) ??
-  adoptedProject(dir, projects ?? composeProjects()) ??
-  declaredProject(dir) ??
-  (existsSync(envFile(dir)) ? LEGACY_PROJECT : projectName(dirname(resolve(dir))));
+const hasEnvFile = (dir: string) =>
+  access(envFile(dir)).then(
+    () => true,
+    () => false,
+  );
 
-export function recordProject(dir: string, projects?: ComposeProject[]) {
-  let text: string;
-  try {
-    text = readFileSync(envFile(dir), "utf8");
-  } catch {
-    return;
-  }
-
-  if (parseEnv(text).COMPOSE_PROJECT_NAME) return;
-
-  writeFileSync(
-    envFile(dir),
-    setEnv(text, { COMPOSE_PROJECT_NAME: composeProject(dir, projects) }),
-    {
-      mode: 0o600,
-    },
+export async function composeProject(dir: string, projects?: ComposeProject[]) {
+  return (
+    (await recordedProject(dir)) ??
+    (await adoptedProject(dir, projects ?? (await composeProjects()))) ??
+    (await declaredProject(dir)) ??
+    ((await hasEnvFile(dir)) ? LEGACY_PROJECT : projectName(dirname(resolve(dir))))
   );
 }
 
-export const composeCommand = (dir: string, args: string[], projects?: ComposeProject[]) => [
-  "docker",
-  "compose",
-  "--project-name",
-  composeProject(dir, projects),
-  "--project-directory",
-  dir,
-  "-f",
-  composeFile(dir),
-  ...args,
-];
+export async function recordProject(dir: string, projects?: ComposeProject[]) {
+  const text = await readFile(envFile(dir), "utf8").catch(() => undefined);
 
-export function serverEnvKeys(dir: string) {
-  try {
-    return Object.keys(parseEnv(readFileSync(envFile(dir), "utf8")));
-  } catch {
-    return [];
-  }
+  if (text === undefined || parseEnv(text).COMPOSE_PROJECT_NAME) return;
+
+  await writePrivateFile(
+    envFile(dir),
+    setEnv(text, { COMPOSE_PROJECT_NAME: await composeProject(dir, projects) }),
+  );
 }
 
-export const runCompose = (dir: string, args: string[]) =>
-  run(composeCommand(dir, args), undefined, serverEnvKeys(dir));
+export async function composeCommand(dir: string, args: string[], projects?: ComposeProject[]) {
+  return [
+    "docker",
+    "compose",
+    "--project-name",
+    await composeProject(dir, projects),
+    "--project-directory",
+    dir,
+    "-f",
+    composeFile(dir),
+    ...args,
+  ];
+}
+
+export async function serverEnvKeys(dir: string) {
+  const text = await readFile(envFile(dir), "utf8").catch(() => undefined);
+  return text === undefined ? [] : Object.keys(parseEnv(text));
+}
+
+export async function runCompose(dir: string, args: string[]) {
+  const [command, keys] = await Promise.all([composeCommand(dir, args), serverEnvKeys(dir)]);
+  return run(command, undefined, keys);
+}
 
 export async function dockerProblem() {
   if ((await capture(["docker", "--version"])) === undefined)

@@ -6,6 +6,7 @@ import { servedFolders } from "@aven/runtime-client/run-runner";
 import compose from "../../../../deploy/docker-compose.yml" with { type: "text" };
 import { dockerProblem } from "../compose";
 import { readEnvFile } from "../env-file";
+import { CliExitError } from "../exit-error";
 import { describeExposure, describeSignups } from "../exposure";
 import { waitForHealthy } from "../health";
 import { avenHome, runnerEnvFile, serverDir } from "../home";
@@ -29,7 +30,7 @@ export async function doctor() {
     console.log(`${label} ${name.padEnd(14)} ${detail}`);
   }
 
-  if (checks.some((check) => !check.ok && !check.warn)) process.exit(1);
+  if (checks.some((check) => !check.ok && !check.warn)) throw new CliExitError(1);
 }
 
 export async function diagnose(

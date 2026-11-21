@@ -1,4 +1,5 @@
 import { parseArgs } from "./args";
+import { CliExitError } from "./exit-error";
 import {
   serverInstall,
   serverLogs,
@@ -158,6 +159,12 @@ if (import.meta.main) {
   try {
     await runCli(process.argv.slice(2));
   } catch (error) {
+    if (error instanceof CliExitError) {
+      if (error.message) console.error(error.message);
+
+      process.exit(error.code);
+    }
+
     console.error(error instanceof Error ? error.message : String(error));
     process.exit(1);
   }

@@ -12,19 +12,36 @@ export const MAX_RESULTS = 500;
 
 const decoder = new TextDecoder();
 
-export const searchRoot = (workdir: string, path: string | undefined) => {
-  const normalized = posix.normalize((path ?? ".").replaceAll("\\", "/"));
-
-  const inside = posix.isAbsolute(normalized)
-    ? posix.relative(workdir, normalized) || "."
-    : normalized;
+export function resolveWorkspacePath(
+  workdir: string,
+  input: string | undefined,
+  options: { allowRoot?: boolean; escapeDash?: boolean } = {},
+) {
+  const raw = input ?? (options.allowRoot ? "." : "");
+  const normalized = posix.normalize(raw.replaceAll("\\", "/"));
+  const inside = posix.isAbsolute(normalized) ? posix.relative(workdir, normalized) : normalized;
 
   if (inside === ".." || inside.startsWith("../")) {
-    throw new Error(`Path is outside the workspace: ${path}`);
+    throw new Error(
+      options.allowRoot
+        ? `Path is outside the workspace: ${input}`
+        : `Path is not a file inside the workspace: ${input}`,
+    );
   }
 
-  return inside.startsWith("-") ? `./${inside}` : inside;
-};
+  if (inside === "" || inside === ".") {
+    if (!options.allowRoot) {
+      throw new Error(`Path is not a file inside the workspace: ${input}`);
+    }
+
+    return ".";
+  }
+
+  return options.escapeDash && inside.startsWith("-") ? `./${inside}` : inside;
+}
+
+export const searchRoot = (workdir: string, path: string | undefined) =>
+  resolveWorkspacePath(workdir, path, { allowRoot: true, escapeDash: true });
 
 const TYPE_TESTS = { file: ["-type", "f"], directory: ["-type", "d"], any: [] } as const;
 
