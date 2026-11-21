@@ -11,7 +11,9 @@ import type {
   QuestionAnswer,
   QuestionPrompt,
   QueuedSteer,
+  RunEvent,
   SubagentPart,
+  ThreadUsage,
   ToolArtifact,
   ToolPart,
 } from "@aven/protocol/types";
@@ -208,3 +210,31 @@ export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: b
 export type RecencyGroupId = "today" | "week" | "month";
 
 export type RecencyGroup = { id: RecencyGroupId; label: string; threads: Thread[] };
+
+export type SidebarRow =
+  | { kind: "pair"; pair: [Thread, Thread] }
+  | { kind: "thread"; thread: Thread; nested: boolean; first: boolean; last: boolean };
+
+export type ThreadStreamState = {
+  messages: ChatMessage[];
+  handoffs: Record<string, Handoff>;
+  earlier: ChatMessage[];
+  hidden: number;
+  running: boolean;
+  startedAt: number | null;
+  usage: ThreadUsage | null;
+  synced: boolean;
+  error: string | null;
+  steers: QueuedSteer[];
+  pending: PendingMessage[];
+};
+
+export type ThreadStreamAction =
+  | { type: "reset" }
+  | { type: "event"; event: RunEvent; now: number }
+  | { type: "connection_lost" }
+  | { type: "earlier_loaded"; before: number; messages: ChatMessage[]; hidden: number }
+  | { type: "steer_add"; steer: QueuedSteer }
+  | { type: "steer_drop"; id: string }
+  | { type: "pending_add"; item: PendingMessage }
+  | { type: "pending_drop"; id: string };

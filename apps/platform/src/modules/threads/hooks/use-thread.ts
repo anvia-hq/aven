@@ -1,31 +1,21 @@
 import { isDriving } from "@aven/protocol/drivers";
-import {
-  answerableQuestion,
-  applyEvent,
-  applyLimits,
-  applyUsage,
-  isRunning,
-  messageId,
-} from "@aven/protocol/events";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { answerableQuestion } from "@aven/protocol/events";
+import type { MessagesPage, RunEvent } from "@aven/protocol/types";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
 
 import { messageBody } from "../message-body";
+import { pendingMessage, pendingShip } from "../pending-messages";
 import {
-  handoffOf,
-  pendingMessage,
-  pendingShip,
-  settlePending,
-  withoutPending,
-} from "../pending-messages";
+  INITIAL_THREAD_STREAM_STATE,
+  reduceThreadStream,
+  rejectedSteerNotice,
+} from "../thread-stream-state";
 import type {
-  ChatMessage,
-  Handoff,
   OutgoingMessage,
-  PendingMessage,
   QuestionAnswer,
   QueuedSteer,
   RunSelection,
@@ -33,7 +23,6 @@ import type {
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
-import type { MessagesPage, RunEvent, ThreadUsage } from "@aven/protocol/types";
 
 function newSteerId() {
   return (
@@ -67,139 +56,66 @@ export function useThread(threadId: string) {
     [viewerId, owned, viewerName, ownerId, ownerName],
   );
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const messagesRef = useRef<ChatMessage[]>([]);
-  const [handoffs, setHandoffs] = useState<Record<string, Handoff>>({});
-  const [earlier, setEarlier] = useState<ChatMessage[]>([]);
-  const [hidden, setHidden] = useState(0);
-  const hiddenRef = useRef(0);
+  const [state, dispatch] = useReducer(reduceThreadStream, INITIAL_THREAD_STREAM_STATE);
   const [loadingEarlier, setLoadingEarlier] = useState(false);
-  const [running, setRunning] = useState(false);
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [usage, setUsage] = useState<ThreadUsage | null>(null);
-  const [synced, setSynced] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [steers, setSteersState] = useState<QueuedSteer[]>([]);
-  const steersRef = useRef<QueuedSteer[]>([]);
-  const changeSteers = useCallback((change: (current: QueuedSteer[]) => QueuedSteer[]) => {
-    steersRef.current = change(steersRef.current);
-    setSteersState(steersRef.current);
-  }, []);
-
-  const [pending, setPendingState] = useState<PendingMessage[]>([]);
-  const pendingRef = useRef<PendingMessage[]>([]);
-  const changePending = useCallback((change: (current: PendingMessage[]) => PendingMessage[]) => {
-    pendingRef.current = change(pendingRef.current);
-    setPendingState(pendingRef.current);
-  }, []);
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
   useEffect(() => {
-    changeSteers(() => []);
-    changePending(() => []);
-    messagesRef.current = [];
-    setMessages([]);
-    setHandoffs({});
-    setEarlier([]);
-    hiddenRef.current = 0;
-    setHidden(0);
-    setRunning(false);
-    setStartedAt(null);
-    setUsage(null);
-    setSynced(false);
-    setError(null);
+    dispatch({ type: "reset" });
 
     const source = new EventSource(`/api/threads/${threadId}/events`);
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined;
     source.onmessage = (message) => {
       const event = parseEvent(message.data);
 
       if (!event) return;
 
-      const handoff = handoffOf(pendingRef.current, steersRef.current, event);
-      const realId = messageId(messagesRef.current.length);
-      messagesRef.current = applyEvent(messagesRef.current, event);
-      setMessages(messagesRef.current);
+      const rejected = rejectedSteerNotice(stateRef.current.steers, event);
 
-      if (handoff) setHandoffs((current) => ({ ...current, [realId]: handoff }));
+      if (rejected) {
+        toast.add({
+          title: "A message was not delivered",
+          description: `${rejected.reason}: “${rejected.prompt}”`,
+          type: "error",
+        });
+      }
 
-      setRunning((current) => isRunning(current, event));
-      changePending((current) => settlePending(current, event));
+      dispatch({ type: "event", event, now: Date.now() });
+
       switch (event.type) {
-        case "steer_queued":
-          changeSteers((current) =>
-            current.some(({ id }) => id === event.id)
-              ? current
-              : [...current, { id: event.id, prompt: event.prompt, mentions: event.mentions }],
-          );
-          break;
-        case "steer":
-          changeSteers((current) => current.filter(({ id }) => id !== event.id));
-          break;
-        case "steer_rejected": {
-          const lost = steersRef.current.find(({ id }) => id === event.id);
-          changeSteers((current) => current.filter(({ id }) => id !== event.id));
-
-          if (lost && event.reason) {
-            toast.add({
-              title: "A message was not delivered",
-              description: `${event.reason}: “${lost.prompt}”`,
-              type: "error",
-            });
-          }
-
-          break;
-        }
         case "snapshot":
-          setHandoffs({});
-          hiddenRef.current = event.hidden ?? 0;
-          setHidden(hiddenRef.current);
-          setEarlier([]);
-          changeSteers(() => event.steers ?? []);
-          setError(event.error ?? null);
           setThreadRunning(threadId, event.running);
-          setSynced(true);
-          setUsage((current) =>
-            event.usage ? { ...event.usage, limits: event.usage.limits ?? current?.limits } : null,
-          );
-          setStartedAt(event.running ? Date.now() - (event.runningMs ?? 0) : null);
-          break;
-        case "usage":
-          setUsage((current) => applyUsage(current, event));
-          break;
-        case "limits":
-          setUsage((current) => applyLimits(current, event.limits));
           break;
         case "run_start":
         case "run_resume":
-          setError(null);
-          setStartedAt(Date.now());
           setThreadRunning(threadId, true);
           break;
         case "error":
-          setError(event.message);
-          setStartedAt(null);
           setThreadRunning(threadId, false);
           break;
         case "done":
-          setStartedAt(null);
           setThreadRunning(threadId, false);
           void refresh();
-          setTimeout(() => void refresh(), 2000);
+          clearTimeout(refreshTimer);
+          refreshTimer = setTimeout(() => void refresh(), 2000);
           break;
       }
     };
     source.onerror = () => {
       if (source.readyState !== EventSource.CLOSED) return;
 
-      setRunning(false);
-      setStartedAt(null);
-      setError("Lost the connection to the server");
+      dispatch({ type: "connection_lost" });
       void refresh();
     };
-    return () => source.close();
-  }, [threadId, setThreadRunning, refresh, changeSteers, changePending]);
+    return () => {
+      clearTimeout(refreshTimer);
+      source.close();
+    };
+  }, [threadId, setThreadRunning, refresh]);
 
   const loadEarlier = useCallback(async () => {
-    const before = hiddenRef.current;
+    const before = stateRef.current.hidden;
 
     if (before === 0) return;
 
@@ -208,19 +124,15 @@ export function useThread(threadId: string) {
       api<MessagesPage>(`/threads/${threadId}/messages?before=${before}`),
     ).finally(() => setLoadingEarlier(false));
 
-    if (!page || hiddenRef.current !== before) return;
+    if (!page) return;
 
-    hiddenRef.current = page.hidden;
-    setHidden(page.hidden);
-    setEarlier((current) => [...page.messages, ...current]);
+    dispatch({ type: "earlier_loaded", before, messages: page.messages, hidden: page.hidden });
   }, [threadId]);
 
   const send = useCallback(
     async (message: OutgoingMessage, selection: RunSelection = {}) => {
       const id = newSteerId();
-      const dropSteer = () => changeSteers((current) => current.filter((steer) => steer.id !== id));
-      const dropPending = () => changePending((current) => withoutPending(current, id));
-      const steering = running;
+      const steering = stateRef.current.running;
 
       if (steering) {
         const queued: QueuedSteer = { id, prompt: message.prompt, mentions: message.mentions };
@@ -229,9 +141,9 @@ export function useThread(threadId: string) {
           queued.attachments = pendingMessage(id, message).message.attachments;
         }
 
-        changeSteers((current) => [...current, queued]);
+        dispatch({ type: "steer_add", steer: queued });
       } else {
-        changePending((current) => [...current, pendingMessage(id, message)]);
+        dispatch({ type: "pending_add", item: pendingMessage(id, message) });
       }
 
       const sent = await attempt("Could not send message", async () => {
@@ -243,22 +155,22 @@ export function useThread(threadId: string) {
         return result;
       });
 
-      if (!sent?.steered) dropSteer();
+      if (!sent?.steered) dispatch({ type: "steer_drop", id });
 
-      if (!sent || sent.steered || steering) dropPending();
+      if (!sent || sent.steered || steering) dispatch({ type: "pending_drop", id });
 
       if (sent && wasArchived) void refresh();
 
       return sent !== null;
     },
-    [threadId, running, changeSteers, changePending, wasArchived, refresh],
+    [threadId, wasArchived, refresh],
   );
 
   const showShip = useCallback(() => {
     const id = newSteerId();
-    changePending((current) => [...current, pendingShip(id)]);
-    return () => changePending((current) => withoutPending(current, id));
-  }, [changePending]);
+    dispatch({ type: "pending_add", item: pendingShip(id) });
+    return () => dispatch({ type: "pending_drop", id });
+  }, []);
 
   const answer = useCallback(
     async (answers: QuestionAnswer[], selection: RunSelection = {}, secret?: SecretChoice) => {
@@ -290,7 +202,7 @@ export function useThread(threadId: string) {
     await api(`/threads/${threadId}/cancel`, { method: "POST" }).catch(() => undefined);
   }, [threadId]);
 
-  const asked = answerableQuestion(messages, running, error !== null);
+  const asked = answerableQuestion(state.messages, state.running, state.error !== null);
   const question = thread?.awaitingAnswer === false ? undefined : asked;
 
   return {
@@ -299,19 +211,19 @@ export function useThread(threadId: string) {
     viewer,
     driven,
     loaded: loaded && (session != null || !isPending),
-    messages,
-    handoffs,
-    earlier,
-    hidden,
+    messages: state.messages,
+    handoffs: state.handoffs,
+    earlier: state.earlier,
+    hidden: state.hidden,
     loadingEarlier,
     loadEarlier,
-    pending: pending.map((item) => item.message),
-    steers,
-    running,
-    startedAt,
-    usage,
-    synced,
-    error,
+    pending: state.pending.map((item) => item.message),
+    steers: state.steers,
+    running: state.running,
+    startedAt: state.startedAt,
+    usage: state.usage,
+    synced: state.synced,
+    error: state.error,
     question,
     send,
     showShip,

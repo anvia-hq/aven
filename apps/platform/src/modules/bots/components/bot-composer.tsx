@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "re
 
 import { Button } from "@aven/ui/button";
 import { AttachButton } from "@/modules/threads/components/attach-button";
+import { MentionChip } from "@/modules/threads/components/mention-chip";
 import { MentionMenu } from "@/modules/threads/components/mention-menu";
 import { PendingAttachments } from "@/modules/threads/components/pending-attachments";
 import { useAttachmentDrop } from "@/modules/threads/hooks/use-attachment-drop";
@@ -17,16 +18,15 @@ import { useAttachments } from "@/modules/threads/hooks/use-attachments";
 import { useComposerChat } from "@/modules/threads/hooks/use-composer-chat";
 import { useComposerDraft } from "@/modules/threads/hooks/use-composer-draft";
 import type { AttachmentUpload } from "@/modules/threads/types";
-import { toast } from "@aven/ui/toast";
 
 import { avatarFor, parseAvatarSetting } from "../avatar";
 import { useBotMentions } from "../hooks/use-bot-mentions";
+import { useBotSendComposer } from "../hooks/use-bot-send-composer";
 import { useBots } from "../hooks/use-bots";
+import type { BotChatQuote } from "../types";
 import { BotMentionChip } from "./bot-mention-chip";
-import { MentionChip } from "@/modules/threads/components/mention-chip";
 import { MentionIcon } from "./mention-icon";
 import { ThreadMentionChip } from "./thread-mention-chip";
-import type { BotChatQuote } from "../types";
 
 const SINGLE_LINE_HEIGHT = 40;
 
@@ -149,11 +149,9 @@ function Composer({
   const attachments = useAttachments(draftId);
   useComposerDraft(draftId, composer, attachments);
   const drop = useAttachmentDrop(attachments);
-  const [sending, setSending] = useState(false);
+  const { canSend, submit } = useBotSendComposer({ composer, attachments, onSend });
   const editor = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const message = composer.input.trim();
-  const canSend = (message.length > 0 || attachments.files.length > 0) && !sending;
 
   useEffect(() => {
     if (composer.input.length === 0) {
@@ -167,29 +165,6 @@ function Composer({
 
     if (composer.input.includes("\n") || box.scrollHeight > SINGLE_LINE_HEIGHT) setExpanded(true);
   }, [composer.input]);
-
-  const submit = async () => {
-    if (!canSend) return;
-
-    setSending(true);
-    try {
-      const files = await attachments.encode();
-
-      if (await onSend(message, files)) {
-        composer.setInput("");
-        composer.setEntities([]);
-        attachments.clear();
-      }
-    } catch (error) {
-      toast.add({
-        title: "Could not read the attached files",
-        description: error instanceof Error ? error.message : undefined,
-        type: "error",
-      });
-    } finally {
-      setSending(false);
-    }
-  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
