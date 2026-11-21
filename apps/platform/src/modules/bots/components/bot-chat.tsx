@@ -35,10 +35,7 @@ export function BotChat({
   const textSize = useTextSize("bot");
   const items = useMemo(() => chatItems([...messages, ...pending]), [messages, pending]);
   const sending = useMemo(() => new Set(pending.map(({ id }) => id)), [pending]);
-  const scroll = useScrollToBottom(
-    messages.length + pending.length + (typing ? 1 : 0),
-    pending.length,
-  );
+  const scroll = useScrollToBottom(messages.length + pending.length, pending.length);
   const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
 
   useEffect(() => setQuoting(null), [bot.id]);
@@ -106,7 +103,9 @@ export function BotChat({
                 </RiseIn>
               );
             })}
-            {typing && <TypingIndicator bot={bot} activity={activity} />}
+            <div className="mt-3 min-h-6">
+              {typing && <TypingIndicator bot={bot} activity={activity} />}
+            </div>
             {error && (
               <p
                 role="alert"
@@ -155,7 +154,7 @@ function TypingIndicator({ bot, activity }: { bot: Bot; activity: string | null 
     <p
       role="status"
       aria-label={activity ?? `${bot.name} is typing`}
-      className="mt-3 flex items-center gap-2.5 text-xs text-muted-foreground"
+      className="indicator-in flex items-center gap-2.5 text-xs text-muted-foreground"
     >
       <BotAvatar bot={bot} mood="working" className="size-6" />
       <span className={cn(activity && "shimmer")}>{activity ?? `${bot.name} is typing…`}</span>

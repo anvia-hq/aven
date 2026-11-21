@@ -1,3 +1,4 @@
+import { cn } from "cn";
 import { useEffect, useState } from "react";
 
 import { elapsed } from "@/lib/format";
@@ -28,7 +29,10 @@ function WorkingWord() {
         )}
         <span
           key={current}
-          className="inline-block whitespace-nowrap motion-safe:animate-[word-in_450ms_ease-out_both]"
+          className={cn(
+            "inline-block whitespace-nowrap",
+            previous && "motion-safe:animate-[word-in_450ms_ease-out_both]",
+          )}
         >
           {current}…
         </span>
@@ -74,7 +78,7 @@ export function WorkingIndicator({
   return (
     <div className="flex flex-col gap-1">
       {creating && (
-        <p className="flex h-7 items-center px-1 text-sm text-muted-foreground">
+        <p className="indicator-in flex h-7 items-center px-1 text-sm text-muted-foreground">
           <span className="shimmer">
             {status.state === "waking" ? "Creating sandbox" : "Starting sandbox"}
           </span>
@@ -83,7 +87,7 @@ export function WorkingIndicator({
       {running && (
         <div
           data-role="working"
-          className="flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
+          className="indicator-in flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
         >
           <ThreadMark
             projectId={projectId}
