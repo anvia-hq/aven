@@ -1,5 +1,6 @@
 import {
   IconAlertTriangle,
+  IconCloud,
   IconGitBranch,
   IconGitPullRequest,
   IconMessageCircle,
@@ -9,7 +10,7 @@ import {
 } from "@tabler/icons-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { cn } from "cn";
-import { useRef } from "react";
+import { useRef, type KeyboardEvent } from "react";
 
 import type { GitActionPayload, GraphRow } from "@aven/protocol/types";
 import { Badge } from "@aven/ui/badge";
@@ -33,9 +34,9 @@ import type {
   GraphDisplayRow,
 } from "../types";
 
-const ROW_HEIGHT = 40;
-const LANE_WIDTH = 15;
-const MAX_LANES = 12;
+const ROW_HEIGHT = 38;
+const LANE_WIDTH = 16;
+const MAX_LANES = 10;
 
 const STROKES = [
   "stroke-graph-1",
@@ -54,7 +55,7 @@ const FILLS = [
   "fill-graph-6",
 ];
 
-const laneX = (lane: number) => lane * LANE_WIDTH + LANE_WIDTH / 2;
+const laneX = (lane: number) => lane * LANE_WIDTH + LANE_WIDTH / 2 + 2;
 const MID = ROW_HEIGHT / 2;
 
 function GraphSvg({
@@ -62,15 +63,19 @@ function GraphSvg({
   lanes,
   dashed = false,
   isHead = false,
+  isMerge = false,
 }: {
   row: GraphRow;
   lanes: number;
   dashed?: boolean;
   isHead?: boolean;
+  isMerge?: boolean;
 }) {
   const shown = Math.max(1, Math.min(lanes, MAX_LANES));
   const width = shown * LANE_WIDTH + 6;
   const line = "fill-none [stroke-linecap:round]";
+  const colorIdx = row.lane % STROKES.length;
+  const cx = laneX(row.lane);
 
   return (
     <svg
@@ -78,7 +83,7 @@ function GraphSvg({
       width={width}
       height={ROW_HEIGHT}
       viewBox={`0 0 ${width} ${ROW_HEIGHT}`}
-      className="shrink-0 overflow-hidden"
+      className="size-auto shrink-0 overflow-visible"
     >
       {row.through.map((lane) => (
         <path
@@ -88,51 +93,110 @@ function GraphSvg({
           className={`${line} ${STROKES[lane % STROKES.length]}`}
         />
       ))}
-      {row.up.map((lane) => (
-        <path
-          key={`u-${lane}`}
-          d={
-            lane === row.lane
-              ? `M ${laneX(lane)} 0 V ${MID}`
-              : `M ${laneX(lane)} 0 Q ${laneX(lane)} ${MID} ${laneX(row.lane)} ${MID}`
-          }
-          strokeWidth={2}
-          className={`${line} ${STROKES[lane % STROKES.length]}`}
-        />
-      ))}
-      {row.down.map((lane) => (
-        <path
-          key={`d-${lane}`}
-          d={
-            lane === row.lane
-              ? `M ${laneX(lane)} ${MID} V ${ROW_HEIGHT}`
-              : `M ${laneX(row.lane)} ${MID} Q ${laneX(lane)} ${MID} ${laneX(lane)} ${ROW_HEIGHT}`
-          }
-          strokeWidth={2}
-          strokeDasharray={dashed ? "3 3" : undefined}
-          className={`${line} ${STROKES[lane % STROKES.length]}`}
-        />
-      ))}
-      {dashed ? (
+      {row.up.map((lane) => {
+        const fromX = laneX(lane);
+        const d =
+          lane === row.lane
+            ? `M ${fromX} 0 V ${MID}`
+            : `M ${fromX} 0 C ${fromX} ${MID * 0.85}, ${cx} ${MID * 0.15}, ${cx} ${MID}`;
+        return (
+          <path
+            key={`u-${lane}`}
+            d={d}
+            strokeWidth={2}
+            className={`${line} ${STROKES[lane % STROKES.length]}`}
+          />
+        );
+      })}
+      {row.down.map((lane) => {
+        const toX = laneX(lane);
+        const d =
+          lane === row.lane
+            ? `M ${toX} ${MID} V ${ROW_HEIGHT}`
+            : `M ${cx} ${MID} C ${cx} ${MID + MID * 0.85}, ${toX} ${MID + MID * 0.15}, ${toX} ${ROW_HEIGHT}`;
+        return (
+          <path
+            key={`d-${lane}`}
+            d={d}
+            strokeWidth={2}
+            strokeDasharray={dashed ? "3 3" : undefined}
+            className={`${line} ${STROKES[lane % STROKES.length]}`}
+          />
+        );
+      })}
+      {dashed && (
         <circle
-          cx={laneX(row.lane)}
+          cx={cx}
           cy={MID}
           r={4.5}
           strokeWidth={2}
-          strokeDasharray="2 2"
-          className={`fill-background ${STROKES[row.lane % STROKES.length]}`}
+          strokeDasharray="2.5 2"
+          className={`fill-background ${STROKES[colorIdx]}`}
         />
-      ) : (
+      )}
+      {!dashed && isHead && (
+        <>
+          <circle
+            cx={cx}
+            cy={MID}
+            r={7.5}
+            strokeWidth={1.5}
+            strokeOpacity={0.35}
+            className={`fill-none ${STROKES[colorIdx]}`}
+          />
+          <circle
+            cx={cx}
+            cy={MID}
+            r={4.5}
+            strokeWidth={1.5}
+            className={`stroke-background ${FILLS[colorIdx]}`}
+          />
+        </>
+      )}
+      {!dashed && !isHead && isMerge && (
         <circle
-          cx={laneX(row.lane)}
+          cx={cx}
           cy={MID}
-          r={isHead ? 5 : 4}
-          strokeWidth={2}
-          className={`stroke-background ${FILLS[row.lane % FILLS.length]}`}
+          r={4}
+          strokeWidth={2.25}
+          className={`fill-background ${STROKES[colorIdx]}`}
+        />
+      )}
+      {!dashed && !isHead && !isMerge && (
+        <circle
+          cx={cx}
+          cy={MID}
+          r={4}
+          strokeWidth={1.5}
+          className={`stroke-background ${FILLS[colorIdx]}`}
         />
       )}
     </svg>
   );
+}
+
+function splitRefs(localRefs: string[], remoteRefs: string[]) {
+  const remoteSet = new Set(remoteRefs);
+  const consumedRemotes = new Set<string>();
+
+  const pairedLocals = localRefs.map((name) => {
+    const originName = `origin/${name}`;
+    const hasOrigin = remoteSet.has(originName);
+
+    if (hasOrigin) consumedRemotes.add(originName);
+
+    return { name, hasOrigin };
+  });
+
+  const standaloneRemotes = remoteRefs.filter((r) => !consumedRemotes.has(r));
+  return { pairedLocals, standaloneRemotes };
+}
+
+function handleRowKeyDown(event: KeyboardEvent<HTMLDivElement>, activate: () => void) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    activate();
+  }
 }
 
 type Props = {
@@ -184,38 +248,41 @@ export function GitGraphPane({
   const hasFilters = Boolean(filters.search || filters.branch || filters.author || filters.path);
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col bg-background">
-      <div className="flex flex-wrap items-center gap-1.5 border-b border-border px-2.5 py-1.5">
-        <div className="relative min-w-44 flex-1">
+    <div className="flex h-full min-w-0 flex-1 flex-col bg-background">
+      <div className="flex min-h-9 shrink-0 flex-wrap items-center gap-1.5 border-b border-border/60 bg-muted/15 px-2.5 py-1">
+        <div className="relative min-w-36 flex-1">
           <IconSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={filters.search}
             onChange={(e) => onChangeFilters((prev) => ({ ...prev, search: e.target.value }))}
             placeholder="Search commits by message or SHA…"
-            className="h-7 pl-7 text-xs"
+            className="h-6.5 pl-7 text-xs"
           />
         </div>
         <Input
           value={filters.author}
           onChange={(e) => onChangeFilters((prev) => ({ ...prev, author: e.target.value }))}
           placeholder="Author"
-          className="h-7 w-28 text-xs"
+          className="h-6.5 w-24 text-xs xl:w-28"
         />
         <Input
           value={filters.path}
           onChange={(e) => onChangeFilters((prev) => ({ ...prev, path: e.target.value }))}
           placeholder="File path"
-          className="h-7 w-32 font-mono text-xs"
+          className="h-6.5 w-28 font-mono text-xs xl:w-32"
         />
         {filters.branch && (
-          <Badge variant="secondary" className="gap-1 font-mono text-[0.6875rem]">
-            <IconGitBranch className="size-3" />
-            <span>{filters.branch}</span>
+          <Badge
+            variant="secondary"
+            className="h-6 max-w-44 gap-1 px-1.5 font-mono text-[0.6875rem]"
+          >
+            <IconGitBranch className="size-3 shrink-0" />
+            <span className="truncate">{filters.branch}</span>
             <Button
               variant="ghost"
               size="icon-xs"
               aria-label="Clear branch filter"
-              className="size-3.5 p-0"
+              className="size-3.5 shrink-0 p-0"
               onClick={() => onChangeFilters((prev) => ({ ...prev, branch: null }))}
             >
               <IconX className="size-2.5" />
@@ -226,6 +293,7 @@ export function GitGraphPane({
           <Button
             variant="ghost"
             size="xs"
+            className="h-6.5 px-2 text-xs text-muted-foreground"
             onClick={() =>
               onChangeFilters(() => ({ search: "", branch: null, author: "", path: "" }))
             }
@@ -261,128 +329,165 @@ export function GitGraphPane({
                       target.kind === "thread" &&
                       row.target.threadId === target.threadId));
                 const dirtyCount = wipTotalFiles(row.wip);
+                const activateWip = () => {
+                  onSelectTarget(row.target);
+                  onSelectInspector({ kind: "wip" });
+                };
                 return (
                   <div key={row.id} style={style}>
-                    <Button
-                      variant="ghost"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       className={cn(
-                        "h-full w-full justify-start gap-2 rounded-none border-b border-border/40 px-2.5 text-left font-normal hover:bg-accent/50",
-                        selected && "bg-accent text-accent-foreground",
+                        "flex h-full w-full cursor-pointer items-center gap-2.5 px-2.5 text-left transition-colors outline-none hover:bg-accent/45 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
+                        selected && "bg-accent/70 shadow-[inset_2px_0_0_0_var(--primary)]",
                       )}
-                      onClick={() => {
-                        onSelectTarget(row.target);
-                        onSelectInspector({ kind: "wip" });
-                      }}
+                      onClick={activateWip}
+                      onKeyDown={(e) => handleRowKeyDown(e, activateWip)}
                     >
                       <GraphSvg row={row.graph} lanes={lanes} dashed />
                       <Badge
                         variant="outline"
-                        className="shrink-0 gap-1 border-dashed text-[0.6875rem]"
+                        className="h-5 shrink-0 gap-1 border-dashed px-1.5 text-[0.625rem] font-medium"
                       >
                         {row.running ? <Spinner className="size-2.5" /> : null}
                         <span>WIP</span>
                       </Badge>
-                      <span className="min-w-0 flex-1 truncate text-xs font-medium">
+                      <span className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium text-foreground">
                         {row.label}
                         {row.branch ? ` (${row.branch})` : ""}
                       </span>
                       {row.conflicts && (
-                        <Badge variant="destructive" className="shrink-0 gap-1 text-[0.625rem]">
+                        <Badge
+                          variant="destructive"
+                          className="h-5 shrink-0 gap-1 px-1.5 text-[0.625rem]"
+                        >
                           <IconAlertTriangle className="size-3" />
                           <span>{row.conflicts.files.length} conflict(s)</span>
                         </Badge>
                       )}
-                      <span className="shrink-0 font-mono text-[0.6875rem] text-muted-foreground">
+                      <span className="shrink-0 font-mono text-[0.6875rem] text-muted-foreground tabular-nums">
                         {dirtyCount} file{dirtyCount === 1 ? "" : "s"}
                       </span>
-                    </Button>
+                    </div>
                   </div>
                 );
               }
 
               const { commit } = row;
               const selected = inspector.kind === "commit" && inspector.sha === commit.sha;
+              const isMerge = commit.parents.length > 1;
+              const { pairedLocals, standaloneRemotes } = splitRefs(commit.refs, commit.remoteRefs);
+              const hasBadges =
+                pairedLocals.length > 0 ||
+                standaloneRemotes.length > 0 ||
+                commit.tags.length > 0 ||
+                row.threads.length > 0 ||
+                row.pulls.length > 0;
+              const activateCommit = () => onSelectInspector({ kind: "commit", sha: commit.sha });
+
               return (
                 <div key={row.id} style={style}>
                   <ContextMenu>
                     <ContextMenuTrigger
                       render={
-                        <Button
-                          variant="ghost"
+                        <div
+                          role="button"
+                          tabIndex={0}
                           className={cn(
-                            "h-full w-full justify-start gap-2 rounded-none border-b border-border/30 px-2.5 text-left font-normal hover:bg-accent/50",
-                            selected && "bg-accent text-accent-foreground",
+                            "flex h-full w-full cursor-pointer items-center gap-2.5 px-2.5 text-left transition-colors outline-none hover:bg-accent/45 focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset",
+                            selected && "bg-accent/70 shadow-[inset_2px_0_0_0_var(--primary)]",
                           )}
-                          onClick={() => onSelectInspector({ kind: "commit", sha: commit.sha })}
+                          onClick={activateCommit}
+                          onKeyDown={(e) => handleRowKeyDown(e, activateCommit)}
                         />
                       }
                     >
-                      <GraphSvg row={row.graph} lanes={lanes} isHead={row.isHead} />
+                      <GraphSvg
+                        row={row.graph}
+                        lanes={lanes}
+                        isHead={row.isHead}
+                        isMerge={isMerge}
+                      />
                       <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-hidden">
-                        {commit.refs.slice(0, 2).map((ref) => (
+                        {pairedLocals.slice(0, 2).map(({ name, hasOrigin }) => (
                           <Badge
-                            key={ref}
+                            key={name}
+                            title={hasOrigin ? `${name} (synced with origin/${name})` : name}
                             variant={row.isHead ? "default" : "secondary"}
-                            className="h-5 shrink-0 gap-1 px-1.5 font-mono text-[0.625rem]"
+                            className="h-5 max-w-44 shrink-0 gap-1 px-1.5 font-mono text-[0.625rem]"
                           >
-                            <IconGitBranch className="size-2.5" />
-                            <span>{ref}</span>
+                            <IconGitBranch className="size-2.5 shrink-0" />
+                            {hasOrigin && <IconCloud className="size-2.5 shrink-0 opacity-75" />}
+                            <span className="truncate">{name}</span>
                           </Badge>
                         ))}
-                        {commit.remoteRefs.slice(0, 1).map((ref) => (
+                        {standaloneRemotes.slice(0, 1).map((ref) => (
                           <Badge
                             key={ref}
+                            title={ref}
                             variant="outline"
-                            className="h-5 shrink-0 px-1.5 font-mono text-[0.625rem] text-muted-foreground"
+                            className="h-5 max-w-40 shrink-0 gap-1 px-1.5 font-mono text-[0.625rem] text-muted-foreground"
                           >
-                            {ref}
+                            <IconCloud className="size-2.5 shrink-0 opacity-70" />
+                            <span className="truncate">{ref}</span>
                           </Badge>
                         ))}
                         {commit.tags.slice(0, 1).map((tag) => (
                           <Badge
                             key={tag}
+                            title={tag}
                             variant="outline"
-                            className="h-5 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem]"
+                            className="h-5 max-w-32 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem]"
                           >
-                            <IconTag className="size-2.5" />
-                            <span>{tag}</span>
+                            <IconTag className="size-2.5 shrink-0" />
+                            <span className="truncate">{tag}</span>
                           </Badge>
                         ))}
                         {row.threads.slice(0, 1).map((thread) => (
                           <Badge
                             key={thread.id}
+                            title={thread.title}
                             variant="secondary"
-                            className="h-5 shrink-0 gap-1 px-1.5 text-[0.625rem]"
+                            className="h-5 max-w-32 shrink-0 gap-1 px-1.5 text-[0.625rem] text-info"
                           >
                             {thread.running ? (
-                              <Spinner className="size-2.5" />
+                              <Spinner className="size-2.5 shrink-0" />
                             ) : (
-                              <IconMessageCircle className="size-2.5" />
+                              <IconMessageCircle className="size-2.5 shrink-0" />
                             )}
-                            <span className="max-w-24 truncate">{thread.title}</span>
+                            <span className="truncate">{thread.title}</span>
                           </Badge>
                         ))}
                         {row.pulls.slice(0, 1).map((pull) => (
                           <Badge
                             key={pull.number}
+                            title={`#${pull.number} ${pull.title}`}
                             variant="outline"
-                            className="h-5 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem] text-primary"
+                            className="h-5 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem] text-success"
                           >
-                            <IconGitPullRequest className="size-2.5" />
+                            <IconGitPullRequest className="size-2.5 shrink-0" />
                             <span>#{pull.number}</span>
                           </Badge>
                         ))}
-                        <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+                        <span
+                          title={commit.message}
+                          className={cn(
+                            "min-w-0 flex-1 truncate text-[0.8125rem]",
+                            isMerge ? "text-muted-foreground" : "text-foreground",
+                            (selected || hasBadges) && !isMerge && "font-medium",
+                          )}
+                        >
                           {commit.message}
                         </span>
                       </div>
-                      <span className="hidden shrink-0 font-mono text-[0.6875rem] text-muted-foreground 2xl:inline">
+                      <span className="hidden w-14 shrink-0 text-right font-mono text-[0.6875rem] text-muted-foreground/80 lg:inline">
                         {commit.shortSha}
                       </span>
-                      <span className="hidden w-24 shrink-0 truncate text-right text-[0.6875rem] text-muted-foreground 2xl:inline">
+                      <span className="hidden w-28 shrink-0 truncate text-right text-[0.6875rem] text-muted-foreground 2xl:inline">
                         {commit.author ?? ""}
                       </span>
-                      <span className="w-12 shrink-0 text-right text-[0.6875rem] text-muted-foreground">
+                      <span className="w-9 shrink-0 text-right font-mono text-[0.6875rem] text-muted-foreground/80 tabular-nums">
                         {commit.date ? shortTimeAgo(commit.date) : ""}
                       </span>
                     </ContextMenuTrigger>

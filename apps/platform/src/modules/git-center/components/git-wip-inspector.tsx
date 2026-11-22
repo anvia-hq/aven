@@ -17,8 +17,16 @@ import { Button } from "@aven/ui/button";
 import { Checkbox } from "@aven/ui/checkbox";
 import { Input } from "@aven/ui/input";
 import { Label } from "@aven/ui/label";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
 import { Skeleton } from "@aven/ui/skeleton";
 import { Textarea } from "@aven/ui/textarea";
+import { safeStorage } from "@aven/ui/use-local-storage";
+import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import type { GitCenterWorkspaceResponse } from "../types";
 import { GitDiffViewer } from "./git-diff-viewer";
@@ -38,6 +46,16 @@ type Props = {
     threadId?: string,
   ) => void;
 };
+
+function statusTone(status: GitWorkspaceStatusFile["status"]) {
+  if (status === "added" || status === "untracked") return "border-success/40 text-success";
+
+  if (status === "deleted" || status === "conflicted") {
+    return "border-destructive/40 text-destructive";
+  }
+
+  return "border-info/40 text-info";
+}
 
 function FileRow({
   file,
@@ -61,7 +79,7 @@ function FileRow({
   return (
     <div
       className={cn(
-        "group flex items-center gap-1 rounded px-1.5 py-0.5 text-xs",
+        "group flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs transition-colors",
         selected ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
       )}
     >
@@ -71,10 +89,19 @@ function FileRow({
         className="h-auto min-w-0 flex-1 justify-start gap-1.5 px-0 py-0.5 text-left font-normal hover:bg-transparent"
         onClick={onSelect}
       >
-        <Badge variant="outline" className="h-4 shrink-0 px-1 font-mono text-[0.5625rem] uppercase">
+        <Badge
+          variant="outline"
+          className={cn(
+            "h-4 w-4 shrink-0 justify-center px-0 font-mono text-[0.5625rem] uppercase",
+            statusTone(file.status),
+          )}
+        >
           {file.status.slice(0, 1)}
         </Badge>
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.6875rem]" title={file.path}>
+        <span
+          className="min-w-0 flex-1 truncate text-left font-mono text-[0.6875rem]"
+          title={file.path}
+        >
           {file.path}
         </span>
       </Button>
@@ -125,6 +152,11 @@ export function GitWipInspector({
   const [body, setBody] = useState("");
   const [amend, setAmend] = useState(false);
   const [signoff, setSignoff] = useState(true);
+  const split = useDefaultLayout({
+    id: "aven.git-center.wip.split",
+    panelIds: ["files", "diff"],
+    storage: safeStorage,
+  });
 
   if (!isLive) {
     return (
@@ -183,16 +215,16 @@ export function GitWipInspector({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+      <div className="flex items-center justify-between gap-2 border-b border-border/70 bg-muted/15 px-3.5 py-2.5">
         <div className="min-w-0">
-          <div className="truncate text-xs font-semibold">
+          <div className="truncate text-xs font-semibold text-foreground">
             {workspace.target.kind === "project"
               ? "Project Working Tree"
               : `Thread: ${workspace.target.title}`}
           </div>
-          <div className="font-mono text-[0.6875rem] text-muted-foreground">
-            {workspace.branch ?? "HEAD (detached)"} · +{workspace.wip.additions} -
-            {workspace.wip.deletions}
+          <div className="mt-0.5 font-mono text-[0.6875rem] text-muted-foreground">
+            {workspace.branch ?? "HEAD (detached)"} ·{" "}
+            <DiffStat additions={workspace.wip.additions} deletions={workspace.wip.deletions} />
           </div>
         </div>
         {workspace.running && (
@@ -253,108 +285,131 @@ export function GitWipInspector({
         </div>
       )}
 
-      <div className="flex max-h-56 shrink-0 flex-col gap-2 overflow-y-auto border-b border-border p-2.5">
-        {conflictedFiles.length > 0 && (
-          <div>
-            <div className="mb-1 text-[0.6875rem] font-semibold tracking-wider text-destructive uppercase">
-              Conflicted ({conflictedFiles.length})
+      <div className="min-h-0 flex-1 overflow-hidden">
+        <ResizablePanelGroup
+          orientation="vertical"
+          defaultLayout={split.defaultLayout}
+          onLayoutChanged={split.onLayoutChanged}
+        >
+          <ResizablePanel id="files" defaultSize="38" minSize="18" maxSize="70">
+            <div className="flex h-full flex-col gap-2.5 overflow-y-auto p-3">
+              {conflictedFiles.length > 0 && (
+                <div>
+                  <div className="mb-1 text-[0.6875rem] font-medium text-destructive">
+                    Conflicted ({conflictedFiles.length})
+                  </div>
+                  {conflictedFiles.map((file) => (
+                    <FileRow
+                      key={`c-${file.path}`}
+                      file={file}
+                      stagedView={false}
+                      selected={selectedFile?.path === file.path}
+                      canMutate={workspace.canMutate}
+                      busy={busy}
+                      onSelect={() => onSelectFile({ path: file.path, staged: false })}
+                      onToggleStage={() => void onAction({ op: "stage", paths: [file.path] })}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[0.6875rem] font-medium text-muted-foreground">
+                    Staged ({stagedFiles.length})
+                  </span>
+                  {workspace.canMutate && stagedFiles.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="h-5 px-1.5 text-[0.6875rem]"
+                      disabled={busy}
+                      onClick={() => void onAction({ op: "unstage", all: true })}
+                    >
+                      Unstage all
+                    </Button>
+                  )}
+                </div>
+                {stagedFiles.length === 0 ? (
+                  <div className="px-1.5 text-[0.6875rem] text-muted-foreground/80">
+                    No staged files
+                  </div>
+                ) : (
+                  stagedFiles.map((file) => (
+                    <FileRow
+                      key={`s-${file.path}`}
+                      file={file}
+                      stagedView
+                      selected={selectedFile?.path === file.path && selectedFile.staged}
+                      canMutate={workspace.canMutate}
+                      busy={busy}
+                      onSelect={() => onSelectFile({ path: file.path, staged: true })}
+                      onToggleStage={() => void onAction({ op: "unstage", paths: [file.path] })}
+                    />
+                  ))
+                )}
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-[0.6875rem] font-medium text-muted-foreground">
+                    Unstaged ({unstagedFiles.length})
+                  </span>
+                  {workspace.canMutate && unstagedFiles.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="h-5 px-1.5 text-[0.6875rem]"
+                      disabled={busy}
+                      onClick={() => void onAction({ op: "stage", all: true })}
+                    >
+                      Stage all
+                    </Button>
+                  )}
+                </div>
+                {unstagedFiles.length === 0 ? (
+                  <div className="px-1.5 text-[0.6875rem] text-muted-foreground/80">
+                    Working tree clean
+                  </div>
+                ) : (
+                  unstagedFiles.map((file) => (
+                    <FileRow
+                      key={`u-${file.path}`}
+                      file={file}
+                      stagedView={false}
+                      selected={selectedFile?.path === file.path && !selectedFile.staged}
+                      canMutate={workspace.canMutate}
+                      busy={busy}
+                      onSelect={() => onSelectFile({ path: file.path, staged: false })}
+                      onToggleStage={() => void onAction({ op: "stage", paths: [file.path] })}
+                      onDiscard={() => onConfirmDiscard([file.path])}
+                    />
+                  ))
+                )}
+              </div>
             </div>
-            {conflictedFiles.map((file) => (
-              <FileRow
-                key={`c-${file.path}`}
-                file={file}
-                stagedView={false}
-                selected={selectedFile?.path === file.path}
-                canMutate={workspace.canMutate}
-                busy={busy}
-                onSelect={() => onSelectFile({ path: file.path, staged: false })}
-                onToggleStage={() => void onAction({ op: "stage", paths: [file.path] })}
-              />
-            ))}
-          </div>
-        )}
+          </ResizablePanel>
 
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
-              Staged ({stagedFiles.length})
-            </span>
-            {workspace.canMutate && stagedFiles.length > 0 && (
-              <Button
-                variant="ghost"
-                size="xs"
-                className="h-5 px-1.5 text-[0.6875rem]"
-                disabled={busy}
-                onClick={() => void onAction({ op: "unstage", all: true })}
-              >
-                Unstage all
-              </Button>
-            )}
-          </div>
-          {stagedFiles.length === 0 ? (
-            <div className="px-1.5 text-[0.6875rem] text-muted-foreground">No staged files</div>
-          ) : (
-            stagedFiles.map((file) => (
-              <FileRow
-                key={`s-${file.path}`}
-                file={file}
-                stagedView
-                selected={selectedFile?.path === file.path && selectedFile.staged}
-                canMutate={workspace.canMutate}
-                busy={busy}
-                onSelect={() => onSelectFile({ path: file.path, staged: true })}
-                onToggleStage={() => void onAction({ op: "unstage", paths: [file.path] })}
-              />
-            ))
-          )}
-        </div>
+          <ResizableHandle
+            withHandle
+            className="h-px bg-border/70 transition-colors hover:bg-primary/50"
+          />
 
-        <div>
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-[0.6875rem] font-semibold tracking-wider text-muted-foreground uppercase">
-              Unstaged ({unstagedFiles.length})
-            </span>
-            {workspace.canMutate && unstagedFiles.length > 0 && (
-              <Button
-                variant="ghost"
-                size="xs"
-                className="h-5 px-1.5 text-[0.6875rem]"
-                disabled={busy}
-                onClick={() => void onAction({ op: "stage", all: true })}
-              >
-                Stage all
-              </Button>
-            )}
-          </div>
-          {unstagedFiles.length === 0 ? (
-            <div className="px-1.5 text-[0.6875rem] text-muted-foreground">Working tree clean</div>
-          ) : (
-            unstagedFiles.map((file) => (
-              <FileRow
-                key={`u-${file.path}`}
-                file={file}
-                stagedView={false}
-                selected={selectedFile?.path === file.path && !selectedFile.staged}
-                canMutate={workspace.canMutate}
-                busy={busy}
-                onSelect={() => onSelectFile({ path: file.path, staged: false })}
-                onToggleStage={() => void onAction({ op: "stage", paths: [file.path] })}
-                onDiscard={() => onConfirmDiscard([file.path])}
+          <ResizablePanel id="diff" defaultSize="62" minSize="25">
+            <div className="flex h-full min-h-0 flex-col">
+              <GitDiffViewer
+                patch={workspace.patch}
+                truncated={workspace.truncated}
+                emptyMessage="Select a file or stage changes to inspect the diff."
+                resetKey={`${workspace.target.kind}:${threadId ?? ""}:${selectedFile?.path ?? ""}:${selectedFile?.staged ? "s" : "u"}`}
               />
-            ))
-          )}
-        </div>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
 
-      <GitDiffViewer
-        patch={workspace.patch}
-        truncated={workspace.truncated}
-        emptyMessage="Select a file or stage changes to inspect the diff."
-        resetKey={`${workspace.target.kind}:${threadId ?? ""}:${selectedFile?.path ?? ""}:${selectedFile?.staged ? "s" : "u"}`}
-      />
-
       {workspace.canMutate && (
-        <div className="shrink-0 border-t border-border bg-card p-3">
+        <div className="shrink-0 border-t border-border/70 bg-muted/15 p-3">
           <div className="flex flex-col gap-2">
             <Input
               value={summary}

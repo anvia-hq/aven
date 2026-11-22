@@ -1,4 +1,12 @@
-import { IconCircleFilled, IconEye, IconGitBranch, IconPlus, IconX } from "@tabler/icons-react";
+import {
+  IconCircleFilled,
+  IconEye,
+  IconGitBranch,
+  IconGitCompare,
+  IconList,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useMemo, useState } from "react";
@@ -6,6 +14,7 @@ import { useMemo, useState } from "react";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
+import { PanelToggle } from "@aven/ui/panel-toggle";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import type { Project } from "@/modules/projects/types";
 
@@ -17,6 +26,10 @@ type Props = {
   tabIds: string[];
   mode: GitCenterMode;
   modeReason: GitCenterModeReason;
+  refsOpen?: boolean;
+  inspectorOpen?: boolean;
+  onToggleRefs?: () => void;
+  onToggleInspector?: () => void;
   onSelectProject: (projectId: string) => void;
   onCloseTab: (projectId: string) => void;
 };
@@ -35,6 +48,10 @@ export function GitTabBar({
   tabIds,
   mode,
   modeReason,
+  refsOpen = true,
+  inspectorOpen = true,
+  onToggleRefs,
+  onToggleInspector,
   onSelectProject,
   onCloseTab,
 }: Props) {
@@ -74,7 +91,7 @@ export function GitTabBar({
   };
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-muted/40 px-2">
+    <header className="flex h-10 shrink-0 items-center gap-2 border-b border-border/70 bg-background px-3">
       <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto">
         {tabs.map((project) => {
           const active = project.id === activeProjectId;
@@ -82,9 +99,9 @@ export function GitTabBar({
             <div
               key={project.id}
               className={cn(
-                "group flex h-7 max-w-48 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors",
+                "group flex h-7 max-w-52 shrink-0 items-center gap-1 rounded-md border px-2 text-xs transition-colors",
                 active
-                  ? "border-border bg-background font-medium text-foreground shadow-2xs"
+                  ? "border-border/80 bg-background font-medium text-foreground shadow-2xs"
                   : "border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground",
               )}
             >
@@ -94,7 +111,12 @@ export function GitTabBar({
                 className="h-auto min-w-0 flex-1 justify-start gap-1.5 px-0 hover:bg-transparent"
                 onClick={() => onSelectProject(project.id)}
               >
-                <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+                <IconGitBranch
+                  className={cn(
+                    "size-3.5 shrink-0",
+                    active ? "text-primary" : "text-muted-foreground",
+                  )}
+                />
                 <span className="truncate">{project.name}</span>
               </Button>
               {tabs.length > 1 && (
@@ -102,7 +124,7 @@ export function GitTabBar({
                   variant="ghost"
                   size="icon-xs"
                   aria-label={`Close ${project.name} tab`}
-                  className="size-4 opacity-0 group-hover:opacity-100"
+                  className="size-4 opacity-0 transition-opacity group-hover:opacity-100"
                   onClick={() => handleClose(project.id)}
                 >
                   <IconX className="size-3" />
@@ -120,6 +142,7 @@ export function GitTabBar({
                 size="icon-xs"
                 aria-label="Open repository tab"
                 title="Open repository tab"
+                className="shrink-0 text-muted-foreground hover:text-foreground"
               />
             }
           >
@@ -166,17 +189,44 @@ export function GitTabBar({
         </Popover>
       </div>
 
-      <Badge
-        variant={mode === "live" ? "secondary" : "outline"}
-        className="shrink-0 gap-1.5 font-normal"
-      >
-        {mode === "live" ? (
-          <IconCircleFilled className="size-2 text-primary" />
-        ) : (
-          <IconEye className="size-3 text-muted-foreground" />
+      <div className="flex shrink-0 items-center gap-1.5">
+        <Badge
+          variant={mode === "live" ? "secondary" : "outline"}
+          className="h-6 shrink-0 gap-1.5 px-2 text-[0.6875rem] font-normal"
+        >
+          {mode === "live" ? (
+            <IconCircleFilled className="size-2 text-success" />
+          ) : (
+            <IconEye className="size-3 text-muted-foreground" />
+          )}
+          <span>{REASON_LABEL[modeReason]}</span>
+        </Badge>
+
+        {(onToggleRefs || onToggleInspector) && (
+          <div
+            role="group"
+            aria-label="Panels"
+            className="hidden items-center gap-0.5 rounded-full bg-muted/50 p-0.5 lg:flex"
+          >
+            {onToggleRefs && (
+              <PanelToggle
+                label="Branches & refs"
+                icon={IconList}
+                open={refsOpen}
+                onToggle={onToggleRefs}
+              />
+            )}
+            {onToggleInspector && (
+              <PanelToggle
+                label="Inspector"
+                icon={IconGitCompare}
+                open={inspectorOpen}
+                onToggle={onToggleInspector}
+              />
+            )}
+          </div>
         )}
-        <span>{REASON_LABEL[modeReason]}</span>
-      </Badge>
-    </div>
+      </div>
+    </header>
   );
 }

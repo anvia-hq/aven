@@ -1,7 +1,15 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+  useDefaultLayout,
+} from "@aven/ui/resizable";
 import { Skeleton } from "@aven/ui/skeleton";
+import { safeStorage, useLocalStorage } from "@aven/ui/use-local-storage";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { useProjects } from "@/modules/projects/hooks/use-projects";
 
 import { buildGraphRows, computeHygiene } from "../graph-rows";
@@ -30,8 +38,12 @@ type Props = {
   projectId: string;
 };
 
+const HANDLE_CLASS =
+  "w-px bg-border/70 transition-colors hover:bg-primary/50 data-[resize-handle-active]:bg-primary/70 after:w-2.5";
+
 export function GitCenterWorkspace({ projectId }: Props) {
   const navigate = useNavigate();
+  const wide = useMediaQuery("(min-width: 1024px)");
   const { projects } = useProjects();
   const { tabIds, openTab, closeTab } = useGitTabs();
   const center = useGitCenter(projectId);
@@ -41,6 +53,8 @@ export function GitCenterWorkspace({ projectId }: Props) {
     center.refresh,
   );
 
+  const [refsOpen, setRefsOpen] = useLocalStorage("aven.git-center.refs-open", true);
+  const [inspectorOpen, setInspectorOpen] = useLocalStorage("aven.git-center.inspector-open", true);
   const [createBranchState, setCreateBranchState] = useState<{
     open: boolean;
     startPoint?: string;
@@ -55,6 +69,24 @@ export function GitCenterWorkspace({ projectId }: Props) {
   useEffect(() => {
     openTab(projectId);
   }, [openTab, projectId]);
+
+  const panelIds = useMemo(() => {
+    const ids: string[] = [];
+
+    if (refsOpen) ids.push("refs");
+
+    ids.push("graph");
+
+    if (inspectorOpen) ids.push("inspector");
+
+    return ids;
+  }, [inspectorOpen, refsOpen]);
+
+  const layout = useDefaultLayout({
+    id: `aven.git-center.panels.${panelIds.join("-")}`,
+    panelIds,
+    storage: safeStorage,
+  });
 
   const graph = useMemo(
     () => (center.snapshot ? buildGraphRows(center.snapshot) : { rows: [], lanes: 1 }),
@@ -75,7 +107,7 @@ export function GitCenterWorkspace({ projectId }: Props) {
 
   if (center.loading && !center.snapshot) {
     return (
-      <div className="flex h-svh flex-col overflow-hidden bg-background">
+      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
         <GitTabBar
           projects={projects ?? []}
           activeProjectId={projectId}
@@ -85,8 +117,8 @@ export function GitCenterWorkspace({ projectId }: Props) {
           onSelectProject={selectProject}
           onCloseTab={closeTab}
         />
-        <div className="flex flex-1 gap-4 p-4">
-          <Skeleton className="h-full w-60" />
+        <div className="flex min-h-0 flex-1 gap-4 p-4">
+          <Skeleton className="h-full w-56" />
           <Skeleton className="h-full flex-1" />
           <Skeleton className="h-full w-96" />
         </div>
@@ -96,7 +128,7 @@ export function GitCenterWorkspace({ projectId }: Props) {
 
   if (!center.snapshot) {
     return (
-      <div className="flex h-svh flex-col overflow-hidden bg-background">
+      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
         <GitTabBar
           projects={projects ?? []}
           activeProjectId={projectId}
@@ -116,14 +148,151 @@ export function GitCenterWorkspace({ projectId }: Props) {
   const snapshot = center.snapshot;
   const isLive = snapshot.mode === "live";
 
+  const refsPane = (
+    <GitRefsSidebar
+      snapshot={snapshot}
+      target={center.target}
+      inspector={center.inspector}
+      branchFilter={center.filters.branch}
+      onSelectTarget={(nextTarget) => {
+        center.setTarget(nextTarget);
+
+        if (!inspectorOpen) setInspectorOpen(true);
+      }}
+      onSelectInspector={(nextInspector) => {
+        center.setInspector(nextInspector);
+
+        if (!inspectorOpen) setInspectorOpen(true);
+      }}
+      onFilterBranch={(branch) => center.setFilters((prev) => ({ ...prev, branch }))}
+      onAction={(action) => void center.runAction(action)}
+      onRenameBranch={(name) => setRenameBranch(name)}
+      onConfirmDeleteBranch={(name, deleteRemote) =>
+        setConfirmRequest({
+          title: deleteRemote ? `Delete remote branch origin/${name}?` : `Delete branch ${name}?`,
+          description: deleteRemote
+            ? `This removes origin/${name} from the remote repository.`
+            : `Delete local branch ${name}. You can recover its tip via Reflog if needed.`,
+          confirmLabel: "Delete branch",
+          action: { op: "branch.delete", name, deleteRemote },
+          target: center.target,
+        })
+      }
+      onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
+    />
+  );
+
+  const graphPane = (
+    <GitGraphPane
+      rows={graph.rows}
+      lanes={graph.lanes}
+      isLive={isLive}
+      hasMore={snapshot.hasMore}
+      loadingMore={center.loadingMore}
+      filters={center.filters}
+      inspector={center.inspector}
+      target={center.target}
+      onChangeFilters={center.setFilters}
+      onSelectTarget={(nextTarget) => {
+        center.setTarget(nextTarget);
+
+        if (!inspectorOpen) setInspectorOpen(true);
+      }}
+      onSelectInspector={(nextInspector) => {
+        center.setInspector(nextInspector);
+
+        if (!inspectorOpen) setInspectorOpen(true);
+      }}
+      onLoadMore={center.loadMore}
+      onAction={(action) => void center.runAction(action)}
+      onCreateBranchFrom={(sha) => setCreateBranchState({ open: true, startPoint: sha })}
+      onConfirmReset={(sha, mode) =>
+        setConfirmRequest({
+          title: `Reset (${mode}) to ${sha.slice(0, 7)}?`,
+          description:
+            mode === "hard"
+              ? "Hard reset discards all uncommitted tracked changes and moves the branch pointer."
+              : `Move the current branch pointer to ${sha.slice(0, 7)} using --${mode}.`,
+          confirmLabel: `Reset (${mode})`,
+          action: { op: "reset", ref: sha, mode },
+          target: center.target,
+        })
+      }
+      onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
+    />
+  );
+
+  const inspectorPane = (
+    <section className="flex h-full min-h-0 min-w-0 flex-col bg-background">
+      {center.inspector.kind === "wip" && (
+        <GitWipInspector
+          workspace={center.workspace}
+          loading={center.workspaceLoading}
+          isLive={isLive}
+          busyAction={center.busyAction}
+          selectedFile={center.selectedFile}
+          onSelectFile={center.setSelectedFile}
+          onAction={(action) => center.runAction(action)}
+          onConfirmDiscard={(paths) =>
+            setConfirmRequest({
+              title: `Discard changes in ${paths.length} file(s)?`,
+              description: `This permanently reverts unstaged changes in: ${paths.join(", ")}`,
+              confirmLabel: "Discard changes",
+              action: { op: "discard", paths },
+              target: center.target,
+            })
+          }
+          onResolveConflictsWithAgent={(operation, files, threadId) =>
+            void center.handoff({ kind: "resolve_conflicts", operation, files, threadId })
+          }
+        />
+      )}
+
+      {center.inspector.kind === "commit" && (
+        <GitCommitInspector
+          commit={center.commitDetail}
+          loading={center.commitLoading}
+          isLive={isLive}
+          busyAction={center.busyAction}
+          onSelectCommit={(sha) => center.setInspector({ kind: "commit", sha })}
+          onAction={(action) => void center.runAction(action)}
+          onCreateBranchFrom={(sha) => setCreateBranchState({ open: true, startPoint: sha })}
+          onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
+        />
+      )}
+
+      {center.inspector.kind === "pr" && (
+        <GitPrInspector
+          data={pr.data}
+          loading={pr.loading}
+          busy={pr.busy}
+          logsByCheck={pr.logsByCheck}
+          loadingCheckId={pr.loadingCheckId}
+          onLoadCheckLogs={pr.loadCheckLogs}
+          onReview={pr.review}
+          onMerge={pr.merge}
+          onUpdateBranch={pr.updateBranch}
+          onSetState={pr.setState}
+          onFixCiWithAgent={(pullNumber, branch, checkName, logSnippet) =>
+            void center.handoff({ kind: "fix_ci", pullNumber, branch, checkName, logSnippet })
+          }
+        />
+      )}
+    </section>
+  );
+
   return (
-    <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-background md:rounded-lg md:border md:border-foreground/12">
+    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
       <GitTabBar
         projects={projects ?? []}
         activeProjectId={projectId}
         tabIds={tabIds}
         mode={snapshot.mode}
         modeReason={snapshot.modeReason}
+        refsOpen={refsOpen}
+        inspectorOpen={inspectorOpen}
+        onToggleRefs={() => setRefsOpen((open) => !open)}
+        onToggleInspector={() => setInspectorOpen((open) => !open)}
         onSelectProject={selectProject}
         onCloseTab={closeTab}
       />
@@ -157,118 +326,45 @@ export function GitCenterWorkspace({ projectId }: Props) {
       />
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
-        <GitRefsSidebar
-          snapshot={snapshot}
-          target={center.target}
-          inspector={center.inspector}
-          branchFilter={center.filters.branch}
-          onSelectTarget={center.setTarget}
-          onSelectInspector={center.setInspector}
-          onFilterBranch={(branch) => center.setFilters((prev) => ({ ...prev, branch }))}
-          onAction={(action) => void center.runAction(action)}
-          onRenameBranch={(name) => setRenameBranch(name)}
-          onConfirmDeleteBranch={(name, deleteRemote) =>
-            setConfirmRequest({
-              title: deleteRemote
-                ? `Delete remote branch origin/${name}?`
-                : `Delete branch ${name}?`,
-              description: deleteRemote
-                ? `This removes origin/${name} from the remote repository.`
-                : `Delete local branch ${name}. You can recover its tip via Reflog if needed.`,
-              confirmLabel: "Delete branch",
-              action: { op: "branch.delete", name, deleteRemote },
-              target: center.target,
-            })
-          }
-          onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
-        />
+        {wide ? (
+          <ResizablePanelGroup
+            key={panelIds.join("-")}
+            orientation="horizontal"
+            defaultLayout={layout.defaultLayout}
+            onLayoutChanged={layout.onLayoutChanged}
+          >
+            {refsOpen && (
+              <>
+                <ResizablePanel id="refs" defaultSize="20" minSize="14" maxSize="36">
+                  {refsPane}
+                </ResizablePanel>
+                <ResizableHandle withHandle className={HANDLE_CLASS} />
+              </>
+            )}
 
-        <GitGraphPane
-          rows={graph.rows}
-          lanes={graph.lanes}
-          isLive={isLive}
-          hasMore={snapshot.hasMore}
-          loadingMore={center.loadingMore}
-          filters={center.filters}
-          inspector={center.inspector}
-          target={center.target}
-          onChangeFilters={center.setFilters}
-          onSelectTarget={center.setTarget}
-          onSelectInspector={center.setInspector}
-          onLoadMore={center.loadMore}
-          onAction={(action) => void center.runAction(action)}
-          onCreateBranchFrom={(sha) => setCreateBranchState({ open: true, startPoint: sha })}
-          onConfirmReset={(sha, mode) =>
-            setConfirmRequest({
-              title: `Reset (${mode}) to ${sha.slice(0, 7)}?`,
-              description:
-                mode === "hard"
-                  ? "Hard reset discards all uncommitted tracked changes and moves the branch pointer."
-                  : `Move the current branch pointer to ${sha.slice(0, 7)} using --${mode}.`,
-              confirmLabel: `Reset (${mode})`,
-              action: { op: "reset", ref: sha, mode },
-              target: center.target,
-            })
-          }
-          onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
-        />
+            <ResizablePanel id="graph" defaultSize="46" minSize="26">
+              {graphPane}
+            </ResizablePanel>
 
-        <section className="flex h-full w-96 shrink-0 flex-col border-l border-border bg-card/40 xl:w-[25rem] 2xl:w-[30rem]">
-          {center.inspector.kind === "wip" && (
-            <GitWipInspector
-              workspace={center.workspace}
-              loading={center.workspaceLoading}
-              isLive={isLive}
-              busyAction={center.busyAction}
-              selectedFile={center.selectedFile}
-              onSelectFile={center.setSelectedFile}
-              onAction={(action) => center.runAction(action)}
-              onConfirmDiscard={(paths) =>
-                setConfirmRequest({
-                  title: `Discard changes in ${paths.length} file(s)?`,
-                  description: `This permanently reverts unstaged changes in: ${paths.join(", ")}`,
-                  confirmLabel: "Discard changes",
-                  action: { op: "discard", paths },
-                  target: center.target,
-                })
-              }
-              onResolveConflictsWithAgent={(operation, files, threadId) =>
-                void center.handoff({ kind: "resolve_conflicts", operation, files, threadId })
-              }
-            />
-          )}
-
-          {center.inspector.kind === "commit" && (
-            <GitCommitInspector
-              commit={center.commitDetail}
-              loading={center.commitLoading}
-              isLive={isLive}
-              busyAction={center.busyAction}
-              onSelectCommit={(sha) => center.setInspector({ kind: "commit", sha })}
-              onAction={(action) => void center.runAction(action)}
-              onCreateBranchFrom={(sha) => setCreateBranchState({ open: true, startPoint: sha })}
-              onStartThreadFromRef={(ref) => void center.handoff({ kind: "start_from_ref", ref })}
-            />
-          )}
-
-          {center.inspector.kind === "pr" && (
-            <GitPrInspector
-              data={pr.data}
-              loading={pr.loading}
-              busy={pr.busy}
-              logsByCheck={pr.logsByCheck}
-              loadingCheckId={pr.loadingCheckId}
-              onLoadCheckLogs={pr.loadCheckLogs}
-              onReview={pr.review}
-              onMerge={pr.merge}
-              onUpdateBranch={pr.updateBranch}
-              onSetState={pr.setState}
-              onFixCiWithAgent={(pullNumber, branch, checkName, logSnippet) =>
-                void center.handoff({ kind: "fix_ci", pullNumber, branch, checkName, logSnippet })
-              }
-            />
-          )}
-        </section>
+            {inspectorOpen && (
+              <>
+                <ResizableHandle withHandle className={HANDLE_CLASS} />
+                <ResizablePanel id="inspector" defaultSize="34" minSize="22" maxSize="58">
+                  {inspectorPane}
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-hidden">{graphPane}</div>
+            {inspectorOpen && (
+              <div className="h-[46%] shrink-0 overflow-hidden border-t border-border/70">
+                {inspectorPane}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <CreateBranchDialog

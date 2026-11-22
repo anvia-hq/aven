@@ -67,93 +67,109 @@ export function GitToolbar({
   const busy = busyAction !== null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5 border-b border-border bg-card px-3 py-1.5">
-      <div className="mr-2 flex items-center gap-1.5 text-xs">
-        <IconGitBranch className="size-3.5 text-muted-foreground" />
-        <span className="font-mono font-medium">
+    <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-b border-border/70 bg-background px-3 py-1.5">
+      <div
+        className="mr-1 flex max-w-56 min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs"
+        title={currentBranch ?? undefined}
+      >
+        <IconGitBranch className="size-3.5 shrink-0 text-primary" />
+        <span className="truncate font-mono font-medium text-foreground">
           {currentBranch ?? (snapshot.detached ? "HEAD (detached)" : "—")}
         </span>
-        {activeThread && (
-          <Badge variant="outline" className="text-[0.6875rem]">
-            Thread: {activeThread.title}
-          </Badge>
+      </div>
+
+      {activeThread && (
+        <Badge
+          variant="outline"
+          className="max-w-44 truncate text-[0.6875rem] font-normal text-muted-foreground"
+          title={activeThread.title}
+        >
+          Thread: {activeThread.title}
+        </Badge>
+      )}
+
+      <div className="mx-0.5 hidden h-4 w-px bg-border/70 sm:block" />
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={!canMutate || busy}
+          onClick={() => onAction({ op: "fetch", prune: true })}
+        >
+          <IconCloudDownload className="size-3.5" />
+          <span>Fetch</span>
+        </Button>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
+          >
+            <IconArrowDown className="size-3.5" />
+            <span>Pull</span>
+            <IconChevronDown className="size-3 opacity-60" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "merge" })}>
+              Pull (merge)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "rebase" })}>
+              Pull (rebase)
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "ff-only" })}>
+              Pull (fast-forward only)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
+          >
+            <IconArrowUp className="size-3.5" />
+            <span>Push</span>
+            <IconChevronDown className="size-3 opacity-60" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => onAction({ op: "push" })}>Push</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onAction({ op: "push", setUpstream: true })}>
+              Push &amp; set upstream
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onForcePush}>
+              Force push (--force-with-lease)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <div className="mx-0.5 hidden h-4 w-px bg-border/70 sm:block" />
+
+      <div className="flex items-center gap-1">
+        <Button
+          variant="outline"
+          size="xs"
+          disabled={!canMutate || busy}
+          onClick={onOpenCreateBranch}
+        >
+          <IconGitBranch className="size-3.5" />
+          <span>Branch</span>
+        </Button>
+
+        <Button variant="outline" size="xs" disabled={!canMutate || busy} onClick={onOpenStash}>
+          <IconArchive className="size-3.5" />
+          <span>Stash</span>
+        </Button>
+
+        {snapshot.project.repoFullName && (
+          <Button variant="outline" size="xs" disabled={busy} onClick={onOpenCreatePr}>
+            <IconGitPullRequest className="size-3.5" />
+            <span>New PR</span>
+          </Button>
         )}
       </div>
 
-      <Button
-        variant="outline"
-        size="xs"
-        disabled={!canMutate || busy}
-        onClick={() => onAction({ op: "fetch", prune: true })}
-      >
-        <IconCloudDownload className="size-3.5" />
-        <span>Fetch</span>
-      </Button>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
-        >
-          <IconArrowDown className="size-3.5" />
-          <span>Pull</span>
-          <IconChevronDown className="size-3 opacity-60" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "merge" })}>
-            Pull (merge)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "rebase" })}>
-            Pull (rebase)
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onAction({ op: "pull", strategy: "ff-only" })}>
-            Pull (fast-forward only)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
-        >
-          <IconArrowUp className="size-3.5" />
-          <span>Push</span>
-          <IconChevronDown className="size-3 opacity-60" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          <DropdownMenuItem onClick={() => onAction({ op: "push" })}>Push</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onAction({ op: "push", setUpstream: true })}>
-            Push &amp; set upstream
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={onForcePush}>
-            Force push (--force-with-lease)
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Button
-        variant="outline"
-        size="xs"
-        disabled={!canMutate || busy}
-        onClick={onOpenCreateBranch}
-      >
-        <IconGitBranch className="size-3.5" />
-        <span>Branch</span>
-      </Button>
-
-      <Button variant="outline" size="xs" disabled={!canMutate || busy} onClick={onOpenStash}>
-        <IconArchive className="size-3.5" />
-        <span>Stash</span>
-      </Button>
-
-      {snapshot.project.repoFullName && (
-        <Button variant="outline" size="xs" disabled={busy} onClick={onOpenCreatePr}>
-          <IconGitPullRequest className="size-3.5" />
-          <span>New PR</span>
-        </Button>
-      )}
-
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         <Button variant="ghost" size="xs" disabled={!isLive || busy} onClick={onOpenReflog}>
           <IconHistory className="size-3.5" />
           <span>Undo / Reflog</span>
@@ -163,7 +179,10 @@ export function GitToolbar({
           <IconTrash className="size-3.5" />
           <span>Cleanup</span>
           {hygieneCount > 0 && (
-            <Badge variant="secondary" className="ml-0.5 h-4 px-1 text-[0.625rem]">
+            <Badge
+              variant="secondary"
+              className="ml-0.5 h-4 px-1.5 font-mono text-[0.625rem] tabular-nums"
+            >
               {hygieneCount}
             </Badge>
           )}
@@ -174,6 +193,7 @@ export function GitToolbar({
           size="icon-xs"
           aria-label="Refresh Git Center"
           title="Refresh Git Center"
+          className="shrink-0"
           onClick={onRefresh}
         >
           <IconRefresh className={cn("size-3.5", refreshing && "animate-spin")} />

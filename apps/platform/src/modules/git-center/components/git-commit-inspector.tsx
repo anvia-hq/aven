@@ -13,6 +13,7 @@ import { Button } from "@aven/ui/button";
 import { Skeleton } from "@aven/ui/skeleton";
 import { toast } from "@aven/ui/toast";
 import { shortTimeAgo } from "@/lib/format";
+import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import type { GitCenterCommitDetail } from "../types";
 import { GitDiffViewer } from "./git-diff-viewer";
@@ -60,12 +61,12 @@ export function GitCommitInspector({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex flex-col gap-2 border-b border-border p-3">
+      <div className="flex flex-col gap-2.5 border-b border-border/70 bg-muted/15 px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm font-semibold text-foreground">{commit.message}</h3>
+            <h3 className="text-sm leading-snug font-semibold text-foreground">{commit.message}</h3>
             {commit.body && (
-              <pre className="mt-1 whitespace-pre-wrap font-sans text-xs text-muted-foreground">
+              <pre className="mt-1.5 max-h-28 overflow-y-auto whitespace-pre-wrap font-sans text-xs leading-relaxed text-muted-foreground">
                 {commit.body}
               </pre>
             )}
@@ -75,7 +76,7 @@ export function GitCommitInspector({
               href={commit.url}
               target="_blank"
               rel="noreferrer noopener"
-              className="shrink-0 p-1 text-muted-foreground hover:text-foreground"
+              className="shrink-0 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
               title="Open on GitHub"
             >
               <IconExternalLink className="size-4" />
@@ -83,9 +84,9 @@ export function GitCommitInspector({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-[0.6875rem] text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.6875rem] text-muted-foreground">
           <Button
-            variant="ghost"
+            variant="secondary"
             size="xs"
             className="h-5 gap-1 px-1.5 font-mono text-[0.6875rem]"
             onClick={() => {
@@ -94,24 +95,24 @@ export function GitCommitInspector({
             }}
           >
             <span>{commit.sha.slice(0, 10)}</span>
-            <IconCopy className="size-3" />
+            <IconCopy className="size-3 opacity-70" />
           </Button>
-          {commit.author && <span>{commit.author}</span>}
+          {commit.author && <span className="font-medium text-foreground/85">{commit.author}</span>}
           {commit.date && <span>· {shortTimeAgo(commit.date)}</span>}
           <span className="font-mono">
-            · {commit.filesChanged} file{commit.filesChanged === 1 ? "" : "s"} (+{commit.additions}{" "}
-            -{commit.deletions})
+            · {commit.filesChanged} file{commit.filesChanged === 1 ? "" : "s"}{" "}
+            <DiffStat additions={commit.additions} deletions={commit.deletions} />
           </span>
         </div>
 
         {commit.parents.length > 0 && (
           <div className="flex flex-wrap items-center gap-1 text-[0.6875rem] text-muted-foreground">
-            <span>Parents:</span>
+            <span>Parents</span>
             {commit.parents.map((parent) => (
               <Badge
                 key={parent}
                 variant="outline"
-                className="cursor-pointer font-mono text-[0.625rem] hover:bg-accent"
+                className="h-5 cursor-pointer px-1.5 font-mono text-[0.625rem] hover:bg-accent"
                 onClick={() => onSelectCommit(parent)}
               >
                 {parent.slice(0, 7)}
@@ -120,7 +121,7 @@ export function GitCommitInspector({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
           <Button size="xs" disabled={busy} onClick={() => onStartThreadFromRef(commit.sha)}>
             <IconSparkles className="size-3.5" />
             <span>Start Thread</span>
