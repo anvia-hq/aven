@@ -378,7 +378,17 @@ export function createGitCenterService(
 
   return {
     snapshot(viewer: Viewer, projectId: string, query: SnapshotQuery): Promise<GitCenterSnapshot> {
-      const key = `${viewer.organizationId}:${viewer.userId}:${projectId}:${query.page ?? 1}:${query.branch ?? ""}:${query.search ?? ""}:${query.author ?? ""}:${query.path ?? ""}`;
+      const key = JSON.stringify([
+        viewer.organizationId,
+        viewer.userId,
+        projectId,
+        query.page ?? 1,
+        query.limit ?? null,
+        query.branch ?? null,
+        query.search ?? null,
+        query.author ?? null,
+        query.path ?? null,
+      ]);
       const existing = inFlightSnapshots.get(key);
 
       if (existing) return existing.promise;

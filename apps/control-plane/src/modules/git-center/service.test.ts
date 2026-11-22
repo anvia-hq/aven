@@ -126,4 +126,21 @@ run("gitCenterService handoff isolation (postgres)", async () => {
     expect(ok).toEqual({ threadId: threadA.id, created: false });
     expect(sent).toEqual([threadA.id]);
   });
+
+  test("coalesces identical concurrent snapshots but separates requests with different limits", async () => {
+    const service = createGitCenterService(
+      { get: () => undefined },
+      { isRunning: () => false },
+      { send: async () => ({ steered: false }) },
+    );
+    const viewer = { organizationId: orgA, userId };
+    const first = service.snapshot(viewer, projectA.id, { page: 1, limit: 25 });
+    const same = service.snapshot(viewer, projectA.id, { page: 1, limit: 25 });
+    const differentLimit = service.snapshot(viewer, projectA.id, { page: 1, limit: 100 });
+
+    expect(same).toBe(first);
+    expect(differentLimit).not.toBe(first);
+
+    await Promise.all([first, differentLimit]);
+  });
 });
