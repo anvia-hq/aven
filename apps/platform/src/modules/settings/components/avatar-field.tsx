@@ -45,7 +45,7 @@ export function AvatarField({ name, image }: Props) {
         type="file"
         accept="image/png,image/jpeg,image/webp"
         aria-label="Photo"
-        className="sr-only"
+        className="sr-only top-0 left-0 h-px w-px border-0 p-0"
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
