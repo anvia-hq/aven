@@ -1,7 +1,21 @@
 import { WIRE_VERSION } from "../packages/protocol/src/runtime-wire";
 import { decodeViewerFrame, encodeViewerFrame } from "../packages/protocol/src/viewer-frame";
+import {
+  readGitCommitDiff,
+  readGitReflog,
+  readGitSnapshot,
+  readGitWorkspaceStatus,
+} from "../packages/runtime-client/src/git/git-center";
+import { runGitAction } from "../packages/runtime-client/src/git/git-center-actions";
 import { readFakeRunnerConfig } from "./fake-runner-config";
-import type { ControlPlaneToRuntime } from "../packages/protocol/src/types";
+import type {
+  ControlPlaneToRuntime,
+  GitActionParams,
+  GitCommitDiffParams,
+  GitReflogParams,
+  GitSnapshotParams,
+  GitWorkspaceStatusParams,
+} from "../packages/protocol/src/types";
 import type { FakeRunnerRun } from "./types";
 
 const base = process.env.AVEN_URL!;
@@ -559,6 +573,84 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
         truncated: false,
       },
     });
+  }
+
+  if (call.method === "git.snapshot") {
+    const { folder, ...rest } = call.params as GitSnapshotParams;
+    void readGitSnapshot(folder, rest)
+      .then((result) => reply(result))
+      .catch((err: unknown) =>
+        send({
+          type: "reply",
+          id: call.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    return;
+  }
+
+  if (call.method === "git.commitDiff") {
+    const { folder, sha } = call.params as GitCommitDiffParams;
+    void readGitCommitDiff(folder, sha)
+      .then((result) => reply(result))
+      .catch((err: unknown) =>
+        send({
+          type: "reply",
+          id: call.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    return;
+  }
+
+  if (call.method === "git.workspaceStatus") {
+    const { target, filePath, staged } = call.params as GitWorkspaceStatusParams;
+    const root = target.kind === "project" ? target.folder : (config.self.dirs[0] ?? "");
+    void readGitWorkspaceStatus(root, { filePath, staged })
+      .then((result) => reply(result))
+      .catch((err: unknown) =>
+        send({
+          type: "reply",
+          id: call.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    return;
+  }
+
+  if (call.method === "git.reflog") {
+    const { target, limit } = call.params as GitReflogParams;
+    const root = target.kind === "project" ? target.folder : (config.self.dirs[0] ?? "");
+    void readGitReflog(root, limit)
+      .then((result) => reply(result))
+      .catch((err: unknown) =>
+        send({
+          type: "reply",
+          id: call.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    return;
+  }
+
+  if (call.method === "git.action") {
+    const { target, action, auth } = call.params as GitActionParams;
+    const root = target.kind === "project" ? target.folder : (config.self.dirs[0] ?? "");
+    void runGitAction(root, action, auth)
+      .then((result) => reply(result))
+      .catch((err: unknown) =>
+        send({
+          type: "reply",
+          id: call.id,
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        }),
+      );
+    return;
   }
 
   if (call.method === "run.steer") {
