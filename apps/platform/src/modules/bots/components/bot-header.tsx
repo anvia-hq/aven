@@ -7,7 +7,7 @@ const TRIGGER =
   "group/bot-badge pointer-events-auto flex h-auto max-w-full flex-col items-center gap-1.5 bg-transparent p-0 hover:bg-transparent dark:hover:bg-transparent";
 
 const BADGE =
-  "max-w-full truncate rounded-full border border-border/60 bg-accent/90 px-3 py-1 text-xs font-semibold shadow-md backdrop-blur-md transition-colors group-hover/bot-badge:bg-card/90 dark:group-hover/bot-badge:bg-card/90";
+  "max-w-full truncate rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background shadow-md transition-colors group-hover/bot-badge:bg-foreground/90";
 
 function BotPill({ bot }: { bot: Bot }) {
   const working = useBotsWorking();
@@ -28,7 +28,7 @@ function BotPill({ bot }: { bot: Bot }) {
 
 export function BotHeader({ bot }: { bot: Bot }) {
   return (
-    <div className="pointer-events-none z-10 flex justify-center px-3 pt-2.5 md:absolute md:inset-x-0 md:top-2.5 md:pt-0">
+    <div className="pointer-events-none z-10 flex justify-center bg-gradient-to-b from-background from-60% to-transparent px-3 pt-3 pb-6 md:absolute md:inset-x-0 md:top-0">
       <header
         aria-label={`${bot.name} header`}
         title={bot.description || undefined}
