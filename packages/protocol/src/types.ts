@@ -1564,4 +1564,5 @@ export type PlatformConfig = {
   isOwner: boolean;
   platformSettings: boolean;
   manageUrl?: string | null;
+  previewDomain?: string | null;
 };

@@ -3,6 +3,7 @@ import { Elysia } from "elysia";
 import { editionInUse } from "../../edition/current";
 import { authRouter } from "../auth/router";
 import { lensEnabled } from "../lens/flag";
+import { previewDomain } from "../preview/config";
 import { claudeBackendEnabled, codexBackendEnabled } from "../providers/backends";
 import { authService, emailLoginEnabled, githubLoginEnabled } from "../auth/service";
 import type { PutAwayThread } from "../threads/types";
@@ -25,6 +26,7 @@ export const platformRouter = (putAway: PutAwayThread) => {
         isOwner: session ? await platformService.isOwner(session.user) : false,
         platformSettings: !editionInUse.current.hidePlatformSettings,
         manageUrl: editionInUse.current.manageUrl,
+        previewDomain: previewDomain(process.env.AVEN_PREVIEW_DOMAIN) ?? null,
       };
     })
     .get(

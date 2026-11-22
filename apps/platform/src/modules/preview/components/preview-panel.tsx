@@ -32,17 +32,27 @@ const SANDBOX =
   "allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads";
 
 export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
-  const { port, setPort, session, problem, opening, open, openInTab, parseRequestedPort } =
-    usePreview(runtimeId);
+  const {
+    port,
+    setPort,
+    previewDomain,
+    session,
+    problem,
+    opening,
+    open,
+    openInTab,
+    parseRequestedPort,
+  } = usePreview(runtimeId);
   const [asking, setAsking] = useState<number | null>(null);
+  const target = { runtimeId, previewDomain };
 
   useEffect(() => {
     if (!offer) return;
 
-    setPort(addressOf(offer.port));
+    setPort(addressOf(offer.port, { runtimeId, previewDomain }));
     setAsking(offer.port);
     onOffered?.();
-  }, [offer]);
+  }, [offer, previewDomain, runtimeId]);
 
   function ask() {
     const parsed = parseRequestedPort();
@@ -51,13 +61,13 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
   }
 
   function confirm() {
-    const target = asking;
+    const requested = asking;
     setAsking(null);
 
-    if (target === null) return;
+    if (requested === null) return;
 
-    setPort(addressOf(target));
-    void open(target);
+    setPort(addressOf(requested, target));
+    void open(requested);
   }
 
   return (
@@ -72,10 +82,12 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
         >
           <Input
             aria-label="Address"
-            placeholder="localhost:3000"
+            placeholder={
+              previewDomain ? `3000 or https://3000-….${previewDomain}` : "localhost:3000"
+            }
             value={port}
             onChange={(event) => setPort(event.target.value)}
-            className="h-7 flex-1"
+            className="h-7 flex-1 font-mono text-xs"
           />
           <Button type="submit" size="sm" disabled={opening || port.trim() === ""}>
             Open
@@ -117,7 +129,9 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
           ) : (
             <PanelNotice>
               {problem ||
-                "Open a page the runner is serving: type its address, such as localhost:3000."}
+                (previewDomain
+                  ? `Open a page the runner is serving: enter a port such as 3000 to view it on *.${previewDomain}.`
+                  : "Open a page the runner is serving: type its address, such as localhost:3000.")}
             </PanelNotice>
           )}
         </div>
@@ -127,8 +141,9 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Open port {asking}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Anyone allowed to use this runner can open what is on port {asking} of this machine.
-              Only open a port you started.
+              {asking !== null && previewDomain
+                ? `This opens ${addressOf(asking, target)}. Anyone allowed to use this runner can open what is on port ${asking} of this machine. Only open a port you started.`
+                : `Anyone allowed to use this runner can open what is on port ${asking} of this machine. Only open a port you started.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
