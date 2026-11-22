@@ -15,21 +15,20 @@ function basic(user: string, pass: string) {
 }
 
 describe("LensProxy", () => {
-  test("issues a runner-scoped proxy config without leaking upstream credentials", () => {
+  test("issues a stable runner-scoped proxy token without leaking upstream credentials", () => {
     const proxy = new LensProxy(
       async () => UPSTREAM,
       () => true,
-      "test-secret",
     );
-    const issued = proxy.forRunner("rt-1", UPSTREAM);
+    const first = proxy.forRunner("rt-1", UPSTREAM);
+    const second = proxy.forRunner("rt-1", UPSTREAM);
 
-    expect(issued).toEqual({
-      baseUrl: LENS_PROXY_PATH,
-      publicKey: "rt-1",
-      secretKey: proxy.tokenFor("rt-1"),
-      captureMode: "full",
-    });
-    expect(issued?.secretKey).not.toContain(UPSTREAM.secretKey);
+    expect(first?.baseUrl).toBe(LENS_PROXY_PATH);
+    expect(first?.publicKey).toBe("rt-1");
+    expect(first?.captureMode).toBe("full");
+    expect(first?.secretKey.startsWith("avlens_")).toBe(true);
+    expect(first?.secretKey).not.toContain(UPSTREAM.secretKey);
+    expect(second?.secretKey).toBe(first?.secretKey);
     expect(proxy.forRunner("rt-1", undefined)).toBeUndefined();
   });
 
@@ -40,7 +39,7 @@ describe("LensProxy", () => {
       seen.push({
         url,
         headers: new Headers(init?.headers),
-        body: new TextDecoder().decode(init?.body as ArrayBuffer),
+        body: new TextDecoder().decode(init?.body as Uint8Array),
       });
       return new Response('{"accepted":true}', {
         status: 200,
@@ -51,7 +50,6 @@ describe("LensProxy", () => {
     const proxy = new LensProxy(
       async () => UPSTREAM,
       () => true,
-      "test-secret",
       fakeFetch,
     );
     const issued = proxy.forRunner("rt-1", UPSTREAM)!;
@@ -80,18 +78,17 @@ describe("LensProxy", () => {
     expect(seen[0]?.body).toBe('{"resourceSpans":[]}');
   });
 
-  test("rejects disallowed paths, non-POST methods, bad tokens, offline expired runtimes, and revoked runtimes", async () => {
+  test("revoking invalidates the old token permanently even after a later run on the same runtime", async () => {
     let clock = 1_000_000;
     let online = false;
     const fakeFetch = (async () => new Response("ok", { status: 200 })) as unknown as typeof fetch;
     const proxy = new LensProxy(
       async () => UPSTREAM,
       () => online,
-      "test-secret",
       fakeFetch,
       () => clock,
     );
-    const issued = proxy.forRunner("rt-1", UPSTREAM)!;
+    const first = proxy.forRunner("rt-1", UPSTREAM)!;
     const post = (path: string, auth?: string) =>
       proxy.forward(
         new Request(`https://aven.sh/api/runtimes/lens/${path}`, {
@@ -112,47 +109,105 @@ describe("LensProxy", () => {
         )
       ).status,
     ).toBe(405);
-    expect((await post("api/v1/projects", basic(issued.publicKey, issued.secretKey))).status).toBe(
+    expect((await post("api/v1/projects", basic(first.publicKey, first.secretKey))).status).toBe(
       404,
     );
     expect((await post("api/public/otel/v1/traces")).status).toBe(401);
     expect((await post("api/public/otel/v1/traces", basic("rt-1", "wrong"))).status).toBe(401);
 
     expect(
-      (await post("api/public/otel/v1/traces", basic(issued.publicKey, issued.secretKey))).status,
+      (await post("api/public/otel/v1/traces", basic(first.publicKey, first.secretKey))).status,
     ).toBe(200);
 
     clock += 6 * 60_000;
     expect(
-      (await post("api/public/otel/v1/traces", basic(issued.publicKey, issued.secretKey))).status,
+      (await post("api/public/otel/v1/traces", basic(first.publicKey, first.secretKey))).status,
     ).toBe(401);
 
     online = true;
     expect(
-      (await post("api/public/otel/v1/traces", basic(issued.publicKey, issued.secretKey))).status,
+      (await post("api/public/otel/v1/traces", basic(first.publicKey, first.secretKey))).status,
     ).toBe(200);
 
     proxy.revoke("rt-1");
     expect(
-      (await post("api/public/otel/v1/traces", basic(issued.publicKey, issued.secretKey))).status,
+      (await post("api/public/otel/v1/traces", basic(first.publicKey, first.secretKey))).status,
     ).toBe(401);
+
+    const rotated = proxy.forRunner("rt-1", UPSTREAM)!;
+    expect(rotated.secretKey).not.toBe(first.secretKey);
+    expect(
+      (await post("api/public/otel/v1/traces", basic(first.publicKey, first.secretKey))).status,
+    ).toBe(401);
+    expect(
+      (await post("api/public/otel/v1/traces", basic(rotated.publicKey, rotated.secretKey))).status,
+    ).toBe(200);
+  });
+
+  test("rejects oversized bodies via content-length or streaming without buffering past the limit", async () => {
+    let forwarded = 0;
+    const fakeFetch = (async () => {
+      forwarded += 1;
+      return new Response("ok", { status: 200 });
+    }) as unknown as typeof fetch;
+    const proxy = new LensProxy(
+      async () => UPSTREAM,
+      () => true,
+      fakeFetch,
+      () => 0,
+      16,
+    );
+    const issued = proxy.forRunner("rt-1", UPSTREAM)!;
+    const auth = basic(issued.publicKey, issued.secretKey);
+
+    const declaredTooBig = new Request(
+      "https://aven.sh/api/runtimes/lens/api/public/otel/v1/traces",
+      {
+        method: "POST",
+        headers: { authorization: auth, "content-length": "64" },
+        body: "small",
+      },
+    );
+    expect((await proxy.forward(declaredTooBig, "api/public/otel/v1/traces")).status).toBe(413);
+
+    let chunksRead = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        chunksRead += 1;
+        controller.enqueue(new Uint8Array(10));
+
+        if (chunksRead >= 5) controller.close();
+      },
+    });
+    const streamedTooBig = new Request(
+      "https://aven.sh/api/runtimes/lens/api/public/otel/v1/traces",
+      {
+        method: "POST",
+        headers: { authorization: auth },
+        body: stream,
+      },
+    );
+    expect((await proxy.forward(streamedTooBig, "api/public/otel/v1/traces")).status).toBe(413);
+    expect(chunksRead).toBeLessThan(5);
+    expect(forwarded).toBe(0);
   });
 
   test("returns 503 when Lens is disabled and 502 when upstream is unreachable", async () => {
     const offProxy = new LensProxy(
       async () => undefined,
       () => true,
-      "test-secret",
     );
-    const token = offProxy.tokenFor("rt-1");
-    const req = () =>
+    const offIssued = offProxy.forRunner("rt-1", UPSTREAM)!;
+    const req = (token: string) =>
       new Request("https://aven.sh/api/runtimes/lens/api/public/otel/v1/traces", {
         method: "POST",
         headers: { authorization: basic("rt-1", token) },
         body: "{}",
       });
 
-    expect((await offProxy.forward(req(), "api/public/otel/v1/traces")).status).toBe(503);
+    expect(
+      (await offProxy.forward(req(offIssued.secretKey), "api/public/otel/v1/traces")).status,
+    ).toBe(503);
 
     const failingFetch = (async () => {
       throw new Error("ECONNREFUSED");
@@ -160,9 +215,11 @@ describe("LensProxy", () => {
     const failProxy = new LensProxy(
       async () => UPSTREAM,
       () => true,
-      "test-secret",
       failingFetch,
     );
-    expect((await failProxy.forward(req(), "api/public/otel/v1/traces")).status).toBe(502);
+    const failIssued = failProxy.forRunner("rt-1", UPSTREAM)!;
+    expect(
+      (await failProxy.forward(req(failIssued.secretKey), "api/public/otel/v1/traces")).status,
+    ).toBe(502);
   });
 });

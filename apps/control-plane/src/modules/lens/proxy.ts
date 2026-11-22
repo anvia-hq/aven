@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 
 import { errorMessage } from "@aven/agents/values";
 import type { RunLens } from "@aven/protocol/types";
@@ -8,22 +8,12 @@ export const LENS_PROXY_PATH = "/runtimes/lens";
 
 const TOKEN_PREFIX = "avlens_";
 const GRACE_MS = 5 * 60_000;
-const MAX_BODY_BYTES = 10 * 1024 * 1024;
+const DEFAULT_MAX_BODY_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PATHS = new Set(["api/public/otel/v1/traces", "api/public/otel/v1/logs"]);
 const PASS_REQUEST_HEADERS = ["content-type", "content-encoding", "accept"];
 const PASS_RESPONSE_HEADERS = ["content-type"];
 
-function defaultSecret() {
-  const secret = process.env.PROVIDER_ENCRYPTION_KEY || process.env.BETTER_AUTH_SECRET;
-
-  if (!secret) {
-    throw new Error(
-      "The Lens proxy has no token secret: set PROVIDER_ENCRYPTION_KEY or BETTER_AUTH_SECRET",
-    );
-  }
-
-  return secret;
-}
+type RunnerGrant = { token: string; seenAt: number };
 
 function reject(message: string, status: number) {
   return Response.json({ error: message }, { status });
@@ -55,53 +45,97 @@ function equalTokens(left: string, right: string) {
   return timingSafeEqual(a, b);
 }
 
+function mintToken() {
+  return `${TOKEN_PREFIX}${randomBytes(32).toString("base64url")}`;
+}
+
+async function readBoundedBody(
+  request: Request,
+  limit: number,
+): Promise<Uint8Array<ArrayBuffer> | null> {
+  const declared = request.headers.get("content-length");
+
+  if (declared !== null) {
+    const length = Number(declared);
+
+    if (Number.isFinite(length) && length > limit) return null;
+  }
+
+  if (!request.body) return new Uint8Array(0);
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      if (!value) continue;
+
+      total += value.byteLength;
+
+      if (total > limit) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const combined = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return combined;
+}
+
 export class LensProxy {
-  #seen = new Map<string, number>();
-  #revoked = new Set<string>();
-  #secret: string;
+  #grants = new Map<string, RunnerGrant>();
 
   constructor(
     private upstream: () => Promise<RunLens | undefined> = () => lensSettingsService.forRun(),
     private isOnline: (runtimeId: string) => boolean = () => false,
-    secret?: string,
     private fetchFn: typeof fetch = fetch,
     private now: () => number = () => Date.now(),
-  ) {
-    this.#secret = secret ?? defaultSecret();
-  }
-
-  tokenFor(runtimeId: string) {
-    const digest = createHmac("sha256", this.#secret)
-      .update(`lens-proxy:${runtimeId}`)
-      .digest("base64url");
-    return `${TOKEN_PREFIX}${digest}`;
-  }
+    private maxBodyBytes: number = DEFAULT_MAX_BODY_BYTES,
+  ) {}
 
   forRunner(runtimeId: string, lens: RunLens | undefined): RunLens | undefined {
     if (!lens) return undefined;
 
-    this.#revoked.delete(runtimeId);
-    this.#seen.set(runtimeId, this.now());
+    const existing = this.#grants.get(runtimeId);
+    const token = existing ? existing.token : mintToken();
+    this.#grants.set(runtimeId, { token, seenAt: this.now() });
     return {
       baseUrl: LENS_PROXY_PATH,
       publicKey: runtimeId,
-      secretKey: this.tokenFor(runtimeId),
+      secretKey: token,
       captureMode: lens.captureMode,
     };
   }
 
   revoke(runtimeId: string) {
-    this.#seen.delete(runtimeId);
-    this.#revoked.add(runtimeId);
+    this.#grants.delete(runtimeId);
   }
 
-  #permitted(runtimeId: string) {
-    if (this.#revoked.has(runtimeId)) return false;
+  #verify(runtimeId: string, token: string) {
+    const grant = this.#grants.get(runtimeId);
+
+    if (!grant || !equalTokens(token, grant.token)) return false;
 
     if (this.isOnline(runtimeId)) return true;
 
-    const seenAt = this.#seen.get(runtimeId);
-    return seenAt !== undefined && seenAt + GRACE_MS > this.now();
+    return grant.seenAt + GRACE_MS > this.now();
   }
 
   async forward(request: Request, path: string): Promise<Response> {
@@ -111,11 +145,7 @@ export class LensProxy {
 
     const auth = parseBasicAuth(request.headers.get("authorization"));
 
-    if (!auth) return reject("Unauthorized", 401);
-
-    const expected = this.tokenFor(auth.runtimeId);
-
-    if (!equalTokens(auth.token, expected) || !this.#permitted(auth.runtimeId)) {
+    if (!auth || !this.#verify(auth.runtimeId, auth.token)) {
       return reject("Unauthorized", 401);
     }
 
@@ -123,9 +153,9 @@ export class LensProxy {
 
     if (!target) return reject("Anvia Lens is not configured", 503);
 
-    const body = await request.arrayBuffer();
+    const body = await readBoundedBody(request, this.maxBodyBytes);
 
-    if (body.byteLength > MAX_BODY_BYTES) return reject("Payload too large", 413);
+    if (!body) return reject("Payload too large", 413);
 
     const headers = new Headers();
     headers.set(
