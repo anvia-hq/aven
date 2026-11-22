@@ -64,8 +64,11 @@ else
   if ! "$PGBIN/pg_ctl" -D "$data" status > /dev/null 2>&1; then
     started=0
     for _ in $(seq 1 20); do
+      socket=/tmp/aven-pg-$port
+      mkdir -p "$socket"
+      rm -f "$socket"/.s.PGSQL."$port"*
       if "$PGBIN/pg_ctl" -D "$data" -l .aven/pg.log \
-        -o "-p $port -k $PWD/.aven/pg -c listen_addresses=127.0.0.1" -w start > /dev/null 2>&1; then
+        -o "-p $port -k $socket -c listen_addresses=127.0.0.1" -w start > /dev/null 2>&1; then
         started=1
         break
       fi
@@ -80,10 +83,10 @@ else
     "$PGBIN/createdb" -h 127.0.0.1 -p "$port" -U postgres aven
   fi
 
-  DATABASE_URL="postgres://postgres@localhost:$port/aven"
+  DATABASE_URL="postgres://postgres@127.0.0.1:$port/aven"
   set_var DATABASE_URL "$DATABASE_URL"
-  set_var E2E_DATABASE_BASE_URL "postgres://localhost:$port"
-  echo "ok       postgres 16 on localhost:$port, database aven"
+  set_var E2E_DATABASE_BASE_URL "postgres://127.0.0.1:$port"
+  echo "ok       postgres 16 on 127.0.0.1:$port, database aven"
 fi
 
 if ! DATABASE_URL="$DATABASE_URL" bun packages/db/src/migrate.ts > .aven/migrate.log 2>&1; then
