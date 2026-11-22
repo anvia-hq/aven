@@ -166,6 +166,22 @@ export class GithubTransport {
     ).json() as Promise<T>;
   }
 
+  async patch<T>(path: string, auth: string, body: unknown): Promise<T> {
+    return (
+      await this.request(path, auth, { method: "PATCH", body: JSON.stringify(body) })
+    ).json() as Promise<T>;
+  }
+
+  async putJson<T>(path: string, auth: string, body: unknown): Promise<T> {
+    return (
+      await this.request(path, auth, { method: "PUT", body: JSON.stringify(body) })
+    ).json() as Promise<T>;
+  }
+
+  async getText(path: string, auth: string): Promise<string> {
+    return (await this.request(path, auth)).text();
+  }
+
   put(path: string, auth: string) {
     return this.request(path, auth, { method: "PUT" });
   }

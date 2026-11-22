@@ -21,6 +21,8 @@ import { Route as AuthedCockpitInboxRouteImport } from './routes/_authed/cockpit
 import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit/notes'
 import { Route as AuthedCockpitTagsRouteImport } from './routes/_authed/cockpit/tags'
 import { Route as AuthedCockpitTasksRouteImport } from './routes/_authed/cockpit/tasks'
+import { Route as AuthedGitIndexRouteImport } from './routes/_authed/git/index'
+import { Route as AuthedGitProjectIdRouteImport } from './routes/_authed/git/$projectId'
 import { Route as AuthedProjectsIndexRouteImport } from './routes/_authed/projects/index'
 import { Route as AuthedProjectsProjectIdRouteImport } from './routes/_authed/projects/$projectId'
 import { Route as AuthedSettingsIndexRouteImport } from './routes/_authed/settings/index'
@@ -104,6 +106,16 @@ const AuthedCockpitTagsRoute = AuthedCockpitTagsRouteImport.update({
 const AuthedCockpitTasksRoute = AuthedCockpitTasksRouteImport.update({
   id: '/cockpit/tasks',
   path: '/cockpit/tasks',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGitIndexRoute = AuthedGitIndexRouteImport.update({
+  id: '/git/',
+  path: '/git/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedGitProjectIdRoute = AuthedGitProjectIdRouteImport.update({
+  id: '/git/$projectId',
+  path: '/git/$projectId',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedProjectsIndexRoute = AuthedProjectsIndexRouteImport.update({
@@ -241,6 +253,7 @@ export interface FileRoutesByFullPath {
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/git/$projectId': typeof AuthedGitProjectIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
@@ -264,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/bot/': typeof AuthedBotIndexRoute
   '/cockpit/': typeof AuthedCockpitIndexRoute
+  '/git/': typeof AuthedGitIndexRoute
   '/projects/': typeof AuthedProjectsIndexRoute
   '/settings/': typeof AuthedSettingsIndexRoute
   '/threads/': typeof AuthedThreadsIndexRoute
@@ -278,6 +292,7 @@ export interface FileRoutesByTo {
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/git/$projectId': typeof AuthedGitProjectIdRoute
   '/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/settings/bots': typeof AuthedSettingsBotsRoute
@@ -301,6 +316,7 @@ export interface FileRoutesByTo {
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/bot': typeof AuthedBotIndexRoute
   '/cockpit': typeof AuthedCockpitIndexRoute
+  '/git': typeof AuthedGitIndexRoute
   '/projects': typeof AuthedProjectsIndexRoute
   '/settings': typeof AuthedSettingsIndexRoute
   '/threads': typeof AuthedThreadsIndexRoute
@@ -317,6 +333,7 @@ export interface FileRoutesById {
   '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
   '/_authed/cockpit/tasks': typeof AuthedCockpitTasksRoute
+  '/_authed/git/$projectId': typeof AuthedGitProjectIdRoute
   '/_authed/projects/$projectId': typeof AuthedProjectsProjectIdRoute
   '/_authed/settings/announcements': typeof AuthedSettingsAnnouncementsRoute
   '/_authed/settings/bots': typeof AuthedSettingsBotsRoute
@@ -340,6 +357,7 @@ export interface FileRoutesById {
   '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
   '/_authed/bot/': typeof AuthedBotIndexRoute
   '/_authed/cockpit/': typeof AuthedCockpitIndexRoute
+  '/_authed/git/': typeof AuthedGitIndexRoute
   '/_authed/projects/': typeof AuthedProjectsIndexRoute
   '/_authed/settings/': typeof AuthedSettingsIndexRoute
   '/_authed/threads/': typeof AuthedThreadsIndexRoute
@@ -356,6 +374,7 @@ export interface FileRouteTypes {
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/git/$projectId'
     | '/projects/$projectId'
     | '/settings/announcements'
     | '/settings/bots'
@@ -379,6 +398,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId'
     | '/bot/'
     | '/cockpit/'
+    | '/git/'
     | '/projects/'
     | '/settings/'
     | '/threads/'
@@ -393,6 +413,7 @@ export interface FileRouteTypes {
     | '/cockpit/notes'
     | '/cockpit/tags'
     | '/cockpit/tasks'
+    | '/git/$projectId'
     | '/projects/$projectId'
     | '/settings/announcements'
     | '/settings/bots'
@@ -416,6 +437,7 @@ export interface FileRouteTypes {
     | '/threads/$threadId'
     | '/bot'
     | '/cockpit'
+    | '/git'
     | '/projects'
     | '/settings'
     | '/threads'
@@ -431,6 +453,7 @@ export interface FileRouteTypes {
     | '/_authed/cockpit/notes'
     | '/_authed/cockpit/tags'
     | '/_authed/cockpit/tasks'
+    | '/_authed/git/$projectId'
     | '/_authed/projects/$projectId'
     | '/_authed/settings/announcements'
     | '/_authed/settings/bots'
@@ -454,6 +477,7 @@ export interface FileRouteTypes {
     | '/_authed/threads/$threadId'
     | '/_authed/bot/'
     | '/_authed/cockpit/'
+    | '/_authed/git/'
     | '/_authed/projects/'
     | '/_authed/settings/'
     | '/_authed/threads/'
@@ -551,6 +575,20 @@ declare module '@tanstack/react-router' {
       path: '/cockpit/tasks'
       fullPath: '/cockpit/tasks'
       preLoaderRoute: typeof AuthedCockpitTasksRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/git/': {
+      id: '/_authed/git/'
+      path: '/git'
+      fullPath: '/git/'
+      preLoaderRoute: typeof AuthedGitIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/git/$projectId': {
+      id: '/_authed/git/$projectId'
+      path: '/git/$projectId'
+      fullPath: '/git/$projectId'
+      preLoaderRoute: typeof AuthedGitProjectIdRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/projects/': {
@@ -730,6 +768,7 @@ interface AuthedRouteChildren {
   AuthedCockpitNotesRoute: typeof AuthedCockpitNotesRoute
   AuthedCockpitTagsRoute: typeof AuthedCockpitTagsRoute
   AuthedCockpitTasksRoute: typeof AuthedCockpitTasksRoute
+  AuthedGitProjectIdRoute: typeof AuthedGitProjectIdRoute
   AuthedProjectsProjectIdRoute: typeof AuthedProjectsProjectIdRoute
   AuthedSettingsAnnouncementsRoute: typeof AuthedSettingsAnnouncementsRoute
   AuthedSettingsBotsRoute: typeof AuthedSettingsBotsRoute
@@ -753,6 +792,7 @@ interface AuthedRouteChildren {
   AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
   AuthedBotIndexRoute: typeof AuthedBotIndexRoute
   AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
+  AuthedGitIndexRoute: typeof AuthedGitIndexRoute
   AuthedProjectsIndexRoute: typeof AuthedProjectsIndexRoute
   AuthedSettingsIndexRoute: typeof AuthedSettingsIndexRoute
   AuthedThreadsIndexRoute: typeof AuthedThreadsIndexRoute
@@ -764,6 +804,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
   AuthedCockpitTagsRoute: AuthedCockpitTagsRoute,
   AuthedCockpitTasksRoute: AuthedCockpitTasksRoute,
+  AuthedGitProjectIdRoute: AuthedGitProjectIdRoute,
   AuthedProjectsProjectIdRoute: AuthedProjectsProjectIdRoute,
   AuthedSettingsAnnouncementsRoute: AuthedSettingsAnnouncementsRoute,
   AuthedSettingsBotsRoute: AuthedSettingsBotsRoute,
@@ -788,6 +829,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
   AuthedBotIndexRoute: AuthedBotIndexRoute,
   AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
+  AuthedGitIndexRoute: AuthedGitIndexRoute,
   AuthedProjectsIndexRoute: AuthedProjectsIndexRoute,
   AuthedSettingsIndexRoute: AuthedSettingsIndexRoute,
   AuthedThreadsIndexRoute: AuthedThreadsIndexRoute,

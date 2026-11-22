@@ -28,6 +28,7 @@ import { webhooksRouter } from "./modules/webhooks/router";
 import { cockpitRouter } from "./modules/cockpit/router";
 import { computerRouter } from "./modules/computer/router";
 import { diffRouter } from "./modules/diff/router";
+import { gitCenterRouter } from "./modules/git-center/router";
 import { actionsRouter } from "./modules/actions/router";
 import { shipRouter } from "./modules/ship/router";
 import { filesRouter } from "./modules/files/router";
@@ -76,6 +77,7 @@ export const app = new Elysia()
   .use(cockpitRouter)
   .use(computerRouter(runtimeHub))
   .use(diffRouter(runtimeHub))
+  .use(gitCenterRouter(runtimeHub, runsService, threadMessages))
   .use(shipRouter(shipService))
   .use(actionsRouter(actionsService))
   .use(filesRouter(runtimeHub))

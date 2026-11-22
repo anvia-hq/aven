@@ -40,10 +40,14 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await page.keyboard.press("Shift+Tab");
   await expect(logo).toBeFocused();
   await expect(page.getByText("Aven · threads", { exact: true })).toBeVisible();
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
-  await page.keyboard.press("Tab");
   const bot = rail.getByRole("link", { name: "Bot", exact: true });
+  const linkCount = await rail.getByRole("link").count();
+  for (let i = 0; i < linkCount; i++) {
+    await page.keyboard.press("Tab");
+
+    if (await bot.evaluate((el) => el === document.activeElement)) break;
+  }
+
   await expect(bot).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/bot$/);

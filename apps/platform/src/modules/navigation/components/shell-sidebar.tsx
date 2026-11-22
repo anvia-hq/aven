@@ -3,12 +3,13 @@ import { useLayoutEffect } from "react";
 
 import { BotSidebar } from "@/modules/bots/components/bot-sidebar";
 import { CockpitSidebar } from "@/modules/cockpit/components/cockpit-sidebar";
+import { GitShellSidebar } from "@/modules/git-center/components/git-shell-sidebar";
 import { SettingsSidebar } from "@/modules/settings/components/settings-sidebar";
 import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 
 import { SidebarTabs } from "./sidebar-tabs";
 
-type Section = "threads" | "settings" | "bot" | "cockpit";
+type Section = "threads" | "settings" | "bot" | "cockpit" | "git";
 
 function sectionOf(pathname: string): Section {
   if (pathname.startsWith("/settings")) return "settings";
@@ -16,6 +17,8 @@ function sectionOf(pathname: string): Section {
   if (pathname.startsWith("/bot")) return "bot";
 
   if (pathname.startsWith("/cockpit")) return "cockpit";
+
+  if (pathname.startsWith("/git")) return "git";
 
   return "threads";
 }
@@ -35,6 +38,8 @@ export function ShellSidebar() {
   if (section === "bot") return <BotSidebar />;
 
   if (section === "cockpit") return <CockpitSidebar />;
+
+  if (section === "git") return <GitShellSidebar />;
 
   return (
     <>

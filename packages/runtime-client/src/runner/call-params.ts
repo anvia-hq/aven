@@ -14,6 +14,13 @@ import type {
   FoldersListParams,
   FoldersReadmeParams,
   FilesSearchParams,
+  GitActionParams,
+  GitActionPayload,
+  GitCommitDiffParams,
+  GitReflogParams,
+  GitSnapshotParams,
+  GitWorkspaceStatusParams,
+  GitWorkspaceTarget,
   MachineCallParams,
   MessageMention,
   RunAttachment,
@@ -232,4 +239,144 @@ export function machineCallParams(params: unknown): MachineCallParams {
   }
 
   return { threadId, op: op as MachineCallParams["op"], args };
+}
+
+function parseWorkspaceTarget(raw: unknown): GitWorkspaceTarget {
+  const rec = asRecord(raw);
+
+  if (rec.kind === "project" && typeof rec.folder === "string" && rec.folder.length <= 4096) {
+    return { kind: "project", folder: rec.folder };
+  }
+
+  if (rec.kind === "thread" && typeof rec.threadId === "string" && rec.threadId.length > 0) {
+    return { kind: "thread", threadId: rec.threadId };
+  }
+
+  throw invalid();
+}
+
+export function gitSnapshotParams(params: unknown): GitSnapshotParams {
+  const { folder, page, limit, branch, search, author, path, threadIds } = asRecord(params);
+
+  if (typeof folder !== "string" || folder.length === 0 || folder.length > 4096) throw invalid();
+
+  if (page !== undefined && (typeof page !== "number" || !Number.isInteger(page) || page < 1)) {
+    throw invalid();
+  }
+
+  if (limit !== undefined && (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1)) {
+    throw invalid();
+  }
+
+  if (branch !== undefined && typeof branch !== "string") throw invalid();
+
+  if (search !== undefined && typeof search !== "string") throw invalid();
+
+  if (author !== undefined && typeof author !== "string") throw invalid();
+
+  if (path !== undefined && typeof path !== "string") throw invalid();
+
+  if (
+    threadIds !== undefined &&
+    (!Array.isArray(threadIds) || !threadIds.every((id) => typeof id === "string"))
+  ) {
+    throw invalid();
+  }
+
+  return { folder, page, limit, branch, search, author, path, threadIds };
+}
+
+export function gitCommitDiffParams(params: unknown): GitCommitDiffParams {
+  const { folder, sha } = asRecord(params);
+
+  if (typeof folder !== "string" || folder.length === 0 || folder.length > 4096) throw invalid();
+
+  if (typeof sha !== "string" || sha.length < 4 || sha.length > 64) throw invalid();
+
+  return { folder, sha };
+}
+
+export function gitWorkspaceStatusParams(params: unknown): GitWorkspaceStatusParams {
+  const { target, filePath, staged } = asRecord(params);
+  const parsedTarget = parseWorkspaceTarget(target);
+
+  if (filePath !== undefined && (typeof filePath !== "string" || filePath.length > 4096)) {
+    throw invalid();
+  }
+
+  if (staged !== undefined && typeof staged !== "boolean") throw invalid();
+
+  return { target: parsedTarget, filePath, staged };
+}
+
+export function gitReflogParams(params: unknown): GitReflogParams {
+  const { target, limit } = asRecord(params);
+  const parsedTarget = parseWorkspaceTarget(target);
+
+  if (limit !== undefined && (typeof limit !== "number" || !Number.isInteger(limit) || limit < 1)) {
+    throw invalid();
+  }
+
+  return { target: parsedTarget, limit };
+}
+
+const GIT_ACTION_OPS = new Set<GitActionPayload["op"]>([
+  "fetch",
+  "pull",
+  "push",
+  "checkout",
+  "branch.create",
+  "branch.rename",
+  "branch.delete",
+  "stage",
+  "unstage",
+  "discard",
+  "commit",
+  "stash.push",
+  "stash.apply",
+  "stash.pop",
+  "stash.drop",
+  "merge",
+  "rebase",
+  "cherryPick",
+  "revert",
+  "conflict.abort",
+  "conflict.continue",
+  "reset",
+  "worktree.prune",
+  "worktree.remove",
+  "branches.cleanup",
+]);
+
+export function gitActionParams(params: unknown): GitActionParams {
+  const { target, action, auth } = asRecord(params);
+  const parsedTarget = parseWorkspaceTarget(target);
+  const actionRec = asRecord(action);
+
+  if (
+    typeof actionRec.op !== "string" ||
+    !GIT_ACTION_OPS.has(actionRec.op as GitActionPayload["op"])
+  ) {
+    throw invalid();
+  }
+
+  let parsedAuth: GitActionParams["auth"];
+
+  if (auth !== undefined && auth !== null) {
+    const authRec = asRecord(auth);
+
+    if (typeof authRec.token !== "string" || typeof authRec.login !== "string") throw invalid();
+
+    parsedAuth = {
+      token: authRec.token,
+      login: authRec.login,
+      name: typeof authRec.name === "string" ? authRec.name : null,
+    };
+  }
+
+  return {
+    target: parsedTarget,
+    action: action as GitActionPayload,
+    auth: parsedAuth,
+  };
 }

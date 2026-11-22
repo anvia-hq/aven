@@ -634,6 +634,248 @@ export type RunnerUpdateResult =
 
 export type SandboxReleaseParams = { threadId: string };
 
+export type GitCenterCallMethod =
+  | "git.snapshot"
+  | "git.commitDiff"
+  | "git.workspaceStatus"
+  | "git.reflog"
+  | "git.action";
+
+export type GitWorkspaceTarget =
+  | { kind: "project"; folder: string }
+  | { kind: "thread"; threadId: string };
+
+export type GitBranchInfo = {
+  name: string;
+  sha: string;
+  current: boolean;
+  upstream: string | null;
+  ahead: number;
+  behind: number;
+  gone: boolean;
+  merged: boolean;
+  lastCommitDate: string | null;
+};
+
+export type GitRemoteRef = {
+  remote: string;
+  name: string;
+  fullName: string;
+  sha: string;
+};
+
+export type GitTagInfo = {
+  name: string;
+  sha: string;
+  date: string | null;
+};
+
+export type GitStashInfo = {
+  index: number;
+  ref: string;
+  message: string;
+  sha: string;
+  date: string;
+};
+
+export type GitWorktreeInfo = {
+  path: string;
+  sha: string | null;
+  branch: string | null;
+  detached: boolean;
+  bare: boolean;
+  locked: boolean;
+  prunable: boolean;
+  isMain: boolean;
+};
+
+export type GitConflictOperation = "merge" | "rebase" | "cherry-pick" | "revert";
+
+export type GitConflictState = {
+  operation: GitConflictOperation;
+  files: string[];
+};
+
+export type GitCommitEntry = {
+  sha: string;
+  shortSha: string;
+  message: string;
+  body: string;
+  author: string | null;
+  authorEmail: string | null;
+  date: string;
+  parents: string[];
+  refs: string[];
+  remoteRefs: string[];
+  tags: string[];
+};
+
+export type GitWipSummary = {
+  staged: number;
+  unstaged: number;
+  untracked: number;
+  conflicted: number;
+  additions: number;
+  deletions: number;
+};
+
+export type GitThreadWorkspaceSummary = {
+  threadId: string;
+  branch: string | null;
+  headSha: string | null;
+  wip: GitWipSummary;
+  conflicts: GitConflictState | null;
+};
+
+export type GitSnapshotParams = {
+  folder: string;
+  page?: number;
+  limit?: number;
+  branch?: string;
+  search?: string;
+  author?: string;
+  path?: string;
+  threadIds?: string[];
+};
+
+export type GitSnapshotResult = {
+  isRepo: boolean;
+  root: string | null;
+  headBranch: string | null;
+  headSha: string | null;
+  detached: boolean;
+  defaultBranch: string | null;
+  branches: GitBranchInfo[];
+  remotes: GitRemoteRef[];
+  tags: GitTagInfo[];
+  stashes: GitStashInfo[];
+  worktrees: GitWorktreeInfo[];
+  conflicts: GitConflictState | null;
+  wip: GitWipSummary;
+  commits: GitCommitEntry[];
+  hasMore: boolean;
+  threadWorkspaces: GitThreadWorkspaceSummary[];
+};
+
+export type GitCommitDiffParams = {
+  folder: string;
+  sha: string;
+};
+
+export type GitCommitDiffResult = {
+  sha: string;
+  message: string;
+  body: string;
+  author: string | null;
+  authorEmail: string | null;
+  date: string;
+  parents: string[];
+  patch: string;
+  truncated: boolean;
+  additions: number;
+  deletions: number;
+  filesChanged: number;
+};
+
+export type GitWorkspaceFileStatus =
+  | "added"
+  | "modified"
+  | "deleted"
+  | "renamed"
+  | "copied"
+  | "untracked"
+  | "conflicted";
+
+export type GitWorkspaceStatusFile = {
+  path: string;
+  oldPath: string | null;
+  status: GitWorkspaceFileStatus;
+  staged: boolean;
+  unstaged: boolean;
+};
+
+export type GitWorkspaceStatusParams = {
+  target: GitWorkspaceTarget;
+  filePath?: string;
+  staged?: boolean;
+};
+
+export type GitWorkspaceStatusResult = {
+  branch: string | null;
+  headSha: string | null;
+  detached: boolean;
+  conflicts: GitConflictState | null;
+  files: GitWorkspaceStatusFile[];
+  patch: string;
+  truncated: boolean;
+  wip: GitWipSummary;
+};
+
+export type GitReflogEntry = {
+  index: number;
+  selector: string;
+  sha: string;
+  shortSha: string;
+  action: string;
+  message: string;
+  date: string;
+};
+
+export type GitReflogParams = {
+  target: GitWorkspaceTarget;
+  limit?: number;
+};
+
+export type GitReflogResult = {
+  entries: GitReflogEntry[];
+};
+
+export type GitActionAuth = {
+  token: string;
+  login: string;
+  name?: string | null;
+};
+
+export type GitActionPayload =
+  | { op: "fetch"; prune?: boolean }
+  | { op: "pull"; strategy?: "merge" | "rebase" | "ff-only" }
+  | { op: "push"; branch?: string; forceWithLease?: boolean; setUpstream?: boolean }
+  | { op: "checkout"; ref: string; createBranch?: string }
+  | { op: "branch.create"; name: string; startPoint?: string; checkout?: boolean }
+  | { op: "branch.rename"; oldName: string; newName: string }
+  | { op: "branch.delete"; name: string; force?: boolean; deleteRemote?: boolean }
+  | { op: "stage"; paths?: string[]; all?: boolean }
+  | { op: "unstage"; paths?: string[]; all?: boolean }
+  | { op: "discard"; paths?: string[]; all?: boolean }
+  | { op: "commit"; message: string; amend?: boolean; signoff?: boolean }
+  | { op: "stash.push"; message?: string; includeUntracked?: boolean }
+  | { op: "stash.apply"; index: number }
+  | { op: "stash.pop"; index: number }
+  | { op: "stash.drop"; index: number }
+  | { op: "merge"; ref: string; noFf?: boolean }
+  | { op: "rebase"; onto: string }
+  | { op: "cherryPick"; sha: string }
+  | { op: "revert"; sha: string }
+  | { op: "conflict.abort" }
+  | { op: "conflict.continue" }
+  | { op: "reset"; ref: string; mode: "soft" | "mixed" | "hard" }
+  | { op: "worktree.prune" }
+  | { op: "worktree.remove"; path: string; force?: boolean }
+  | { op: "branches.cleanup"; branches: string[]; force?: boolean };
+
+export type GitActionParams = {
+  target: GitWorkspaceTarget;
+  action: GitActionPayload;
+  auth?: GitActionAuth;
+};
+
+export type GitActionResult = {
+  ok: boolean;
+  summary: string;
+  conflicts?: GitConflictState | null;
+  output?: string;
+};
+
 export type RunnerCallMethod =
   | ComputerCallMethod
   | DiffCallMethod
@@ -645,7 +887,8 @@ export type RunnerCallMethod =
   | SandboxCallMethod
   | MachineCallMethod
   | ProcessWatchCallMethod
-  | RunnerSelfCallMethod;
+  | RunnerSelfCallMethod
+  | GitCenterCallMethod;
 
 export type DiffGetParams = {
   threadId: string;

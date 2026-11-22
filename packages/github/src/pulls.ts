@@ -15,6 +15,7 @@ import {
   nullWhenNotFound,
 } from "./errors";
 import type {
+  CheckRunPayload,
   CheckRunsResponsePayload,
   FilePayload,
   PullDetailPayload,
@@ -26,9 +27,15 @@ import type {
 } from "./payload-types";
 import { PAGE_SIZE, repoPath, splitFullName, type GithubTransport } from "./transport";
 import type {
+  GithubCheckLogResult,
+  GithubCreatePullInput,
+  GithubMergePullInput,
+  GithubMergePullResult,
   GithubPullDetail,
+  GithubPullListEntry,
   GithubPullRequest,
   GithubReviewComment,
+  GithubReviewPullInput,
   GithubTrackedFilters,
   GithubTrackedItem,
   GithubTrackedKind,
@@ -292,5 +299,177 @@ export class GithubPulls {
 
       return unresolvedComments(payload);
     });
+  }
+
+  async listPulls(
+    installationId: number,
+    fullName: string,
+    state: "open" | "closed" | "all" = "open",
+  ): Promise<GithubPullListEntry[]> {
+    return this.auth.withInstallationToken(installationId, async (token) => {
+      const query = new URLSearchParams({
+        state,
+        sort: "updated",
+        direction: "desc",
+        per_page: "50",
+      });
+      const pulls = await this.transport.get<
+        (PullDetailPayload & { head: { ref: string; sha: string }; base: { ref: string } })[]
+      >(`${repoPath(fullName)}/pulls?${query}`, token);
+      return pulls.map((pull) => ({
+        number: pull.number,
+        title: pull.title,
+        url: pull.html_url,
+        author: pull.user?.login ?? null,
+        status: pullStatus(pull),
+        head: pull.head.ref,
+        headSha: pull.head.sha,
+        base: pull.base.ref,
+        updatedAt: pull.updated_at,
+      }));
+    });
+  }
+
+  async createPull(
+    userToken: string,
+    fullName: string,
+    input: GithubCreatePullInput,
+  ): Promise<GithubPullRequest> {
+    const pull = await this.transport.post<PullPayload>(`${repoPath(fullName)}/pulls`, userToken, {
+      title: input.title,
+      body: input.body ?? "",
+      head: input.head,
+      base: input.base,
+      draft: input.draft ?? false,
+    });
+    return asPullRequest(pull);
+  }
+
+  async reviewPull(
+    userToken: string,
+    fullName: string,
+    number: number,
+    input: GithubReviewPullInput,
+  ): Promise<{ ok: true }> {
+    await this.transport.post(`${repoPath(fullName)}/pulls/${number}/reviews`, userToken, {
+      event: input.event,
+      body: input.body ?? "",
+    });
+    return { ok: true };
+  }
+
+  async mergePull(
+    userToken: string,
+    fullName: string,
+    number: number,
+    input: GithubMergePullInput,
+  ): Promise<GithubMergePullResult> {
+    if (input.method === "enqueue") {
+      const detail = await this.transport.get<PullDetailPayload>(
+        `${repoPath(fullName)}/pulls/${number}`,
+        userToken,
+      );
+
+      if (!detail.node_id) {
+        throw new GithubApiError("Pull request node ID unavailable for merge queue", 422);
+      }
+
+      const result = await this.transport.graphql<{
+        data?: { enqueuePullRequest?: { mergeQueueEntry?: { id: string; state: string } } };
+        errors?: { message: string }[];
+      }>(
+        userToken,
+        "mutation($id:ID!){enqueuePullRequest(input:{pullRequestId:$id}){mergeQueueEntry{id state}}}",
+        { id: detail.node_id },
+      );
+
+      if (result.errors?.length) {
+        throw new GithubApiError(
+          result.errors[0]?.message ?? "Could not enqueue pull request",
+          422,
+        );
+      }
+
+      return {
+        merged: false,
+        queued: true,
+        message: "Enqueued pull request in merge queue",
+      };
+    }
+
+    const body: Record<string, string> = { merge_method: input.method };
+
+    if (input.commitTitle) body.commit_title = input.commitTitle;
+
+    if (input.commitMessage) body.commit_message = input.commitMessage;
+
+    const result = await this.transport.putJson<{
+      merged: boolean;
+      message: string;
+      sha?: string;
+    }>(`${repoPath(fullName)}/pulls/${number}/merge`, userToken, body);
+    return {
+      merged: result.merged,
+      queued: false,
+      message: result.message,
+      sha: result.sha,
+    };
+  }
+
+  async updatePullBranch(
+    userToken: string,
+    fullName: string,
+    number: number,
+  ): Promise<{ message: string }> {
+    const result = await this.transport.putJson<{ message?: string }>(
+      `${repoPath(fullName)}/pulls/${number}/update-branch`,
+      userToken,
+      {},
+    );
+    return { message: result.message ?? "Updated pull request branch" };
+  }
+
+  async updatePullState(
+    userToken: string,
+    fullName: string,
+    number: number,
+    state: "open" | "closed",
+  ): Promise<GithubPullRequest> {
+    const pull = await this.transport.patch<PullPayload>(
+      `${repoPath(fullName)}/pulls/${number}`,
+      userToken,
+      { state },
+    );
+    return asPullRequest(pull);
+  }
+
+  async checkRunLogs(
+    authToken: string,
+    fullName: string,
+    checkRunId: number,
+  ): Promise<GithubCheckLogResult> {
+    const run = await this.transport.get<CheckRunPayload>(
+      `${repoPath(fullName)}/check-runs/${checkRunId}`,
+      authToken,
+    );
+    let logs: string | null = null;
+    try {
+      const text = await this.transport.getText(
+        `${repoPath(fullName)}/actions/jobs/${checkRunId}/logs`,
+        authToken,
+      );
+      const maxChars = 16_000;
+      logs = text.length > maxChars ? text.slice(-maxChars) : text;
+    } catch {
+      logs = null;
+    }
+    return {
+      checkRunId,
+      name: run.name,
+      summary: run.output?.summary ?? run.output?.title ?? null,
+      text: run.output?.text ? run.output.text.slice(0, 16_000) : null,
+      logs,
+      url: run.html_url,
+    };
   }
 }

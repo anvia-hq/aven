@@ -1,4 +1,4 @@
-import { IconPlus } from "@tabler/icons-react";
+import { IconGitFork, IconPlus } from "@tabler/icons-react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
@@ -44,13 +44,19 @@ function ProjectPage() {
       <main className="flex w-full flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-3">
           <ProjectTitle project={project} />
-          <Button
-            className="shrink-0"
-            onClick={() => navigate({ to: "/threads", search: { project: project.id } })}
-          >
-            <IconPlus />
-            Start thread
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => navigate({ to: "/git/$projectId", params: { projectId: project.id } })}
+            >
+              <IconGitFork />
+              Git Center
+            </Button>
+            <Button onClick={() => navigate({ to: "/threads", search: { project: project.id } })}>
+              <IconPlus />
+              Start thread
+            </Button>
+          </div>
         </div>
         <div className="grid items-start gap-4 lg:grid-cols-2">
           <div className="flex min-w-0 flex-col gap-4">
