@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { BotLine } from "@/components/bot-line";
 import { RailLink } from "@/components/rail-link";
 
 import { attentionQueue } from "../attention";
@@ -8,7 +9,6 @@ import { useReducedMotion } from "../hooks/use-reduced-motion";
 import { refreshBots, useBots } from "../hooks/use-bots";
 import { useBotsWorking } from "../hooks/use-bots-working";
 import { BotAttentionCell } from "./bot-attention-cell";
-import { BotAvatar } from "./bot-avatar";
 import { BotSwapParticles } from "./bot-swap-particles";
 
 export function BotRailLink({ active }: { active: boolean }) {
@@ -71,16 +71,7 @@ export function BotRailLink({ active }: { active: boolean }) {
 
   return (
     <RailLink to="/bot" label="Bot" tooltip={main?.name ?? "Bot"} active={active}>
-      {main ? (
-        <BotAvatar
-          bot={main}
-          mood={working.has(main.id) ? "working" : "idle"}
-          steady
-          className="size-7"
-        />
-      ) : (
-        <span className="size-7 rounded-lg bg-sidebar-accent" />
-      )}
+      <BotLine className="size-[17px]" />
     </RailLink>
   );
 }
