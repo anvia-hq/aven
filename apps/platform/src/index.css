@@ -38,11 +38,11 @@
   --popover-foreground: oklch(0.2 0.003 280);
   --primary: oklch(0.22 0.003 280);
   --primary-foreground: oklch(0.99 0.002 280);
-  --secondary: oklch(0.96 0.003 280);
+  --secondary: oklch(0.965 0.003 280);
   --secondary-foreground: oklch(0.25 0.003 280);
-  --muted: oklch(0.96 0.003 280);
+  --muted: oklch(0.965 0.003 280);
   --muted-foreground: oklch(0.5 0.003 280);
-  --accent: oklch(0.945 0.003 280);
+  --accent: oklch(0.96 0.003 280);
   --accent-foreground: oklch(0.25 0.003 280);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -65,7 +65,7 @@
   --sidebar-foreground: oklch(0.2 0.003 280);
   --sidebar-primary: oklch(0.22 0.003 280);
   --sidebar-primary-foreground: oklch(0.99 0.002 280);
-  --sidebar-accent: oklch(0.94 0.003 280);
+  --sidebar-accent: oklch(0.96 0.003 280);
   --sidebar-accent-foreground: oklch(0.25 0.003 280);
   --sidebar-border: oklch(0.91 0.003 280);
   --sidebar-ring: oklch(0.7 0.003 280);
@@ -130,7 +130,7 @@
   --secondary-foreground: oklch(0.25 0.024 165);
   --muted: oklch(0.96 0.016 165);
   --muted-foreground: oklch(0.5 0.02 165);
-  --accent: oklch(0.945 0.022 165);
+  --accent: oklch(0.955 0.036 165);
   --accent-foreground: oklch(0.25 0.016 165);
   --destructive: oklch(0.577 0.245 27.325);
   --success: oklch(0.55 0.15 150);
@@ -145,7 +145,7 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.48 0.13 155);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.988 0.011 165);
+  --frame: oklch(0.995 0.007 165);
   --border: oklch(0.91 0.016 165);
   --input: oklch(0.89 0.016 165);
   --ring: oklch(0.7 0.06 160);
@@ -153,27 +153,27 @@
   --sidebar-foreground: oklch(0.2 0.014 165);
   --sidebar-primary: oklch(0.22 0.018 165);
   --sidebar-primary-foreground: oklch(0.99 0.005 165);
-  --sidebar-accent: oklch(0.94 0.022 165);
+  --sidebar-accent: oklch(0.955 0.036 165);
   --sidebar-accent-foreground: oklch(0.25 0.016 165);
   --sidebar-border: oklch(0.91 0.016 165);
   --sidebar-ring: oklch(0.7 0.06 160);
 }
 
 :root[data-theme="mint"].dark {
-  --background: oklch(0.2 0.014 195);
-  --foreground: oklch(0.9 0.008 195);
-  --card: oklch(0.23 0.014 195);
-  --card-foreground: oklch(0.9 0.008 195);
-  --popover: oklch(0.25 0.014 195);
-  --popover-foreground: oklch(0.9 0.008 195);
-  --primary: oklch(0.93 0.008 195);
-  --primary-foreground: oklch(0.18 0.008 195);
-  --secondary: oklch(0.27 0.014 195);
-  --secondary-foreground: oklch(0.9 0.008 195);
-  --muted: oklch(0.25 0.014 195);
-  --muted-foreground: oklch(0.66 0.008 195);
-  --accent: oklch(0.285 0.014 195);
-  --accent-foreground: oklch(0.92 0.008 195);
+  --background: oklch(0.2 0.022 208);
+  --foreground: oklch(0.9 0.012 208);
+  --card: oklch(0.23 0.022 208);
+  --card-foreground: oklch(0.9 0.012 208);
+  --popover: oklch(0.25 0.022 208);
+  --popover-foreground: oklch(0.9 0.012 208);
+  --primary: oklch(0.93 0.012 208);
+  --primary-foreground: oklch(0.18 0.012 208);
+  --secondary: oklch(0.27 0.022 208);
+  --secondary-foreground: oklch(0.9 0.012 208);
+  --muted: oklch(0.25 0.022 208);
+  --muted-foreground: oklch(0.66 0.014 208);
+  --accent: oklch(0.285 0.024 208);
+  --accent-foreground: oklch(0.92 0.012 208);
   --destructive: oklch(0.68 0.19 22);
   --success: oklch(0.76 0.17 155);
   --info: oklch(0.72 0.15 250);
@@ -187,18 +187,18 @@
   --graph-6: oklch(0.76 0.19 25);
   --code: oklch(0.8 0.14 155);
   --effort: oklch(0.74 0.2 160);
-  --frame: oklch(0.255 0.014 195);
+  --frame: oklch(0.255 0.022 208);
   --border: oklch(1 0 0 / 5%);
   --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.55 0.03 195);
+  --ring: oklch(0.55 0.045 208);
   --sidebar: var(--background);
-  --sidebar-foreground: oklch(0.86 0.008 195);
-  --sidebar-primary: oklch(0.93 0.008 195);
-  --sidebar-primary-foreground: oklch(0.18 0.008 195);
-  --sidebar-accent: oklch(0.26 0.014 195);
-  --sidebar-accent-foreground: oklch(0.92 0.008 195);
+  --sidebar-foreground: oklch(0.86 0.012 208);
+  --sidebar-primary: oklch(0.93 0.012 208);
+  --sidebar-primary-foreground: oklch(0.18 0.012 208);
+  --sidebar-accent: oklch(0.26 0.024 208);
+  --sidebar-accent-foreground: oklch(0.92 0.012 208);
   --sidebar-border: oklch(1 0 0 / 3%);
-  --sidebar-ring: oklch(0.55 0.03 195);
+  --sidebar-ring: oklch(0.55 0.045 208);
 }
 
 :root[data-theme="catppuccin"] {
@@ -1718,10 +1718,12 @@
    a little deeper in a dark one (decision 0304). */
 :root {
   --chrome: var(--frame);
+  --chrome-accent: color-mix(in oklch, var(--chrome), var(--foreground) 4.5%);
 }
 
 .dark {
   --chrome: color-mix(in oklch, var(--frame), black 28%);
+  --chrome-accent: color-mix(in oklch, var(--chrome), var(--foreground) 9%);
 }
 
 :root:not([data-theme]) {
@@ -1730,6 +1732,10 @@
 
 .dark:not([data-theme]) {
   --chrome: oklch(0.2 0.003 280);
+}
+
+:root[data-theme="mint"]:not(.dark) {
+  --chrome-accent: oklch(0.955 0.036 165);
 }
 
 /* The Aven mark keeps Mint's neutral in every color theme (decision 0156): the palette blocks never set --brand. */
