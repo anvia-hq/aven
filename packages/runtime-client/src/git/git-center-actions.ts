@@ -1,10 +1,8 @@
-import { rm } from "node:fs/promises";
-import { resolve } from "node:path";
-
 import type { GitActionAuth, GitActionPayload, GitActionResult } from "@aven/protocol/types";
 
 import { gitFailure } from "./host-git";
 import {
+  assertContainedRepoPath,
   assertRelativeRepoPath,
   assertSafeRef,
   assertSafeRevision,
@@ -315,7 +313,9 @@ async function executeAction(
         throw new Error("No paths provided to discard");
       }
 
-      const safePaths = action.paths.map((p) => assertRelativeRepoPath(root, p));
+      const safePaths = await Promise.all(
+        action.paths.map((p) => assertContainedRepoPath(root, p)),
+      );
       const trackedOut = await runCenterGit(root, ["ls-files", "--", ...safePaths]);
       const trackedSet = new Set(
         trackedOut.stdout.split("\n").flatMap((line) => {
@@ -332,8 +332,10 @@ async function executeAction(
         if (out.code !== 0) throw gitFailure("Could not discard tracked files", out);
       }
 
-      for (const file of untracked) {
-        await rm(resolve(root, file), { recursive: true, force: true });
+      if (untracked.length > 0) {
+        const clean = await runCenterGit(root, ["clean", "-fd", "--", ...untracked]);
+
+        if (clean.code !== 0) throw gitFailure("Could not clean untracked files", clean);
       }
 
       return { ok: true, summary: `Discarded changes in ${safePaths.length} file(s)` };

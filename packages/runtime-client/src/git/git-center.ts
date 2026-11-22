@@ -1,5 +1,5 @@
 import { lstat, realpath } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import type {
   GitActionAuth,
@@ -140,11 +140,45 @@ export function assertRelativeRepoPath(root: string, filePath: string) {
   const resolvedTarget = resolve(root, filePath);
   const rel = relative(root, resolvedTarget);
 
-  if (rel === "" || rel.startsWith("..") || rel.startsWith(sep)) {
+  if (rel === "" || rel.startsWith("..") || isAbsolute(rel)) {
     throw new Error(`Path is outside repository: ${filePath}`);
   }
 
+  const segments = rel.split(/[\\/]+/);
+
+  if (segments.some((segment) => segment.toLowerCase() === ".git")) {
+    throw new Error(`Path targets .git metadata: ${filePath}`);
+  }
+
   return filePath;
+}
+
+export async function assertContainedRepoPath(root: string, filePath: string) {
+  const safe = assertRelativeRepoPath(root, filePath);
+  const realRoot = await realpath(root);
+  let cursor = dirname(resolve(realRoot, safe));
+
+  while (true) {
+    const realCursor = await realpath(cursor).catch(() => null);
+
+    if (realCursor !== null) {
+      const rel = relative(realRoot, realCursor);
+
+      if (rel.startsWith("..") || isAbsolute(rel)) {
+        throw new Error(`Path escapes repository via symlink: ${filePath}`);
+      }
+
+      break;
+    }
+
+    const parent = dirname(cursor);
+
+    if (parent === cursor) break;
+
+    cursor = parent;
+  }
+
+  return safe;
 }
 
 export async function resolveRepoRoot(dir: string): Promise<string | null> {

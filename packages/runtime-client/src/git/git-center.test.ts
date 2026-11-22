@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -140,5 +140,39 @@ describe("git-center runner engine", () => {
     await expect(runGitAction(repo, { op: "discard", paths: ["../outside.txt"] })).rejects.toThrow(
       /outside repository/,
     );
+  });
+
+  test("blocks discarding .git metadata or paths escaping via symlinks", async () => {
+    const repo = await createTempRepo();
+    const outsideDir = await mkdtemp(join(tmpdir(), "aven-git-center-outside-"));
+    cleanupDirs.push(outsideDir);
+    const outsideFile = join(outsideDir, "keep.txt");
+    await writeFile(outsideFile, "important\n");
+
+    await symlink(outsideDir, join(repo, "escaped-dir"));
+    await symlink(outsideFile, join(repo, "file-link"));
+    await mkdir(join(repo, "nested"), { recursive: true });
+    await writeFile(join(repo, "nested", "scratch.txt"), "remove me\n");
+
+    await expect(runGitAction(repo, { op: "discard", paths: [".git"] })).rejects.toThrow(
+      /\.git metadata/,
+    );
+    await expect(runGitAction(repo, { op: "discard", paths: [".git/HEAD"] })).rejects.toThrow(
+      /\.git metadata/,
+    );
+    await expect(runGitAction(repo, { op: "discard", paths: [".GIT/config"] })).rejects.toThrow(
+      /\.git metadata/,
+    );
+    await expect(
+      runGitAction(repo, { op: "discard", paths: ["escaped-dir/keep.txt"] }),
+    ).rejects.toThrow(/escapes repository via symlink/);
+
+    expect((await lstat(join(repo, ".git", "HEAD"))).isFile()).toBe(true);
+    expect(await readFile(outsideFile, "utf8")).toBe("important\n");
+
+    await runGitAction(repo, { op: "discard", paths: ["file-link", "nested/scratch.txt"] });
+    expect(await lstat(join(repo, "file-link")).catch(() => null)).toBeNull();
+    expect(await lstat(join(repo, "nested", "scratch.txt")).catch(() => null)).toBeNull();
+    expect(await readFile(outsideFile, "utf8")).toBe("important\n");
   });
 });

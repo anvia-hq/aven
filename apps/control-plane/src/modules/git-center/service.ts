@@ -100,9 +100,9 @@ function mapGithubWriteError(error: unknown): never {
 }
 
 export function createGitCenterService(
-  hub: RuntimeHub,
+  hub: Pick<RuntimeHub, "get">,
   runs: Pick<RunManager, "isRunning">,
-  messages: ReturnType<typeof createThreadMessages>,
+  messages: Pick<ReturnType<typeof createThreadMessages>, "send">,
 ) {
   const inFlightSnapshots = new Map<
     string,
@@ -733,6 +733,19 @@ export function createGitCenterService(
 
       if (body.kind === "resolve_conflicts" && body.threadId) {
         const thread = await threadsService.readable(viewer, body.threadId);
+
+        if (thread.projectId !== project.id) throw new NotFoundError("Thread not in this project");
+
+        if (thread.createdBy !== viewer.userId && !isDriving(thread.drivingUntil)) {
+          throw new ForbiddenError(
+            "Only the thread owner or an active driver can hand off conflict resolution",
+          );
+        }
+
+        if (runs.isRunning(thread.id)) {
+          throw new ConflictError("Stop the active run before handing off conflict resolution");
+        }
+
         const prompt = [
           `Resolve the active git ${body.operation} conflicts in this workspace.`,
           `Conflicted files:\n${body.files.map((f) => `- ${f}`).join("\n")}`,
