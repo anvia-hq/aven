@@ -225,14 +225,6 @@ export const createThreadMessages = (runs: RunManager, gate: AddressingGate = de
 
     if (thread.awaitingAnswer) throw new ConflictError("Answer the agent's question first");
 
-    if (
-      attachments.length > 0 &&
-      thread.agentBackend !== "claude" &&
-      thread.agentBackend !== "codex"
-    ) {
-      throw new ConflictError("Files can be sent when the agent is not working");
-    }
-
     if (prompt.length === 0 && attachments.length === 0) {
       throw new ConflictError("Write a message to send to the agent");
     }

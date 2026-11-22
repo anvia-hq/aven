@@ -741,6 +741,42 @@ describe("steering a run that is going (decision 0098)", () => {
     expect(roles).toEqual(["user", "assistant", "tool", "user", "assistant"]);
   });
 
+  test("a multipart image steering message is taken at the next step", async () => {
+    const runs = await opened(journalPath());
+    const { agent, gate, seen } = slowRun();
+    const events: RunEvent[] = [];
+    const run = await runs.start("steer-img", "thread-img", "build it", { agent }, (e) =>
+      events.push(e),
+    );
+    for (let i = 0; i < 100 && !events.some((e) => e.type === "tool_start"); i++)
+      await Bun.sleep(10);
+
+    const pngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+    expect(
+      await runs.steer(
+        run.durableId,
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "look at this screenshot" },
+            { type: "image", image: { type: "data", data: pngBase64 }, mediaType: "image/png" },
+          ],
+        },
+        "steer-img-1",
+      ),
+    ).toBe(true);
+    gate.resolve();
+    const end = await run.done;
+
+    expect(end.type).toBe("response");
+    expect(events.filter((e) => e.type === "steer_applied")).toEqual([
+      { type: "steer_applied", id: "steer-img-1" },
+    ]);
+    expect(seen[0]).toContain("look at this screenshot");
+    expect(seen[0]).toContain("image/png");
+  });
+
   test("a message the agent took is filed with a run that is then cancelled", async () => {
     const runs = await opened(journalPath());
     const toolGate = Promise.withResolvers<void>();
