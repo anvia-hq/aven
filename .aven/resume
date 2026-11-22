@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Brings the database up again when a thread's container starts: the Docker PostgreSQL of .aven/stack.
-set -euo pipefail
-exec bash "$(dirname "$0")/stack"
