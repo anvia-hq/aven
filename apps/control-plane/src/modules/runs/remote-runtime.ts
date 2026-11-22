@@ -1,6 +1,7 @@
 import { parseAgentContinuation } from "@anvia/core/agent/interactions";
 import { z } from "zod";
 
+import type { LensProxy } from "../lens/proxy";
 import { environmentModel } from "../providers/resolve-model";
 import type { RunGateway } from "../runtimes/gateway";
 import {
@@ -93,26 +94,33 @@ export class RemoteRuntime implements Runtime {
     private gateway: Pick<RunGateway, "issue" | "revoke">,
     private identities: Pick<RunIdentities, "issue" | "revoke"> = runIdentities,
     private agentOnControlPlane = true,
+    private lensProxy?: Pick<LensProxy, "forRunner">,
   ) {}
 
   async start(input: StartRunInput): Promise<RuntimeRun> {
     const { thread, prompt, compact, attachments, mentions, model } = input;
-    return this.#launch(thread, model, input, undefined, (runId, runModel, credential, placed) => {
-      const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
-        type: "run.start",
-        runId,
-        thread: placed,
-        prompt,
-        compact: compact || undefined,
-        attachments: attachments?.length ? attachments : undefined,
-        mentions: mentions?.length ? mentions : undefined,
-        ...sharedRunFields(input, credential),
-      };
+    return this.#launch(
+      thread,
+      model,
+      input,
+      undefined,
+      (runId, runModel, credential, placed, runnerLens) => {
+        const message: Extract<ControlPlaneToRuntime, { type: "run.start" }> = {
+          type: "run.start",
+          runId,
+          thread: placed,
+          prompt,
+          compact: compact || undefined,
+          attachments: attachments?.length ? attachments : undefined,
+          mentions: mentions?.length ? mentions : undefined,
+          ...sharedRunFields(input, credential, runnerLens),
+        };
 
-      if (runModel) message.model = runModel;
+        if (runModel) message.model = runModel;
 
-      return message;
-    });
+        return message;
+      },
+    );
   }
 
   async resume(input: ResumeRunInput): Promise<RuntimeRun> {
@@ -122,14 +130,14 @@ export class RemoteRuntime implements Runtime {
       model,
       input,
       askedBy(continuation),
-      (runId, runModel, credential, placed) => ({
+      (runId, runModel, credential, placed, runnerLens) => ({
         type: "run.resume",
         runId,
         thread: placed,
         continuation,
         response,
         model: runModel,
-        ...sharedRunFields(input, credential),
+        ...sharedRunFields(input, credential, runnerLens),
       }),
     );
   }
@@ -169,6 +177,7 @@ export class RemoteRuntime implements Runtime {
       runModel: RunModel | undefined,
       credential: RunIdentityCredential | undefined,
       placed: RunThreadInfo,
+      runnerLens: StartRunInput["lens"],
     ) => ControlPlaneToRuntime,
   ): Promise<RuntimeRun> {
     const { connection, hostId, machine } = await this.#placementFor(thread);
@@ -179,6 +188,9 @@ export class RemoteRuntime implements Runtime {
       backend === "claude" || backend === "codex"
         ? undefined
         : this.gateway.issue(runId, model ?? environmentModel(), thread.id, tokenOf);
+    const rawLens = nativeLens(lens, thread);
+    const runnerLens =
+      rawLens && this.lensProxy ? this.lensProxy.forRunner(hostId, rawLens) : rawLens;
     const queue = new EventQueue();
     const result = Promise.withResolvers<RunResult>();
     result.promise.catch(() => undefined);
@@ -201,10 +213,10 @@ export class RemoteRuntime implements Runtime {
         webSearch,
         claudeToken,
         codexToken,
-        nativeLens(lens, thread),
+        runnerLens,
       ),
     );
-    this.#post(connection, runId, message(runId, runModel, credential, placed));
+    this.#post(connection, runId, message(runId, runModel, credential, placed, runnerLens));
 
     return {
       events: queue,
@@ -285,7 +297,11 @@ export class RemoteRuntime implements Runtime {
 
 const ASKING_AGENT = /^run-(.+)$/;
 
-function sharedRunFields(input: RunSharedInput, credential: RunIdentityCredential | undefined) {
+function sharedRunFields(
+  input: RunSharedInput,
+  credential: RunIdentityCredential | undefined,
+  runnerLens?: StartRunInput["lens"],
+) {
   const {
     thread,
     skills,
@@ -327,7 +343,7 @@ function sharedRunFields(input: RunSharedInput, credential: RunIdentityCredentia
     env: env?.length ? env : undefined,
     identity: credential,
     webSearch,
-    lens: nativeLens(lens, thread),
+    lens: runnerLens ?? nativeLens(lens, thread),
     memory: memory?.index,
     cockpit: cockpit?.access,
     backend: threadBackend(thread),

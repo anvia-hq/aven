@@ -3,6 +3,7 @@ import { createCompactionAgent } from "@aven/agents/compaction-agent";
 import { subagentInstructions } from "@aven/agents/subagent-instruction";
 import { SUBAGENT_MAX_TURNS } from "@aven/agents/subagents";
 
+import { resolveLens } from "./resolve-lens";
 import type { CreateRuntimeAgent } from "../types";
 
 export const defaultCreateAgent =
@@ -64,7 +65,7 @@ export const defaultCreateAgent =
       memory,
       project,
       webSearch,
-      lens,
+      lens: resolveLens(origin, lens),
       forks,
     });
   };

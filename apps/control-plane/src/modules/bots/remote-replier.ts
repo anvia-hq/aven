@@ -6,6 +6,7 @@ import { LOCAL_RUNTIME_ID } from "../runtimes/service";
 import { answerBotMemory } from "./memory-answer";
 import { prepareBotReply, replyAbortError } from "./reply-setup";
 import { TalkBotReplier } from "./talk-replier";
+import type { LensProxy } from "../lens/proxy";
 import { lensSettingsService } from "../lens/service";
 import { webSearchForRun } from "../runs/web-search";
 import type {
@@ -89,6 +90,7 @@ export class RemoteBotReplier implements BotReplier {
     private world: BotWorldKeeper,
     private agentOnControlPlane = true,
     private talk = new TalkBotReplier({ store, bots, world, mcp, providers, threads, notes }),
+    private lensProxy?: Pick<LensProxy, "forRunner">,
   ) {}
 
   ready(choice: BotRunChoice, bot: Pick<Bot, "runtimeId" | "hasComputer">) {
@@ -304,6 +306,10 @@ export class RemoteBotReplier implements BotReplier {
       notes: ({ command }: Omit<BotNotesParams, "replyId">) => hosts.notes(command),
       cockpit: ({ command }: { command: unknown }) => hosts.cockpit(command),
     };
+    const hostRuntimeId = machine ? LOCAL_RUNTIME_ID : runtimeId;
+    const rawLens = choice.backend === "native" ? await lensSettingsService.forRun() : undefined;
+    const runnerLens =
+      rawLens && this.lensProxy ? this.lensProxy.forRunner(hostRuntimeId, rawLens) : rawLens;
     const cancel = () => this.#cancel(replyId, signal, runtimeId);
     try {
       connection.startBotReply(
@@ -330,7 +336,7 @@ export class RemoteBotReplier implements BotReplier {
           context: world.context,
           projects: world.projects.length ? world.projects : undefined,
           webSearch: webSearchForRun,
-          lens: choice.backend === "native" ? await lensSettingsService.forRun() : undefined,
+          lens: runnerLens,
           machine,
         },
         sink,

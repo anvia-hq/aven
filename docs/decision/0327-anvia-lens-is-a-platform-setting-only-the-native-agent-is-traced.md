@@ -58,3 +58,17 @@ which report nothing to Lens.
 - Not decided here: scores and end-user feedback from a thread's messages, dataset or prompt access
   (`lens.score`, `datasetClient`, `promptClient`), and a "test the connection" button that checks the
   keys on save.
+
+## Addendum: proxying OTLP traces through the control plane
+
+Isolated cloud sandboxes cannot reach a private or Tailscale-hosted Anvia Lens server directly, and
+sending the real `sk-lens-*` secret key to untrusted sandboxes is unnecessary (2026-11-22). Runners
+now receive `baseUrl: "/runtimes/lens"` with `publicKey: <runtimeId>` and a random runner-scoped
+proxy token (`LensProxy` in `apps/control-plane/src/modules/lens/proxy.ts`), which the runner
+resolves against its control-plane origin (`resolveLens`). The control plane authenticates the
+runner token, restricts forwarding strictly to `POST /api/public/otel/v1/traces` and
+`POST /api/public/otel/v1/logs` with a streaming 10 MB body limit, and attaches the real upstream
+Lens Basic credentials when forwarding to the configured `baseUrl`. A 5-minute grace window lets
+asynchronous OTLP batches flush after a sandbox disconnects, while rotating or revoking a runtime
+deletes its grant so the old token is permanently invalidated and any future run mints a new one.
+In-process bot talk replies continue to talk to the configured Lens server directly.

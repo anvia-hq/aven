@@ -13,6 +13,7 @@ import { keepAttachments } from "./files/attachments";
 import { connectMcpForMachine } from "./mcp/machine-mcp";
 import { connectMcpServers } from "./mcp/mcp-servers";
 import { createHostedRunInput } from "./runs/hosted-input";
+import { resolveLens } from "./runner/resolve-lens";
 import { boundedTools } from "./tools/late-bound-tools";
 import type { ReactToMessage, SendMessage } from "@aven/agents/tools/types";
 import type {
@@ -99,7 +100,7 @@ export const defaultCreateBotAgent =
       context,
       projects,
       projectFiles,
-      lens,
+      lens: resolveLens(origin, lens),
     });
 
 const sleep = (ms: number, signal?: AbortSignal) =>

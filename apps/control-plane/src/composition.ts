@@ -17,6 +17,8 @@ import { cockpitService } from "./modules/cockpit/service";
 import { githubService } from "./modules/github/service";
 import { projectsService } from "./modules/projects/service";
 import { RemoteRuntime } from "./modules/runs/remote-runtime";
+import { LensProxy } from "./modules/lens/proxy";
+import { lensSettingsService } from "./modules/lens/service";
 import { runIdentities } from "./modules/workload-identity/grants";
 import { RunManager } from "./modules/runs/service";
 import { runGateway } from "./modules/runtimes/gateway";
@@ -80,6 +82,11 @@ export const previews = createPreviewService({
   openPort: (runtimeId, port, sink) => runtimeHub.openPort(runtimeId, port, sink),
 });
 
+export const lensProxy = new LensProxy(
+  () => lensSettingsService.forRun(),
+  (runtimeId) => runtimeHub.isOnline(runtimeId),
+);
+
 export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(
@@ -87,6 +94,7 @@ export const runsService = new RunManager({
     runGateway,
     runIdentities,
     localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
+    lensProxy,
   ),
   onRunFinished: async (thread, ending, run) => {
     const updated = (async () => {
@@ -273,6 +281,8 @@ export const botRunner = new BotRunner({
     },
     botWorld,
     localRunnerMode(process.env.AVEN_LOCAL_RUNNER) !== "off",
+    undefined,
+    lensProxy,
   ),
   settled: (reply) => goalDriver.settled(reply),
   said: (botId, askedQuestion) => {
