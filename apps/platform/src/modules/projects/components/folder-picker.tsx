@@ -1,4 +1,12 @@
-import { IconArrowUp, IconFolder, IconFolderPlus, IconGitBranch } from "@tabler/icons-react";
+import {
+  IconArrowUp,
+  IconChevronRight,
+  IconFolder,
+  IconFolderFilled,
+  IconFolderPlus,
+  IconGitBranch,
+  IconX,
+} from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -36,10 +44,10 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
 
   const shown = listing?.data ?? null;
   let body = (
-    <div className="flex flex-col" aria-busy="true">
+    <div className="flex flex-col p-1" aria-busy="true">
       {skeletonWidths.map((width) => (
-        <div key={width} className="flex h-9 items-center gap-2 px-3">
-          <Skeleton className="size-4" />
+        <div key={width} className="flex h-9 items-center gap-2.5 px-2.5">
+          <Skeleton className="size-4 rounded-sm" />
           <Skeleton className="h-3" style={{ width }} />
         </div>
       ))}
@@ -51,89 +59,133 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
     body = <PanelNotice>No folders in here. Add this one, or make a new one.</PanelNotice>;
   } else if (shown) {
     body = (
-      <ul className="flex flex-col">
-        {shown.folders.map((folder) => (
-          <li key={folder.path}>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-pressed={folder.path === path}
-              className="h-9 w-full justify-start gap-2 rounded-none px-3 font-normal select-none aria-pressed:bg-primary/15 aria-pressed:shadow-[inset_2px_0_0_var(--color-primary)]"
-              onClick={() => onChange(folder.path)}
-              onDoubleClick={() => openFolder(folder.path)}
-              onKeyDown={(event) => {
-                if (event.key !== "Enter") return;
+      <ul className="flex flex-col gap-0.5 p-1">
+        {shown.folders.map((folder) => {
+          const selected = folder.path === path;
 
-                event.preventDefault();
-                openFolder(folder.path);
-              }}
-            >
-              <IconFolder className="size-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate">{folder.name}</span>
-              {folder.git && <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />}
-            </Button>
-          </li>
-        ))}
+          return (
+            <li key={folder.path}>
+              <Button
+                type="button"
+                variant="ghost"
+                aria-pressed={selected}
+                className="group h-9 w-full justify-start gap-2.5 rounded-lg px-2.5 text-left font-normal select-none aria-pressed:bg-accent/80 aria-pressed:font-medium aria-pressed:text-foreground"
+                onClick={() => onChange(folder.path)}
+                onDoubleClick={() => openFolder(folder.path)}
+                onKeyDown={(event) => {
+                  if (event.key !== "Enter") return;
+
+                  event.preventDefault();
+                  openFolder(folder.path);
+                }}
+              >
+                {selected ? (
+                  <IconFolderFilled className="size-4 shrink-0 text-foreground" />
+                ) : (
+                  <IconFolder className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <span className="min-w-0 flex-1 truncate text-left">{folder.name}</span>
+                {folder.git && (
+                  <span
+                    aria-hidden
+                    className="inline-flex items-center gap-1 rounded-md bg-muted/80 px-1.5 py-0.5 text-[11px] font-normal text-muted-foreground"
+                  >
+                    <IconGitBranch className="size-3" />
+                    git
+                  </span>
+                )}
+                <IconChevronRight
+                  aria-hidden
+                  className="size-3.5 shrink-0 text-muted-foreground/35 transition-colors group-hover:text-muted-foreground"
+                />
+              </Button>
+            </li>
+          );
+        })}
       </ul>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2 text-sm">
-      <div className="flex items-center gap-1">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Up one folder"
-          disabled={!browsing}
-          onClick={() => openFolder(shown?.parent ?? "")}
-        >
-          <IconArrowUp />
-        </Button>
-        <span className="min-w-0 flex-1 truncate font-mono text-xs" title={browsing}>
-          {browsing || "Folders this computer serves"}
-        </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label="New folder"
-          disabled={!browsing}
-          onClick={() => setNaming(true)}
-        >
-          <IconFolderPlus />
-        </Button>
-      </div>
-      {naming && (
-        <div className="flex items-center gap-2">
-          <Input
-            aria-label="Name of the new folder"
-            autoFocus
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                void submitName();
-              }
-
-              if (event.key === "Escape") setNaming(false);
-            }}
-            placeholder="New folder name"
-          />
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 text-sm">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border bg-background/40">
+        <div className="flex shrink-0 items-center gap-1.5 border-b bg-muted/25 px-2 py-1.5">
           <Button
             type="button"
-            size="sm"
-            variant="outline"
-            disabled={creating || !name.trim()}
-            onClick={() => void submitName()}
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Up one folder"
+            disabled={!browsing}
+            onClick={() => openFolder(shown?.parent ?? "")}
           >
-            Create
+            <IconArrowUp />
+          </Button>
+          <span
+            className={
+              browsing
+                ? "min-w-0 flex-1 truncate text-left font-mono text-xs text-foreground"
+                : "min-w-0 flex-1 truncate text-left text-xs text-muted-foreground"
+            }
+            title={browsing}
+          >
+            {browsing || "Folders this computer serves"}
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="New folder"
+            disabled={!browsing}
+            onClick={() => setNaming(true)}
+          >
+            <IconFolderPlus />
           </Button>
         </div>
-      )}
-      <div className="h-56 overflow-y-auto rounded-md border">{body}</div>
+        {naming && (
+          <div className="flex items-center gap-1.5 border-b bg-muted/20 px-2.5 py-2">
+            <Input
+              aria-label="Name of the new folder"
+              autoFocus
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void submitName();
+                }
+
+                if (event.key === "Escape") setNaming(false);
+              }}
+              placeholder="New folder name"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={creating || !name.trim()}
+              onClick={() => void submitName()}
+            >
+              Create
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label="Cancel new folder"
+              onClick={() => {
+                setNaming(false);
+                setName("");
+              }}
+            >
+              <IconX />
+            </Button>
+          </div>
+        )}
+        <div className="min-h-0 flex-1 overflow-y-auto">{body}</div>
+      </div>
+      <span className="text-xs text-muted-foreground">
+        Click to select a folder, or double-click to open it.
+      </span>
     </div>
   );
 }

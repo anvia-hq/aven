@@ -1,9 +1,16 @@
-import { IconPlus } from "@tabler/icons-react";
+import {
+  IconDeviceDesktop,
+  IconFolder,
+  IconGitBranch,
+  IconLoader2,
+  IconPlus,
+} from "@tabler/icons-react";
 import type { ComponentProps } from "react";
 
 import { Button } from "@aven/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -17,10 +24,12 @@ import { Label } from "@aven/ui/label";
 import { LabeledSelect } from "@aven/ui/labeled-select";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
+import { GithubMark } from "@/components/brand-icons";
+
 import { useAddProject } from "../hooks/use-add-project";
+import type { Project } from "../types";
 import { FolderPicker } from "./folder-picker";
 import { GithubRepositoryChoice } from "./github-repository-choice";
-import type { Project } from "../types";
 
 type Props = {
   onAdded?: (project: Project) => void;
@@ -29,6 +38,9 @@ type Props = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
+
+const SOURCE_CARD_CLASS =
+  "flex h-auto flex-col items-start gap-2 rounded-xl border border-border/70 bg-muted/25 p-3 text-left font-normal transition-colors hover:border-border hover:bg-muted/50 data-active:border-foreground/25 data-active:bg-accent/70 data-active:shadow-none dark:data-active:border-foreground/20 dark:data-active:bg-foreground/[0.08]";
 
 export function AddProjectDialog({ onAdded, variant, size, open, onOpenChange }: Props) {
   const state = useAddProject(
@@ -43,25 +55,60 @@ export function AddProjectDialog({ onAdded, variant, size, open, onOpenChange }:
           <IconPlus /> Add project
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-lg">
-        <Form onSubmit={state.handleSubmit} className="flex flex-col gap-4">
-          <DialogHeader>
-            <DialogTitle>Add a project</DialogTitle>
+      <DialogContent className="p-6 sm:max-w-[520px]">
+        <Form onSubmit={state.handleSubmit} className="flex flex-col gap-5">
+          <DialogHeader className="gap-1.5 pr-6">
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              Add a project
+            </DialogTitle>
             <DialogDescription>
-              A repository on GitHub can run on any computer, including Aven Cloud, and Aven can
-              make one for you. A folder is a project that stays on the computer that serves it.
+              Connect a GitHub repository, open a local folder, or clone by URL.
             </DialogDescription>
           </DialogHeader>
           <Tabs value={state.kind} onValueChange={(next) => state.setKind(next)}>
-            <TabsList>
-              <TabsTrigger value="github">GitHub</TabsTrigger>
-              <TabsTrigger value="folder">Folder</TabsTrigger>
-              <TabsTrigger value="repository">Clone</TabsTrigger>
+            <TabsList className="grid h-auto! w-full grid-cols-3 gap-2.5 bg-transparent p-0">
+              <TabsTrigger value="github" className={SOURCE_CARD_CLASS}>
+                <span className="flex size-7 items-center justify-center rounded-lg bg-background/80 text-foreground ring-1 ring-border/60">
+                  <GithubMark className="size-4" />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm leading-tight font-medium text-foreground">GitHub</span>
+                  <span aria-hidden className="text-xs leading-tight text-muted-foreground">
+                    Cloud &amp; runners
+                  </span>
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="folder" className={SOURCE_CARD_CLASS}>
+                <span className="flex size-7 items-center justify-center rounded-lg bg-background/80 text-foreground ring-1 ring-border/60">
+                  <IconFolder className="size-4" />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm leading-tight font-medium text-foreground">Folder</span>
+                  <span aria-hidden className="text-xs leading-tight text-muted-foreground">
+                    Local computer
+                  </span>
+                </span>
+              </TabsTrigger>
+              <TabsTrigger value="repository" className={SOURCE_CARD_CLASS}>
+                <span className="flex size-7 items-center justify-center rounded-lg bg-background/80 text-foreground ring-1 ring-border/60">
+                  <IconGitBranch className="size-4" />
+                </span>
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-sm leading-tight font-medium text-foreground">Clone</span>
+                  <span aria-hidden className="text-xs leading-tight text-muted-foreground">
+                    From Git URL
+                  </span>
+                </span>
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-          <ProjectSource state={state} />
-          <DialogFooter>
+          <div className="flex h-[340px] flex-col gap-4">
+            <ProjectSource state={state} />
+          </div>
+          <DialogFooter className="-mx-6 -mb-6 mt-1 px-6 py-3.5">
+            <DialogClose render={<Button type="button" variant="ghost" />}>Cancel</DialogClose>
             <Button type="submit" disabled={state.submitting || !state.canSubmit}>
+              {state.submitting && <IconLoader2 className="animate-spin" />}
               {submitLabel(state)}
             </Button>
           </DialogFooter>
@@ -84,11 +131,18 @@ function ProjectSource({ state }: { state: ReturnType<typeof useAddProject> }) {
 
   if (!state.hasHosts)
     return (
-      <p className="text-sm text-muted-foreground">
-        No computer serves a folder yet. On the computer, run a runner that works on it directly and
-        gives the folders it may use: AVEN_DIRS=/path/to/code (or aven runner install --dir
-        /path/to/code).
-      </p>
+      <div className="flex flex-col gap-2.5 rounded-xl border border-dashed bg-muted/25 p-4 text-sm">
+        <div className="flex items-center gap-2 font-medium text-foreground">
+          <IconDeviceDesktop className="size-4 text-muted-foreground" />
+          <span>No computer serves a folder yet</span>
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Run a runner directly on your machine and expose the folders it may use:
+        </p>
+        <code className="rounded-md bg-background/80 px-2.5 py-1.5 font-mono text-xs text-foreground ring-1 ring-border/60">
+          aven runner install --dir /path/to/code
+        </code>
+      </div>
     );
 
   return (
@@ -108,7 +162,7 @@ function ProjectSource({ state }: { state: ReturnType<typeof useAddProject> }) {
           onChange={state.setPath}
         />
       ) : (
-        <div className="flex flex-col gap-1 text-sm">
+        <div className="flex flex-col gap-1.5 text-sm">
           <Label htmlFor="project-repository">Repository</Label>
           <Input
             id="project-repository"
@@ -117,9 +171,8 @@ function ProjectSource({ state }: { state: ReturnType<typeof useAddProject> }) {
             placeholder="owner/name or https://github.com/owner/name"
             autoFocus
           />
-          <span className="text-xs text-muted-foreground">
-            The computer clones it once into its own repos folder and keeps it up to date. It uses
-            the git sign-in that computer already has, so a private repository needs that.
+          <span className="text-xs leading-relaxed text-muted-foreground">
+            Cloned once into the computer&apos;s repos folder using its existing Git sign-in.
           </span>
         </div>
       )}
