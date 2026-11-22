@@ -15,14 +15,29 @@ import { withBackground } from "./background-command";
 
 const EXEC_DEFAULT_TIMEOUT_MS = 2 * 60_000;
 const READ_FILE_MAX_LINES = 10_000;
+const HOST_SANDBOX_TOOL_NAMES = [
+  "exec_command",
+  "read_file",
+  "write_file",
+  "list_files",
+  "start_process",
+  "list_processes",
+  "read_process_logs",
+  "stop_process",
+  "wait_for_port",
+] as const;
 
 export function sandboxTools(
   sandbox: SandboxRuntime,
   thread: { id: string; artifacts: Pick<ArtifactStore, "save"> },
 ): readonly AnyTool[] {
+  const tools =
+    sandbox.provider === "directory" || sandbox.provider === "machine"
+      ? HOST_SANDBOX_TOOL_NAMES
+      : SANDBOX_TOOL_NAMES;
   const own = createSandboxTools({
     sandbox,
-    tools: SANDBOX_TOOL_NAMES,
+    tools,
     exec: { defaultTimeoutMs: EXEC_DEFAULT_TIMEOUT_MS },
     readFile: { maxLineCount: READ_FILE_MAX_LINES },
   });
