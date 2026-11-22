@@ -74,7 +74,7 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <p className="flex max-w-full min-w-0 items-center gap-1.5 rounded-full border bg-foreground/10 py-1 pr-3 pl-2.5 text-xs [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
+    <p className="flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-full border bg-foreground/10 pr-3 pl-2.5 text-xs [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
       {icon}
       <span className="min-w-0 truncate">{children}</span>
       {action}
