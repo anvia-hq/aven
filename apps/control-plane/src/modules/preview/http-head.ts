@@ -124,13 +124,22 @@ export function requestForPort(head: Head, port: number) {
   return { head: { start: head.start, headers }, upgrade };
 }
 
-function keptCookie(value: string) {
+function keptCookie(value: string, embed = false) {
   const [pair = "", ...attributes] = value.split(";");
   const name = pair.slice(0, pair.indexOf("=")).trim();
 
   if (PREVIEW_COOKIES.includes(name)) return null;
 
-  const kept = attributes.filter((attribute) => !/^\s*domain\s*=/i.test(attribute));
+  const kept = attributes.filter((attribute) => {
+    if (/^\s*domain\s*=/i.test(attribute)) return false;
+
+    if (embed && /^\s*(sameSite\s*=|secure\s*$|partitioned\s*$)/i.test(attribute)) return false;
+
+    return true;
+  });
+
+  if (embed) kept.push(" SameSite=None", " Secure", " Partitioned");
+
   return [pair.trimStart(), ...kept].join(";");
 }
 
@@ -155,7 +164,11 @@ function withoutFrameAncestors(policy: string) {
     .trim();
 }
 
-export function responseForBrowser(head: Head, port: number): Head {
+export function responseForBrowser(
+  head: Head,
+  port: number,
+  options: { embed?: boolean } = {},
+): Head {
   const switching = head.start.split(" ")[1] === "101";
   const headers: Header[] = [];
 
@@ -171,7 +184,7 @@ export function responseForBrowser(head: Head, port: number): Head {
     const [name, value] = header;
 
     if (named(header, "set-cookie")) {
-      const cookie = keptCookie(value);
+      const cookie = keptCookie(value, options.embed);
 
       if (cookie) headers.push([name, cookie]);
     } else if (named(header, "location")) headers.push([name, relative(value, port)]);

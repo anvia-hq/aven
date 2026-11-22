@@ -54,6 +54,7 @@ class Relay {
   #queuedBytes = 0;
   #handle: ViewerHandle | undefined;
   #claims: PreviewClaims | undefined;
+  #embed = false;
   #routed = false;
   #answered = false;
   #finishing = false;
@@ -151,6 +152,8 @@ class Relay {
       this.#reply(401, "Open the preview again from the thread: this preview's session is gone.");
       return;
     }
+
+    this.#embed = !page;
 
     if (headerOf(head, "sec-fetch-site")?.toLowerCase() === "same-site") {
       this.#reply(403, "A page of another preview cannot reach this one");
@@ -252,7 +255,9 @@ class Relay {
       return;
     }
 
-    this.#send(text(serializeHead(responseForBrowser(head, this.#claims.port))));
+    this.#send(
+      text(serializeHead(responseForBrowser(head, this.#claims.port, { embed: this.#embed }))),
+    );
     const status = head.start.split(" ")[1] ?? "";
     const interim = status.startsWith("1") && status !== "101";
 

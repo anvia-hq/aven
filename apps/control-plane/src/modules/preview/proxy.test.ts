@@ -297,4 +297,30 @@ describe("a page", () => {
     );
     expect(answer).toStartWith("HTTP/1.1 502");
   });
+
+  test("upgrades app session cookies for embedded previews while leaving top-level tabs intact", async () => {
+    const { port } = setup((_app, _text, sink) => {
+      sink.data(
+        encoder.encode(
+          "HTTP/1.1 200 OK\r\nSet-Cookie: session=tok; Path=/; HttpOnly; SameSite=Lax\r\nContent-Length: 2\r\n\r\nok",
+        ),
+      );
+      sink.closed("done");
+    });
+
+    const embedded = await raw(
+      port,
+      `GET /login HTTP/1.1\r\nHost: ${host()}\r\nCookie: ${EMBED_COOKIE}=${embedPage()}\r\n\r\n`,
+    );
+    expect(embedded).toContain(
+      "Set-Cookie: session=tok; Path=/; HttpOnly; SameSite=None; Secure; Partitioned\r\n",
+    );
+
+    const topLevel = await raw(
+      port,
+      `GET /login HTTP/1.1\r\nHost: ${host()}\r\nCookie: ${PAGE_COOKIE}=${page()}\r\n\r\n`,
+    );
+    expect(topLevel).toContain("Set-Cookie: session=tok; Path=/; HttpOnly; SameSite=Lax\r\n");
+    expect(topLevel).not.toContain("Partitioned");
+  });
 });
