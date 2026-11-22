@@ -1,11 +1,13 @@
 import { generateKeyPairSync } from "node:crypto";
-import { mkdtempSync } from "node:fs";
+import { existsSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { defineConfig } from "@playwright/test";
 
 import { BOT_RUNNER_HEALTH_PORT, BOT_RUNNER_ID } from "./e2e/bot-runner-config";
+
+if (existsSync(".env")) process.loadEnvFile(".env");
 
 const portFromEnv = (value: string | undefined, fallback: number) => {
   const port = Number(value);
