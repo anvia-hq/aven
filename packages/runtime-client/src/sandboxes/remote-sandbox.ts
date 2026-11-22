@@ -2,10 +2,12 @@ import type {
   SandboxExecOptions,
   SandboxExecResult,
   SandboxFileEntry,
+  SandboxPortStatus,
   SandboxProcessInfo,
   SandboxProcessLogs,
   SandboxRuntime,
   SandboxTextFilePage,
+  SandboxWaitForPortOptions,
 } from "@anvia/sandbox";
 
 import type { MachineCall } from "../types";
@@ -113,7 +115,27 @@ export class RemoteSandbox implements SandboxRuntime {
     return (await this.call("stopProcess", { processId })) as SandboxProcessInfo;
   }
 
-  async waitForPort(): Promise<never> {
-    throw new Error("waitForPort is not supported on a machine reached from elsewhere");
+  async waitForPort({
+    abortSignal,
+    ...options
+  }: SandboxWaitForPortOptions): Promise<SandboxPortStatus> {
+    if (!abortSignal) return (await this.call("waitForPort", options)) as SandboxPortStatus;
+
+    if (abortSignal.aborted) {
+      throw abortSignal.reason ?? new DOMException("Aborted", "AbortError");
+    }
+
+    let onAbort: (() => void) | undefined;
+    try {
+      return await Promise.race([
+        this.call("waitForPort", options) as Promise<SandboxPortStatus>,
+        new Promise<never>((_, reject) => {
+          onAbort = () => reject(abortSignal.reason ?? new DOMException("Aborted", "AbortError"));
+          abortSignal.addEventListener("abort", onAbort, { once: true });
+        }),
+      ]);
+    } finally {
+      if (onAbort) abortSignal.removeEventListener("abort", onAbort);
+    }
   }
 }

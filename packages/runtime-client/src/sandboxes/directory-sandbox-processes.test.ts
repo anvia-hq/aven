@@ -133,3 +133,67 @@ test("prunes oldest exited processes beyond the cap while keeping running proces
   expect(remaining.some((proc) => proc.id === exitedIds[0])).toBe(false);
   expect(remaining.some((proc) => proc.id === exitedIds.at(-1))).toBe(true);
 });
+
+test("waitForPort resolves once a local TCP listener accepts connections", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "aven-port-"));
+  folders.push(folder);
+  const sandbox = new DirectorySandbox("thread-1", folder);
+  sandboxes.push(sandbox);
+
+  const server = Bun.listen({
+    hostname: "127.0.0.1",
+    port: 0,
+    socket: {
+      data() {},
+    },
+  });
+
+  try {
+    const status = await sandbox.waitForPort({
+      containerPort: server.port,
+      timeoutMs: 2000,
+      intervalMs: 20,
+    });
+    expect(status).toEqual({
+      containerPort: server.port,
+      protocol: "tcp",
+      host: "127.0.0.1",
+      hostPort: server.port,
+    });
+  } finally {
+    server.stop(true);
+  }
+});
+
+test("waitForPort times out when nothing is listening and aborts on signal", async () => {
+  const folder = await mkdtemp(join(tmpdir(), "aven-port-timeout-"));
+  folders.push(folder);
+  const sandbox = new DirectorySandbox("thread-1", folder);
+  sandboxes.push(sandbox);
+
+  const probe = Bun.listen({
+    hostname: "127.0.0.1",
+    port: 0,
+    socket: {
+      data() {},
+    },
+  });
+  const unusedPort = probe.port;
+  probe.stop(true);
+
+  await expect(
+    sandbox.waitForPort({ containerPort: unusedPort, timeoutMs: 80, intervalMs: 20 }),
+  ).rejects.toThrow(`Timed out waiting for port ${unusedPort}`);
+
+  const controller = new AbortController();
+  setTimeout(() => controller.abort(new Error("cancelled")), 30);
+
+  await expect(
+    sandbox.waitForPort({
+      containerPort: unusedPort,
+      timeoutMs: 2000,
+      intervalMs: 20,
+      abortSignal: controller.signal,
+    }),
+  ).rejects.toThrow("cancelled");
+});
