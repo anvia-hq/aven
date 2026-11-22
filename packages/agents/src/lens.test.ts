@@ -26,6 +26,13 @@ describe("lensObservability", () => {
     expect(typeof observability?.observers.lens?.startRun).toBe("function");
   });
 
+  test("enables full capture mode with input and output redaction", () => {
+    const observability = lensObservability({ ...lens, captureMode: "full" });
+
+    expect(observability?.primaryTrace).toBe("lens");
+    expect(typeof observability?.observers.lens?.startRun).toBe("function");
+  });
+
   test("an address Lens refuses leaves the run untraced instead of failing it", () => {
     expect(lensObservability({ ...lens, baseUrl: "nope" })).toBeUndefined();
   });
