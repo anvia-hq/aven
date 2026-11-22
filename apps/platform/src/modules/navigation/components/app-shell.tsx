@@ -1,4 +1,4 @@
-import { IconEdit, IconFolder, IconSearch, IconSettings } from "@tabler/icons-react";
+import { IconEdit, IconFolder, IconGitFork, IconSearch, IconSettings } from "@tabler/icons-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 
@@ -42,7 +42,7 @@ export function AppShell({ user }: Props) {
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const drawsOwnCards = /^\/(threads\/[^/]+|bot)(\/|$)/.test(pathname);
+  const drawsOwnCards = /^\/(threads\/[^/]+|bot|git)(\/|$)/.test(pathname);
 
   return (
     <SidebarProvider
@@ -71,6 +71,9 @@ export function AppShell({ user }: Props) {
           <div className="mt-[0.45rem] flex flex-col items-center gap-[0.45rem]">
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
               <IconFolder className="size-[17px]" />
+            </RailLink>
+            <RailLink to="/git" label="Git Center" active={pathname.startsWith("/git")}>
+              <IconGitFork className="size-[17px]" />
             </RailLink>
             <CockpitRailLink active={pathname.startsWith("/cockpit")} />
             <BotRailLink active={pathname.startsWith("/bot")} />
