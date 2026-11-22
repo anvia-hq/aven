@@ -131,4 +131,31 @@ describe("a port of a runner", () => {
     tunnels.close(viewerId);
     expect(tunnels.has(viewerId)).toBe(false);
   });
+
+  test("reaches a port listening only on IPv6 loopback", async () => {
+    const server = Bun.listen<undefined>({
+      hostname: "::1",
+      port: 0,
+      socket: {
+        open(socket) {
+          socket.write("hello from ipv6\n");
+        },
+        data(socket, bytes) {
+          socket.write(bytes);
+        },
+      },
+    });
+    stops.push(() => server.stop(true));
+
+    const sent: Sent = { messages: [], frames: [] };
+    const tunnels = new PortTunnels(link(sent));
+    stops.push(() => tunnels.closeAll());
+
+    await tunnels.open(viewerId, server.port);
+    await waitFor(() => sent.messages.find((message) => message.type === "port.opened"));
+    await waitFor(() => (received(sent).includes("hello from ipv6") ? true : undefined));
+
+    tunnels.write(viewerId, new TextEncoder().encode("pong"));
+    await waitFor(() => (received(sent).includes("pong") ? true : undefined));
+  });
 });

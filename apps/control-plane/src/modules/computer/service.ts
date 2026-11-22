@@ -6,6 +6,11 @@ import type { Refusal, Runner } from "../runtimes/types";
 
 export const WAKE_TIMEOUT_MS = 120_000;
 
+const statusRefused: Refusal = {
+  logged: "The status of a computer was refused:",
+  message: "The computer status could not be checked",
+};
+
 const wakeRefused: Refusal = {
   logged: "The wake-up of a computer was refused:",
   message: "The computer could not be started",
@@ -20,7 +25,13 @@ const wakeRefused: Refusal = {
 export function createComputerService(runner: Runner) {
   return {
     async status(scope: string, threadId: string): Promise<ComputerStatus> {
-      const info = await runner.ask(scope, "computer.status", { threadId }, computerInfo);
+      const info = await runner.ask(
+        scope,
+        "computer.status",
+        { threadId },
+        computerInfo,
+        statusRefused,
+      );
       return info ? { available: true, state: info.state } : { available: false };
     },
 

@@ -12,8 +12,47 @@ type Tunnel = {
   closing: boolean;
 };
 
-const LOOPBACK = "127.0.0.1";
+const LOOPBACK_HOSTS = ["127.0.0.1", "::1"] as const;
 const MAX_UNWRITTEN_BYTES = 8 * 1024 * 1024;
+
+async function connectLoopback(
+  port: number,
+  handlers: {
+    data: (socket: Socket<Tunnel>, bytes: Uint8Array) => void;
+    drain: () => void;
+    close: () => void;
+    error: (error: Error) => void;
+  },
+): Promise<Socket<Tunnel>> {
+  let lastError: unknown;
+
+  for (const hostname of LOOPBACK_HOSTS) {
+    let connected = false;
+    try {
+      return await Bun.connect<Tunnel>({
+        hostname,
+        port,
+        socket: {
+          open() {
+            connected = true;
+          },
+          data: (socket, bytes) => handlers.data(socket, bytes),
+          drain: () => handlers.drain(),
+          close: () => {
+            if (connected) handlers.close();
+          },
+          error: (_socket, error) => {
+            if (connected) handlers.error(error);
+          },
+        },
+      });
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  throw lastError;
+}
 
 export class PortTunnels {
   #tunnels = new Map<string, Tunnel>();
@@ -43,15 +82,11 @@ export class PortTunnels {
     this.#tunnels.set(viewerId, tunnel);
 
     try {
-      tunnel.socket = await Bun.connect<Tunnel>({
-        hostname: LOOPBACK,
-        port,
-        socket: {
-          data: (_socket, bytes) => this.#fromPort(viewerId, tunnel, bytes),
-          drain: () => this.#flush(tunnel),
-          close: () => this.#end(viewerId, tunnel, "The port closed the connection"),
-          error: (_socket, error) => this.#end(viewerId, tunnel, errorMessage(error)),
-        },
+      tunnel.socket = await connectLoopback(port, {
+        data: (_socket, bytes) => this.#fromPort(viewerId, tunnel, bytes),
+        drain: () => this.#flush(tunnel),
+        close: () => this.#end(viewerId, tunnel, "The port closed the connection"),
+        error: (error) => this.#end(viewerId, tunnel, errorMessage(error)),
       });
     } catch (error) {
       this.#tunnels.delete(viewerId);

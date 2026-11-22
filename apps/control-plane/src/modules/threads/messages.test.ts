@@ -58,7 +58,7 @@ run("a person driving an archived thread (postgres, decision 0114)", async () =>
   const PNG =
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
 
-  test("a picture sent while a Claude agent works is handed to the run, and refused for a native one", async () => {
+  test("a picture sent while an agent works is handed to the run on claude, codex, and native backends", async () => {
     const handed: { prompt: string; attachments?: { name: string }[] }[] = [];
     const files: number[] = [];
     const taking = createThreadMessages({
@@ -83,12 +83,11 @@ run("a person driving an archived thread (postgres, decision 0114)", async () =>
     const body = { prompt: "see this", attachments: [{ name: "shot.png", data: PNG }] };
     expect((await taking.send(orgA, userId, claude.id, body)).steered).toBe(true);
     expect((await taking.send(orgA, userId, codex.id, body)).steered).toBe(true);
-    expect(files).toEqual([1, 1]);
+    expect((await taking.send(orgA, userId, native.id, body)).steered).toBe(true);
+    expect(files).toEqual([1, 1, 1]);
     expect(handed[0]?.attachments?.[0]?.name).toBe("shot.png");
-    expect(JSON.stringify(handed[0])).not.toContain(PNG);
-    await expect(taking.send(orgA, userId, native.id, body)).rejects.toThrow(
-      "Files can be sent when the agent is not working",
-    );
+    expect(handed[2]?.attachments?.[0]?.name).toBe("shot.png");
+    expect(JSON.stringify(handed)).not.toContain(PNG);
   });
 
   test("a message that is refused leaves it archived", async () => {

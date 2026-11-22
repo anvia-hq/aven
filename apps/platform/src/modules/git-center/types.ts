@@ -207,12 +207,13 @@ export type GitCenterActionResult = {
 };
 
 export type GitCenterHandoffInput =
-  | { kind: "start_from_ref"; ref: string; prompt?: string }
+  | { kind: "start_from_ref"; ref: string; prompt?: string; runtimeId?: string }
   | {
       kind: "resolve_conflicts";
       threadId?: string;
       operation: "merge" | "rebase" | "cherry-pick" | "revert";
       files: string[];
+      runtimeId?: string;
     }
   | {
       kind: "fix_ci";
@@ -220,6 +221,7 @@ export type GitCenterHandoffInput =
       branch: string;
       checkName: string;
       logSnippet?: string;
+      runtimeId?: string;
     };
 
 export type GitCenterHandoffResult = {

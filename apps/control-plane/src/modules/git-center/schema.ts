@@ -172,12 +172,14 @@ export const handoffBody = z.discriminatedUnion("kind", [
     kind: z.literal("start_from_ref"),
     ref: z.string().min(1).max(256),
     prompt: z.string().max(4000).optional(),
+    runtimeId: z.string().uuid().optional(),
   }),
   z.object({
     kind: z.literal("resolve_conflicts"),
     threadId: z.string().uuid().optional(),
     operation: z.enum(["merge", "rebase", "cherry-pick", "revert"]),
     files: z.array(z.string().min(1).max(4096)).max(200),
+    runtimeId: z.string().uuid().optional(),
   }),
   z.object({
     kind: z.literal("fix_ci"),
@@ -185,6 +187,7 @@ export const handoffBody = z.discriminatedUnion("kind", [
     branch: z.string().min(1).max(256),
     checkName: z.string().min(1).max(256),
     logSnippet: z.string().max(12_000).optional(),
+    runtimeId: z.string().uuid().optional(),
   }),
 ]);
 
