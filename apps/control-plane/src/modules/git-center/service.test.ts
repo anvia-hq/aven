@@ -2,6 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 
 import { db } from "@aven/db/client";
 import { members } from "@aven/db/schema/members";
+import { projects } from "@aven/db/schema/projects";
 import { threads } from "@aven/db/schema/threads";
 import { users } from "@aven/db/schema/users";
 import { ConflictError, ForbiddenError, NotFoundError } from "@aven/server-kit/errors";
@@ -142,5 +143,45 @@ run("gitCenterService handoff isolation (postgres)", async () => {
     expect(differentLimit).not.toBe(first);
 
     await Promise.all([first, differentLimit]);
+  });
+
+  test("starts a thread from a ref on a project without a fixed runtimeId", async () => {
+    const [repoProject] = await db
+      .insert(projects)
+      .values({
+        organizationId: orgA,
+        name: `gc-repo-${suffix}`,
+        createdBy: userId,
+        runtimeId: null,
+        directory: null,
+      })
+      .returning();
+
+    const sent: string[] = [];
+    const service = createGitCenterService(
+      { get: () => undefined },
+      { isRunning: () => false },
+      {
+        send: async (_orgId, _userId, threadId) => {
+          sent.push(threadId);
+          return { steered: false };
+        },
+      },
+    );
+
+    const auto = await service.handoff({ organizationId: orgA, userId }, repoProject!.id, {
+      kind: "start_from_ref",
+      ref: "main",
+    });
+    expect(auto.created).toBe(true);
+    expect(sent).toEqual([auto.threadId]);
+
+    const explicit = await service.handoff({ organizationId: orgA, userId }, repoProject!.id, {
+      kind: "start_from_ref",
+      ref: "main",
+      runtimeId: runner.id,
+    });
+    expect(explicit.created).toBe(true);
+    expect(sent).toEqual([auto.threadId, explicit.threadId]);
   });
 });

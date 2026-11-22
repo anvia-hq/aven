@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { GitActionPayload } from "@aven/protocol/types";
 import { toast } from "@aven/ui/toast";
 import { api, attempt, errorMessage, postJson } from "@/lib/api";
+import { useNewThreadComputer } from "@/modules/threads/hooks/use-new-thread-computer";
 
 import {
   gitFiltersByProjectAtom,
@@ -54,6 +55,7 @@ function snapshotUrl(projectId: string, filters: GitCenterFilters, page: number)
 
 export function useGitCenter(projectId: string) {
   const navigate = useNavigate();
+  const computer = useNewThreadComputer();
   const [snapshots, setSnapshots] = useAtom(gitSnapshotsAtom);
   const [targets, setTargets] = useAtom(gitTargetByProjectAtom);
   const [inspectors, setInspectors] = useAtom(gitInspectorByProjectAtom);
@@ -323,8 +325,12 @@ export function useGitCenter(projectId: string) {
     async (input: GitCenterHandoffInput) => {
       setBusyAction("handoff");
       try {
+        const runtimeId = snapshot?.project.directory
+          ? undefined
+          : (input.runtimeId ?? computer.runtimeId);
+        const body = runtimeId ? { ...input, runtimeId } : input;
         const result = await attempt("Could not hand off to agent", () =>
-          postJson<GitCenterHandoffResult>(`/git-center/projects/${projectId}/handoff`, input),
+          postJson<GitCenterHandoffResult>(`/git-center/projects/${projectId}/handoff`, body),
         );
 
         if (!result) return null;
@@ -339,7 +345,7 @@ export function useGitCenter(projectId: string) {
         setBusyAction(null);
       }
     },
-    [navigate, projectId],
+    [computer.runtimeId, navigate, projectId, snapshot?.project.directory],
   );
 
   return {

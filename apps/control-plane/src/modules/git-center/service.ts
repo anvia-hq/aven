@@ -2,6 +2,7 @@ import { db } from "@aven/db/client";
 import { githubInstallations } from "@aven/db/schema/github-installations";
 import { github, GithubApiError } from "@aven/github/client";
 import { isDriving } from "@aven/protocol/drivers";
+import { isCloudTemplate } from "@aven/sandbox/cloud-config";
 import type {
   GitActionResult,
   GitBranchInfo,
@@ -791,9 +792,27 @@ export function createGitCenterService(
           .join("\n\n");
       }
 
+      let runtimeId: string | undefined;
+
+      if (project.directory) {
+        runtimeId = project.runtimeId ?? undefined;
+      } else if (body.runtimeId) {
+        runtimeId = body.runtimeId;
+      } else if (project.runtimeId) {
+        runtimeId = project.runtimeId;
+      } else {
+        const available = await runtimesService.list(viewer.organizationId, viewer.userId);
+        const preferred =
+          available.find((runtime) => isCloudTemplate(runtime.id)) ??
+          available.find((runtime) => hub.get(runtime.id) !== undefined) ??
+          available[0];
+        runtimeId = preferred?.id;
+      }
+
       const thread = await threadsService.create(viewer.organizationId, viewer.userId, {
         projectId: project.id,
         title: title.slice(0, 120),
+        runtimeId,
       });
 
       await messages.send(viewer.organizationId, viewer.userId, thread.id, { prompt });
