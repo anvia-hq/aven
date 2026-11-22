@@ -56,7 +56,7 @@ export function toolsForRun({
   const notes = memory ? [createMemoryTool(memory)] : [];
   const reading = cockpit ? [createCockpitTool(cockpit, "read")] : [];
   const forking = forks ? createForkTools(forks) : [];
-  const saving = attended && saveEnvironment ? [createSaveEnvironmentTool(saveEnvironment)] : [];
+  const saving = saveEnvironment ? [createSaveEnvironmentTool(saveEnvironment)] : [];
   const withSubagents = [...bound, spawnAgent, ...notes, ...reading, ...forking, ...saving];
   return attended ? [...withSubagents, createDefineGoalTool(defineGoal)] : withSubagents;
 }

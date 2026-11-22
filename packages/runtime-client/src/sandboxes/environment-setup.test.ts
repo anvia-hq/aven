@@ -66,7 +66,7 @@ describe("running .aven/setup", () => {
     expect(execs[0]).toMatchObject({ command: "sh", cwd: ROOT, timeoutMs: 20 * 60_000 });
     expect(execs[0]?.args).toEqual([
       "-c",
-      'exec env -i HOME="$HOME" PATH="$PATH" CI=1 bash .aven/setup',
+      'exec env -i HOME="$HOME" PATH="$PATH" CI=1 AVEN_CLOUD=1 bash .aven/setup',
     ]);
   });
 
@@ -122,8 +122,8 @@ describe("running .aven/resume", () => {
       command: "bash",
       args: [".aven/resume"],
       cwd: ROOT,
-      env: { API_URL: "https://example.test" },
-      timeoutMs: 10_000,
+      env: { API_URL: "https://example.test", AVEN_CLOUD: "1" },
+      timeoutMs: 120_000,
     });
   });
 

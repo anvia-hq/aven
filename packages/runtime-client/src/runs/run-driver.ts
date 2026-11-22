@@ -209,7 +209,7 @@ async function saveEnvironment({
   const until = saved.expiresAt
     ? new Date(saved.expiresAt).toISOString().slice(0, 16).replace("T", " ")
     : "72 hours";
-  return `The environment is saved, and new threads of this project start from it until ${until} UTC. They still get a fresh clone and their own branch: only what .aven/setup installed carries over. Commit the .aven folder if you have not.${done}`;
+  return `The environment is saved, and new threads of this project start from it until ${until} UTC. System packages, toolchains, and home-directory caches carry over; each new thread still gets a fresh clone in its own workspace and runs .aven/resume (if present). Commit the .aven folder if you changed it.${done}`;
 }
 
 export function createRunDriver(context: DriverContext) {

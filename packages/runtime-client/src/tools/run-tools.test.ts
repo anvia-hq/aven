@@ -51,7 +51,16 @@ describe("toolsForRun", () => {
     expect(given[0]).not.toContain("cockpit");
   });
 
-  test("save_environment is only offered to an attended run the host gives it to, which is a sandbox (decision 0326)", () => {
+  test("save_environment is offered to top-level sandbox runs (including goals), never to subagents or manual runners (decision 0326)", async () => {
+    const given: string[][] = [];
+    const createSubagent: CreateSubagent = ({ tools }) => {
+      given.push(tools.map((tool) => tool.name));
+      return createCodingAgent({
+        model: scriptedModel([[text("done")]]),
+        tools,
+        questions: false,
+      }).agent;
+    };
     const base = {
       sandbox,
       thread: { id: "t1", organizationId: "o1" },
@@ -60,19 +69,25 @@ describe("toolsForRun", () => {
       attended: true,
       repoAccess: async () => ({ cloneUrl: "", defaultBranch: "main", token: "" }),
       defineGoal: () => undefined,
-      createSubagent: () => {
-        throw new Error("unused");
-      },
+      createSubagent,
       emit: () => undefined,
       saveEnvironment: async () => "saved",
     };
-    expect(toolsForRun(base).map((tool) => tool.name)).toContain("save_environment");
-    expect(toolsForRun({ ...base, attended: false }).map((tool) => tool.name)).not.toContain(
+    const tools = toolsForRun(base);
+    expect(tools.map((tool) => tool.name)).toContain("save_environment");
+    expect(toolsForRun({ ...base, attended: false }).map((tool) => tool.name)).toContain(
       "save_environment",
     );
     expect(
       toolsForRun({ ...base, saveEnvironment: undefined }).map((tool) => tool.name),
     ).not.toContain("save_environment");
+
+    const spawn = tools.find((tool) => tool.name === "spawn_agent") as AnyTool & {
+      call(input: unknown): Promise<unknown>;
+    };
+    await spawn.call({ tasks: [{ description: "task", prompt: "look", type: "general" }] });
+    expect(given).toHaveLength(1);
+    expect(given[0]).not.toContain("save_environment");
   });
 
   test("the fork tools are the run's agent's alone, and only when the host gives them (decision 0135)", async () => {
