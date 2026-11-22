@@ -34,3 +34,11 @@ The person's own computer is not in this: it has their files, their tools and th
 ## Addendum: a saved environment the provider no longer has
 
 The provider can lose a saved snapshot while the project's row still says `ready` (it was deleted on the provider's side, 2026-11-17). Creating a sandbox from it then answered 404 and the thread could not start at all. The boat and spaces wakes now create the sandbox from the image when creating from the environment answers "not found" (or, on boat, "expired"), as this decision always said a missing environment would. The journal cleanup of 0330 is skipped for it, since nothing was restored. The row is left as it is: it expires by itself, or is replaced by the next `save_environment`.
+
+## Addendum: goals, `AVEN_CLOUD=1`, and `.aven/resume` hydration
+
+Three operational fixes aligned the runtime with `/setup-env` (2026-11-22):
+
+- **Top-level goals keep `save_environment`.** `define_goal` runs with `attended: false` even though the user started it, and system instructions explicitly recommend goals for setting up an environment. `save_environment` is now offered whenever the run is on a cloud sandbox (including top-level goals), while still excluded from subagents and manual runners.
+- **`AVEN_CLOUD=1` is passed to `.aven/setup` and `.aven/resume`.** `runEnvironmentSetup` and `runEnvironmentResume` export `AVEN_CLOUD=1` so scripts have a reliable guard for cloud-only system installs instead of guessing with `sudo -n true`.
+- **`.aven/resume` gets 2 minutes and logs failures.** Because each thread clones into a fresh workspace directory, workspace-local files (`node_modules`, `.venv`, `.env`) do not carry over from the snapshot even when home caches do. `.aven/resume` hydrates those per thread from the warm caches and starts services, so its timeout is raised from 10 seconds to 120 seconds and non-zero exits log their output tail instead of failing silently.

@@ -5,15 +5,20 @@ import type { SandboxRuntime } from "@anvia/sandbox";
 import type { EnvironmentSetup } from "../types";
 
 const SETUP_TIMEOUT_MS = 20 * 60_000;
-const RESUME_TIMEOUT_MS = 10_000;
+const RESUME_TIMEOUT_MS = 120_000;
 const OUTPUT_TAIL = 2_000;
 
 const SETUP = ".aven/setup";
+const RESUME = ".aven/resume";
 
 const MINUTES = SETUP_TIMEOUT_MS / 60_000;
 
 function tail(bytes: Uint8Array) {
   return Buffer.from(bytes).toString("utf8").trim().slice(-OUTPUT_TAIL);
+}
+
+function combinedOutput(stdout: Uint8Array, stderr: Uint8Array) {
+  return [tail(stdout), tail(stderr)].filter((text) => text.length > 0).join("\n");
 }
 
 export async function runEnvironmentSetup({
@@ -34,14 +39,12 @@ export async function runEnvironmentSetup({
   const digest = createHash("sha256").update(content).digest("hex");
   const result = await runtime.exec({
     command: "sh",
-    args: ["-c", `exec env -i HOME="$HOME" PATH="$PATH" CI=1 bash ${SETUP}`],
+    args: ["-c", `exec env -i HOME="$HOME" PATH="$PATH" CI=1 AVEN_CLOUD=1 bash ${SETUP}`],
     cwd: root,
     timeoutMs: SETUP_TIMEOUT_MS,
     abortSignal: signal,
   });
-  const stdout = tail(result.stdout);
-  const stderr = tail(result.stderr);
-  const output = [stdout, stderr].filter((text) => text.length > 0).join("\n");
+  const output = combinedOutput(result.stdout, result.stderr);
 
   if (result.status !== "exited")
     throw new Error(`${SETUP} did not finish within ${MINUTES} minutes`, { cause: output });
@@ -67,11 +70,19 @@ export async function runEnvironmentResume({
 
   const result = await runtime.exec({
     command: "bash",
-    args: [".aven/resume"],
+    args: [RESUME],
     cwd: root,
-    env,
+    env: { ...env, AVEN_CLOUD: "1" },
     timeoutMs: RESUME_TIMEOUT_MS,
   });
 
-  return result.status === "exited" && result.exitCode === 0;
+  if (result.status === "exited" && result.exitCode === 0) return true;
+
+  const output = combinedOutput(result.stdout, result.stderr);
+  const reason =
+    result.status === "exited"
+      ? `exited with ${result.exitCode}`
+      : `did not finish within ${RESUME_TIMEOUT_MS / 1000}s`;
+  console.warn(`${RESUME} ${reason}${output ? `:\n${output}` : ""}`);
+  return false;
 }
