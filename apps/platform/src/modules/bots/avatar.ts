@@ -1,10 +1,26 @@
 import { isLightTint } from "@/lib/bubble-tint";
 import { SHAPES } from "./avatar-shapes";
-import type { Avatar, AvatarSetting } from "./types";
+import type { Avatar, AvatarAccessory, AvatarSetting } from "./types";
 
 export { isLightTint };
 
 export const families: readonly string[] = SHAPES.map((shape) => shape.name);
+
+export const accessories: readonly AvatarAccessory[] = [
+  "none",
+  "beanie",
+  "cap",
+  "tophat",
+  "glasses",
+  "shades",
+  "headphones",
+  "sprout",
+  "halo",
+  "bowtie",
+];
+
+export const isAccessory = (value: unknown): value is AvatarAccessory =>
+  typeof value === "string" && (accessories as readonly string[]).includes(value);
 
 export const colors: readonly string[] = [
   "#ff6eb4",
@@ -54,7 +70,9 @@ export function avatarFor(id: string, setting?: AvatarSetting): Avatar {
   const randomColor = pick(colors);
   const delay = Math.floor(next() * 4000);
   const family = families.find((candidate) => candidate === setting?.family) ?? randomFamily;
-  return { family, color: setting?.color ?? randomColor, delay };
+  const accessory =
+    setting?.accessory && isAccessory(setting.accessory) ? setting.accessory : "none";
+  return { family, color: setting?.color ?? randomColor, accessory, delay };
 }
 
 export const randomSeed = () =>
@@ -71,7 +89,7 @@ export function parseAvatarSetting(avatar: string): AvatarSetting | null {
 
     if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
 
-    const { seed, family, color, ...rest } = value as Record<string, unknown>;
+    const { seed, family, color, accessory, ...rest } = value as Record<string, unknown>;
 
     if (Object.keys(rest).length > 0) return null;
 
@@ -93,6 +111,12 @@ export function parseAvatarSetting(avatar: string): AvatarSetting | null {
       if (typeof color !== "string" || !COLOR.test(color)) return null;
 
       setting.color = color;
+    }
+
+    if (accessory !== undefined) {
+      if (!isAccessory(accessory)) return null;
+
+      setting.accessory = accessory;
     }
 
     return setting;

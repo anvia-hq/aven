@@ -91,14 +91,21 @@ export const SHAPES: readonly FamilyShape[] = [
     name: "circle",
     field: puffed(1.5, (x, y) => length(x, y)),
     eye: { x: 0, y: 0.1, gap: 0.5, scale: 1 },
+    mouth: { x: 0, y: -0.34, scale: 1 },
   },
-  { name: "flower", field: flower, eye: { x: 0, y: 0.22, gap: 0.5, scale: 1 } },
+  {
+    name: "flower",
+    field: flower,
+    eye: { x: 0, y: 0.22, gap: 0.5, scale: 1 },
+    mouth: { x: 0, y: -0.22, scale: 1 },
+  },
   {
     name: "bean",
     field: puffed(0.95, (x, y) =>
       smoothMin(segment(x, y, -0.45, 0.5, 0.45, 0.5), segment(x, y, -0.45, -0.5, 0.45, -0.5), 0.35),
     ),
     eye: { x: 0, y: 0.05, gap: 0.55, scale: 1 },
+    mouth: { x: 0, y: -0.38, scale: 0.95 },
   },
   {
     name: "stack",
@@ -110,6 +117,7 @@ export const SHAPES: readonly FamilyShape[] = [
       ),
     ),
     eye: { x: 0, y: 0, gap: 0.55, scale: 0.72 },
+    mouth: { x: 0, y: -0.36, scale: 0.8 },
   },
   {
     name: "crown",
@@ -122,26 +130,31 @@ export const SHAPES: readonly FamilyShape[] = [
       return smoothMin(box(x, y + 0.35, 0.7, 0.35), bumps, 0.3);
     }),
     eye: { x: 0, y: -0.25, gap: 0.5, scale: 0.95 },
+    mouth: { x: 0, y: -0.62, scale: 0.9 },
   },
   {
     name: "arch",
     field: puffed(0.9, (x, y) => Math.min(box(x, y + 0.5, 0.4, 0.5), length(x, y) - 0.4)),
     eye: { x: 0, y: -0.15, gap: 0.5, scale: 1 },
+    mouth: { x: 0, y: -0.56, scale: 0.95 },
   },
   {
     name: "hexagon",
     field: puffed(0.9, (x, y) => hexagon(x, y, 0.5)),
     eye: { x: 0, y: 0, gap: 0.52, scale: 1 },
+    mouth: { x: 0, y: -0.42, scale: 0.95 },
   },
   {
     name: "triangle",
     field: puffed(0.8, (x, y) => triangle(x, y, 0.62)),
     eye: { x: 0, y: -0.2, gap: 0.42, scale: 0.85 },
+    mouth: { x: 0, y: -0.56, scale: 0.85 },
   },
   {
     name: "square",
     field: puffed(0.95, (x, y) => box(x, y, 0.5, 0.5)),
     eye: { x: 0, y: 0, gap: 0.55, scale: 1 },
+    mouth: { x: 0, y: -0.44, scale: 0.95 },
   },
   {
     name: "quarter",
@@ -149,16 +162,19 @@ export const SHAPES: readonly FamilyShape[] = [
       smoothMax(length(x - 0.34, y + 0.34) - 0.8, smoothMax(x - 0.34, -0.34 - y, 0.5), 0.5),
     ),
     eye: { x: -0.12, y: 0.12, gap: 0.5, scale: 1 },
+    mouth: { x: -0.12, y: -0.32, scale: 0.95 },
   },
   {
     name: "capsule",
     field: puffed(0.95, (x, y) => segment(x, y, -0.7, 0, 0.7, 0)),
     eye: { x: 0, y: 0, gap: 0.6, scale: 0.92 },
+    mouth: { x: 0, y: -0.36, scale: 0.9 },
   },
   {
     name: "diamond",
     field: puffed(0.8, (x, y) => rhombus(x, y, 0.8, 0.8)),
     eye: { x: 0, y: -0.02, gap: 0.42, scale: 0.85 },
+    mouth: { x: 0, y: -0.44, scale: 0.82 },
   },
 ];
 

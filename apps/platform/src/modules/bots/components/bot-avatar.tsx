@@ -30,6 +30,7 @@ export function BotAvatar({
   useBotAvatar(canvas, {
     family: look.family,
     color: look.color,
+    accessory: look.accessory,
     mood,
     delayMs: delayMs ?? look.delay,
     follow,
@@ -48,6 +49,7 @@ export function BotAvatar({
           aria-hidden="true"
           data-family={look.family}
           data-color={look.color}
+          data-accessory={look.accessory}
           data-mood={mood}
           className="size-full!"
         />

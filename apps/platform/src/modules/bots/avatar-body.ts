@@ -1,7 +1,7 @@
 import { BufferAttribute, BufferGeometry, Color, SphereGeometry } from "three";
 
 import { DEPTH, frontDepth, outward, reach } from "./avatar-shapes";
-import type { BodyBase, EyeSpot, FamilyShape } from "./types";
+import type { BodyBase, EyeSpot, FamilyShape, SurfaceSpot } from "./types";
 
 const BLUSH = new Color("#ff4fa6");
 const WHITE = new Color("#ffffff");
@@ -32,6 +32,21 @@ function eyesOf(shape: FamilyShape): EyeSpot[] {
   });
 }
 
+function spotAt(
+  shape: FamilyShape,
+  x: number,
+  y: number,
+  scale: number,
+  inset: number,
+): SurfaceSpot {
+  const depth = frontDepth(shape.field, x, y);
+  return {
+    position: { x, y, z: depth * DEPTH - inset },
+    normal: outward(shape.field, x, y, depth),
+    scale,
+  };
+}
+
 function build(shape: FamilyShape): BodyBase {
   const sphere = new SphereGeometry(1, 96, 64);
   const position = sphere.getAttribute("position");
@@ -59,7 +74,24 @@ function build(shape: FamilyShape): BodyBase {
     maxY = Math.max(maxY, y);
   }
 
-  return { geometry: sphere, minX, maxX, minY, maxY, eyes: eyesOf(shape) };
+  const topY = reach(shape.field, 0, 1, 0);
+  const mouth = spotAt(shape, shape.mouth.x, shape.mouth.y, shape.mouth.scale, 0.015);
+  const chinY = Math.max(minY + 0.25, shape.mouth.y - 0.36);
+  const chin = spotAt(shape, shape.mouth.x, chinY, shape.mouth.scale, 0);
+
+  return {
+    geometry: sphere,
+    minX,
+    maxX,
+    minY,
+    maxY,
+    eyes: eyesOf(shape),
+    mouth,
+    top: { x: 0, y: topY, z: 0 },
+    left: { x: minX, y: shape.eye.y, z: 0 },
+    right: { x: maxX, y: shape.eye.y, z: 0 },
+    chin,
+  };
 }
 
 export function bodyOf(shape: FamilyShape) {

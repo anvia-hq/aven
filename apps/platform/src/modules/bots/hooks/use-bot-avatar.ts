@@ -6,7 +6,7 @@ import type { AvatarHandle, AvatarLook } from "../types";
 export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: AvatarLook) {
   const handle = useRef<AvatarHandle | null>(null);
   const mood = useRef(look.mood);
-  const { family, color, delayMs, follow, steady } = look;
+  const { family, color, accessory = "none", delayMs, follow, steady } = look;
 
   useEffect(() => {
     const element = canvas.current;
@@ -22,6 +22,7 @@ export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: 
       handle.current = mountAvatar(element, {
         family,
         color,
+        accessory,
         delayMs,
         mood: mood.current,
         follow,
@@ -34,7 +35,7 @@ export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: 
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [canvas, family, color, delayMs, follow, steady]);
+  }, [canvas, family, color, accessory, delayMs, follow, steady]);
 
   useEffect(() => {
     mood.current = look.mood;

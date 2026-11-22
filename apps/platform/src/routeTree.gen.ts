@@ -16,6 +16,7 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
 import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
+import { Route as AuthedBotAvatarsRouteImport } from './routes/_authed/bot/avatars'
 import { Route as AuthedCockpitIndexRouteImport } from './routes/_authed/cockpit/index'
 import { Route as AuthedCockpitInboxRouteImport } from './routes/_authed/cockpit/inbox'
 import { Route as AuthedCockpitNotesRouteImport } from './routes/_authed/cockpit/notes'
@@ -81,6 +82,11 @@ const AuthedBotIndexRoute = AuthedBotIndexRouteImport.update({
 const AuthedBotBotIdRoute = AuthedBotBotIdRouteImport.update({
   id: '/bot/$botId',
   path: '/bot/$botId',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedBotAvatarsRoute = AuthedBotAvatarsRouteImport.update({
+  id: '/bot/avatars',
+  path: '/bot/avatars',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedCockpitIndexRoute = AuthedCockpitIndexRouteImport.update({
@@ -249,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/bot/$botId': typeof AuthedBotBotIdRoute
+  '/bot/avatars': typeof AuthedBotAvatarsRoute
   '/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
@@ -288,6 +295,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/bot/$botId': typeof AuthedBotBotIdRoute
+  '/bot/avatars': typeof AuthedBotAvatarsRoute
   '/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/cockpit/tags': typeof AuthedCockpitTagsRoute
@@ -329,6 +337,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_authed/bot/$botId': typeof AuthedBotBotIdRoute
+  '/_authed/bot/avatars': typeof AuthedBotAvatarsRoute
   '/_authed/cockpit/inbox': typeof AuthedCockpitInboxRoute
   '/_authed/cockpit/notes': typeof AuthedCockpitNotesRoute
   '/_authed/cockpit/tags': typeof AuthedCockpitTagsRoute
@@ -370,6 +379,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/accept-invitation/$invitationId'
     | '/bot/$botId'
+    | '/bot/avatars'
     | '/cockpit/inbox'
     | '/cockpit/notes'
     | '/cockpit/tags'
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/accept-invitation/$invitationId'
     | '/bot/$botId'
+    | '/bot/avatars'
     | '/cockpit/inbox'
     | '/cockpit/notes'
     | '/cockpit/tags'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/accept-invitation/$invitationId'
     | '/_authed/bot/$botId'
+    | '/_authed/bot/avatars'
     | '/_authed/cockpit/inbox'
     | '/_authed/cockpit/notes'
     | '/_authed/cockpit/tags'
@@ -540,6 +552,13 @@ declare module '@tanstack/react-router' {
       path: '/bot/$botId'
       fullPath: '/bot/$botId'
       preLoaderRoute: typeof AuthedBotBotIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/bot/avatars': {
+      id: '/_authed/bot/avatars'
+      path: '/bot/avatars'
+      fullPath: '/bot/avatars'
+      preLoaderRoute: typeof AuthedBotAvatarsRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/cockpit/': {
@@ -764,6 +783,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedBotBotIdRoute: typeof AuthedBotBotIdRoute
+  AuthedBotAvatarsRoute: typeof AuthedBotAvatarsRoute
   AuthedCockpitInboxRoute: typeof AuthedCockpitInboxRoute
   AuthedCockpitNotesRoute: typeof AuthedCockpitNotesRoute
   AuthedCockpitTagsRoute: typeof AuthedCockpitTagsRoute
@@ -800,6 +820,7 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBotBotIdRoute: AuthedBotBotIdRoute,
+  AuthedBotAvatarsRoute: AuthedBotAvatarsRoute,
   AuthedCockpitInboxRoute: AuthedCockpitInboxRoute,
   AuthedCockpitNotesRoute: AuthedCockpitNotesRoute,
   AuthedCockpitTagsRoute: AuthedCockpitTagsRoute,

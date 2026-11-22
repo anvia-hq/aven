@@ -3,7 +3,7 @@ import type { BotChatMessage, BotEvent, ParsedBotPrompt } from "./types";
 export const BOT_NAME_MAX = 60;
 export const BOT_INSTRUCTION_MAX = 4000;
 export const BOT_DESCRIPTION_MAX = 200;
-export const BOT_AVATAR_MAX = 120;
+export const BOT_AVATAR_MAX = 160;
 export const BOT_LIMIT = 20;
 export const BOT_MESSAGE_MAX = 4000;
 export const BOT_COMPACT_TOKENS = { min: 1_000, max: 2_000_000 } as const;

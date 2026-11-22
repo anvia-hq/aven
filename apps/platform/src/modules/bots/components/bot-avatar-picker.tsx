@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import { Toggle } from "@aven/ui/toggle";
 
 import {
+  accessories,
   avatarFor,
   colors,
   families,
@@ -14,10 +15,23 @@ import {
   randomSeed,
 } from "../avatar";
 import { BotAvatar } from "./bot-avatar";
-import type { AvatarSetting } from "../types";
+import type { AvatarAccessory, AvatarSetting } from "../types";
 
 const VARIANTS = 15;
 const CHOICE = "size-11 rounded-full p-0.5";
+
+const ACCESSORY_LABELS: Record<AvatarAccessory, string> = {
+  none: "None",
+  beanie: "Beanie",
+  cap: "Cap",
+  tophat: "Top hat",
+  glasses: "Glasses",
+  shades: "Shades",
+  headphones: "Headphones",
+  sprout: "Sprout",
+  halo: "Halo",
+  bowtie: "Bow tie",
+};
 
 const newSeeds = () => Array.from({ length: VARIANTS }, randomSeed);
 
@@ -71,9 +85,32 @@ export function BotAvatarPicker({ botId, value, onChange }: PickerProps) {
                   onPressedChange={() => choose({ family })}
                 >
                   <BotAvatar
-                    bot={show({ ...setting, family, color: current.color })}
+                    bot={show({
+                      ...setting,
+                      family,
+                      color: current.color,
+                      accessory: current.accessory,
+                    })}
                     className="size-full"
                   />
+                </Toggle>
+              ))}
+            </div>
+            <div
+              role="group"
+              aria-label="Accessory"
+              className="flex flex-wrap justify-center gap-1"
+            >
+              {accessories.map((accessory) => (
+                <Toggle
+                  key={accessory}
+                  aria-label={ACCESSORY_LABELS[accessory]}
+                  size="sm"
+                  className="h-7 rounded-full px-2.5 text-xs"
+                  pressed={current.accessory === accessory}
+                  onPressedChange={() => choose({ accessory })}
+                >
+                  {ACCESSORY_LABELS[accessory]}
                 </Toggle>
               ))}
             </div>
