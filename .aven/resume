@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# A new thread clones into a fresh folder: bring node_modules back from the caches .aven/setup warmed up, then start this
+# workspace's PostgreSQL and write its .env (.aven/stack). It runs automatically when a sandbox thread starts, in at most
+# two minutes, so it stays quiet and skips all of this when the workspace already has it.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+if [ ! -d node_modules ]; then
+  bun install --frozen-lockfile --offline --silent 2> /dev/null \
+    || bun install --frozen-lockfile --silent
+fi
+
+exec bash .aven/stack

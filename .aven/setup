@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+# Aven's development environment: checks the machine, installs what is missing, and installs the workspace dependencies.
+#
+# Versions, and where the repository names them: Bun 1.4.5-canary.20261120.1, the exact version CI pins
+# (.github/workflows/ci.yml, .github/actions/setup-bun-pinned): `bun run lint` is `bun lint`, and a Bun without that
+# command runs the script again until the arguments overflow, so the 1.4.4 the shipped images use (apps/*/Dockerfile)
+# cannot lint this repository. PostgreSQL 16 (docker/ci.Dockerfile installs Ubuntu 24.04's postgresql, which is what
+# ci.yml's runner has; production's deploy/docker-compose.yml ships postgres:17-alpine).
+#
+# Nothing is deleted. System packages and Bun are installed only on an Aven Cloud sandbox. The database, .env and its
+# per-workspace port come from `bash .aven/stack`, which the Set up action runs after this.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/.npm-global/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+BUN_VERSION=1.4.5-canary.20261120.1
+BUN_SHA512='WeORe6WhB0QEhPu739WCWKFswaplOIoP21RgEk3NmHC5gNOOKmHMiQZuy29bnEwtGqQ8LuBZ+SI57RHxbOhfZQ=='
+
+pg_bin() {
+  if [ -d /usr/lib/postgresql ]; then
+    ls -d /usr/lib/postgresql/*/bin 2> /dev/null | sort -V | tail -n 1
+  elif [ -x /opt/homebrew/opt/postgresql@16/bin/pg_ctl ]; then
+    echo /opt/homebrew/opt/postgresql@16/bin
+  elif [ -x /usr/local/opt/postgresql@16/bin/pg_ctl ]; then
+    echo /usr/local/opt/postgresql@16/bin
+  fi
+}
+
+missing=0
+need() {
+  if ! command -v "$1" > /dev/null; then
+    echo "missing  $1: $2"
+    missing=1
+    return
+  fi
+  local version=${3:-$1 --version}
+  echo "ok       $1 $($version 2>&1 | head -n 1)"
+}
+
+need git "install git"
+need bun "curl -fsSL https://bun.sh/install | bash"
+need openssl "install openssl" "openssl version"
+[ "$missing" -eq 0 ] || { echo "Install what is missing above, then run this again."; exit 1; }
+
+case "$(bun --version)" in
+  1.4.5* | 1.4.6*) echo "ok       bun $(bun --version) (CI pins $BUN_VERSION)" ;;
+  *)
+    if [ "${AVEN_CLOUD:-}" = "1" ] && [ "$(uname -s)-$(uname -m)" = "Linux-x86_64" ]; then
+      echo "step     bun $BUN_VERSION (the version CI pins, sandbox only)"
+      tgz=$(mktemp)
+      curl -fsSL "https://registry.npmjs.org/@oven/bun-linux-x64/-/bun-linux-x64-$BUN_VERSION.tgz" -o "$tgz"
+      if [ "$(openssl dgst -sha512 -binary "$tgz" | base64 -w0)" != "$BUN_SHA512" ]; then
+        rm -f "$tgz"
+        echo "failed   the Bun tarball does not match CI's sha512; nothing installed"
+        exit 1
+      fi
+      mkdir -p "$HOME/.bun/bin"
+      tar -xzf "$tgz" -C "$HOME/.bun/bin" --strip-components=2 package/bin/bun
+      rm -f "$tgz"
+      chmod +x "$HOME/.bun/bin/bun"
+      ln -sf "$HOME/.bun/bin/bun" "$HOME/.bun/bin/bunx"
+      hash -r
+      echo "ok       bun $(bun --version) (CI pins $BUN_VERSION)"
+    else
+      echo "missing  bun $BUN_VERSION: CI pins it and \`bun run lint\` needs it (bun 1.4.4 has no lint command). Get the"
+      echo "         tarball CI uses, for your platform: registry.npmjs.org/@oven/bun-<platform>/-/bun-<platform>-$BUN_VERSION.tgz"
+      missing=1
+    fi
+    ;;
+esac
+
+if [ -z "$(pg_bin)" ]; then
+  if [ "${AVEN_CLOUD:-}" = "1" ] && sudo -n true 2> /dev/null; then
+    echo "step     postgresql 16 (apt, sandbox only)"
+    sudo apt-get update -qq
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq postgresql
+  else
+    echo "missing  postgresql 16: brew install postgresql@16 (macOS) or sudo apt-get install postgresql"
+    missing=1
+  fi
+fi
+[ "$missing" -eq 0 ] || { echo "Install what is missing above, then run this again."; exit 1; }
+
+echo "ok       postgresql $("$(pg_bin)/postgres" --version | head -n 1)"
+
+echo "step     dependencies"
+bun install --frozen-lockfile --silent
+
+echo "step     chromium for e2e"
+bunx playwright install chromium-headless-shell > /dev/null 2>&1 \
+  || echo "warn     chromium is not installed; run: bunx playwright install chromium-headless-shell"
+
+for variable in ANTHROPIC_API_KEY OPENAI_API_KEY GEMINI_API_KEY TAVILY_API_KEY; do
+  [ -n "${!variable:-}" ] \
+    || echo "note     $variable: .env.example has a placeholder; put a real one in Settings > Variables to give agents a model"
+done
+
+echo "done     next: bash .aven/stack (.env and PostgreSQL; the Set up action runs both), then bun run dev (control-plane 8000, platform 5173)"
