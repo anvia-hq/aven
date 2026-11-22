@@ -15,20 +15,26 @@ import { GithubRepositories, README_MAX_CHARS } from "./repositories";
 import { githubConfigFromEnv, GithubTransport } from "./transport";
 import type {
   GithubBranchSummary,
+  GithubCheckLogResult,
   GithubCommitDetail,
   GithubCommitFilters,
   GithubCommitPage,
   GithubConfig,
+  GithubCreatePullInput,
   GithubCreateRepositoryInput,
   GithubFetch,
   GithubFile,
   GithubInstallation,
+  GithubMergePullInput,
+  GithubMergePullResult,
   GithubNewRepository,
   GithubPullDetail,
+  GithubPullListEntry,
   GithubPullRequest,
   GithubReadme,
   GithubRepository,
   GithubReviewComment,
+  GithubReviewPullInput,
   GithubTrackedFilters,
   GithubTrackedKind,
   GithubTrackedPage,
@@ -193,6 +199,56 @@ export class GithubClient {
     number: number,
   ): Promise<GithubReviewComment[]> {
     return this.#pulls.unresolvedReviewComments(installationId, fullName, number);
+  }
+
+  listPulls(
+    installationId: number,
+    fullName: string,
+    state: "open" | "closed" | "all" = "open",
+  ): Promise<GithubPullListEntry[]> {
+    return this.#pulls.listPulls(installationId, fullName, state);
+  }
+
+  createPull(
+    userToken: string,
+    fullName: string,
+    input: GithubCreatePullInput,
+  ): Promise<GithubPullRequest> {
+    return this.#pulls.createPull(userToken, fullName, input);
+  }
+
+  reviewPull(userToken: string, fullName: string, number: number, input: GithubReviewPullInput) {
+    return this.#pulls.reviewPull(userToken, fullName, number, input);
+  }
+
+  mergePull(
+    userToken: string,
+    fullName: string,
+    number: number,
+    input: GithubMergePullInput,
+  ): Promise<GithubMergePullResult> {
+    return this.#pulls.mergePull(userToken, fullName, number, input);
+  }
+
+  updatePullBranch(userToken: string, fullName: string, number: number) {
+    return this.#pulls.updatePullBranch(userToken, fullName, number);
+  }
+
+  updatePullState(
+    userToken: string,
+    fullName: string,
+    number: number,
+    state: "open" | "closed",
+  ): Promise<GithubPullRequest> {
+    return this.#pulls.updatePullState(userToken, fullName, number, state);
+  }
+
+  checkRunLogs(
+    authToken: string,
+    fullName: string,
+    checkRunId: number,
+  ): Promise<GithubCheckLogResult> {
+    return this.#pulls.checkRunLogs(authToken, fullName, checkRunId);
   }
 
   commit(

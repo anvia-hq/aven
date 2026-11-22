@@ -99,6 +99,7 @@ export type PullPayload = {
 
 export type PullDetailPayload = {
   number: number;
+  node_id?: string;
   title: string;
   body: string | null;
   html_url: string;
@@ -117,6 +118,7 @@ export type PullDetailPayload = {
   created_at: string;
   updated_at: string;
   mergeable: boolean | null;
+  mergeable_state?: string;
   requested_reviewers?: { login: string }[];
 };
 
@@ -154,10 +156,16 @@ export type ReviewPayload = {
 };
 
 export type CheckRunPayload = {
+  id?: number;
   name: string;
   status: string;
   conclusion: string | null;
   html_url: string | null;
+  output?: {
+    title?: string | null;
+    summary?: string | null;
+    text?: string | null;
+  };
 };
 
 export type CheckRunsResponsePayload = {

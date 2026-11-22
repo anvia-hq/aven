@@ -160,8 +160,57 @@ export type GithubPullDetail = {
 };
 
 export type GithubCheckRun = {
+  id?: number;
   name: string;
   state: "success" | "failure" | "pending";
+  url: string | null;
+  summary?: string | null;
+};
+
+export type GithubPullListEntry = {
+  number: number;
+  title: string;
+  url: string;
+  author: string | null;
+  status: "open" | "draft" | "merged" | "closed";
+  head: string;
+  headSha: string;
+  base: string;
+  updatedAt: string;
+};
+
+export type GithubCreatePullInput = {
+  title: string;
+  body?: string;
+  head: string;
+  base: string;
+  draft?: boolean;
+};
+
+export type GithubReviewPullInput = {
+  event: "APPROVE" | "REQUEST_CHANGES" | "COMMENT";
+  body?: string;
+};
+
+export type GithubMergePullInput = {
+  method: "merge" | "squash" | "rebase" | "enqueue";
+  commitTitle?: string;
+  commitMessage?: string;
+};
+
+export type GithubMergePullResult = {
+  merged: boolean;
+  queued: boolean;
+  message: string;
+  sha?: string;
+};
+
+export type GithubCheckLogResult = {
+  checkRunId: number;
+  name: string;
+  summary: string | null;
+  text: string | null;
+  logs: string | null;
   url: string | null;
 };
 

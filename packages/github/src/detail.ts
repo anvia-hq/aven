@@ -67,11 +67,21 @@ function runState(run: CheckRunPayload): GithubCheckRun["state"] {
 export function checksOf(runs: CheckRunPayload[] | null): GithubPullDetail["checks"] {
   if (!runs || runs.length === 0) return { state: "none", runs: [] };
 
-  const shaped = runs.map((run): GithubCheckRun => ({
-    name: run.name,
-    state: runState(run),
-    url: run.html_url,
-  }));
+  const shaped = runs.map((run): GithubCheckRun => {
+    const entry: GithubCheckRun = {
+      name: run.name,
+      state: runState(run),
+      url: run.html_url,
+    };
+
+    if (run.id !== undefined) entry.id = run.id;
+
+    const summary = run.output?.summary ?? run.output?.title ?? null;
+
+    if (summary) entry.summary = summary.slice(0, 2000);
+
+    return entry;
+  });
   let state: GithubCheckRun["state"] = "success";
 
   if (shaped.some((run) => run.state === "pending")) state = "pending";
