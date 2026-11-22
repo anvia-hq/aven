@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# This workspace's own PostgreSQL 16 and the .env it needs. Everything here is git-ignored (.env) or under .aven/, so a
+# new thread's fresh clone has none of it: this runs again per thread through .aven/resume, and from the Set up action.
+#
+# The cluster lives in .aven/pg on a port of this folder's own (55400 plus a hash of the path), so two threads of this
+# project on one machine never collide. It starts no dev server: run that with `bun run dev`. With DATABASE_URL already
+# in the environment (a project variable) it uses that database and starts nothing.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+export PATH="$HOME/.local/bin:$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+pg_bin() {
+  if [ -d /usr/lib/postgresql ]; then
+    ls -d /usr/lib/postgresql/*/bin 2> /dev/null | sort -V | tail -n 1
+  elif [ -x /opt/homebrew/opt/postgresql@16/bin/pg_ctl ]; then
+    echo /opt/homebrew/opt/postgresql@16/bin
+  elif [ -x /usr/local/opt/postgresql@16/bin/pg_ctl ]; then
+    echo /usr/local/opt/postgresql@16/bin
+  fi
+}
+
+PGBIN=$(pg_bin)
+[ -n "$PGBIN" ] \
+  || { echo "missing  postgresql 16: bash .aven/setup installs it on a sandbox; otherwise brew install postgresql@16 or sudo apt-get install postgresql"; exit 1; }
+PATH="$PGBIN:$PATH"
+
+set_var() {
+  if grep -q "^$1=" .env; then
+    sed -i.bak "s|^$1=.*|$1=$2|" .env
+    rm -f .env.bak
+  else
+    printf '%s=%s\n' "$1" "$2" >> .env
+  fi
+}
+
+if [ ! -f .env ]; then
+  cp .env.example .env
+  set_var BETTER_AUTH_SECRET "$(openssl rand -base64 32)"
+  set_var PROVIDER_ENCRYPTION_KEY "$(openssl rand -base64 32)"
+  set_var AVEN_LOCAL_RUNNER_TOKEN "avrt_$(openssl rand -hex 24)"
+  set_var AVEN_RUNTIME_HOME "$PWD/.aven/runtime"
+  echo "step     .env made from .env.example, its local secrets generated (git-ignored)"
+fi
+
+if [ -n "${DATABASE_URL:-}" ]; then
+  echo "note     using DATABASE_URL from the environment; no PostgreSQL started here"
+else
+  mkdir -p .aven
+  data=.aven/pg
+  portfile=.aven/pg.port
+
+  if [ -f "$portfile" ]; then
+    port=$(cat "$portfile")
+  else
+    port=$((55400 + $(pwd | cksum | cut -d' ' -f1) % 100))
+  fi
+
+  if [ ! -d "$data" ]; then
+    echo "step     initdb .aven/pg"
+    "$PGBIN/initdb" -D "$data" -U postgres -A trust --no-sync > .aven/pg-initdb.log 2>&1
+  fi
+
+  if ! "$PGBIN/pg_ctl" -D "$data" status > /dev/null 2>&1; then
+    started=0
+    for _ in $(seq 1 20); do
+      if "$PGBIN/pg_ctl" -D "$data" -l .aven/pg.log \
+        -o "-p $port -k $PWD/.aven/pg -c listen_addresses=127.0.0.1" -w start > /dev/null 2>&1; then
+        started=1
+        break
+      fi
+      port=$((port + 1))
+    done
+    [ "$started" = 1 ] || { echo "failed   could not start PostgreSQL (see .aven/pg.log)"; exit 1; }
+    echo "$port" > "$portfile"
+  fi
+
+  if ! "$PGBIN/psql" -h 127.0.0.1 -p "$port" -U postgres -d postgres -tAc \
+    "SELECT 1 FROM pg_database WHERE datname = 'aven'" | grep -q 1; then
+    "$PGBIN/createdb" -h 127.0.0.1 -p "$port" -U postgres aven
+  fi
+
+  DATABASE_URL="postgres://postgres@localhost:$port/aven"
+  set_var DATABASE_URL "$DATABASE_URL"
+  set_var E2E_DATABASE_BASE_URL "postgres://localhost:$port"
+  echo "ok       postgres 16 on localhost:$port, database aven"
+fi
+
+if ! DATABASE_URL="$DATABASE_URL" bun packages/db/src/migrate.ts > .aven/migrate.log 2>&1; then
+  tail -n 20 .aven/migrate.log
+  echo "failed   migrations (full log in .aven/migrate.log)"
+  exit 1
+fi
+echo "ok       migrations applied to $DATABASE_URL"
+
+echo "done     bun run dev (control-plane 8000, platform 5173)"
