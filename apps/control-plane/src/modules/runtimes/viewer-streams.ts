@@ -15,7 +15,7 @@ type Viewer = {
 };
 
 const MAX_TERMINALS = 32;
-const MAX_PORTS = 64;
+const MAX_PORTS = 256;
 const MAX_WAITING_BYTES = 1024 * 1024;
 
 export class ViewerStreams {
