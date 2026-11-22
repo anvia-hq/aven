@@ -11,6 +11,11 @@ import {
   foldersListParams,
   foldersReadmeParams,
   filesSearchParams,
+  gitActionParams,
+  gitCommitDiffParams,
+  gitReflogParams,
+  gitSnapshotParams,
+  gitWorkspaceStatusParams,
   machineCallParams,
   processWatchParams,
   processesCallParams,
@@ -18,13 +23,21 @@ import {
   sandboxReleaseParams,
   steerParams,
 } from "./call-params";
-import { createFolder, listFolders } from "../files/folder-browser";
+import { createFolder, listFolders, resolved, servedPath } from "../files/folder-browser";
 import { createMachineCalls } from "./machine-calls";
 import { listCommits, listFiles, readReadme } from "../files/folder-contents";
+import {
+  readGitCommitDiff,
+  readGitReflog,
+  readGitSnapshot,
+  readGitWorkspaceStatus,
+} from "../git/git-center";
+import { runGitAction } from "../git/git-center-actions";
 import { readThreadDiff } from "../git/thread-diff";
 import { listDirectory, readWorkspaceFile, searchWorkspace } from "../files/workspace-files";
 import type {
   FilesCallMethod,
+  GitWorkspaceTarget,
   ProcessesCallMethod,
   RunnerCallMethod,
   RunnerUpdateResult,
@@ -154,7 +167,50 @@ export function createRunnerCalls({
     return { status: "started" };
   }
 
+  async function resolveGitTarget(target: GitWorkspaceTarget): Promise<string> {
+    if (target.kind === "project") {
+      return servedPath(await resolved(dirs), target.folder);
+    }
+
+    const root = await sandbox.workspace(target.threadId);
+
+    if (!root) throw new Error("The thread has no workspace on this computer");
+
+    return root;
+  }
+
   function callOf(method: RunnerCallMethod, params: unknown) {
+    if (method === "git.snapshot") {
+      const { folder, ...rest } = gitSnapshotParams(params);
+      return resolved(dirs)
+        .then((allowed) => servedPath(allowed, folder))
+        .then((root) => readGitSnapshot(root, rest, (threadId) => sandbox.workspace(threadId)));
+    }
+
+    if (method === "git.commitDiff") {
+      const { folder, sha } = gitCommitDiffParams(params);
+      return resolved(dirs)
+        .then((allowed) => servedPath(allowed, folder))
+        .then((root) => readGitCommitDiff(root, sha));
+    }
+
+    if (method === "git.workspaceStatus") {
+      const { target, filePath, staged } = gitWorkspaceStatusParams(params);
+      return resolveGitTarget(target).then((root) =>
+        readGitWorkspaceStatus(root, { filePath, staged }),
+      );
+    }
+
+    if (method === "git.reflog") {
+      const { target, limit } = gitReflogParams(params);
+      return resolveGitTarget(target).then((root) => readGitReflog(root, limit));
+    }
+
+    if (method === "git.action") {
+      const { target, action, auth } = gitActionParams(params);
+      return resolveGitTarget(target).then((root) => runGitAction(root, action, auth));
+    }
+
     if (method === "runner.update") return updateOf(params);
 
     if (method === "folders.list") return listFolders(dirs, foldersListParams(params).path);
