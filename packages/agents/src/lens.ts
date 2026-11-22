@@ -29,7 +29,11 @@ export function lensObservability(lens?: RunLens): AgentObservabilityOptions | u
       clients.set(key, client);
     }
 
-    const observer = client.observer({ captureMode: lens.captureMode ?? "safe" });
+    const observer = client.observer({
+      captureMode: lens.captureMode ?? "safe",
+      redactInputs: true,
+      redactOutputs: true,
+    });
     return { observers: { [LENS_OBSERVER]: observer }, primaryTrace: LENS_OBSERVER };
   } catch (error) {
     console.error(
