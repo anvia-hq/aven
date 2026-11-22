@@ -30,17 +30,17 @@
 /* Semantic color tokens (shadcn/ui structure; Aven's light neutrals are a cool gray like its dark ones, decision 0305). Use these, never raw palette colors. */
 :root {
   --radius: 0.5rem;
-  --background: oklch(0.92 0.003 280);
+  --background: oklch(0.99 0.002 280);
   --foreground: oklch(0.2 0.003 280);
-  --card: oklch(0.995 0.003 280);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.003 280);
-  --popover: oklch(0.995 0.003 280);
+  --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.2 0.003 280);
   --primary: oklch(0.22 0.003 280);
-  --primary-foreground: oklch(0.98 0.003 280);
-  --secondary: oklch(0.955 0.003 280);
+  --primary-foreground: oklch(0.99 0.002 280);
+  --secondary: oklch(0.96 0.003 280);
   --secondary-foreground: oklch(0.25 0.003 280);
-  --muted: oklch(0.955 0.003 280);
+  --muted: oklch(0.96 0.003 280);
   --muted-foreground: oklch(0.5 0.003 280);
   --accent: oklch(0.945 0.003 280);
   --accent-foreground: oklch(0.25 0.003 280);
@@ -57,15 +57,15 @@
   --graph-6: oklch(0.62 0.19 25);
   --code: oklch(0.35 0.003 280);
   --effort: oklch(0.7 0.19 160);
-  --frame: oklch(0.955 0.003 280);
-  --border: oklch(0.89 0.003 280);
+  --frame: oklch(0.99 0.002 280);
+  --border: oklch(0.91 0.003 280);
   --input: oklch(0.89 0.003 280);
   --ring: oklch(0.7 0.003 280);
   --sidebar: var(--background);
   --sidebar-foreground: oklch(0.2 0.003 280);
   --sidebar-primary: oklch(0.22 0.003 280);
-  --sidebar-primary-foreground: oklch(0.98 0.003 280);
-  --sidebar-accent: oklch(0.935 0.003 280);
+  --sidebar-primary-foreground: oklch(0.99 0.002 280);
+  --sidebar-accent: oklch(0.94 0.003 280);
   --sidebar-accent-foreground: oklch(0.25 0.003 280);
   --sidebar-border: oklch(0.91 0.003 280);
   --sidebar-ring: oklch(0.7 0.003 280);
@@ -1725,7 +1725,7 @@
 }
 
 :root:not([data-theme]) {
-  --chrome: oklch(0.9 0.003 280);
+  --chrome: oklch(0.99 0.002 280);
 }
 
 .dark:not([data-theme]) {
