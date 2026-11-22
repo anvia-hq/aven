@@ -3,6 +3,7 @@ import { Elysia, status } from "elysia";
 import { ForbiddenError, orNotFound } from "@aven/server-kit/errors";
 import { isOwnerOrAdmin } from "../auth/members";
 import { authRouter } from "../auth/router";
+import type { LensProxy } from "../lens/proxy";
 import { platformService } from "../platform/service";
 import { isBehind, serverBuild } from "./build";
 import { connectRouter } from "./connect";
@@ -36,7 +37,11 @@ async function canManageRuntime(
     : runtime.ownerId === user.id || (await isOwnerOrAdmin(organizationId, user.id));
 }
 
-export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLatestRelease()) => {
+export const runtimesRouter = (
+  hub: RuntimeHub,
+  latest: LatestRelease = createLatestRelease(),
+  lens?: Pick<LensProxy, "forward" | "revoke">,
+) => {
   const folders = runnerFolders(hub);
   return new Elysia({ prefix: "/runtimes" })
     .use(authRouter)
@@ -78,6 +83,14 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
     .all(
       "/gateway/:segment/*",
       ({ request, params }) => runGateway.forward(request, params.segment, params["*"]),
+      { parse: "none" },
+    )
+    .post(
+      "/lens/*",
+      ({ request, params }) =>
+        lens
+          ? lens.forward(request, params["*"])
+          : Response.json({ error: "Anvia Lens is not configured" }, { status: 503 }),
       { parse: "none" },
     )
     .patch(
@@ -132,6 +145,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           "Runtime not found",
         );
         hub.disconnect(params.id, "Token rotated");
+        lens?.revoke(params.id);
         return rotated;
       },
       { auth: true, org: true, params: runtimeParams },
@@ -191,6 +205,7 @@ export const runtimesRouter = (hub: RuntimeHub, latest: LatestRelease = createLa
           );
         });
         hub.disconnect(params.id, "Revoked");
+        lens?.revoke(params.id);
         return revoked;
       },
       { auth: true, org: true, params: runtimeParams },

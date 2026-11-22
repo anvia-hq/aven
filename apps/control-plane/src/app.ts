@@ -5,6 +5,7 @@ import {
   botChats,
   botDefaultRuntime,
   botRuntimeId,
+  lensProxy,
   previews,
   runsService,
   runtimeHub,
@@ -95,7 +96,7 @@ export const app = new Elysia()
   .use(projectsRouter(putAwayThread, runnerFolders(runtimeHub)))
   .use(providersRouter)
   .use(decisionModelRouter)
-  .use(runtimesRouter(runtimeHub))
+  .use(runtimesRouter(runtimeHub, undefined, lensProxy))
   .use(previewRouter(previews))
   .use(schedulesRouter)
   .use(skillsRouter)
