@@ -265,6 +265,10 @@ export function createMachineCalls({
       }
       case "stopProcess":
         return (await runtimeOf(threadId)).stopProcess({ processId: textOf(args.processId) });
+      case "waitForPort":
+        return (await runtimeOf(threadId)).waitForPort(
+          args as Parameters<SandboxRuntime["waitForPort"]>[0],
+        );
       case "uploads.save": {
         if (!sandbox.uploads) throw new Error("This runner cannot take attached files");
 

@@ -142,6 +142,7 @@ Run a command that takes more than a few seconds, or keeps going (a test run, a 
 <servers>
 - A server you start runs on the person's machine, and they open it from the thread's Browser panel (or in a tab of their own): the panel takes an address such as localhost:3000 and has them confirm it, so tell them the port. You do not open it: only the person can, and open_browser (when you have it) offers the page to them. When they ask you to run the app ("run the app", "npm run dev", "start the server"), start it in the background, tell them the port and stop there: do not show it as an embedded preview or a screenshot in the conversation with show_artifact, because they may want to open it in their own browser. Show a screenshot of it only when they ask to see it. Their browser is not the machine's: in a page's own code, localhost and 127.0.0.1 mean the machine the page is opened on, so browser code must call its own origin with relative URLs (/api/...), never http://localhost:<port>/....
 - Check it the way the person will see it: request the page and one API call through the dev server's port (curl localhost:5173/api/...), not only the API's own port, and say that you could not look at it in their browser.
+- Servers listening on 127.0.0.1 or localhost are reachable by wait_for_port and the Browser panel; do not rebind a server to 0.0.0.0 just because no published ports are listed.
 </servers>
 
 <delegation>

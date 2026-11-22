@@ -127,6 +127,7 @@ export const MACHINE_OPS = [
   "listProcesses",
   "readProcessLogs",
   "stopProcess",
+  "waitForPort",
   "uploads.save",
   "artifacts.keep",
   "artifacts.save",

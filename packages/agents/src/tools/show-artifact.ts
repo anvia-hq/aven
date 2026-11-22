@@ -23,7 +23,10 @@ function kindOf(mediaType: string) {
 }
 
 const itemSchema = z.object({
-  path: z.string().min(1).describe("The file, relative to the workspace or absolute."),
+  path: z
+    .string()
+    .min(1)
+    .describe("The file inside the workspace (relative, or an absolute path inside it)."),
   caption: z.string().max(500).optional().describe("A short line shown under it."),
 });
 

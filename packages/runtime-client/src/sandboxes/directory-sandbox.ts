@@ -1,13 +1,16 @@
 import { withoutRunnerSecrets } from "@aven/agent-backend/runner-secrets";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createConnection } from "node:net";
 import { dirname, join, posix } from "node:path";
 
 import type {
   SandboxExecOptions,
   SandboxExecResult,
   SandboxFileEntry,
+  SandboxPortStatus,
   SandboxProcessInfo,
   SandboxRuntime,
+  SandboxWaitForPortOptions,
 } from "@anvia/sandbox";
 
 import type { Launch, Spawned, Terminate } from "../types";
@@ -352,8 +355,54 @@ export class DirectorySandbox implements SandboxRuntime {
     return managed.info;
   }
 
-  async waitForPort(): Promise<never> {
-    throw new Error("waitForPort is not supported by the directory sandbox");
+  async waitForPort({
+    containerPort,
+    timeoutMs = 30_000,
+    intervalMs = 100,
+    abortSignal,
+  }: SandboxWaitForPortOptions): Promise<SandboxPortStatus> {
+    if (!Number.isInteger(containerPort) || containerPort < 1 || containerPort > 65535) {
+      throw new Error(`Invalid port: ${containerPort}`);
+    }
+
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0) {
+      throw new Error(`Invalid timeoutMs: ${timeoutMs}`);
+    }
+
+    if (!Number.isSafeInteger(intervalMs) || intervalMs <= 0) {
+      throw new Error(`Invalid intervalMs: ${intervalMs}`);
+    }
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (true) {
+      if (abortSignal?.aborted) {
+        throw abortSignal.reason ?? new DOMException("Aborted", "AbortError");
+      }
+
+      const remaining = deadline - Date.now();
+
+      if (remaining <= 0) {
+        throw new Error(`Timed out waiting for port ${containerPort}`);
+      }
+
+      if (await canConnectPort(containerPort, Math.min(remaining, 1000), abortSignal)) {
+        return {
+          containerPort,
+          protocol: "tcp",
+          host: "127.0.0.1",
+          hostPort: containerPort,
+        };
+      }
+
+      const waitMs = Math.min(intervalMs, Math.max(0, deadline - Date.now()));
+
+      if (waitMs <= 0) {
+        throw new Error(`Timed out waiting for port ${containerPort}`);
+      }
+
+      await sleepWithAbort(waitMs, abortSignal);
+    }
   }
 
   async dispose() {
@@ -373,4 +422,46 @@ export class DirectorySandbox implements SandboxRuntime {
 
 async function collect(stream: ReadableStream, into: LogBuffer, limit: number) {
   for await (const chunk of stream) appendLog(into, Buffer.from(chunk), limit);
+}
+
+function canConnectPort(port: number, timeoutMs: number, abortSignal?: AbortSignal) {
+  return new Promise<boolean>((resolve) => {
+    let settled = false;
+    const socket = createConnection({ port, host: "localhost" });
+    const done = (ok: boolean) => {
+      if (settled) return;
+
+      settled = true;
+      clearTimeout(timer);
+      abortSignal?.removeEventListener("abort", onAbort);
+      socket.destroy();
+      resolve(ok);
+    };
+    const onAbort = () => done(false);
+    const timer = setTimeout(() => done(false), timeoutMs);
+
+    abortSignal?.addEventListener("abort", onAbort, { once: true });
+    socket.once("connect", () => done(true));
+    socket.once("error", () => done(false));
+  });
+}
+
+function sleepWithAbort(ms: number, abortSignal?: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(abortSignal.reason ?? new DOMException("Aborted", "AbortError"));
+      return;
+    }
+
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(abortSignal?.reason ?? new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      abortSignal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+
+    abortSignal?.addEventListener("abort", onAbort, { once: true });
+  });
 }

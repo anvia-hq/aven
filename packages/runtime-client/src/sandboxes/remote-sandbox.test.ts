@@ -107,4 +107,42 @@ describe("a sandbox reached on another machine", () => {
 
     expect(await pending).toMatchObject({ status: "exited", exitCode: 0 });
   });
+
+  test("forwards waitForPort to the machine and respects abortSignal", async () => {
+    const seen: { op: string; args: unknown }[] = [];
+    let release: (value: unknown) => void = () => undefined;
+    const call: MachineCall = async (op, args) => {
+      seen.push({ op, args });
+
+      if ((args as { containerPort: number }).containerPort === 5173) {
+        return { containerPort: 5173, protocol: "tcp", host: "127.0.0.1", hostPort: 5173 };
+      }
+
+      return new Promise((resolve) => {
+        release = resolve;
+      });
+    };
+    const sandbox = new RemoteSandbox("t1", call, () => "/work");
+
+    const status = await sandbox.waitForPort({ containerPort: 5173, timeoutMs: 5000 });
+    expect(status).toEqual({
+      containerPort: 5173,
+      protocol: "tcp",
+      host: "127.0.0.1",
+      hostPort: 5173,
+    });
+    expect(seen[0]).toEqual({
+      op: "waitForPort",
+      args: { containerPort: 5173, timeoutMs: 5000 },
+    });
+
+    const controller = new AbortController();
+    const pending = sandbox.waitForPort({
+      containerPort: 8000,
+      abortSignal: controller.signal,
+    });
+    controller.abort(new Error("aborted"));
+    await expect(pending).rejects.toThrow("aborted");
+    release({ containerPort: 8000, protocol: "tcp" });
+  });
 });

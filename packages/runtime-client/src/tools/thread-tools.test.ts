@@ -55,4 +55,9 @@ describe("the agent's file and command tools", () => {
     const tools = await agentTools(async () => undefined);
     expect(tools.map((tool) => tool.name)).not.toContain("wait_for_process");
   });
+
+  test("directory sandboxes omit list_ports because they publish no container ports", async () => {
+    const tools = await agentTools(async () => undefined);
+    expect(tools.map((tool) => tool.name)).not.toContain("list_ports");
+  });
 });
