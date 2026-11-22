@@ -3,8 +3,11 @@ import type { Bot } from "../types";
 import { BotAvatar } from "./bot-avatar";
 import { BotSettingsDialog } from "./bot-settings-dialog";
 
-const PILL =
-  "pointer-events-auto flex h-auto max-w-full items-center gap-2 rounded-full border border-border/60 bg-accent/90 px-3 py-1.5 shadow-xl backdrop-blur-md";
+const TRIGGER =
+  "group/bot-badge pointer-events-auto flex h-auto max-w-full flex-col items-center gap-1.5 bg-transparent p-0 hover:bg-transparent dark:hover:bg-transparent";
+
+const BADGE =
+  "max-w-full truncate rounded-full border border-border/60 bg-accent/90 px-3 py-1 text-xs font-semibold shadow-md backdrop-blur-md transition-colors group-hover/bot-badge:bg-card/90 dark:group-hover/bot-badge:bg-card/90";
 
 function BotPill({ bot }: { bot: Bot }) {
   const working = useBotsWorking();
@@ -15,10 +18,10 @@ function BotPill({ bot }: { bot: Bot }) {
       <BotAvatar
         bot={bot}
         mood={online ? "working" : "idle"}
-        className="size-7 shrink-0 text-sm"
+        className="size-12 shrink-0 drop-shadow-md transition-transform group-hover/bot-badge:scale-105"
         follow
       />
-      <span className="truncate text-sm font-semibold">{bot.name}</span>
+      <span className={BADGE}>{bot.name}</span>
     </>
   );
 }
@@ -32,7 +35,7 @@ export function BotHeader({ bot }: { bot: Bot }) {
         className="flex max-w-full"
       >
         <h1 className="sr-only">{bot.name}</h1>
-        <BotSettingsDialog bot={bot} className={`${PILL} hover:bg-card/90 dark:hover:bg-card/90`}>
+        <BotSettingsDialog bot={bot} className={TRIGGER}>
           <BotPill bot={bot} />
         </BotSettingsDialog>
       </header>
