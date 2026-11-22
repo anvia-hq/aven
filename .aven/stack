@@ -84,7 +84,7 @@ else
 
   DATABASE_URL="postgres://postgres@127.0.0.1:$port/aven"
   set_var DATABASE_URL "$DATABASE_URL"
-  set_var E2E_DATABASE_BASE_URL "postgres://127.0.0.1:$port"
+  set_var E2E_DATABASE_BASE_URL "postgres://postgres@127.0.0.1:$port"
   echo "ok       postgres 16 on 127.0.0.1:$port, database aven"
 fi
 
