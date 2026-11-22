@@ -673,7 +673,11 @@ export async function readGitSnapshot(
   ].join("%1f");
 
   const remoteRefFormat = ["%(refname:short)", "%(objectname)"].join("%1f");
-  const tagFormat = ["%(refname:short)", "%(objectname)", "%(creatordate:iso-strict)"].join("%1f");
+  const tagFormat = [
+    "%(refname:short)",
+    "%(if)%(*objectname)%(then)%(*objectname)%(else)%(objectname)%(end)",
+    "%(creatordate:iso-strict)",
+  ].join("%1f");
   const stashFormat = ["%gd", "%H", "%aI", "%gs"].join("%x1f");
 
   const [

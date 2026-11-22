@@ -175,4 +175,22 @@ describe("git-center runner engine", () => {
     expect(await lstat(join(repo, "nested", "scratch.txt")).catch(() => null)).toBeNull();
     expect(await readFile(outsideFile, "utf8")).toBe("important\n");
   });
+
+  test("resolves annotated and lightweight tags to their target commit SHA", async () => {
+    const repo = await createTempRepo();
+    await runCenterGit(repo, ["tag", "-a", "v1.0.0", "-m", "Release 1.0.0"]);
+    await runCenterGit(repo, ["tag", "v1.0.0-light"]);
+
+    const snapshot = await readGitSnapshot(repo, {});
+    const headSha = snapshot.commits[0]!.sha;
+    const annotated = snapshot.tags.find((t) => t.name === "v1.0.0");
+    const lightweight = snapshot.tags.find((t) => t.name === "v1.0.0-light");
+
+    expect(annotated?.sha).toBe(headSha);
+    expect(lightweight?.sha).toBe(headSha);
+
+    const diff = await readGitCommitDiff(repo, annotated!.sha);
+    expect(diff.sha).toBe(headSha);
+    expect(diff.message).toBe("Initial commit");
+  });
 });
