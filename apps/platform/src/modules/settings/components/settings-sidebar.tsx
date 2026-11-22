@@ -3,15 +3,14 @@ import {
   IconBook,
   IconCode,
   IconCodeblock,
+  IconCpu,
   IconExternalLink,
   IconFlag,
   IconId,
   IconKey,
   IconLock,
-  IconMessageDots,
   IconServer,
   IconSettings,
-  IconSparkles,
   IconUserCircle,
   IconUsers,
   IconUsersGroup,
@@ -27,6 +26,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@aven/ui/sidebar";
+import { BotLine } from "@/components/bot-line";
 import { CloudLine } from "@/components/cloud-line";
 import { McpLine } from "@/components/mcp-line";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
@@ -43,8 +43,8 @@ const groups = [
   {
     label: "AI",
     items: [
-      { to: "/settings/providers", label: "Providers", icon: IconSparkles },
-      { to: "/settings/bots", label: "Bots", icon: IconMessageDots },
+      { to: "/settings/providers", label: "Providers", icon: IconCpu },
+      { to: "/settings/bots", label: "Bots", icon: BotLine },
       { to: "/settings/memory", label: "Memory", icon: IconId },
     ],
   },

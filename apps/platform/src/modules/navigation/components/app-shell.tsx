@@ -51,14 +51,14 @@ export function AppShell({ user }: Props) {
         {
           "--sidebar-width": `${sidebarSize.width}px`,
           "--sidebar": "var(--chrome)",
-          "--sidebar-accent": "color-mix(in oklch, var(--chrome), var(--foreground) 9%)",
+          "--sidebar-accent": "var(--chrome-accent)",
         } as CSSProperties
       }
     >
       <TooltipProvider delay={300}>
         <nav
           aria-label="Aven"
-          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center bg-[color-mix(in_oklch,var(--chrome),black_6%)] py-2.5 md:flex"
+          className="sticky top-0 hidden h-svh w-12 shrink-0 flex-col items-center bg-[color-mix(in_oklch,var(--chrome),black_1.5%)] py-2.5 md:flex dark:bg-[color-mix(in_oklch,var(--chrome),black_6%)]"
         >
           <RailLink
             to="/threads"
@@ -90,10 +90,7 @@ export function AppShell({ user }: Props) {
         </nav>
       </TooltipProvider>
       <div className="flex min-w-0 flex-1">
-        <Sidebar
-          collapsible="icon"
-          className="text-sidebar-foreground/80 data-[side=left]:left-12 group-data-[side=left]:border-r-0"
-        >
+        <Sidebar collapsible="icon" className="text-sidebar-foreground/80 data-[side=left]:left-12">
           <SidebarHeader className="pt-3.5">
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
               <div className="min-w-0 flex-1">
@@ -153,7 +150,7 @@ export function AppShell({ user }: Props) {
             "pb-(--mobile-tab-bar) md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
-              : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto md:border md:border-foreground/12",
+              : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto",
           )}
         >
           <MobileAppBar />
