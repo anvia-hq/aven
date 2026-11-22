@@ -34,7 +34,9 @@ export function createGrepTool(files: SearchableFiles) {
       path: z
         .string()
         .optional()
-        .describe("File or folder to search, relative to the workspace (default: the workspace)."),
+        .describe(
+          "Single file or folder to search, relative to the workspace (default: the workspace).",
+        ),
       include: z
         .string()
         .optional()
@@ -83,9 +85,10 @@ export function createGrepTool(files: SearchableFiles) {
         );
       }
 
-      if (lines.length === 0 && result.status === "exited") return "No matches.";
+      const cut = result.status !== "exited" || result.stdoutTruncated;
 
-      const cut = result.status === "timed_out" || result.stdoutTruncated;
+      if (lines.length === 0 && !cut) return "No matches.";
+
       const shown = lines.slice(0, maxResults).map(clipped);
       return withNotes(shown, [
         lines.length > maxResults ? `${lines.length - maxResults} more lines not shown` : "",

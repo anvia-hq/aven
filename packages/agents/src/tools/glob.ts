@@ -25,7 +25,7 @@ export function createGlobTool(files: SearchableFiles) {
       path: z
         .string()
         .optional()
-        .describe("Folder to search, relative to the workspace (default: the workspace)."),
+        .describe("Single folder to search, relative to the workspace (default: the workspace)."),
       maxResults: z
         .int()
         .min(1)

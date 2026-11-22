@@ -44,7 +44,7 @@ export function createFindTool(files: SearchableFiles) {
       path: z
         .string()
         .optional()
-        .describe("Folder to search, relative to the workspace (default: the workspace)."),
+        .describe("Single folder to search, relative to the workspace (default: the workspace)."),
       maxDepth: z.int().min(1).max(20).optional().describe("How many folders deep to look."),
       maxResults: z
         .int()
