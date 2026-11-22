@@ -3,6 +3,7 @@ import type { Bot, BotChatMessage, BotChatQuote, ToolArtifact } from "@aven/prot
 import type {
   BufferGeometry,
   Group,
+  Mesh,
   MeshBasicMaterial,
   MeshPhysicalMaterial,
   SphereGeometry,
@@ -37,7 +38,24 @@ export type ChatItem =
   | { type: "message"; key: string; message: BotChatMessage }
   | { type: "activity"; key: string; messages: BotChatMessage[] };
 
-export type AvatarSetting = { seed?: string; family?: string; color?: string };
+export type AvatarAccessory =
+  | "none"
+  | "beanie"
+  | "cap"
+  | "tophat"
+  | "glasses"
+  | "shades"
+  | "headphones"
+  | "sprout"
+  | "halo"
+  | "bowtie";
+
+export type AvatarSetting = {
+  seed?: string;
+  family?: string;
+  color?: string;
+  accessory?: AvatarAccessory;
+};
 
 export type Point = { x: number; y: number };
 
@@ -46,6 +64,7 @@ export type Vec3 = { x: number; y: number; z: number };
 export type Avatar = {
   family: string;
   color: string;
+  accessory: AvatarAccessory;
   delay: number;
 };
 
@@ -53,7 +72,14 @@ export type ShapeField = (x: number, y: number, z: number) => number;
 
 export type EyePlacement = { x: number; y: number; gap: number; scale: number };
 
-export type FamilyShape = { name: string; field: ShapeField; eye: EyePlacement };
+export type MouthPlacement = { x: number; y: number; scale: number };
+
+export type FamilyShape = {
+  name: string;
+  field: ShapeField;
+  eye: EyePlacement;
+  mouth: MouthPlacement;
+};
 
 export type Keyframe = readonly [number, number, number, number];
 
@@ -103,6 +129,7 @@ export type MotionInput = {
 };
 
 export type AvatarMotion = {
+  family: string;
   work: number;
   phase: number;
   hopping: boolean;
@@ -134,11 +161,15 @@ export type AvatarPose = {
   gazeX: number;
   gazeY: number;
   wobble: number;
+  mouthOpen: number;
+  accessoryBob: number;
+  accessoryTilt: number;
 };
 
 export type AvatarLook = {
   family: string;
   color: string;
+  accessory?: AvatarAccessory;
   mood: BotMood;
   delayMs: number;
   follow?: boolean;
@@ -149,6 +180,8 @@ export type AvatarHandle = { setMood(mood: BotMood): void; dispose(): void };
 
 export type EyeSpot = { position: Vec3; normal: Vec3; scale: number };
 
+export type SurfaceSpot = { position: Vec3; normal: Vec3; scale: number };
+
 export type BodyBase = {
   geometry: BufferGeometry;
   minX: number;
@@ -156,6 +189,11 @@ export type BodyBase = {
   minY: number;
   maxY: number;
   eyes: EyeSpot[];
+  mouth: SurfaceSpot;
+  top: Vec3;
+  left: Vec3;
+  right: Vec3;
+  chin: SurfaceSpot;
 };
 
 export type AvatarMaterials = {
@@ -169,11 +207,22 @@ export type AvatarMaterials = {
 
 export type EyeRig = { lid: Group; pupil: Group };
 
+export type MouthRig = { group: Group; smile: Mesh; open: Group };
+
+export type AccessoryRig = {
+  root: Group;
+  sway?: Group;
+  float?: Group;
+  dispose(): void;
+};
+
 export type AvatarModel = {
   root: Group;
   rig: Group;
   tilt: Group;
   eyes: EyeRig[];
+  mouth: MouthRig;
+  accessory: AccessoryRig | null;
   wobble: { value: number };
   scale: number;
   restY: number;

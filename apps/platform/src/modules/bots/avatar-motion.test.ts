@@ -120,4 +120,24 @@ describe("an avatar's motion", () => {
     expect(advanceMotion(motion, { ...working, reduced: true }, 1 / 60, 3)).toBe(REST_POSE);
     expect(motion.hopping).toBe(false);
   });
+
+  test("its mouth stays closed at rest and opens while working, and different shapes move differently", () => {
+    const idleMouth = Math.max(
+      ...run(createMotion(1, calm, "circle"), idle, 2).map((p) => p.mouthOpen),
+    );
+    const workMouth = Math.max(
+      ...run(createMotion(1, calm, "circle"), working, 2).map((p) => p.mouthOpen),
+    );
+    expect(idleMouth).toBeLessThan(0.01);
+    expect(workMouth).toBeGreaterThan(0.4);
+
+    const flowerSpin = Math.max(
+      ...run(createMotion(1, calm, "flower"), working, 2).map((p) => Math.abs(p.rotZ)),
+    );
+    const diamondSpin = Math.max(
+      ...run(createMotion(1, calm, "diamond"), working, 2).map((p) => Math.abs(p.rotY)),
+    );
+    expect(flowerSpin).toBeGreaterThan(0.2);
+    expect(diamondSpin).toBeGreaterThan(1);
+  });
 });

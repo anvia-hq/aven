@@ -311,7 +311,8 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
 
   const seed = look.delayMs / 1000;
   const random = hash(look.delayMs + 1);
-  const model = createAvatarModel(shapeOf(look.family), look.color, current.materials);
+  const shape = shapeOf(look.family);
+  const model = createAvatarModel(shape, look.color, current.materials, look.accessory ?? "none");
   current.scene.add(model.root);
 
   const entry: Entry = {
@@ -319,7 +320,7 @@ export function mountAvatar(canvas: HTMLCanvasElement, look: AvatarLook): Avatar
     color: look.color,
     context,
     model,
-    motion: createMotion(seed, random),
+    motion: createMotion(seed, random, shape.name),
     mood: look.mood,
     visible: current.observer === null,
     dirty: true,

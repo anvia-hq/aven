@@ -1,6 +1,8 @@
+import { BOT_AVATAR_MAX } from "@aven/protocol/bots";
 import { describe, expect, test } from "bun:test";
 
 import {
+  accessories,
   avatarFor,
   colors,
   families,
@@ -87,8 +89,17 @@ describe("a bot's avatar setting as it is kept", () => {
       seed: "x".repeat(64),
       family: "triangle".padEnd(12, "x"),
       color: "#ffffff",
+      accessory: "headphones",
     });
-    expect(widest.length).toBeLessThanOrEqual(120);
+    expect(widest.length).toBeLessThanOrEqual(BOT_AVATAR_MAX);
+  });
+
+  test("defaults accessory to none and validates known accessories", () => {
+    expect(avatarFor("bot").accessory).toBe("none");
+    expect(avatarFor("bot", { accessory: "beanie" }).accessory).toBe("beanie");
+    expect(parseAvatarSetting('{"accessory":"sprout"}')).toEqual({ accessory: "sprout" });
+    expect(parseAvatarSetting('{"accessory":"monocle"}')).toBeNull();
+    expect(accessories.length).toBe(10);
   });
 
   test("random seeds are short and differ", () => {

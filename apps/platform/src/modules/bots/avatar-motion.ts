@@ -28,6 +28,9 @@ export const REST_POSE: AvatarPose = {
   gazeX: 0,
   gazeY: 0,
   wobble: 0,
+  mouthOpen: 0,
+  accessoryBob: 0,
+  accessoryTilt: 0,
 };
 
 export const approach = (current: number, target: number, rate: number, dt: number) =>
@@ -88,8 +91,9 @@ export function hopPose(phase: number): HopPose {
   return { lift: channel(1), width: channel(2), height: channel(3) };
 }
 
-export function createMotion(seed: number, random: () => number): AvatarMotion {
+export function createMotion(seed: number, random: () => number, family = "circle"): AvatarMotion {
   return {
+    family,
     work: 0,
     phase: 0,
     hopping: false,
@@ -157,6 +161,158 @@ function blinkOf(motion: AvatarMotion, dt: number, time: number) {
   return u < 0.5 ? 1 - u * 2 * 0.96 : 0.04 + (u - 0.5) * 2 * 0.96;
 }
 
+type ShapeFlavor = {
+  lift: number;
+  scaleX: number;
+  scaleY: number;
+  scaleZ: number;
+  rotX: number;
+  rotY: number;
+  rotZ: number;
+};
+
+function flavorOf(
+  family: string,
+  time: number,
+  seed: number,
+  phase: number,
+  rest: number,
+  work: number,
+  hopWeight: number,
+  steady: boolean,
+): ShapeFlavor {
+  const sway = steady ? 0 : 1;
+  const tau = Math.PI * 2;
+  const t = time + seed;
+
+  switch (family) {
+    case "flower":
+      return {
+        lift: (Math.sin(t * 1.9) * 0.5 + 0.5) * 0.08 * rest,
+        scaleX: 1 + Math.sin(t * 2.6) * 0.025 * rest + Math.sin(phase * tau * 2) * 0.06 * hopWeight,
+        scaleY: 1 + Math.sin(t * 2.6) * 0.025 * rest + Math.sin(phase * tau * 2) * 0.06 * hopWeight,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(t * 1.5) * 0.14 * rest * sway + Math.sin(phase * tau) * 0.34 * hopWeight,
+      };
+    case "bean":
+      return {
+        lift: (Math.sin(t * 1.6) * 0.5 + 0.5) * 0.06 * rest,
+        scaleX: 1 + Math.sin(phase * tau * 2) * 0.04 * hopWeight,
+        scaleY: 1 - Math.sin(phase * tau * 2) * 0.04 * hopWeight,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(t * 1.8) * 0.16 * rest * sway + Math.sin(phase * tau * 2) * 0.24 * hopWeight,
+      };
+    case "stack":
+      return {
+        lift: 0,
+        scaleX: 1 - Math.sin(t * 2.4) * 0.035 * rest,
+        scaleY: 1 + Math.sin(t * 2.4) * 0.055 * rest + Math.sin(phase * tau) * 0.14 * hopWeight,
+        scaleZ: 1 - Math.sin(t * 2.4) * 0.035 * rest,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(phase * tau) * 0.06 * hopWeight,
+      };
+    case "crown":
+      return {
+        lift: (Math.sin(t * 1.4) * 0.5 + 0.5) * 0.12 * rest,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: Math.sin(phase * tau * 2) * 0.18 * hopWeight,
+        rotY: Math.sin(t * 0.9) * 0.16 * rest * sway,
+        rotZ: Math.sin(t * 1.2) * 0.04 * rest * sway,
+      };
+    case "arch":
+      return {
+        lift: 0,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: Math.sin(phase * tau * 2) * 0.08 * hopWeight,
+        rotY: 0,
+        rotZ: Math.sin(t * 1.6) * 0.12 * rest * sway + Math.sin(phase * tau * 2) * 0.22 * hopWeight,
+      };
+    case "hexagon": {
+      const tick = Math.floor(phase * 2) + Math.pow(phase * 2 - Math.floor(phase * 2), 3);
+      return {
+        lift: (Math.sin(t * 1.8) * 0.5 + 0.5) * 0.14 * rest,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: Math.sin(t * 1.2) * 0.09 * rest * sway,
+        rotY: Math.cos(t * 0.9) * 0.12 * rest * sway,
+        rotZ: Math.sin(tick * Math.PI) * 0.28 * hopWeight,
+      };
+    }
+    case "triangle": {
+      const cock = Math.max(0, Math.sin(t * 0.9)) ** 3 * 0.2 * rest * sway;
+      return {
+        lift: Math.sin(phase * tau) * 0.18 * hopWeight,
+        scaleX: 1 - Math.sin(phase * tau) * 0.05 * hopWeight,
+        scaleY: 1 + Math.sin(phase * tau) * 0.1 * hopWeight,
+        scaleZ: 1,
+        rotX: -0.1 * hopWeight,
+        rotY: 0,
+        rotZ: cock + Math.sin(t * 18) * 0.04 * work,
+      };
+    }
+    case "square":
+      return {
+        lift: (Math.sin(t * 1.3) * 0.5 + 0.5) * 0.05 * rest,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(t * 1.1) * 0.06 * rest * sway + Math.sin(phase * tau) * 0.2 * hopWeight,
+      };
+    case "quarter":
+      return {
+        lift: 0,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(t * 2.1) * 0.18 * rest * sway + Math.sin(phase * tau) * 0.3 * hopWeight,
+      };
+    case "capsule":
+      return {
+        lift: (Math.sin(t * 2.1) * 0.5 + 0.5) * 0.1 * rest,
+        scaleX: 1 + Math.sin(phase * tau * 2) * 0.07 * hopWeight,
+        scaleY: 1 - Math.sin(phase * tau * 2) * 0.05 * hopWeight,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: Math.sin(phase * tau * 2) * 0.16 * hopWeight,
+        rotZ: Math.sin(t * 1.7) * 0.1 * rest * sway + Math.sin(phase * tau * 2) * 0.16 * hopWeight,
+      };
+    case "diamond":
+      return {
+        lift: (Math.sin(t * 1.9) * 0.5 + 0.5) * 0.18 * rest + 0.12 * hopWeight,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: Math.sin(t * 1.1) * 0.08 * rest * sway,
+        rotY: Math.sin(t * 1.4) * 0.22 * rest * sway + phase * tau * hopWeight,
+        rotZ: 0,
+      };
+    default:
+      return {
+        lift: 0,
+        scaleX: 1,
+        scaleY: 1,
+        scaleZ: 1,
+        rotX: 0,
+        rotY: 0,
+        rotZ: Math.sin(phase * tau) * 0.05 * hopWeight,
+      };
+  }
+}
+
 export function advanceMotion(
   motion: AvatarMotion,
   input: MotionInput,
@@ -197,17 +353,35 @@ export function advanceMotion(
   motion.open = approach(motion.open, 0.8 + 0.2 * motion.work, 6, dt);
   motion.wobble = approach(motion.wobble, 0, 3.2, dt);
 
+  const flavor = flavorOf(
+    motion.family,
+    time,
+    motion.seed,
+    motion.phase,
+    rest,
+    motion.work,
+    motion.hopWeight,
+    input.steady === true,
+  );
+  const chatter = (Math.sin(time * 11 + motion.seed * 3) * 0.5 + 0.5) * 0.75 + 0.15;
+  const mouthOpen = chatter * motion.work;
+  const accessoryBob = Math.sin(time * 2.4 + motion.seed) * 0.08 + hop.lift * 0.12;
+  const accessoryTilt = Math.sin(time * 2.2 + motion.seed) * 0.14 + flavor.rotZ * 0.5;
+
   return {
-    lift: Math.max(0, hop.lift + float),
-    scaleX: hop.width * (1 - breathe * 0.7),
-    scaleY: hop.height * (1 + breathe),
-    scaleZ: hop.width,
-    rotX: motion.rotX,
-    rotY: motion.rotY,
-    rotZ: Math.sin(motion.phase * Math.PI * 2) * 0.05 * motion.hopWeight,
+    lift: Math.max(0, hop.lift + float + flavor.lift),
+    scaleX: hop.width * (1 - breathe * 0.7) * flavor.scaleX,
+    scaleY: hop.height * (1 + breathe) * flavor.scaleY,
+    scaleZ: hop.width * flavor.scaleZ,
+    rotX: motion.rotX + flavor.rotX,
+    rotY: motion.rotY + flavor.rotY,
+    rotZ: flavor.rotZ,
     eyeOpen: motion.open * blinkOf(motion, dt, time),
     gazeX: motion.gaze.x,
     gazeY: motion.gaze.y,
     wobble: motion.wobble,
+    mouthOpen,
+    accessoryBob,
+    accessoryTilt,
   };
 }
