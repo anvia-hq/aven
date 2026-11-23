@@ -9,7 +9,7 @@ import {
   DEFAULT_TRANSITION_WATCHDOG_MS,
   deleteRetryPlan,
 } from "@aven/sandbox/lifecycle";
-import { and, asc, eq, gt, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 
 import type { FailedCloudDelete } from "./types";
 
@@ -177,7 +177,7 @@ export const cloudSandboxStore = {
   ) {
     const snapshotPatch =
       snapshotName === undefined ? {} : { runtimeSnapshotName: snapshotName, dirty: false };
-    await db
+    const updated = await db
       .update(cloudSandboxes)
       .set({
         state: "stopped",
@@ -189,7 +189,77 @@ export const cloudSandboxStore = {
         version: sql`${cloudSandboxes.version} + 1`,
         ...snapshotPatch,
       })
-      .where(eq(cloudSandboxes.runtimeId, runtimeId));
+      .where(
+        and(
+          eq(cloudSandboxes.runtimeId, runtimeId),
+          inArray(cloudSandboxes.state, ["starting", "running", "draining", "stopping"]),
+        ),
+      )
+      .returning({ runtimeId: cloudSandboxes.runtimeId });
+
+    if (updated.length === 0 && snapshotName !== undefined) {
+      await db
+        .update(cloudSandboxes)
+        .set({
+          runtimeSnapshotName: snapshotName,
+          dirty: false,
+          version: sql`${cloudSandboxes.version} + 1`,
+        })
+        .where(and(eq(cloudSandboxes.runtimeId, runtimeId), eq(cloudSandboxes.state, "stopped")));
+    }
+  },
+
+  async revertStarting(runtimeId: string, expireMs: number, now = new Date()) {
+    const row = await this.get(runtimeId);
+
+    if (!row || row.state !== "starting") return;
+
+    if (!row.externalId) {
+      await db
+        .update(cloudSandboxes)
+        .set({
+          state: "absent",
+          runningSince: null,
+          expiresAt: null,
+          version: sql`${cloudSandboxes.version} + 1`,
+        })
+        .where(
+          and(
+            eq(cloudSandboxes.runtimeId, runtimeId),
+            eq(cloudSandboxes.state, "starting"),
+            eq(cloudSandboxes.version, row.version),
+          ),
+        );
+      return;
+    }
+
+    const stoppedAt = row.stoppedAt ?? now;
+    await db
+      .update(cloudSandboxes)
+      .set({
+        state: "stopped",
+        runningSince: null,
+        stoppedAt,
+        expiresAt: new Date(stoppedAt.getTime() + expireMs),
+        version: sql`${cloudSandboxes.version} + 1`,
+      })
+      .where(
+        and(
+          eq(cloudSandboxes.runtimeId, runtimeId),
+          eq(cloudSandboxes.state, "starting"),
+          eq(cloudSandboxes.version, row.version),
+        ),
+      );
+  },
+
+  async expireStoppedNow(runtimeId: string, now = new Date()) {
+    await db
+      .update(cloudSandboxes)
+      .set({
+        expiresAt: sql`least(coalesce(${cloudSandboxes.expiresAt}, ${now.toISOString()}::timestamptz), ${now.toISOString()}::timestamptz)`,
+        version: sql`${cloudSandboxes.version} + 1`,
+      })
+      .where(and(eq(cloudSandboxes.runtimeId, runtimeId), eq(cloudSandboxes.state, "stopped")));
   },
 
   async markDeleting(
@@ -365,7 +435,10 @@ export const cloudSandboxStore = {
       );
   },
 
-  async syncLegacyRuntimes(defaultExpireMs: number) {
+  async syncLegacyRuntimes(
+    defaultExpireMs: number,
+    activeConfig?: { id: string; provider: string } | null,
+  ) {
     const missing = await db
       .select({
         id: runtimes.id,
@@ -387,11 +460,13 @@ export const cloudSandboxStore = {
 
     for (const row of missing) {
       const hasBox = Boolean(row.sandboxId);
+      const providerConfigId = activeConfig?.provider === row.provider ? activeConfig.id : null;
       await db
         .insert(cloudSandboxes)
         .values({
           runtimeId: row.id,
           provider: row.provider,
+          providerConfigId,
           externalId: row.sandboxId,
           machineType: row.machineType ?? "default",
           state: hasBox ? "stopped" : "absent",
@@ -400,6 +475,39 @@ export const cloudSandboxStore = {
           expiresAt: hasBox ? new Date(row.createdAt.getTime() + defaultExpireMs) : null,
         })
         .onConflictDoNothing();
+    }
+
+    const drifted = await db
+      .select({
+        runtimeId: cloudSandboxes.runtimeId,
+        provider: cloudSandboxes.provider,
+        providerConfigId: cloudSandboxes.providerConfigId,
+        sandboxId: runtimes.boatSandboxId,
+      })
+      .from(cloudSandboxes)
+      .innerJoin(runtimes, eq(runtimes.id, cloudSandboxes.runtimeId))
+      .where(
+        and(
+          isNull(cloudSandboxes.externalId),
+          isNotNull(runtimes.boatSandboxId),
+          ne(cloudSandboxes.state, "absent"),
+        ),
+      )
+      .limit(500);
+
+    for (const row of drifted) {
+      if (!row.sandboxId) continue;
+
+      const providerConfigId =
+        row.providerConfigId ?? (activeConfig?.provider === row.provider ? activeConfig.id : null);
+      await db
+        .update(cloudSandboxes)
+        .set({
+          externalId: row.sandboxId,
+          providerConfigId,
+          version: sql`${cloudSandboxes.version} + 1`,
+        })
+        .where(and(eq(cloudSandboxes.runtimeId, row.runtimeId), isNull(cloudSandboxes.externalId)));
     }
   },
 };
