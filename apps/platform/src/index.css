@@ -116,7 +116,8 @@
 
 /* Color themes (decision 0155): well-known developer color schemes, each with a light and a dark mode. Aven, the default, is :root and .dark above; Mint is the palette it was made from (decision 0292). */
 
-:root[data-theme="mint"] {
+:root[data-theme="mint"],
+[data-theme="mint"]:not(:root) {
   --radius: 0.5rem;
   --background: oklch(0.988 0.011 165);
   --foreground: oklch(0.2 0.014 165);
@@ -159,7 +160,8 @@
   --sidebar-ring: oklch(0.7 0.06 160);
 }
 
-:root[data-theme="mint"].dark {
+:root[data-theme="mint"].dark,
+[data-theme="mint"][data-mode="dark"]:not(:root) {
   --background: oklch(0.2 0.022 208);
   --foreground: oklch(0.9 0.012 208);
   --card: oklch(0.23 0.022 208);
@@ -201,7 +203,8 @@
   --sidebar-ring: oklch(0.55 0.045 208);
 }
 
-:root[data-theme="catppuccin"] {
+:root[data-theme="catppuccin"],
+[data-theme="catppuccin"]:not(:root) {
   --background: #eff1f5;
   --foreground: #4c4f69;
   --card: #e6e9ef;
@@ -232,7 +235,8 @@
   --sidebar-ring: #1e66f5;
 }
 
-:root[data-theme="catppuccin"].dark {
+:root[data-theme="catppuccin"].dark,
+[data-theme="catppuccin"][data-mode="dark"]:not(:root) {
   --background: #1e1e2e;
   --foreground: #cdd6f4;
   --card: #181825;
@@ -263,7 +267,8 @@
   --sidebar-ring: #89b4fa;
 }
 
-:root[data-theme="tokyo-night"] {
+:root[data-theme="tokyo-night"],
+[data-theme="tokyo-night"]:not(:root) {
   --background: #e1e2e7;
   --foreground: #3760bf;
   --card: #d5d6db;
@@ -294,7 +299,8 @@
   --sidebar-ring: #2e7de9;
 }
 
-:root[data-theme="tokyo-night"].dark {
+:root[data-theme="tokyo-night"].dark,
+[data-theme="tokyo-night"][data-mode="dark"]:not(:root) {
   --background: #1a1b26;
   --foreground: #d9dffb;
   --card: #1f2335;
@@ -325,7 +331,8 @@
   --sidebar-ring: #7aa2f7;
 }
 
-:root[data-theme="github"] {
+:root[data-theme="github"],
+[data-theme="github"]:not(:root) {
   --background: #ffffff;
   --foreground: #1f2328;
   --card: #f6f8fa;
@@ -356,7 +363,8 @@
   --sidebar-ring: #0969da;
 }
 
-:root[data-theme="github"].dark {
+:root[data-theme="github"].dark,
+[data-theme="github"][data-mode="dark"]:not(:root) {
   --background: #0d1117;
   --foreground: #e6edf3;
   --card: #161b22;
@@ -387,7 +395,8 @@
   --sidebar-ring: #58a6ff;
 }
 
-:root[data-theme="one-dark"] {
+:root[data-theme="one-dark"],
+[data-theme="one-dark"]:not(:root) {
   --background: #fafafa;
   --foreground: #383a42;
   --card: #f0f0f1;
@@ -418,7 +427,8 @@
   --sidebar-ring: #4078f2;
 }
 
-:root[data-theme="one-dark"].dark {
+:root[data-theme="one-dark"].dark,
+[data-theme="one-dark"][data-mode="dark"]:not(:root) {
   --background: #282c34;
   --foreground: #abb2bf;
   --card: #21252b;
@@ -449,7 +459,8 @@
   --sidebar-ring: #61afef;
 }
 
-:root[data-theme="solarized"] {
+:root[data-theme="solarized"],
+[data-theme="solarized"]:not(:root) {
   --background: #fdf6e3;
   --foreground: #657b83;
   --card: #eee8d5;
@@ -480,7 +491,8 @@
   --sidebar-ring: #268bd2;
 }
 
-:root[data-theme="solarized"].dark {
+:root[data-theme="solarized"].dark,
+[data-theme="solarized"][data-mode="dark"]:not(:root) {
   --background: #002b36;
   --foreground: #839496;
   --card: #073642;
@@ -511,7 +523,8 @@
   --sidebar-ring: #268bd2;
 }
 
-:root[data-theme="nord"] {
+:root[data-theme="nord"],
+[data-theme="nord"]:not(:root) {
   --background: #eceff4;
   --foreground: #2e3440;
   --card: #e5e9f0;
@@ -542,7 +555,8 @@
   --sidebar-ring: #5e81ac;
 }
 
-:root[data-theme="nord"].dark {
+:root[data-theme="nord"].dark,
+[data-theme="nord"][data-mode="dark"]:not(:root) {
   --background: #2e3440;
   --foreground: #eceff4;
   --card: #3b4252;
@@ -573,7 +587,8 @@
   --sidebar-ring: #88c0d0;
 }
 
-:root[data-theme="dracula"] {
+:root[data-theme="dracula"],
+[data-theme="dracula"]:not(:root) {
   --background: #f8f8f2;
   --foreground: #282a36;
   --card: #eeeee6;
@@ -604,7 +619,8 @@
   --sidebar-ring: #7c3aed;
 }
 
-:root[data-theme="dracula"].dark {
+:root[data-theme="dracula"].dark,
+[data-theme="dracula"][data-mode="dark"]:not(:root) {
   --background: #282a36;
   --foreground: #f8f8f2;
   --card: #21222c;
@@ -635,7 +651,8 @@
   --sidebar-ring: #bd93f9;
 }
 
-:root[data-theme="gruvbox"] {
+:root[data-theme="gruvbox"],
+[data-theme="gruvbox"]:not(:root) {
   --background: #fbf1c7;
   --foreground: #3c3836;
   --card: #f2e5bc;
@@ -666,7 +683,8 @@
   --sidebar-ring: #076678;
 }
 
-:root[data-theme="gruvbox"].dark {
+:root[data-theme="gruvbox"].dark,
+[data-theme="gruvbox"][data-mode="dark"]:not(:root) {
   --background: #282828;
   --foreground: #ebdbb2;
   --card: #32302f;
@@ -697,7 +715,8 @@
   --sidebar-ring: #83a598;
 }
 
-:root[data-theme="rose-pine"] {
+:root[data-theme="rose-pine"],
+[data-theme="rose-pine"]:not(:root) {
   --background: #faf4ed;
   --foreground: #575279;
   --card: #fffaf3;
@@ -728,7 +747,8 @@
   --sidebar-ring: #286983;
 }
 
-:root[data-theme="rose-pine"].dark {
+:root[data-theme="rose-pine"].dark,
+[data-theme="rose-pine"][data-mode="dark"]:not(:root) {
   --background: #191724;
   --foreground: #e0def4;
   --card: #1f1d2e;
@@ -759,7 +779,8 @@
   --sidebar-ring: #9ccfd8;
 }
 
-:root[data-theme="monokai"] {
+:root[data-theme="monokai"],
+[data-theme="monokai"]:not(:root) {
   --background: #fafafa;
   --foreground: #272822;
   --card: #f0f0eb;
@@ -790,7 +811,8 @@
   --sidebar-ring: #c4265e;
 }
 
-:root[data-theme="monokai"].dark {
+:root[data-theme="monokai"].dark,
+[data-theme="monokai"][data-mode="dark"]:not(:root) {
   --background: #272822;
   --foreground: #f8f8f2;
   --card: #1e1f1c;
@@ -821,7 +843,8 @@
   --sidebar-ring: #a6e22e;
 }
 
-:root[data-theme="ayu"] {
+:root[data-theme="ayu"],
+[data-theme="ayu"]:not(:root) {
   --background: #fafafa;
   --foreground: #5c6166;
   --card: #f0eee4;
@@ -852,7 +875,8 @@
   --sidebar-ring: #399ee6;
 }
 
-:root[data-theme="ayu"].dark {
+:root[data-theme="ayu"].dark,
+[data-theme="ayu"][data-mode="dark"]:not(:root) {
   --background: #0b0e14;
   --foreground: #bfbdb6;
   --card: #131721;
@@ -883,7 +907,8 @@
   --sidebar-ring: #e6b450;
 }
 
-:root[data-theme="material"] {
+:root[data-theme="material"],
+[data-theme="material"]:not(:root) {
   --background: #fafafa;
   --foreground: #546e7a;
   --card: #eceff1;
@@ -914,7 +939,8 @@
   --sidebar-ring: #6182b8;
 }
 
-:root[data-theme="material"].dark {
+:root[data-theme="material"].dark,
+[data-theme="material"][data-mode="dark"]:not(:root) {
   --background: #263238;
   --foreground: #eeffff;
   --card: #2c3b41;
@@ -945,7 +971,8 @@
   --sidebar-ring: #82aaff;
 }
 
-:root[data-theme="everforest"] {
+:root[data-theme="everforest"],
+[data-theme="everforest"]:not(:root) {
   --background: #fdf6e3;
   --foreground: #5c6a72;
   --card: #f4f0d9;
@@ -976,7 +1003,8 @@
   --sidebar-ring: #3a94c5;
 }
 
-:root[data-theme="everforest"].dark {
+:root[data-theme="everforest"].dark,
+[data-theme="everforest"][data-mode="dark"]:not(:root) {
   --background: #2d353b;
   --foreground: #d3c6aa;
   --card: #343f44;
@@ -1007,7 +1035,8 @@
   --sidebar-ring: #a7c080;
 }
 
-:root[data-theme="night-owl"] {
+:root[data-theme="night-owl"],
+[data-theme="night-owl"]:not(:root) {
   --background: #fbfbfb;
   --foreground: #403f53;
   --card: #f0f0f0;
@@ -1038,7 +1067,8 @@
   --sidebar-ring: #4876d6;
 }
 
-:root[data-theme="night-owl"].dark {
+:root[data-theme="night-owl"].dark,
+[data-theme="night-owl"][data-mode="dark"]:not(:root) {
   --background: #011627;
   --foreground: #d6deeb;
   --card: #0b2942;
@@ -1069,7 +1099,8 @@
   --sidebar-ring: #82aaff;
 }
 
-:root[data-theme="palenight"] {
+:root[data-theme="palenight"],
+[data-theme="palenight"]:not(:root) {
   --background: #fafafa;
   --foreground: #6a7a96;
   --card: #eef0f6;
@@ -1100,7 +1131,8 @@
   --sidebar-ring: #7c4dff;
 }
 
-:root[data-theme="palenight"].dark {
+:root[data-theme="palenight"].dark,
+[data-theme="palenight"][data-mode="dark"]:not(:root) {
   --background: #292d3e;
   --foreground: #a6accd;
   --card: #31364a;
@@ -1131,7 +1163,8 @@
   --sidebar-ring: #82aaff;
 }
 
-:root[data-theme="kanagawa"] {
+:root[data-theme="kanagawa"],
+[data-theme="kanagawa"]:not(:root) {
   --background: #f2ecbc;
   --foreground: #545464;
   --card: #e7dba0;
@@ -1162,7 +1195,8 @@
   --sidebar-ring: #4d699b;
 }
 
-:root[data-theme="kanagawa"].dark {
+:root[data-theme="kanagawa"].dark,
+[data-theme="kanagawa"][data-mode="dark"]:not(:root) {
   --background: #1f1f28;
   --foreground: #dcd7ba;
   --card: #2a2a37;
@@ -1193,7 +1227,8 @@
   --sidebar-ring: #7e9cd8;
 }
 
-:root[data-theme="oceanic"] {
+:root[data-theme="oceanic"],
+[data-theme="oceanic"]:not(:root) {
   --background: #f0f4f8;
   --foreground: #343d46;
   --card: #e1e8ef;
@@ -1224,7 +1259,8 @@
   --sidebar-ring: #3b7dbf;
 }
 
-:root[data-theme="oceanic"].dark {
+:root[data-theme="oceanic"].dark,
+[data-theme="oceanic"][data-mode="dark"]:not(:root) {
   --background: #1b2b34;
   --foreground: #c0c5ce;
   --card: #24373f;
@@ -1255,7 +1291,8 @@
   --sidebar-ring: #6699cc;
 }
 
-:root[data-theme="horizon"] {
+:root[data-theme="horizon"],
+[data-theme="horizon"]:not(:root) {
   --background: #fdf0ed;
   --foreground: #403c3d;
   --card: #f9e1db;
@@ -1286,7 +1323,8 @@
   --sidebar-ring: #e95378;
 }
 
-:root[data-theme="horizon"].dark {
+:root[data-theme="horizon"].dark,
+[data-theme="horizon"][data-mode="dark"]:not(:root) {
   --background: #1c1e26;
   --foreground: #cbced0;
   --card: #232530;
@@ -1317,7 +1355,8 @@
   --sidebar-ring: #e95378;
 }
 
-:root[data-theme="zenburn"] {
+:root[data-theme="zenburn"],
+[data-theme="zenburn"]:not(:root) {
   --background: #f5f1e4;
   --foreground: #3f3f3f;
   --card: #e9e3cf;
@@ -1348,7 +1387,8 @@
   --sidebar-ring: #5b7ea0;
 }
 
-:root[data-theme="zenburn"].dark {
+:root[data-theme="zenburn"].dark,
+[data-theme="zenburn"][data-mode="dark"]:not(:root) {
   --background: #3f3f3f;
   --foreground: #dcdccc;
   --card: #4f4f4f;
@@ -1379,7 +1419,8 @@
   --sidebar-ring: #8cd0d3;
 }
 
-:root[data-theme="synthwave"] {
+:root[data-theme="synthwave"],
+[data-theme="synthwave"]:not(:root) {
   --background: #faf4ff;
   --foreground: #2b2140;
   --card: #f0e4fb;
@@ -1410,7 +1451,8 @@
   --sidebar-ring: #c026d3;
 }
 
-:root[data-theme="synthwave"].dark {
+:root[data-theme="synthwave"].dark,
+[data-theme="synthwave"][data-mode="dark"]:not(:root) {
   --background: #262335;
   --foreground: #ffffff;
   --card: #2e2b45;
@@ -1445,7 +1487,8 @@
    (ChatGPT's grays and the Codex terminal's green), Claude (bone paper, clay and a serif
    heading), Devin (its page and wash grays and its blue) and T3 (near-black zinc and violet). */
 
-:root[data-theme="codex"] {
+:root[data-theme="codex"],
+[data-theme="codex"]:not(:root) {
   --radius: 0.75rem;
   --background: #ffffff;
   --foreground: #0d0d0d;
@@ -1477,7 +1520,8 @@
   --sidebar-ring: #8f8f8f;
 }
 
-:root[data-theme="codex"].dark {
+:root[data-theme="codex"].dark,
+[data-theme="codex"][data-mode="dark"]:not(:root) {
   --background: #212121;
   --foreground: #ececec;
   --card: #2a2a2a;
@@ -1508,7 +1552,8 @@
   --sidebar-ring: #8f8f8f;
 }
 
-:root[data-theme="claude"] {
+:root[data-theme="claude"],
+[data-theme="claude"]:not(:root) {
   --radius: 0.75rem;
   --background: #faf9f5;
   --foreground: #1f1e1d;
@@ -1540,7 +1585,8 @@
   --sidebar-ring: #b5552f;
 }
 
-:root[data-theme="claude"].dark {
+:root[data-theme="claude"].dark,
+[data-theme="claude"][data-mode="dark"]:not(:root) {
   --background: #1f1e1d;
   --foreground: #f5f4ee;
   --card: #262624;
@@ -1571,7 +1617,8 @@
   --sidebar-ring: #d97757;
 }
 
-:root[data-theme="devin"] {
+:root[data-theme="devin"],
+[data-theme="devin"]:not(:root) {
   --radius: 0.5rem;
   --background: #fcfcfc;
   --foreground: #191919;
@@ -1603,7 +1650,8 @@
   --sidebar-ring: #005fcc;
 }
 
-:root[data-theme="devin"].dark {
+:root[data-theme="devin"].dark,
+[data-theme="devin"][data-mode="dark"]:not(:root) {
   --background: #141414;
   --foreground: #ffffff;
   --card: #1f1f1f;
@@ -1634,7 +1682,8 @@
   --sidebar-ring: #4d8dff;
 }
 
-:root[data-theme="t3"] {
+:root[data-theme="t3"],
+[data-theme="t3"]:not(:root) {
   --radius: 0.625rem;
   --background: #fafafa;
   --foreground: #09090b;
@@ -1666,7 +1715,8 @@
   --sidebar-ring: #8b5cf6;
 }
 
-:root[data-theme="t3"].dark {
+:root[data-theme="t3"].dark,
+[data-theme="t3"][data-mode="dark"]:not(:root) {
   --background: #09090b;
   --foreground: #fafafa;
   --card: #131316;

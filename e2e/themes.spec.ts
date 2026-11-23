@@ -9,26 +9,32 @@ async function chooseMode(page: Page, name: "Light" | "Dark" | "System") {
 }
 
 test.describe("themes", () => {
-  test("every theme can be picked, in light and dark, and is remembered", async ({ page }) => {
+  test("every theme can be picked from its card, in light and dark, and is remembered", async ({
+    page,
+  }) => {
     await registerUser(page, "theme", "Theme User");
     await page.goto("/settings/general");
     const html = page.locator("html");
+    const background = (id: string) =>
+      page.locator(`[data-palette="${id}"]`).evaluate((el) => getComputedStyle(el).backgroundColor);
 
-    const picker = page.getByRole("combobox", { name: "Theme" });
     for (const { id, label } of PALETTES) {
-      await picker.click();
-      await page.getByRole("option", { name: label, exact: true }).click();
-      await expect(picker).toContainText(label);
+      const card = page.getByRole("button", { name: label, exact: true });
+
+      await card.click();
+      await expect(card).toHaveAttribute("aria-pressed", "true");
 
       if (id === DEFAULT_PALETTE) await expect(html).not.toHaveAttribute("data-theme", /.+/);
       else await expect(html).toHaveAttribute("data-theme", id);
     }
 
-    await picker.click();
-    await page.getByRole("option", { name: "Catppuccin", exact: true }).click();
+    await page.getByRole("button", { name: "Catppuccin", exact: true }).click();
     await page.reload();
     await expect(html).toHaveAttribute("data-theme", "catppuccin");
-    await expect(page.getByRole("combobox", { name: "Theme" })).toContainText("Catppuccin");
+    await expect(page.getByRole("button", { name: "Catppuccin", exact: true })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
     await chooseMode(page, "Light");
     await expect(html).not.toHaveClass(/dark/);
@@ -44,12 +50,17 @@ test.describe("themes", () => {
     const brand = await html.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("--brand").trim(),
     );
-    await page.getByRole("combobox", { name: "Theme" }).click();
-    await page.getByRole("option", { name: "GitHub", exact: true }).click();
+    await page.getByRole("button", { name: "GitHub", exact: true }).click();
     await expect(html).toHaveAttribute("data-theme", "github");
     expect(
       await html.evaluate((el) => getComputedStyle(el).getPropertyValue("--brand").trim()),
     ).toBe(brand);
+
+    await page.getByRole("button", { name: "Aven", exact: true }).click();
+    expect(await background("github")).not.toBe(await background("aven"));
+    expect(await background("github")).toBe("rgb(13, 17, 23)");
+    await chooseMode(page, "Light");
+    expect(await background("github")).toBe("rgb(255, 255, 255)");
   });
 
   test("a palette can lend the headings a face of its own", async ({ page }) => {
@@ -57,10 +68,8 @@ test.describe("themes", () => {
     await page.goto("/settings/general");
     const html = page.locator("html");
     const heading = page.getByRole("heading", { level: 1 }).first();
-    const picker = page.getByRole("combobox", { name: "Theme" });
 
-    await picker.click();
-    await page.getByRole("option", { name: "Claude", exact: true }).click();
+    await page.getByRole("button", { name: "Claude", exact: true }).click();
     await expect(html).toHaveAttribute("style", /--palette-heading-font/);
     await expect(heading).toHaveCSS("font-family", /Source Serif 4/);
     await expect(page.locator("#aven-theme-font")).toHaveAttribute(
@@ -68,13 +77,11 @@ test.describe("themes", () => {
       /family=Source\+Serif\+4/,
     );
 
-    await picker.click();
-    await page.getByRole("option", { name: "Mint", exact: true }).click();
+    await page.getByRole("button", { name: "Mint", exact: true }).click();
     await expect(html).not.toHaveAttribute("style", /--palette-heading-font/);
     await expect(page.locator("#aven-theme-font")).toHaveCount(0);
 
-    await picker.click();
-    await page.getByRole("option", { name: "Codex", exact: true }).click();
+    await page.getByRole("button", { name: "Codex", exact: true }).click();
     await expect(html).not.toHaveAttribute("style", /--palette-heading-font/);
   });
 

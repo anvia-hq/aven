@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-394 decisions: 301 are the answer, 39 are superseded and 54 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+395 decisions: 302 are the answer, 39 are superseded and 54 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 

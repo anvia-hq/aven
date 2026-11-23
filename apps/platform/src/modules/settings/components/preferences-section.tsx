@@ -24,12 +24,10 @@ export function PreferencesSection() {
   return (
     <>
       <SettingsSection title="Appearance" description="Only affects this device.">
-        <SettingsRow
-          title="Theme"
-          description="The colors of the app. Each has a light and a dark mode."
-        >
-          <PalettePicker />
+        <SettingsRow title="Mode" description="Light, dark, or System to follow this device.">
+          <ModePicker />
         </SettingsRow>
+        <PalettePicker />
         <SettingsRow
           title="Interface font"
           description="The font for the app's text. Code keeps its monospace font."
@@ -53,9 +51,6 @@ export function PreferencesSection() {
           description="The size of the conversation with a bot, on top of the interface size."
         >
           <TextSizePicker scope="bot" label="Bot chat text size" />
-        </SettingsRow>
-        <SettingsRow title="Mode" description="Light, dark, or System to follow this device.">
-          <ModePicker />
         </SettingsRow>
       </SettingsSection>
       <SettingsSection title="Sound" description="Only affects this device.">
