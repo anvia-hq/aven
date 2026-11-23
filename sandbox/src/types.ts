@@ -67,6 +67,7 @@ export type SandboxStore = {
   isExpiredCloud(runtimeId: string): Promise<boolean>;
   admit?(runtimeId: string): Promise<void>;
   onStarted?(runtimeId: string): Promise<void>;
+  onStartFailed?(runtimeId: string): Promise<void>;
   onStopped?(runtimeId: string): Promise<void>;
 };
 
