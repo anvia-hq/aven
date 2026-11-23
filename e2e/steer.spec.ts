@@ -123,22 +123,22 @@ test.describe("steering a running agent", () => {
     await expect(page.locator("[data-queued]")).toContainText("remember this");
   });
 
-  test("a file attached before the run stays in the draft while the words steer it", async ({
-    page,
-  }) => {
+  test("a picture attached before the run goes with the steering message", async ({ page }) => {
     const { events } = await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" }, true);
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     await prompt.click();
     await page.keyboard.type("use the other API");
     await page.keyboard.press("Enter");
 
-    await expect(page.locator("[data-queued]")).toContainText("use the other API");
+    const queued = page.locator("[data-queued]");
+    await expect(queued).toContainText("use the other API");
+    await expect(queued.getByRole("img")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toHaveCount(0);
     await expect
       .poll(() =>
         events.some((event) => event.type === "steer" && event.prompt === "use the other API"),
       )
       .toBe(true);
-    await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
   });
 
   test("on the Claude agent a picture goes with the steering message, and is shown while it waits", async ({
@@ -182,8 +182,23 @@ test.describe("steering a running agent", () => {
     await expect(page.getByRole("button", { name: "Remove shot.png" })).toHaveCount(0);
   });
 
-  test("files cannot go with it: attaching is off while the agent works", async ({ page }) => {
-    await runningThread(page);
-    await expect(page.getByRole("button", { name: "Attach files" })).toBeDisabled();
+  test("a picture can be attached and sent alone while the agent works", async ({ page }) => {
+    await runningThread(page, { FAKE_STEER_APPLIES_AFTER: "60000" });
+    await expect(page.getByRole("button", { name: "Attach files" })).toBeEnabled();
+    await page.locator('input[type="file"]').setInputFiles({
+      name: "shot.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==",
+        "base64",
+      ),
+    });
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toBeVisible();
+    await page.getByRole("textbox", { name: "Prompt" }).click();
+    await page.keyboard.press("Enter");
+
+    const queued = page.locator("[data-queued]");
+    await expect(queued.getByRole("img")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Remove shot.png" })).toHaveCount(0);
   });
 });
