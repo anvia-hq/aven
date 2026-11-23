@@ -73,9 +73,21 @@ export function createCloudReconciler({
   now = Date.now,
 }: ReconcilerOptions) {
   async function credentialsFor(row: CloudSandboxRow): Promise<ProviderCredentials | undefined> {
-    if (!row.providerConfigId) return undefined;
+    if (row.providerConfigId) {
+      return (await cloudSettingsService.credentialsFor(row.providerConfigId)) ?? undefined;
+    }
 
-    return (await cloudSettingsService.credentialsFor(row.providerConfigId)) ?? undefined;
+    return (await cloudSettingsService.credentialsForProvider(row.provider)) ?? undefined;
+  }
+
+  async function externalIdFor(row: CloudSandboxRow): Promise<string | null> {
+    if (row.externalId) return row.externalId;
+
+    const [runtime] = await db
+      .select({ boatSandboxId: runtimes.boatSandboxId })
+      .from(runtimes)
+      .where(eq(runtimes.id, row.runtimeId));
+    return runtime?.boatSandboxId ?? null;
   }
 
   async function snapshotBeforeStop(
@@ -135,13 +147,14 @@ export function createCloudReconciler({
     }
 
     const credentials = await credentialsFor(row);
+    const externalId = await externalIdFor(row);
 
     try {
       if (isCloudProvider(row.provider)) {
         const module = cloudProvider(row.provider);
 
-        if (row.externalId) {
-          const removed = await module.removeSandbox(row.externalId, credentials);
+        if (externalId) {
+          const removed = await module.removeSandbox(externalId, credentials);
 
           if (!removed) throw new Error("Provider credentials unavailable to remove sandbox");
         }
@@ -304,7 +317,8 @@ export function createCloudReconciler({
   async function sweep(atMs = now()) {
     const at = new Date(atMs);
     const basePolicy = await cloudLifecycleService.policy();
-    await cloudSandboxStore.syncLegacyRuntimes(basePolicy.expireMs);
+    const activeConfig = await cloudSettingsService.activeConfigRef();
+    await cloudSandboxStore.syncLegacyRuntimes(basePolicy.expireMs, activeConfig);
     const spend = await spendBrakeService.verdict(at);
     const windows = effectiveIdleWindows(
       { agentIdleMs: basePolicy.agentIdleMs, userIdleMs: basePolicy.userIdleMs },

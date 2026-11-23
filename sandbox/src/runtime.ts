@@ -74,7 +74,15 @@ export function createSandboxRuntime<T extends SandboxRunner>(store: SandboxStor
 
     if (isCloudProvider(kind)) await store.admit?.(place.runtimeId);
 
-    const runner = await providerFor(kind, hub).start(place, offline);
+    let runner: T;
+
+    try {
+      runner = await providerFor(kind, hub).start(place, offline);
+    } catch (error) {
+      if (isCloudProvider(kind)) await store.onStartFailed?.(place.runtimeId);
+
+      throw error;
+    }
 
     if (isCloudProvider(kind)) await store.onStarted?.(place.runtimeId);
 

@@ -121,8 +121,25 @@ export const cloudSettingsService = {
     return activeProviderConfigId();
   },
 
+  async activeConfigRef(): Promise<{ id: string; provider: string } | null> {
+    const active = await readActiveConfig();
+    return active ? { id: active.id, provider: active.provider } : null;
+  },
+
   async credentialsFor(configId: string): Promise<ProviderCredentials | null> {
     return credentialsForConfig(configId);
+  },
+
+  async credentialsForProvider(provider: string): Promise<ProviderCredentials | null> {
+    const active = await readActiveConfig();
+
+    if (active && active.provider === provider) {
+      return credentialsForConfig(active.id);
+    }
+
+    const draining = await this.drainingConfigs();
+    const match = draining.find((row) => row.provider === provider);
+    return match ? credentialsForConfig(match.id) : null;
   },
 
   async drainingConfigs(): Promise<CloudProviderConfigRow[]> {

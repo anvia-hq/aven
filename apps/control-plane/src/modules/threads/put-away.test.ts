@@ -40,6 +40,7 @@ run("putting a thread away (real postgres)", async () => {
     } as unknown as Pick<RuntimeHub, "get">;
     const cancelled: string[] = [];
     const stopped: string[] = [];
+    const reclaimed: string[] = [];
     const looked: string[] = [];
     const putAway = createPutAwayThread({
       cancel: (id) => cancelled.push(id),
@@ -51,8 +52,11 @@ run("putting a thread away (real postgres)", async () => {
       stop: async (runtimeId) => {
         stopped.push(runtimeId);
       },
+      reclaim: async (runtimeId) => {
+        reclaimed.push(runtimeId);
+      },
     });
-    return { asked, calls, cancelled, looked, stopped, putAway };
+    return { asked, calls, cancelled, looked, stopped, reclaimed, putAway };
   }
 
   test("stops the run and asks the thread's runner to free its sandbox", async () => {
@@ -76,23 +80,25 @@ run("putting a thread away (real postgres)", async () => {
     expect(calls).toEqual([]);
   });
 
-  test("a sandbox no other thread uses is stopped as soon as the thread is put away", async () => {
-    const { looked, putAway, stopped } = harness();
+  test("a sandbox no other thread uses is stopped and queued for reclaim as soon as the thread is put away", async () => {
+    const { looked, putAway, stopped, reclaimed } = harness();
 
     putAway(thread);
-    await until(() => stopped.length > 0);
+    await until(() => reclaimed.length > 0);
 
     expect(looked).toEqual([thread.runtimeId]);
     expect(stopped).toEqual([thread.runtimeId]);
+    expect(reclaimed).toEqual([thread.runtimeId]);
   });
 
   test("a sandbox another thread is still open on is left running", async () => {
-    const { looked, putAway, stopped } = harness({ open: 1 });
+    const { looked, putAway, stopped, reclaimed } = harness({ open: 1 });
 
     putAway(thread);
     await until(() => looked.length > 0);
     await Bun.sleep(20);
 
     expect(stopped).toEqual([]);
+    expect(reclaimed).toEqual([]);
   });
 });

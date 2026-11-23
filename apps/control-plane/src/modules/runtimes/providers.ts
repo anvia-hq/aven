@@ -32,6 +32,10 @@ const sandboxRuntime = createSandboxRuntime<RuntimeConnection>({
 
     spendBrakeService.invalidate();
   },
+  onStartFailed: async (runtimeId) => {
+    const expireMs = await cloudLifecycleService.expireAfterMs();
+    await cloudSandboxStore.revertStarting(runtimeId, expireMs).catch(() => undefined);
+  },
   onStopped: async (runtimeId) => {
     const expireMs = await cloudLifecycleService.expireAfterMs();
     await cloudSandboxStore.markStopped(runtimeId, expireMs).catch(() => undefined);

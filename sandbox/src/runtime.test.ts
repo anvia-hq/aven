@@ -110,6 +110,25 @@ describe("reaching a runtime's sandbox", () => {
     expect(recorded).toEqual([]);
   });
 
+  test("notifies onStartFailed when starting a cloud sandbox fails", async () => {
+    setSandboxSettings({ provider: "boat", base: "", apiKey: "boat_key", runnerUrl: "" });
+    const failed: string[] = [];
+    const sandbox = createSandboxRuntime<SandboxRunner>(
+      store({
+        providerOf: async () => "boat",
+        record: async () => null,
+        onStartFailed: async (runtimeId) => {
+          failed.push(runtimeId);
+        },
+      }),
+    );
+
+    await expect(
+      sandbox.reachRunner({ get: () => undefined }, { runtimeId: "r1" }),
+    ).rejects.toBeInstanceOf(RuntimeOfflineError);
+    expect(failed).toEqual(["r1"]);
+  });
+
   test("a manual runtime is never put through admission", async () => {
     let asked = false;
     const sandbox = createSandboxRuntime<SandboxRunner>(
