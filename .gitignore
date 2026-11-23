@@ -18,3 +18,8 @@ playwright-report
 .tanstack/
 .env.local
 .pi/
+# Local skill output (superpowers, taste-skill, antislop) stays off GitHub.
+.superpowers/
+.taste-skill/
+.antislop/
+docs/superpowers/
