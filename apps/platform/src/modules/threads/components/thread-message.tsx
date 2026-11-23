@@ -29,10 +29,12 @@ function AssistantBlock({
   block,
   live,
   threadId,
+  runtimeId,
 }: {
   block: Block;
   live: boolean;
   threadId: string;
+  runtimeId: string;
 }) {
   if (block.type === "text") {
     return <Markdown live={live}>{block.text}</Markdown>;
@@ -44,7 +46,9 @@ function AssistantBlock({
     return <ArtifactGrid threadId={threadId} artifacts={block.artifacts} />;
   }
 
-  if (block.type === "browser") return <BrowserOffer tool={block.tool} threadId={threadId} />;
+  if (block.type === "browser") {
+    return <BrowserOffer tool={block.tool} threadId={threadId} runtimeId={runtimeId} />;
+  }
 
   if (block.type === "fork") return <ForkCard tool={block.tool} forkId={block.forkId} />;
 
@@ -67,6 +71,7 @@ function AssistantBlock({
 export const ThreadMessage = memo(function ThreadMessage({
   message,
   threadId,
+  runtimeId,
   viewer,
   streaming = false,
   sending = false,
@@ -75,6 +80,7 @@ export const ThreadMessage = memo(function ThreadMessage({
 }: {
   message: ChatMessage;
   threadId: string;
+  runtimeId: string;
   viewer: Viewer;
   streaming?: boolean;
   sending?: boolean;
@@ -145,16 +151,25 @@ export const ThreadMessage = memo(function ThreadMessage({
     );
   }
 
-  return <AssistantMessage message={message} threadId={threadId} streaming={streaming} />;
+  return (
+    <AssistantMessage
+      message={message}
+      threadId={threadId}
+      runtimeId={runtimeId}
+      streaming={streaming}
+    />
+  );
 });
 
 function AssistantMessage({
   message,
   threadId,
+  runtimeId,
   streaming,
 }: {
   message: ChatMessage;
   threadId: string;
+  runtimeId: string;
   streaming: boolean;
 }) {
   const { parts, draining } = useSmoothParts(message, streaming);
@@ -182,15 +197,32 @@ function AssistantMessage({
           <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
             <div className="flex min-w-0 flex-col gap-2 pt-2">
               {folded.steps.map((block, index) => (
-                <AssistantBlock key={index} block={block} live={false} threadId={threadId} />
+                <AssistantBlock
+                  key={index}
+                  block={block}
+                  live={false}
+                  threadId={threadId}
+                  runtimeId={runtimeId}
+                />
               ))}
             </div>
           </CollapsibleContent>
         </Collapsible>
         {folded.kept.map((block, index) => (
-          <AssistantBlock key={index} block={block} live={false} threadId={threadId} />
+          <AssistantBlock
+            key={index}
+            block={block}
+            live={false}
+            threadId={threadId}
+            runtimeId={runtimeId}
+          />
         ))}
-        <AssistantBlock block={folded.answer} live={false} threadId={threadId} />
+        <AssistantBlock
+          block={folded.answer}
+          live={false}
+          threadId={threadId}
+          runtimeId={runtimeId}
+        />
       </div>
     );
   }
@@ -203,6 +235,7 @@ function AssistantMessage({
           block={block}
           live={live && index === all.length - 1}
           threadId={threadId}
+          runtimeId={runtimeId}
         />
       ))}
     </div>

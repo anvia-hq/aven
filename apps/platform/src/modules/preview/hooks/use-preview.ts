@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { toast } from "@aven/ui/toast";
 import { useLocalStorage } from "@aven/ui/use-local-storage";
 import { errorMessage, postJson } from "@/lib/api";
 import { forgetStoredKeys, registerUserState } from "@/lib/user-state";
+import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 
-import { parsePort } from "../port";
+import { addressOf, parsePort } from "../port";
 import type { PreviewAnswer, PreviewSession } from "../types";
 
 const PORT_KEY = "aven.preview-port";
@@ -13,12 +14,26 @@ const PORT_KEY = "aven.preview-port";
 registerUserState(() => forgetStoredKeys([PORT_KEY]));
 
 export function usePreview(runtimeId: string) {
-  const [port, setPort] = useLocalStorage(PORT_KEY, "");
+  const { config } = usePlatformConfig();
+  const previewDomain = config?.previewDomain ?? null;
+  const [saved, setSaved] = useLocalStorage(PORT_KEY, "");
+  const [port, setPort] = useState(() => {
+    const parsed = parsePort(saved);
+    return parsed !== null ? addressOf(parsed, { runtimeId, previewDomain }) : saved;
+  });
   const [session, setSession] = useState<PreviewSession | null>(null);
   const [problem, setProblem] = useState("");
   const [opening, setOpening] = useState(false);
 
+  useEffect(() => {
+    const parsed = parsePort(saved);
+
+    if (parsed !== null) setPort(addressOf(parsed, { runtimeId, previewDomain }));
+  }, [previewDomain, runtimeId, saved]);
+
   async function open(target: number) {
+    setSaved(String(target));
+    setPort(addressOf(target, { runtimeId, previewDomain }));
     setOpening(true);
 
     try {
@@ -62,15 +77,30 @@ export function usePreview(runtimeId: string) {
   }
 
   function parseRequestedPort() {
-    const parsed = parsePort(port);
+    const parsed = parsePort(port, { runtimeId, previewDomain });
 
     if (parsed === null) {
-      toast.add({ title: "Enter an address such as localhost:3000", type: "error" });
+      toast.add({
+        title: previewDomain
+          ? "Enter a port such as 3000 or a preview URL"
+          : "Enter an address such as localhost:3000",
+        type: "error",
+      });
       return null;
     }
 
     return parsed;
   }
 
-  return { port, setPort, session, problem, opening, open, openInTab, parseRequestedPort };
+  return {
+    port,
+    setPort,
+    previewDomain,
+    session,
+    problem,
+    opening,
+    open,
+    openInTab,
+    parseRequestedPort,
+  };
 }

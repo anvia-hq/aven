@@ -129,6 +129,7 @@ export function ThreadMessages({
                 <ThreadMessage
                   message={message}
                   threadId={threadId}
+                  runtimeId={runtimeId}
                   viewer={viewer}
                   streaming={streaming}
                   sending={sending}

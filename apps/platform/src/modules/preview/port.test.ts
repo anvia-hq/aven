@@ -23,6 +23,21 @@ describe("parsePort", () => {
     }
   });
 
+  test("reads and formats a preview tunnel URL when previewDomain is set", () => {
+    const target = {
+      runtimeId: "00000000-0000-4000-8000-000000000001",
+      previewDomain: "aven.run",
+    };
+    const url = addressOf(5173, target);
+    expect(url).toBe("https://5173-00000000-0000-4000-8000-000000000001.aven.run");
+    expect(parsePort(url, target)).toBe(5173);
+    expect(parsePort(`${url}/login?next=/`, target)).toBe(5173);
+    expect(parsePort("5173-00000000-0000-4000-8000-000000000002.aven.run", target)).toBeNull();
+    expect(
+      parsePort("https://5173-00000000-0000-4000-8000-000000000001.evil.test", target),
+    ).toBeNull();
+  });
+
   test("refuses what is not a port", () => {
     for (const text of ["", "0", "65536", "-1", "3000.5", "http://x", "localhost", "abc", "1e3"]) {
       expect(parsePort(text)).toBeNull();

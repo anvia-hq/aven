@@ -54,4 +54,30 @@ describe("an answer from a port", () => {
     expect(sent).toContain("Content-Security-Policy: default-src 'self'\r\n");
     expect(sent).toContain("Referrer-Policy: no-referrer\r\n");
   });
+
+  test("upgrades app cookies to SameSite=None; Secure; Partitioned for embedded previews", () => {
+    const rewritten = responseForBrowser(
+      head([
+        "HTTP/1.1 200 OK",
+        "Set-Cookie: session=abc; Path=/; HttpOnly; SameSite=Lax",
+        "Set-Cookie: prefs=dark; Path=/; Secure; SameSite=Strict; Partitioned",
+        "Set-Cookie: sid=1; Domain=.aven.run; Path=/",
+        "",
+        "",
+      ]),
+      5173,
+      { embed: true },
+    );
+    const sent = serializeHead(rewritten);
+    expect(sent).toContain(
+      "Set-Cookie: session=abc; Path=/; HttpOnly; SameSite=None; Secure; Partitioned\r\n",
+    );
+    expect(sent).toContain(
+      "Set-Cookie: prefs=dark; Path=/; SameSite=None; Secure; Partitioned\r\n",
+    );
+    expect(sent).toContain("Set-Cookie: sid=1; Path=/; SameSite=None; Secure; Partitioned\r\n");
+    expect(sent).not.toContain("SameSite=Lax");
+    expect(sent).not.toContain("SameSite=Strict");
+    expect(sent).not.toContain("Domain=");
+  });
 });
