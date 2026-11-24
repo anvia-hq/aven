@@ -24,7 +24,6 @@ type Props = {
   panels: ThreadPanels;
   previewOffer: ReturnType<typeof usePreviewOffer>;
   owned: boolean;
-  handleClassName: string;
 };
 
 export function ThreadSidePanels({
@@ -34,7 +33,6 @@ export function ThreadSidePanels({
   panels,
   previewOffer,
   owned,
-  handleClassName,
 }: Props) {
   const { diff, files, terminal, preview } = panels;
   const side = useDefaultLayout({
@@ -93,7 +91,7 @@ export function ThreadSidePanels({
     >
       {shown.map(({ item: panel, leaving }, index) => (
         <Fragment key={panel.id}>
-          {index > 0 && <ResizableHandle className={handleClassName} />}
+          {index > 0 && <ResizableHandle />}
           <ResizablePanel id={panel.id} defaultSize="50" minSize="15">
             <PanelEnter leaving={leaving}>{panel.node}</PanelEnter>
           </ResizablePanel>

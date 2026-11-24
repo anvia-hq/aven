@@ -1,7 +1,6 @@
 import { backendSupports } from "@aven/protocol/runtime-wire";
 import { PANEL_EXIT_MS } from "@aven/ui/panel-enter";
 import {
-  GAP_HANDLE,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -128,9 +127,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
         >
           <ResizablePanel id="conversation" defaultSize="50" minSize="30">
             <div
-              className={cn(
-                "@container flex h-full min-w-0 flex-col overflow-clip bg-background md:border md:border-foreground/12",
-              )}
+              className={cn("@container flex h-full min-w-0 flex-col overflow-clip bg-background")}
             >
               <ThreadHeader
                 thread={thread}
@@ -245,7 +242,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
           </ResizablePanel>
           {sideOpen && (
             <>
-              <ResizableHandle className={GAP_HANDLE} />
+              <ResizableHandle />
               <ResizablePanel id="side" defaultSize="50" minSize="25">
                 <ThreadSidePanels
                   threadId={thread.id}
@@ -254,7 +251,6 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   panels={panels}
                   previewOffer={previewOffer}
                   owned={owned}
-                  handleClassName={GAP_HANDLE}
                 />
               </ResizablePanel>
             </>

@@ -14,7 +14,7 @@ type Props = {
 export function SidePanel({ title, icon: Icon, actions, onClose, children }: Props) {
   return (
     <section
-      className="flex size-full min-w-0 flex-col overflow-hidden border border-foreground/12 bg-background"
+      className="flex size-full min-w-0 flex-col overflow-hidden bg-background"
       aria-label={title}
     >
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">

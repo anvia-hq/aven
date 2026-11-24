@@ -27,7 +27,7 @@ function GitCenterIndexPage() {
   if (projects.length > 0) return null;
 
   return (
-    <main className="flex h-[calc(100svh-var(--mobile-chrome))] flex-col items-center justify-center gap-3 bg-background p-6 text-center md:h-svh md:border md:border-foreground/12">
+    <main className="flex h-[calc(100svh-var(--mobile-chrome))] flex-col items-center justify-center gap-3 bg-background p-6 text-center md:h-svh">
       <IconGitFork className="size-10 text-muted-foreground/50" />
       <h1 className="text-lg font-semibold">Git Center</h1>
       <p className="max-w-sm text-sm text-muted-foreground">

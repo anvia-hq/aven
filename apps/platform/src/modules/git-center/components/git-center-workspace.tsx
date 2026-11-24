@@ -107,7 +107,7 @@ export function GitCenterWorkspace({ projectId }: Props) {
 
   if (center.loading && !center.snapshot) {
     return (
-      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
+      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh">
         <GitTabBar
           projects={projects ?? []}
           activeProjectId={projectId}
@@ -128,7 +128,7 @@ export function GitCenterWorkspace({ projectId }: Props) {
 
   if (!center.snapshot) {
     return (
-      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
+      <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh">
         <GitTabBar
           projects={projects ?? []}
           activeProjectId={projectId}
@@ -282,7 +282,7 @@ export function GitCenterWorkspace({ projectId }: Props) {
   );
 
   return (
-    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh md:border md:border-foreground/12">
+    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col overflow-hidden bg-background md:h-svh">
       <GitTabBar
         projects={projects ?? []}
         activeProjectId={projectId}
