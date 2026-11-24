@@ -2,7 +2,11 @@ import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "@aven/protocol/skills";
 
 import type { SkillCandidate, ResolvedSkill, SkillSource } from "./types";
 
-const API_URL = "https://api.github.com";
+const GITHUB_API = "https://api.github.com";
+
+function apiUrl() {
+  return (process.env.GITHUB_API_URL ?? GITHUB_API).replace(/\/+$/, "");
+}
 
 const MAX_CANDIDATES = 100;
 
@@ -256,7 +260,7 @@ async function treeOf(source: SkillSource, token: string | null, fetcher: SkillF
   const ref = source.ref ?? "HEAD";
   const tree = await githubJson<Tree>(
     fetcher,
-    `${API_URL}/repos/${source.owner}/${source.repo}/git/trees/${refPath(ref)}?recursive=1`,
+    `${apiUrl()}/repos/${source.owner}/${source.repo}/git/trees/${refPath(ref)}?recursive=1`,
     token,
     `GitHub has no ${source.owner}/${source.repo} this account can read, or none with ${ref}`,
   );
@@ -292,7 +296,7 @@ async function filesUnder(
   for (const entry of entries) {
     const blob = await githubJson<Blob>(
       fetcher,
-      `${API_URL}/repos/${source.owner}/${source.repo}/git/blobs/${entry.sha}`,
+      `${apiUrl()}/repos/${source.owner}/${source.repo}/git/blobs/${entry.sha}`,
       token,
       `${entry.path} could not be read from ${source.owner}/${source.repo}`,
     );

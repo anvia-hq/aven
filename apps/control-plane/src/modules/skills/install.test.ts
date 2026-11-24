@@ -227,6 +227,21 @@ describe("resolveSkill", () => {
     );
   });
 
+  test("reads from the GitHub API the control plane is configured with", async () => {
+    const fake = github(filesOf(repo));
+    const before = process.env.GITHUB_API_URL;
+    process.env.GITHUB_API_URL = "http://localhost:8101/";
+
+    try {
+      await resolveSkill("owner/repo@release-notes", { fetch: fake.fetch });
+    } finally {
+      if (before === undefined) delete process.env.GITHUB_API_URL;
+      else process.env.GITHUB_API_URL = before;
+    }
+
+    expect(fake.asked[0]).toBe("http://localhost:8101/repos/owner/repo/git/trees/HEAD?recursive=1");
+  });
+
   test("says so when GitHub has no such repository", async () => {
     const fetch = async () => new Response("", { status: 404 });
 
