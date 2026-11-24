@@ -20,3 +20,11 @@ export type ResolvedSkill =
 export type ResolvedInstall =
   | { status: "installed"; skill: SkillView }
   | { status: "choose"; choices: SkillCandidate[] };
+
+export type SkillFetch = (url: string, init?: RequestInit) => Promise<Response>;
+
+export type InstallOptions = {
+  folder?: string | null;
+  token?: string | null;
+  fetch?: SkillFetch;
+};

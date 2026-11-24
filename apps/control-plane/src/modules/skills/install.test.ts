@@ -122,6 +122,9 @@ describe("parseSkillSource", () => {
     expect(() => parseSkillSource("/Users/me/skills/my-skill")).toThrow("uploaded, not installed");
     expect(() => parseSkillSource("https://skills.sh/p/web-design")).toThrow("pack");
     expect(() => parseSkillSource("https://example.com/my-skill.zip")).toThrow("owner/repo");
+    expect(() => parseSkillSource("https://github.com/%E0%A4%A/repo")).toThrow("owner/repo");
+    expect(() => parseSkillSource("https://github.com/a%2Fb/repo")).toThrow("owner/repo");
+    expect(() => parseSkillSource("https://github.com/../repo")).toThrow("owner/repo");
     expect(() => parseSkillSource("not a link")).toThrow("owner/repo");
     expect(() => parseSkillSource("   ")).toThrow("owner/repo");
   });

@@ -1,6 +1,12 @@
 import { MAX_SKILL_BYTES, MAX_SKILL_FILES } from "@aven/protocol/skills";
 
-import type { SkillCandidate, ResolvedSkill, SkillSource } from "./types";
+import type {
+  InstallOptions,
+  ResolvedSkill,
+  SkillCandidate,
+  SkillFetch,
+  SkillSource,
+} from "./types";
 
 const GITHUB_API = "https://api.github.com";
 
@@ -12,6 +18,8 @@ const MAX_CANDIDATES = 100;
 
 const SKILL_FILE = "SKILL.md";
 
+const SEGMENT = /^[A-Za-z0-9_.-]+$/;
+
 const SHORTHAND = /^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:@([A-Za-z0-9_.-]+))?$/;
 
 const SSH = /^git@([A-Za-z0-9_.-]+):([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/;
@@ -19,14 +27,6 @@ const SSH = /^git@([A-Za-z0-9_.-]+):([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/;
 const JUNK = new Set([".git", "node_modules", "__MACOSX"]);
 
 export class SkillInstallError extends Error {}
-
-export type SkillFetch = (url: string, init?: RequestInit) => Promise<Response>;
-
-export type InstallOptions = {
-  folder?: string | null;
-  token?: string | null;
-  fetch?: SkillFetch;
-};
 
 type TreeEntry = { path: string; mode: string; type: string; sha: string; size?: number };
 
@@ -46,7 +46,13 @@ function segmentsOf(pathname: string) {
   const parts: string[] = [];
 
   for (const part of pathname.split("/")) {
-    if (part.length > 0) parts.push(decodeURIComponent(part));
+    if (part.length === 0) continue;
+
+    try {
+      parts.push(decodeURIComponent(part));
+    } catch {
+      askFor();
+    }
   }
 
   return parts;
@@ -60,12 +66,20 @@ function folderOf(path: string) {
   return path.split("/").slice(0, -1).join("/");
 }
 
+function isSegment(value: string) {
+  return value !== "." && value !== ".." && SEGMENT.test(value);
+}
+
 function skillSource(
   owner: string,
   repo: string,
   { ref = null, folder = null, name = null }: Partial<SkillSource>,
 ): SkillSource {
-  return { owner, repo: withoutGit(repo), ref, folder, name };
+  const cleanRepo = withoutGit(repo);
+
+  if (!isSegment(owner) || !isSegment(cleanRepo)) askFor();
+
+  return { owner, repo: cleanRepo, ref, folder, name };
 }
 
 function fromPath(pathname: string, owner: string, repo: string): SkillSource {
@@ -260,7 +274,7 @@ async function treeOf(source: SkillSource, token: string | null, fetcher: SkillF
   const ref = source.ref ?? "HEAD";
   const tree = await githubJson<Tree>(
     fetcher,
-    `${apiUrl()}/repos/${source.owner}/${source.repo}/git/trees/${refPath(ref)}?recursive=1`,
+    `${apiUrl()}/repos/${encodeURIComponent(source.owner)}/${encodeURIComponent(source.repo)}/git/trees/${refPath(ref)}?recursive=1`,
     token,
     `GitHub has no ${source.owner}/${source.repo} this account can read, or none with ${ref}`,
   );
@@ -296,7 +310,7 @@ async function filesUnder(
   for (const entry of entries) {
     const blob = await githubJson<Blob>(
       fetcher,
-      `${apiUrl()}/repos/${source.owner}/${source.repo}/git/blobs/${entry.sha}`,
+      `${apiUrl()}/repos/${encodeURIComponent(source.owner)}/${encodeURIComponent(source.repo)}/git/blobs/${encodeURIComponent(entry.sha)}`,
       token,
       `${entry.path} could not be read from ${source.owner}/${source.repo}`,
     );
