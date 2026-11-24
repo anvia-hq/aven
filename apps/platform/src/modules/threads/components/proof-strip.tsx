@@ -7,6 +7,7 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "cn";
 
+import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 import { DiffStat } from "@/modules/diff/components/diff-stat";
 
@@ -26,14 +27,22 @@ function prStatusLabel(pull: ThreadPullRequestCheck) {
 
 function PrStatusGlyph({ state }: { state: ThreadPullRequestCheck["checksState"] }) {
   if (state === "pending")
-    return <IconLoader2 aria-hidden className="size-3.5 animate-spin text-muted-foreground" />;
+    return (
+      <IconLoader2
+        aria-hidden
+        data-icon="inline-start"
+        className="animate-spin text-muted-foreground"
+      />
+    );
 
   if (state === "passing")
-    return <IconCheck aria-hidden className="size-3.5 text-muted-foreground" />;
+    return <IconCheck aria-hidden data-icon="inline-start" className="text-muted-foreground" />;
 
-  if (state === "failing") return <IconAlertTriangle aria-hidden className="size-3.5" />;
+  if (state === "failing") return <IconAlertTriangle aria-hidden data-icon="inline-start" />;
 
-  return <IconGitPullRequest aria-hidden className="size-3.5 text-muted-foreground" />;
+  return (
+    <IconGitPullRequest aria-hidden data-icon="inline-start" className="text-muted-foreground" />
+  );
 }
 
 export function ProofStrip({
@@ -55,69 +64,64 @@ export function ProofStrip({
 
   const totalAdd = proof.files.reduce((sum, file) => sum + file.additions, 0);
   const totalDel = proof.files.reduce((sum, file) => sum + file.deletions, 0);
+  const filesLabel = (
+    <>
+      <IconFileDiff aria-hidden data-icon="inline-start" className="text-muted-foreground" />
+      <span>{proof.files.length === 1 ? "1 file" : `${proof.files.length} files`}</span>
+      {(totalAdd > 0 || totalDel > 0) && (
+        <span className="font-mono">
+          <DiffStat additions={totalAdd} deletions={totalDel} />
+        </span>
+      )}
+    </>
+  );
 
   return (
     <div
       data-role="proof-strip"
-      className={cn("flex flex-wrap items-center gap-1.5 pt-1 text-xs", animate && "timeline-in")}
+      className={cn("flex flex-wrap items-center gap-1.5 pt-1", animate && "timeline-in")}
     >
       {proof.checks.map((check) => (
-        <span
+        <Badge
           key={check.id}
+          variant={check.status === "pass" ? "secondary" : "destructive"}
           title={check.detail}
-          className={cn(
-            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-medium",
-            check.status === "pass"
-              ? "border-border bg-muted/35 text-foreground/85"
-              : "border-destructive/30 bg-destructive/8 text-destructive",
-          )}
         >
           {check.status === "pass" ? (
-            <IconCheck aria-hidden className="size-3.5 text-muted-foreground" />
+            <IconCheck aria-hidden data-icon="inline-start" className="text-muted-foreground" />
           ) : (
-            <IconAlertTriangle aria-hidden className="size-3.5" />
+            <IconAlertTriangle aria-hidden data-icon="inline-start" />
           )}
           <span>{check.label}</span>
-        </span>
+        </Badge>
       ))}
-      {hasFiles && (
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          className="h-6 rounded-full px-2.5 font-normal text-muted-foreground hover:text-foreground"
-          onClick={onOpenChanges}
-          disabled={!onOpenChanges}
-        >
-          <IconFileDiff aria-hidden className="size-3.5" />
-          <span>{proof.files.length === 1 ? "1 file" : `${proof.files.length} files`}</span>
-          {(totalAdd > 0 || totalDel > 0) && (
-            <span className="font-mono">
-              <DiffStat additions={totalAdd} deletions={totalDel} />
-            </span>
-          )}
-        </Button>
-      )}
+      {hasFiles &&
+        (onOpenChanges ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="xs"
+            className="h-5 rounded-4xl px-2"
+            onClick={onOpenChanges}
+          >
+            {filesLabel}
+          </Button>
+        ) : (
+          <Badge variant="secondary">{filesLabel}</Badge>
+        ))}
       {prChecks.map((pull) => {
         const failing = pull.checksState === "failing";
         return (
-          <a
+          <Badge
             key={pull.number}
-            href={pull.url}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-medium transition-colors hover:bg-accent/50",
-              failing
-                ? "border-destructive/30 bg-destructive/8 text-destructive"
-                : "border-border bg-muted/35 text-foreground/85",
-            )}
+            variant={failing ? "destructive" : "secondary"}
+            render={<a href={pull.url} target="_blank" rel="noreferrer" />}
           >
             <PrStatusGlyph state={pull.checksState} />
             <span>
               PR #{pull.number} · {prStatusLabel(pull)}
             </span>
-          </a>
+          </Badge>
         );
       })}
     </div>
