@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -463,5 +463,23 @@ describe("a thread's changes", () => {
 
     const diff = await threadDiff(root, "all");
     expect(diff?.patch).toContain("+++ b/b.txt");
+  });
+
+  test("preserves racy-git detection when a same-size edit shares the index timestamp", async () => {
+    const { root, sh } = await workspace();
+    const past = Math.floor(Date.now() / 1000) - 5;
+    await writeFile(join(root, "a.txt"), "one\n");
+    await utimes(join(root, "a.txt"), past, past);
+    await sh(root, "add", "a.txt");
+    await sh(root, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "same-second");
+    await utimes(join(root, ".git", "index"), past, past);
+
+    await writeFile(join(root, "a.txt"), "six\n");
+    await utimes(join(root, "a.txt"), past, past);
+
+    const ignoreCtime: Git = (args, options) =>
+      git(["-c", "core.trustctime=false", ...args], options);
+    const diff = await threadDiff(root, "all", ignoreCtime);
+    expect(diff?.patch).toContain("+six");
   });
 });
