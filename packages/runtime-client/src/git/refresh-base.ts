@@ -4,13 +4,32 @@ import { threadBranchFamily } from "./thread-branches";
 import type { Git } from "../types";
 
 const REFRESH_TIMEOUT_MS = 10_000;
+const FOLDER_FRESH_MS = 15_000;
 const UPSTREAM_FRESH_MS = 60_000;
+const MAX_CACHE_ENTRIES = 200;
 const UPSTREAM_URL = /^(https:\/\/|ssh:\/\/|git@|file:\/\/|\/)/;
 
 export const UPSTREAM_REF = "refs/aven/upstream";
 
+const folderFetched = new Map<
+  string,
+  { at: number; head: string; branch: string; current: string | null }
+>();
 const upstreamFetched = new Map<string, { at: number; head: string; ok: boolean }>();
 const upstreamInFlight = new Map<string, Promise<void>>();
+
+function rememberFolderFetch(
+  root: string,
+  entry: { at: number; head: string; branch: string; current: string | null },
+) {
+  if (folderFetched.size >= MAX_CACHE_ENTRIES && !folderFetched.has(root)) {
+    const oldest = folderFetched.keys().next().value;
+
+    if (oldest !== undefined) folderFetched.delete(oldest);
+  }
+
+  folderFetched.set(root, entry);
+}
 
 const isFolder = (url: string) => url.startsWith("/") || url.startsWith("file://");
 
@@ -117,21 +136,32 @@ export async function refreshBase(
       : await host(["symbolic-ref", "--quiet", "--short", "HEAD"], { cwd: root }).then((found) =>
           found.code === 0 ? found.stdout.trim() : null,
         );
-  const family = current ? threadBranchFamily(current) : null;
-  const refspecs = [`+refs/heads/${branch}:refs/remotes/origin/${branch}`];
-
-  if (family) refspecs.push(`+refs/heads/${family}*:refs/remotes/origin/${family}*`);
-
-  await host(["fetch", "--no-tags", "--", folder, ...refspecs], {
-    cwd: root,
-    timeoutMs: REFRESH_TIMEOUT_MS,
-  });
-
   const head =
     known?.head !== undefined
       ? known.head
       : await host(["rev-parse", "--verify", "--quiet", "HEAD"], { cwd: root }).then((rev) =>
           rev.code === 0 ? rev.stdout.trim() : "",
         );
+  const lastFolder = folderFetched.get(root);
+  const folderFresh =
+    lastFolder !== undefined &&
+    Date.now() - lastFolder.at < FOLDER_FRESH_MS &&
+    lastFolder.head === head &&
+    lastFolder.branch === branch &&
+    lastFolder.current === current;
+
+  if (!folderFresh) {
+    const family = current ? threadBranchFamily(current) : null;
+    const refspecs = [`+refs/heads/${branch}:refs/remotes/origin/${branch}`];
+
+    if (family) refspecs.push(`+refs/heads/${family}*:refs/remotes/origin/${family}*`);
+
+    await host(["fetch", "--no-tags", "--", folder, ...refspecs], {
+      cwd: root,
+      timeoutMs: REFRESH_TIMEOUT_MS,
+    });
+    rememberFolderFetch(root, { at: Date.now(), head, branch, current });
+  }
+
   await refreshUpstream(root, folder, branch, head, run, host);
 }

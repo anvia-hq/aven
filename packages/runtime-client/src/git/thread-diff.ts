@@ -21,7 +21,33 @@ const TURN_REF = "refs/aven/turn";
 const FORK_REF = "refs/aven/fork-base";
 const FETCHED_BASE_REF = "refs/aven/fetched-base";
 const MAX_PATCH_BYTES = 2 * 1024 * 1024;
+const MAX_TREE_CACHE = 100;
 const ZERO_SUMMARY: DiffSummary = { files: 0, additions: 0, deletions: 0 };
+
+type CachedDiff = { patch: string; truncated: boolean; summary?: DiffSummary };
+
+const diffTreeCache = new Map<string, CachedDiff>();
+const numstatTreeCache = new Map<string, { summary: DiffSummary; score: number }>();
+
+function cacheGet<T>(cache: Map<string, T>, key: string) {
+  const hit = cache.get(key);
+
+  if (hit === undefined) return undefined;
+
+  cache.delete(key);
+  cache.set(key, hit);
+  return hit;
+}
+
+function cacheSet<T>(cache: Map<string, T>, key: string, value: T) {
+  if (cache.size >= MAX_TREE_CACHE && !cache.has(key)) {
+    const oldest = cache.keys().next().value;
+
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+
+  cache.set(key, value);
+}
 const IDENTITY = {
   GIT_AUTHOR_NAME: "Aven",
   GIT_AUTHOR_EMAIL: "aven@localhost",
@@ -229,11 +255,18 @@ async function numstatBetween(
 ): Promise<RankedTree> {
   if (from === now) return { tree: from, summary: ZERO_SUMMARY, score: 0 };
 
+  const cacheKey = `${from}:${now}`;
+  const cached = cacheGet(numstatTreeCache, cacheKey);
+
+  if (cached) return { tree: from, ...cached };
+
   const stat = await host(["diff", "--numstat", "--no-renames", from, now], { cwd: root });
 
   if (stat.code !== 0) throw new Error("Could not compare the thread's changes");
 
-  return { tree: from, ...parseNumstat(stat.stdout) };
+  const parsed = parseNumstat(stat.stdout);
+  cacheSet(numstatTreeCache, cacheKey, parsed);
+  return { tree: from, ...parsed };
 }
 
 async function pickNearestTree(root: string, trees: readonly string[], now: string, host: Git) {
@@ -306,12 +339,21 @@ async function diffForTree(
       : { patch: "", truncated: false };
   }
 
+  const cacheKey = `${from}:${now}:${summaryOnly ? "s" : "p"}`;
+  const cached = cacheGet(diffTreeCache, cacheKey);
+
+  if (cached) return cached;
+
   if (summaryOnly) {
     const summary = knownSummary ?? (await numstatBetween(root, from, now, host)).summary;
-    return { patch: "", truncated: false, summary };
+    const result = { patch: "", truncated: false, summary };
+    cacheSet(diffTreeCache, cacheKey, result);
+    return result;
   }
 
-  return patchBetween(root, from, now, host);
+  const result = await patchBetween(root, from, now, host);
+  cacheSet(diffTreeCache, cacheKey, result);
+  return result;
 }
 
 export async function readThreadDiff(
