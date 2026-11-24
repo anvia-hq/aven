@@ -26,23 +26,26 @@ function prStatusLabel(pull: ThreadPullRequestCheck) {
 
 function PrStatusGlyph({ state }: { state: ThreadPullRequestCheck["checksState"] }) {
   if (state === "pending")
-    return <IconLoader2 aria-hidden className="size-3.5 animate-spin text-meter" />;
+    return <IconLoader2 aria-hidden className="size-3.5 animate-spin text-muted-foreground" />;
 
-  if (state === "passing") return <IconCheck aria-hidden className="size-3.5" />;
+  if (state === "passing")
+    return <IconCheck aria-hidden className="size-3.5 text-muted-foreground" />;
 
   if (state === "failing") return <IconAlertTriangle aria-hidden className="size-3.5" />;
 
-  return <IconGitPullRequest aria-hidden className="size-3.5" />;
+  return <IconGitPullRequest aria-hidden className="size-3.5 text-muted-foreground" />;
 }
 
 export function ProofStrip({
   proof,
   prChecks = [],
   onOpenChanges,
+  animate = false,
 }: {
   proof: TurnProof;
   prChecks?: readonly ThreadPullRequestCheck[];
   onOpenChanges?: () => void;
+  animate?: boolean;
 }) {
   const hasChecks = proof.checks.length > 0;
   const hasFiles = proof.files.length > 0;
@@ -54,7 +57,10 @@ export function ProofStrip({
   const totalDel = proof.files.reduce((sum, file) => sum + file.deletions, 0);
 
   return (
-    <div data-role="proof-strip" className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+    <div
+      data-role="proof-strip"
+      className={cn("flex flex-wrap items-center gap-1.5 pt-1 text-xs", animate && "timeline-in")}
+    >
       {proof.checks.map((check) => (
         <span
           key={check.id}
@@ -62,12 +68,12 @@ export function ProofStrip({
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-medium",
             check.status === "pass"
-              ? "border-success/25 bg-success/8 text-success"
+              ? "border-border bg-muted/35 text-foreground/85"
               : "border-destructive/30 bg-destructive/8 text-destructive",
           )}
         >
           {check.status === "pass" ? (
-            <IconCheck aria-hidden className="size-3.5" />
+            <IconCheck aria-hidden className="size-3.5 text-muted-foreground" />
           ) : (
             <IconAlertTriangle aria-hidden className="size-3.5" />
           )}
@@ -93,7 +99,6 @@ export function ProofStrip({
         </Button>
       )}
       {prChecks.map((pull) => {
-        const passing = pull.checksState === "passing";
         const failing = pull.checksState === "failing";
         return (
           <a
@@ -103,9 +108,9 @@ export function ProofStrip({
             rel="noreferrer"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 font-medium transition-colors hover:bg-accent/50",
-              passing && "border-success/25 bg-success/8 text-success",
-              failing && "border-destructive/30 bg-destructive/8 text-destructive",
-              !passing && !failing && "border-border text-muted-foreground",
+              failing
+                ? "border-destructive/30 bg-destructive/8 text-destructive"
+                : "border-border bg-muted/35 text-foreground/85",
             )}
           >
             <PrStatusGlyph state={pull.checksState} />

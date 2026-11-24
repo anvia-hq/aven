@@ -39,17 +39,15 @@ const ICONS = [
 
 const TONES = ["muted", "success", "warning", "error"] as const satisfies readonly TimelineTone[];
 
-const INSTRUCTIONS = `You write ultra-concise activity timeline entries for an AI software engineer.
+const INSTRUCTIONS = `You write ultra-concise single-line activity timeline entries for an AI software engineer.
 Given one completed tool call (name, target, diff or output, status), produce:
-- label: short present-participle or past phrase (3-7 words, e.g. "Patching dashboard/export.ts", "Reproducing crash in browser", "Running unit tests"). Never include raw shell flags.
-- outcome (optional): crisp factual result when meaningful (3-9 words, e.g. "Added null check in PDF renderer", "84/84 passed", "Uncaught TypeError: Cannot read properties of null"). Omit if trivial.
+- label: one short factual phrase (3-9 words) summarizing the completed step and its key finding or result (e.g. "Listed sandbox providers and tests", "Added null check in PDF renderer", "Unit tests passed (84/84)", "TypeError in dashboard/export.ts"). Never include raw shell flags.
 - icon: best semantic icon from the enum.
 - tone: "success" for verified wins/passing checks, "error" or "warning" for failures/crashes, "muted" otherwise.
 Be factual—never invent counts or claims not in the tool input/output.`;
 
 const schema = z.object({
-  label: z.string().trim().min(1).max(72),
-  outcome: z.string().trim().min(1).max(96).optional(),
+  label: z.string().trim().min(1).max(88),
   icon: z.enum(ICONS).optional(),
   tone: z.enum(TONES).optional(),
 });
@@ -126,8 +124,6 @@ export function createRunNarrator(
           abortSignal,
         });
         const narration: ToolNarration = { toolId: tool.id, label: output.label };
-
-        if (output.outcome) narration.outcome = output.outcome;
 
         if (output.icon) narration.icon = output.icon;
 

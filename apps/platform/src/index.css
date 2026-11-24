@@ -2006,6 +2006,68 @@
   }
 }
 
+/* A timeline narration rises smoothly into place as steps stream in or get narrated. */
+@keyframes timeline-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility timeline-in {
+  animation: timeline-in 240ms var(--ease-out-strong) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes narration-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility narration-in {
+  animation: narration-in 220ms var(--ease-out-strong) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+/* The "Worked for Xs" header expands smoothly above the timeline when a run finishes. */
+@keyframes worked-in {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    max-height: 2.25rem;
+    transform: none;
+  }
+}
+
+@utility worked-in {
+  overflow: hidden;
+  animation: worked-in 280ms var(--ease-out-strong) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* A working or typing indicator fades into its reserved slot without shifting layout. */
 @keyframes indicator-in {
   from {
