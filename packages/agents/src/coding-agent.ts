@@ -48,32 +48,37 @@ export function createCodingAgent(options: CodingAgentOptions) {
 
   const maxTurns = options.maxTurns ?? CODING_MAX_TURNS;
   const agentModel = resolveAgentModel(options);
+  const instructions = forPaths(
+    [
+      options.instructions ??
+        codingInstructions(maxTurns, options.questions ?? true, options.machine),
+      skillsInstructions(options.skills ?? [], options.skillsUnavailable),
+      environmentInstructions(options.envNames ?? []),
+      mcpInstructions(options.mcp),
+      memoryInstructions(options.memory),
+      options.project ?? "",
+      options.forks ? forkInstructions() : "",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    options.paths ?? SANDBOX_PATHS,
+  );
+  const strictTools = tools.map(withStrictToolOutput);
   const agent = new Agent({
     ...agentModel,
     retries: options.retries ?? agentModel.retries,
     id: options.id ?? "coding",
-    instructions: forPaths(
-      [
-        options.instructions ??
-          codingInstructions(maxTurns, options.questions ?? true, options.machine),
-        skillsInstructions(options.skills ?? [], options.skillsUnavailable),
-        environmentInstructions(options.envNames ?? []),
-        mcpInstructions(options.mcp),
-        memoryInstructions(options.memory),
-        options.project ?? "",
-        options.forks ? forkInstructions() : "",
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
-      options.paths ?? SANDBOX_PATHS,
-    ),
+    instructions,
     maxTurns,
     observability: lensObservability(options.lens),
-    tools: tools.map(withStrictToolOutput),
+    tools: strictTools,
   });
 
   return {
     agent,
-    compaction: compactionFor(options, agentModel.model, undefined, CODING_SUMMARY_INSTRUCTIONS),
+    compaction: compactionFor(options, agentModel.model, undefined, CODING_SUMMARY_INSTRUCTIONS, {
+      instructions,
+      tools: strictTools,
+    }),
   };
 }

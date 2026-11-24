@@ -182,8 +182,11 @@ export function botAgentParts(options: BotPartsOptions) {
 export function createBotAgent(options: BotAgentOptions) {
   const { id, memory, compactAfterTokens, onActivity, ...rest } = options;
   const agentModel = resolveAgentModel(rest);
-  const compaction = compactionFor(rest, agentModel.model, compactAfterTokens);
   const parts = botAgentParts(rest);
+  const compaction = compactionFor(rest, agentModel.model, compactAfterTokens, undefined, {
+    instructions: parts.instructions,
+    tools: parts.tools,
+  });
 
   return new Agent({
     ...agentModel,
