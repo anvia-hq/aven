@@ -32,10 +32,9 @@ type Row = {
   description: string;
 };
 
-const detail = (provider: Provider, label: string | undefined) =>
-  [provider.baseUrl, label ?? provider.modelId, provider.keyHint && `…${provider.keyHint}`]
-    .filter(Boolean)
-    .join(" · ");
+const detail = (provider: Provider, label: string | undefined) => label ?? provider.modelId ?? "";
+
+const CONFIGURED_BADGE = "border-transparent bg-success text-primary-foreground";
 
 function Highlight({
   kind,
@@ -65,7 +64,7 @@ function Highlight({
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-2">
           <span className="text-lg font-semibold tracking-tight">{PROVIDER_LABELS[kind]}</span>
-          {provider && <Badge variant="outline">Connected</Badge>}
+          {provider && <Badge className={CONFIGURED_BADGE}>Connected</Badge>}
           {provider?.isDefault && <Badge variant="secondary">Default</Badge>}
         </span>
       </div>
@@ -74,9 +73,11 @@ function Highlight({
       </p>
       {provider ? (
         <div className="relative mt-auto flex flex-col gap-2 border-t pt-3">
-          <p className="truncate font-mono text-xs text-muted-foreground">
-            {detail(provider, modelLabel)}
-          </p>
+          {detail(provider, modelLabel) && (
+            <p className="truncate font-mono text-xs text-muted-foreground">
+              {detail(provider, modelLabel)}
+            </p>
+          )}
           <div className="flex flex-wrap items-center gap-1">
             <ProviderActions
               provider={provider}
@@ -243,23 +244,21 @@ export function ProvidersList() {
         }
       >
         {matchingConnected.map((provider) => {
+          const subtitle = detail(
+            provider,
+            provider.modelId ? byProvider[provider.id]?.labels?.[provider.modelId] : undefined,
+          );
           const summary = (
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="truncate text-sm font-medium">{provider.name}</span>
-                <Badge variant="outline">Configured</Badge>
                 {provider.managed && <Badge variant="secondary">Managed</Badge>}
                 {isSubscription(provider) && <Badge variant="outline">Subscription</Badge>}
                 {provider.isDefault && <Badge variant="secondary">Default</Badge>}
               </div>
-              <p className="truncate font-mono text-xs text-muted-foreground">
-                {detail(
-                  provider,
-                  provider.modelId
-                    ? byProvider[provider.id]?.labels?.[provider.modelId]
-                    : undefined,
-                )}
-              </p>
+              {subtitle && (
+                <p className="truncate font-mono text-xs text-muted-foreground">{subtitle}</p>
+              )}
             </div>
           );
 
@@ -272,6 +271,7 @@ export function ProvidersList() {
               >
                 <Tile kind={provider.kind} baseUrl={provider.baseUrl} />
                 {summary}
+                <Badge className={CONFIGURED_BADGE}>Configured</Badge>
               </li>
             );
           }
@@ -302,6 +302,7 @@ export function ProvidersList() {
                       Make default
                     </Button>
                   )}
+                  <Badge className={CONFIGURED_BADGE}>Configured</Badge>
                   {trigger}
                 </>
               )}
