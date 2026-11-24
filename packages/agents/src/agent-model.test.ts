@@ -1,9 +1,16 @@
 import { describe, expect, test } from "bun:test";
-
+import { createTool, type Message } from "@anvia/core";
 import { isStreamingCompletionModel } from "@anvia/core/completion";
+import { z } from "zod";
 
 import { CODING_SUMMARY_INSTRUCTIONS } from "./compaction-instructions";
-import { compactionFor, outputLimitFor, resolveAgentModel } from "./agent-model";
+import {
+  compactionFor,
+  contextTokenCounter,
+  outputLimitFor,
+  resolveAgentModel,
+} from "./agent-model";
+import { createCodingAgent } from "./coding-agent";
 import { scriptedModel } from "./testing/scripted-model";
 
 const model = scriptedModel([]);
@@ -287,5 +294,76 @@ describe("compactionFor", () => {
   test("with neither there is nothing to measure against, so history is left whole", () => {
     expect(compactionFor({ provider: "openai", apiKey: "k" }, model)).toBeUndefined();
     expect(compactionFor({ model }, model)).toBeUndefined();
+  });
+
+  test("counts system instructions and tool definitions alongside messages at 3 chars per token", async () => {
+    const tool = createTool({
+      name: "inspect_workspace",
+      description: "Inspects files in the workspace. ".repeat(60),
+      inputSchema: z.object({
+        path: z.string().describe("Relative file path inside the repository."),
+      }),
+      handler: async () => "ok",
+    });
+    const instructions = "System rules. ".repeat(300);
+    const messages: Message[] = [{ role: "user", content: "x".repeat(3_000) }];
+
+    const bare = contextTokenCounter();
+    const withContext = contextTokenCounter({ instructions, tools: [tool] });
+
+    expect(await withContext([])).toBe(0);
+    const bareTokens = await bare(messages);
+    const fullTokens = await withContext(messages);
+
+    expect(bareTokens).toBeGreaterThan(1_000);
+    expect(fullTokens).toBeGreaterThan(bareTokens + Math.floor(instructions.length / 3));
+  });
+
+  test("bounds inline base64 media payloads instead of counting raw base64 bytes as text", async () => {
+    const counter = contextTokenCounter();
+    const hugeImage: Message[] = [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "look at this" },
+          {
+            type: "image",
+            image: { type: "data", data: "A".repeat(200_000) },
+            mediaType: "image/png",
+          },
+        ],
+      },
+    ];
+
+    const tokens = await counter(hugeImage);
+    expect(tokens).toBeLessThan(3_000);
+  });
+
+  test("coding agent compaction counts its own instructions and tools toward the 70% trigger", async () => {
+    const bigTool = createTool({
+      name: "huge_mcp_tool",
+      description: "D".repeat(9_000),
+      inputSchema: z.object({ query: z.string() }),
+      handler: async () => "ok",
+    });
+    const baseOptions = {
+      provider: "openai" as const,
+      apiKey: "k",
+      modelId: "gpt-5",
+      contextWindow: 100_000,
+    };
+    const small = createCodingAgent({ ...baseOptions, tools: [], questions: false });
+    const large = createCodingAgent({
+      ...baseOptions,
+      tools: [bigTool],
+      questions: false,
+      project: "P".repeat(9_000),
+    });
+    const messages: Message[] = [{ role: "user", content: "hello" }];
+
+    const smallTokens = await small.compaction!.tokenCounter!(messages);
+    const largeTokens = await large.compaction!.tokenCounter!(messages);
+
+    expect(largeTokens - smallTokens).toBeGreaterThanOrEqual(6_000);
   });
 });
