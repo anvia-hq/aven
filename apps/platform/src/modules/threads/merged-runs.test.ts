@@ -29,6 +29,32 @@ describe("answers a background task's end woke the agent for", () => {
     expect(mergedRuns(messages, true).map((message) => message.id)).toEqual(["a1", "n1", "a2"]);
   });
 
+  test("merge continuously while running when the prior assistant turn ended on tool calls", () => {
+    const a1: ChatMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Starting the server." },
+        { type: "tool", tool: { id: "t1", name: "start_process", target: "dev", status: "done" } },
+      ],
+      workedMs: 1000,
+    };
+    const a2: ChatMessage = {
+      id: "a2",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          tool: { id: "t2", name: "exec_command", target: "curl /health", status: "running" },
+        },
+      ],
+    };
+    const merged = mergedRuns([a1, note("n1"), a2], true);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.id).toBe("a1");
+    expect(merged[0]?.parts).toHaveLength(3);
+  });
+
   test("keep an unknown time unknown", () => {
     const merged = mergedRuns(
       [said("a1", "assistant", "x"), note("n1"), said("a2", "assistant", "y")],

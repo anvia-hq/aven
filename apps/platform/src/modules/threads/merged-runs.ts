@@ -83,6 +83,24 @@ export function foldedCompactions(
   return folded;
 }
 
+const hasTrailingTools = (message: ChatMessage | undefined) => {
+  if (!message) return false;
+
+  for (let index = message.parts.length - 1; index >= 0; index -= 1) {
+    const part = message.parts[index]!;
+
+    if (part.type === "text") {
+      if (part.text.trim() !== "") return false;
+
+      continue;
+    }
+
+    return part.type === "tool" || part.type === "reasoning";
+  }
+
+  return false;
+};
+
 export function mergedRuns(
   source: ChatMessage[],
   running: boolean,
@@ -101,7 +119,11 @@ export function mergedRuns(
     const live = running && index === messages.length - 1;
     const previous = merged[merged.length - 1 - notes];
 
-    if (message.role === "assistant" && previous?.role === "assistant" && !live) {
+    if (
+      message.role === "assistant" &&
+      previous?.role === "assistant" &&
+      (!live || hasTrailingTools(previous))
+    ) {
       merged.splice(merged.length - notes, notes);
       merged[merged.length - 1] = {
         ...previous,

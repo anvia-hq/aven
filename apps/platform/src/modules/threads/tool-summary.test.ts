@@ -29,6 +29,17 @@ describe("summarizeTools", () => {
   test("falls back to Thought when no tool calls are present", () => {
     expect(summarizeTools([])).toBe("Thought");
   });
+
+  test("summarizes image inspection, browser, and subagent tools", () => {
+    expect(
+      summarizeTools([
+        tool({ id: "i1", name: "view_image", target: "shot.png" }),
+        tool({ id: "b1", name: "open_browser", target: "http://localhost:5173" }),
+        tool({ id: "s1", name: "spawn_agent", target: "audit" }),
+        tool({ id: "s2", name: "spawn_agent", target: "tests" }),
+      ]),
+    ).toBe("Inspected an image, used the browser, ran 2 subagents");
+  });
 });
 
 describe("summarizeBlocks", () => {

@@ -1,4 +1,6 @@
 import type { ChildProcess } from "node:child_process";
+import { createServer, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 
 import { expect, test, type Page } from "@playwright/test";
 
@@ -484,9 +486,11 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     const timeline = page.locator('[data-role="timeline"]');
-    await expect(timeline.locator("> div")).toHaveCount(4);
     const parent = timeline.locator('[data-role="timeline-parent"]');
     await expect(parent.getByRole("button", { name: "Edited 3 files" })).toBeVisible();
+    await expect(
+      timeline.locator('[data-role="timeline-viewport"] [data-role="timeline-row"]'),
+    ).toHaveCount(3);
     await expect(timeline.getByText("Patched src/five.ts")).toBeVisible();
     await expect(timeline.getByText("Patched src/one.ts")).toBeHidden();
 
@@ -545,6 +549,177 @@ test.describe("threads", () => {
 
     await worked.click();
     await expect(page.getByText("Patched src/app.ts")).toBeVisible();
+  });
+
+  test("keeps a live tool timeline unified across a background process wake", async ({ page }) => {
+    const firstBatch = [
+      { id: "t1", name: "edit", target: "src/one.ts", status: "done", output: "ok" },
+      { id: "t2", name: "edit", target: "src/two.ts", status: "done", output: "ok" },
+      { id: "t3", name: "edit", target: "src/three.ts", status: "done", output: "ok" },
+      { id: "t4", name: "edit", target: "src/four.ts", status: "done", output: "ok" },
+      { id: "t5", name: "start_process", target: "bun dev", status: "done", output: "started" },
+    ];
+    const secondBatch = [
+      { id: "t6", name: "exec_command", target: "curl /health", status: "done", output: "ok" },
+      { id: "t7", name: "exec_command", target: "bun test", status: "running" },
+    ];
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\ndata: ${JSON.stringify({
+          type: "snapshot",
+          running: true,
+          messages: [
+            { id: "m-0", role: "user", parts: [{ type: "text", text: "Start and verify" }] },
+            {
+              id: "m-1",
+              role: "assistant",
+              parts: firstBatch.map((tool) => ({ type: "tool", tool })),
+            },
+            {
+              id: "m-2",
+              role: "user",
+              parts: [
+                {
+                  type: "text",
+                  text: "[process] Process proc-1 (bun dev) ended with exit code 0 after 2s.",
+                },
+              ],
+            },
+            {
+              id: "m-3",
+              role: "assistant",
+              parts: secondBatch.map((tool) => ({ type: "tool", tool })),
+            },
+          ],
+        })}\n\n`,
+      }),
+    );
+
+    await registerUser(page, "thr", "Thread User");
+    await startThread(page, "Start and verify");
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    const timelines = page.locator('[data-role="timeline"]');
+    await expect(timelines).toHaveCount(1);
+    await expect(
+      timelines.locator('[data-role="timeline-viewport"] [data-role="timeline-row"]'),
+    ).toHaveCount(3);
+    const parentButton = timelines.locator('[data-role="timeline-parent"]').getByRole("button");
+    await expect(parentButton).toHaveText("Edited 4 files");
+    await expect(timelines.getByText("Patched src/one.ts")).toBeHidden();
+    await expect(timelines.getByText("Running tests")).toBeVisible();
+
+    const [parentTextLeft, rowTextLeft, workingTextLeft] = await page.evaluate(() => {
+      const parentLabel = document.querySelector<HTMLElement>(
+        '[data-role="timeline-parent"] button > span',
+      );
+      const rowLabel = document.querySelector<HTMLElement>(
+        '[data-role="timeline-viewport"] [data-role="timeline-row"] button > span',
+      );
+      const workingLabel = document.querySelector<HTMLElement>(
+        '[data-role="working"] [role="status"]',
+      );
+      return [
+        parentLabel?.getBoundingClientRect().left ?? -1,
+        rowLabel?.getBoundingClientRect().left ?? -2,
+        workingLabel?.getBoundingClientRect().left ?? -3,
+      ];
+    });
+    expect(Math.abs(parentTextLeft - rowTextLeft)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(workingTextLeft - rowTextLeft)).toBeLessThanOrEqual(0.5);
+  });
+
+  test("pushes older live tool rows into the parent group with zero working-indicator shift", async ({
+    page,
+  }) => {
+    const clients = new Set<ServerResponse>();
+    const backlog: string[] = [];
+    const server = createServer((_req, res) => {
+      res.writeHead(200, {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+        "access-control-allow-origin": "*",
+      });
+      res.write("retry: 600000\n\n");
+      for (const chunk of backlog) res.write(chunk);
+      clients.add(res);
+      res.on("close", () => clients.delete(res));
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const port = (server.address() as AddressInfo).port;
+    const push = (event: unknown) => {
+      const chunk = `data: ${JSON.stringify(event)}\n\n`;
+      backlog.push(chunk);
+      for (const client of clients) client.write(chunk);
+    };
+
+    try {
+      await page.route("**/api/threads/*/events", (route) =>
+        route.continue({ url: `http://127.0.0.1:${port}/events` }),
+      );
+
+      await registerUser(page, "thr", "Thread User");
+      await startThread(page, "Run six commands");
+      await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+      const makeTool = (index: number) => ({
+        id: `c${index}`,
+        name: "exec_command",
+        target: `echo step-${index}`,
+        status: "done",
+        output: `step-${index}`,
+      });
+
+      const snapshotWith = (count: number) => ({
+        type: "snapshot",
+        running: true,
+        messages: [
+          { id: "m-0", role: "user", parts: [{ type: "text", text: "Run six commands" }] },
+          {
+            id: "m-1",
+            role: "assistant",
+            parts: Array.from({ length: count }, (_, i) => ({
+              type: "tool",
+              tool: makeTool(i + 1),
+            })),
+          },
+        ],
+      });
+
+      push(snapshotWith(4));
+      const timeline = page.locator('[data-role="timeline"]');
+      await expect(timeline.locator('[data-role="timeline-row"]')).toHaveCount(4);
+      await expect(timeline.locator('[data-role="timeline-parent"]')).toHaveCount(0);
+
+      const working = page.locator('[data-role="working"]');
+      await expect(working).toBeVisible();
+      const topAt4 = await working.evaluate((el) => el.getBoundingClientRect().top);
+
+      push(snapshotWith(5));
+      await expect(
+        timeline.locator('[data-role="timeline-parent"]').getByRole("button"),
+      ).toHaveText("Ran 2 commands");
+      const topAt5 = await working.evaluate((el) => el.getBoundingClientRect().top);
+      expect(Math.abs(topAt5 - topAt4)).toBeLessThanOrEqual(1);
+
+      push(snapshotWith(6));
+      await expect(
+        timeline.locator('[data-role="timeline-parent"]').getByRole("button"),
+      ).toHaveText("Ran 3 commands");
+      await expect(
+        timeline.locator('[data-role="timeline-viewport"] [data-role="timeline-row"]'),
+      ).toHaveCount(3);
+      await expect(timeline.getByText("echo step-6")).toBeVisible();
+      await expect(timeline.getByText("echo step-3")).toBeHidden();
+      const topAt6 = await working.evaluate((el) => el.getBoundingClientRect().top);
+      expect(Math.abs(topAt6 - topAt4)).toBeLessThanOrEqual(1);
+    } finally {
+      for (const client of clients) client.end();
+      server.close();
+    }
   });
 
   test("a running thread shows it is working, and its composer offers Stop alone, even once there is something to say", async ({

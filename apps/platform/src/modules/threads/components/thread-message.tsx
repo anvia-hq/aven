@@ -123,7 +123,7 @@ function WorkedSteps({
     <Collapsible className="min-w-0 text-sm" open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger
         className={cn(
-          "group flex h-6 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none",
+          "group flex h-6 items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none",
           seenLive && "timeline-in",
         )}
         data-role="worked"
@@ -134,7 +134,10 @@ function WorkedSteps({
         />
         <span
           key={labelState.rev}
-          className={cn("min-w-0 truncate font-medium", labelState.rev > 0 && "narration-in")}
+          className={cn(
+            "min-w-0 truncate font-medium tabular-nums",
+            labelState.rev > 0 && "narration-in",
+          )}
         >
           {label}
         </span>
@@ -332,18 +335,21 @@ function AssistantMessage({
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
-      {shown.map((block, index, all) => (
-        <AssistantBlock
-          key={index}
-          block={block}
-          live={live && index === all.length - 1}
-          windowed={live && index === all.length - 1}
-          collapsed={block.type === "tools" && index < all.length - 1}
-          threadId={threadId}
-          runtimeId={runtimeId}
-          narrations={narrations}
-        />
-      ))}
+      {shown.map((block, index, all) => {
+        const active = live && index === all.length - 1;
+        return (
+          <AssistantBlock
+            key={index}
+            block={block}
+            live={active}
+            windowed={active}
+            collapsed={block.type === "tools" && !active}
+            threadId={threadId}
+            runtimeId={runtimeId}
+            narrations={narrations}
+          />
+        );
+      })}
       {!live && (
         <ProofStrip
           proof={proof}

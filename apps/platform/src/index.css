@@ -2016,6 +2016,77 @@
   }
 }
 
+/* Live tool rows slide upward into the pinned parent group without changing container height. */
+@keyframes timeline-push-a {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(var(--timeline-push, -1.75rem));
+  }
+}
+
+@keyframes timeline-push-b {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(var(--timeline-push, -1.75rem));
+  }
+}
+
+@keyframes timeline-push-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes timeline-push-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@utility timeline-push-a {
+  animation: timeline-push-a 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility timeline-push-b {
+  animation: timeline-push-b 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility timeline-push-out {
+  animation: timeline-push-out 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility timeline-push-in {
+  animation: timeline-push-in 220ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
 /* A working or typing indicator fades into its reserved slot without shifting layout. */
 @keyframes indicator-in {
   from {
