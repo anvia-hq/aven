@@ -32,6 +32,7 @@ import type {
   RunOutcome,
   RunSecrets,
   RunThreadInfo,
+  SandboxPhase,
 } from "@aven/protocol/types";
 
 const STEER_TIMEOUT_MS = 10_000;
@@ -98,7 +99,7 @@ export class RemoteRuntime implements Runtime {
   ) {}
 
   async start(input: StartRunInput): Promise<RuntimeRun> {
-    const { thread, prompt, compact, attachments, mentions, model } = input;
+    const { thread, prompt, compact, attachments, mentions, model, onSandboxPhase } = input;
     return this.#launch(
       thread,
       model,
@@ -120,6 +121,7 @@ export class RemoteRuntime implements Runtime {
 
         return message;
       },
+      compact ? undefined : onSandboxPhase,
     );
   }
 
@@ -179,9 +181,17 @@ export class RemoteRuntime implements Runtime {
       placed: RunThreadInfo,
       runnerLens: StartRunInput["lens"],
     ) => ControlPlaneToRuntime,
+    onSandboxPhase?: (phase: SandboxPhase) => void | Promise<void>,
   ): Promise<RuntimeRun> {
+    const provider = await runtimesService.providerOf(thread.runtimeId);
+    const isCloud = provider !== undefined && provider !== "manual";
+
+    if (isCloud && !this.hub.get(thread.runtimeId)) {
+      await onSandboxPhase?.("preparing");
+    }
+
     const { connection, hostId, machine } = await this.#placementFor(thread);
-    const placed = forkable(thread, machine, await runtimesService.providerOf(thread.runtimeId));
+    const placed = forkable(thread, machine, provider);
     const runId = crypto.randomUUID();
     const backend = threadBackend(thread);
     const runModel =
@@ -221,6 +231,7 @@ export class RemoteRuntime implements Runtime {
     return {
       events: queue,
       result: result.promise,
+      sandbox: isCloud,
       cancel: (reason) => this.hub.cancelRun(hostId, runId, reason),
       steer: async ({ id, prompt, mentions }, attachments) =>
         steerResult.parse(

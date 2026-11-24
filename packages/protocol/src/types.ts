@@ -373,6 +373,8 @@ export type ThreadPullRequestCheck = {
   failing: string[];
 };
 
+export type SandboxPhase = "preparing" | "ready";
+
 export type RunEvent =
   | {
       type: "snapshot";
@@ -384,6 +386,7 @@ export type RunEvent =
       steers?: QueuedSteer[];
       error?: string;
       narrations?: Record<string, ToolNarration>;
+      sandboxPhase?: SandboxPhase;
     }
   | {
       type: "run_start";
@@ -397,6 +400,7 @@ export type RunEvent =
   | ({ type: "steer" } & QueuedSteer)
   | { type: "steer_applied"; id: string }
   | { type: "steer_rejected"; id: string; reason?: string }
+  | { type: "sandbox_status"; phase: SandboxPhase | null }
   | { type: "text"; delta: string }
   | { type: "reasoning"; delta: string }
   | { type: "tool_start"; tool: ToolPart }

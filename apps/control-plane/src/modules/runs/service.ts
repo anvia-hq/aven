@@ -37,6 +37,7 @@ import type {
   QueuedSteer,
   RunAttachment,
   RunEvent,
+  SandboxPhase,
   ThreadUsage,
   ToolNarration,
   ToolPart,
@@ -47,6 +48,7 @@ const answerMark = (messages: ChatMessage[]) =>
 
 type ActiveRun = {
   handle: RuntimeRun;
+  trackSandbox: boolean;
   markAtStart: string;
   messages: ChatMessage[];
   usage: ThreadUsage;
@@ -69,6 +71,7 @@ type Channel = {
   run?: ActiveRun;
   starting?: boolean;
   failure?: string | null;
+  sandboxPhase?: SandboxPhase;
 };
 
 export class RunBusyError extends ConflictError {
@@ -173,29 +176,44 @@ export class RunManager {
     }: RunExtras = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
-      const handle = await this.#runtime.start({
-        thread,
-        prompt,
-        compact,
-        attachments,
-        mentions,
-        skills,
-        mcp,
-        github,
-        env,
-        identity,
-        webSearch,
-        lens,
-        memory,
-        cockpit,
-        model: model ?? undefined,
-        claudeToken,
-        claudeModel,
-        claudeEffort,
-        codexToken,
-        codexModel,
-        codexEffort,
-      });
+      let handle: RuntimeRun;
+      try {
+        handle = await this.#runtime.start({
+          thread,
+          prompt,
+          compact,
+          attachments,
+          mentions,
+          skills,
+          mcp,
+          github,
+          env,
+          identity,
+          webSearch,
+          lens,
+          memory,
+          cockpit,
+          model: model ?? undefined,
+          claudeToken,
+          claudeModel,
+          claudeEffort,
+          codexToken,
+          codexModel,
+          codexEffort,
+          onSandboxPhase: !compact
+            ? async (phase) => {
+                if (channel.sandboxPhase !== undefined) return;
+
+                const prior = await this.#history.loadMessages(thread).catch(() => []);
+
+                if (channel.starting && prior.length === 0) this.#setSandboxPhase(channel, phase);
+              }
+            : undefined,
+        });
+      } catch (error) {
+        this.#clearSandboxPhase(channel);
+        throw error;
+      }
       const opening: Extract<RunEvent, { type: "run_start" }> = { type: "run_start", prompt };
 
       if (senderId) opening.senderId = senderId;
@@ -204,7 +222,7 @@ export class RunManager {
 
       if (mentions.length > 0) opening.mentions = mentions;
 
-      await this.#begin(channel, handle, opening);
+      await this.#begin(channel, handle, opening, undefined, !compact);
     });
   }
 
@@ -290,10 +308,12 @@ export class RunManager {
     handle: RuntimeRun,
     opening: RunEvent,
     prepare: () => Promise<void> = async () => undefined,
+    allowSandbox = false,
   ) {
     const { thread } = channel;
     const run: ActiveRun = {
       handle,
+      trackSandbox: false,
       markAtStart: "",
       messages: [],
       usage: usageFromHistory([]),
@@ -323,6 +343,7 @@ export class RunManager {
       await loaded;
     } catch (error) {
       channel.run = undefined;
+      this.#clearSandboxPhase(channel);
       run.finished.resolve();
       handle.cancel("history load failed");
       console.warn(`Could not load the history of thread ${thread.id}:`, error);
@@ -330,6 +351,7 @@ export class RunManager {
     }
 
     if (opening.type === "run_start") {
+      run.trackSandbox = allowSandbox && handle.sandbox === true && run.messages.length === 0;
       this.#history.recordSender(channel.thread.id, run.messages.length, opening.senderId);
     }
 
@@ -483,6 +505,8 @@ export class RunManager {
 
         if (Object.keys(run.narrations).length > 0) liveSnapshot.narrations = { ...run.narrations };
 
+        if (channel.sandboxPhase) liveSnapshot.sandboxPhase = channel.sandboxPhase;
+
         return liveSnapshot;
       }
 
@@ -506,12 +530,48 @@ export class RunManager {
 
       if (Object.keys(state.narrations).length > 0) snapshot.narrations = state.narrations;
 
+      if (channel.sandboxPhase) snapshot.sandboxPhase = channel.sandboxPhase;
+
       return snapshot;
     }
   }
 
+  #setSandboxPhase(channel: Channel, phase: SandboxPhase) {
+    if (phase === "preparing" && channel.sandboxPhase !== undefined) return;
+
+    if (phase === "ready" && channel.sandboxPhase !== "preparing") return;
+
+    channel.sandboxPhase = phase;
+    const event: RunEvent = { type: "sandbox_status", phase };
+    for (const subscriber of channel.subscribers) subscriber(event);
+  }
+
+  #clearSandboxPhase(channel: Channel) {
+    if (channel.sandboxPhase !== "preparing") return;
+
+    channel.sandboxPhase = undefined;
+    const event: RunEvent = { type: "sandbox_status", phase: null };
+    for (const subscriber of channel.subscribers) subscriber(event);
+  }
+
   #emit(channel: Channel, event: RunEvent) {
     const { run } = channel;
+
+    if (event.type === "sandbox_status") {
+      if (run?.trackSandbox) {
+        if (event.phase === null) this.#clearSandboxPhase(channel);
+        else this.#setSandboxPhase(channel, event.phase);
+      }
+
+      return;
+    }
+
+    if (
+      channel.sandboxPhase === "preparing" &&
+      (event.type === "text" || event.type === "tool_end")
+    ) {
+      this.#setSandboxPhase(channel, "ready");
+    }
 
     if (run) {
       run.messages = applyEvent(run.messages, event);
@@ -655,6 +715,14 @@ export class RunManager {
     const workedMs = Date.now() - run.startedAt;
     const answered = run.messages.findLastIndex((message) => message.role === "assistant");
     const produced = answered !== -1 && answerMark(run.messages) !== run.markAtStart;
+
+    if (channel.sandboxPhase === "preparing") {
+      if ((ending.outcome === "done" || ending.outcome === "question") && produced) {
+        this.#setSandboxPhase(channel, "ready");
+      } else {
+        this.#clearSandboxPhase(channel);
+      }
+    }
 
     if (ending.outcome === "failed") {
       this.#emit(channel, { type: "error", message: ending.error });

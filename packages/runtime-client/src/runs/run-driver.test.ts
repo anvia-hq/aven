@@ -111,6 +111,7 @@ function harness(
   native: Promise<AgentBackend>,
   other?: Promise<AgentBackend>,
   dbPath: string = journalPath(),
+  options?: { onStart?: () => Promise<void> },
 ) {
   const db = openRunDatabase(dbPath);
   const records = new RunRecords(db);
@@ -126,7 +127,12 @@ function harness(
   const sandbox: ThreadWorkspaces = {
     async acquire(threadRef) {
       acquired.push(threadRef.id);
-      return { tools: [], hasRunningProcesses: async () => false, processes: noProcesses };
+      return {
+        tools: [],
+        hasRunningProcesses: async () => false,
+        processes: noProcesses,
+        start: options?.onStart,
+      };
     },
     workspace: async () => undefined,
     async release() {},
@@ -449,6 +455,107 @@ describe("persisted run state never stores plaintext secrets on disk", () => {
     expect(redacted).not.toContain("sk-claude-compact-secret-7777");
     expect(redacted).not.toContain("db-pass-secret-8888");
     claude.finish("run-compact");
+    await running;
+    await driver.close();
+  });
+});
+
+describe("cloud sandbox preparation events", () => {
+  const sandboxEvents = (frames: RuntimeToControlPlane[]) =>
+    frames.flatMap((frame) =>
+      frame.type === "run.event" && frame.event.type === "sandbox_status"
+        ? [frame.event.phase]
+        : [],
+    );
+
+  test("emits preparing then ready on the first run of a cloud sandbox, and not on subsequent runs or manual runtimes", async () => {
+    const claude = fakeBackend("claude");
+    const { driver, reported } = harness(Promise.resolve(claude.backend));
+
+    const first = driver.start({
+      ...start("run-cloud-1"),
+      thread: { ...thread, provider: "spaces" },
+    } as RunMessage);
+    await until(() => claude.calls.some((call) => call.id === "run-cloud-1"));
+    claude.finish("run-cloud-1");
+    await first;
+
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+
+    const second = driver.start({
+      ...start("run-cloud-2"),
+      thread: { ...thread, provider: "spaces" },
+    } as RunMessage);
+    await until(() => claude.calls.some((call) => call.id === "run-cloud-2"));
+    claude.finish("run-cloud-2");
+    await second;
+
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+
+    const manual = driver.start({
+      ...start("run-manual-1"),
+      thread: { id: "thread-manual", organizationId: "org-1", provider: "manual" },
+    } as RunMessage);
+    await until(() => claude.calls.some((call) => call.id === "run-manual-1"));
+    claude.finish("run-manual-1");
+    await manual;
+
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+    await driver.close();
+  });
+
+  test("emits preparing then ready on a native cloud sandbox run when text streams without a tool call", async () => {
+    const native = fakeBackend("native");
+    const { driver, reported } = harness(Promise.resolve(native.backend));
+
+    const running = driver.start({
+      ...start("run-native-cloud"),
+      thread: { id: "thread-native-cloud", organizationId: "org-1", provider: "boat" },
+    } as RunMessage);
+    await until(() => native.calls.some((call) => call.id === "run-native-cloud"));
+    expect(sandboxEvents(reported)).toEqual(["preparing"]);
+
+    native.emitted.current?.({ type: "text", delta: "Ready!" });
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+
+    native.finish("run-native-cloud");
+    await running;
+    await driver.close();
+  });
+
+  test("holds preparing until wake finishes on a native cloud sandbox tool call, then emits ready once", async () => {
+    const native = fakeBackend("native");
+    const wakeGate = Promise.withResolvers<void>();
+    const { driver, handed, reported } = harness(
+      Promise.resolve(native.backend),
+      undefined,
+      undefined,
+      {
+        onStart: () => wakeGate.promise,
+      },
+    );
+
+    const running = driver.start({
+      ...start("run-native-tool"),
+      thread: { id: "thread-native-tool", organizationId: "org-1", provider: "spaces" },
+    } as RunMessage);
+    await until(() => handed.length === 1);
+    expect(sandboxEvents(reported)).toEqual(["preparing"]);
+
+    const wakeTool = handed[0]?.tools.find((tool) => tool.name === "computer_wake");
+    expect(wakeTool).toBeDefined();
+    const waking = wakeTool!.call({});
+    await Bun.sleep(20);
+    expect(sandboxEvents(reported)).toEqual(["preparing"]);
+
+    wakeGate.resolve();
+    await waking;
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+
+    native.emitted.current?.({ type: "text", delta: "All set" });
+    expect(sandboxEvents(reported)).toEqual(["preparing", "ready"]);
+
+    native.finish("run-native-tool");
     await running;
     await driver.close();
   });

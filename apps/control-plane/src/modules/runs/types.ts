@@ -19,6 +19,7 @@ import type {
   RunOutcome,
   RunSkill,
   RunWebSearch,
+  SandboxPhase,
   SteerResult,
   ToolNarration,
   ToolPart,
@@ -89,6 +90,7 @@ export type StartRunInput = RunSharedInput & {
   compact?: boolean;
   attachments?: RunAttachment[];
   mentions?: MessageMention[];
+  onSandboxPhase?: (phase: SandboxPhase) => void | Promise<void>;
 };
 
 export type ResumeRunInput = RunSharedInput & {
@@ -103,6 +105,7 @@ export type RuntimeRun = {
   result: Promise<RunResult>;
   cancel(reason: string): void;
   steer(message: QueuedSteer, files?: RunAttachment[]): Promise<SteerResult>;
+  sandbox?: boolean;
 };
 
 export interface Runtime {

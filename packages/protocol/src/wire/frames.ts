@@ -107,6 +107,7 @@ export const ALLOWED_RUN_EVENT_TYPES = [
   "text",
   "reasoning",
   "steer_applied",
+  "sandbox_status",
   "tool_start",
   "tool_end",
   "subagent",
@@ -118,6 +119,7 @@ export const runEvent = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), delta: z.string() }),
   z.object({ type: z.literal("reasoning"), delta: z.string() }),
   z.object({ type: z.literal("steer_applied"), id: z.string().min(1).max(100) }),
+  z.object({ type: z.literal("sandbox_status"), phase: z.enum(["preparing", "ready"]) }),
   z.object({ type: z.literal("tool_start"), tool: toolPart }),
   z.object({
     type: z.literal("tool_end"),

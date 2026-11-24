@@ -1,5 +1,5 @@
 import { liveStepOf } from "@aven/protocol/timeline";
-import { useMemo, type ReactNode } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 
 import { cn } from "cn";
 
@@ -13,6 +13,7 @@ import type {
   ChatMessage,
   Handoff,
   QueuedSteer,
+  SandboxPhase,
   Speaker,
   ThreadPullRequestCheck,
   ToolNarration,
@@ -21,6 +22,7 @@ import type {
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { RiseIn } from "./rise-in";
+import { SandboxPreparationRow } from "./sandbox-preparation-row";
 import { ThreadMessage } from "./thread-message";
 import { WorkingIndicator } from "./working-indicator";
 
@@ -36,6 +38,7 @@ type Props = {
   onLoadEarlier?: () => void;
   handoffs?: Record<string, Handoff>;
   narrations?: Readonly<Record<string, ToolNarration>>;
+  sandboxPhase?: SandboxPhase | null;
   prChecks?: readonly ThreadPullRequestCheck[];
   onOpenChanges?: () => void;
   pending?: ChatMessage[];
@@ -60,6 +63,7 @@ export function ThreadMessages({
   onLoadEarlier,
   handoffs = {},
   narrations,
+  sandboxPhase = null,
   prChecks,
   onOpenChanges,
   pending = [],
@@ -72,6 +76,11 @@ export function ThreadMessages({
   aside,
 }: Props) {
   const textSize = useTextSize("thread");
+  const sandboxPhaseShown =
+    sandboxPhase === "preparing" || (sandboxPhase === "ready" && hidden === 0)
+      ? sandboxPhase
+      : null;
+
   const scrollRef = useScrollToBottom(
     messages.length + pending.length + steers.length,
     pending.length + steers.length,
@@ -98,6 +107,9 @@ export function ThreadMessages({
     return { listed, queued };
   }, [earlierRuns, runs, pending, steers, running, viewer]);
 
+  const firstPersonIndex =
+    hidden === 0 ? entries.listed.findIndex(({ speaker }) => speaker?.kind === "person") : -1;
+
   let previous: Speaker | null = null;
   const place = (speaker: Speaker | null) => {
     const space = speaker ? spaceBefore(previous, speaker) : "";
@@ -107,7 +119,21 @@ export function ThreadMessages({
 
     return { space, first };
   };
-  const listed = entries.listed.map((entry) => ({ ...entry, ...place(entry.speaker) }));
+  let sandboxSpace = "";
+  let afterSandbox = false;
+  const listed = entries.listed.map((entry, index) => {
+    const placed = place(entry.speaker);
+    const space = afterSandbox && entry.speaker?.kind === "agent" ? "mt-1.5" : placed.space;
+
+    if (entry.speaker) afterSandbox = false;
+
+    if (sandboxPhaseShown && index === firstPersonIndex) {
+      sandboxSpace = place({ kind: "agent" }).space;
+      afterSandbox = true;
+    }
+
+    return { ...entry, space, first: placed.first };
+  });
   const queued = entries.queued.map((entry) => ({ ...entry, ...place(entry.speaker) }));
   const working = place({ kind: "agent" });
 
@@ -115,6 +141,10 @@ export function ThreadMessages({
     () => (running ? liveStepOf(messages, narrations) : null),
     [running, messages, narrations],
   );
+  const onlyFirstTurn =
+    firstPersonIndex === -1 ||
+    entries.listed.slice(firstPersonIndex + 1).every(({ speaker }) => speaker?.kind !== "person");
+  const showWorking = running && !(sandboxPhaseShown === "preparing" && onlyFirstTurn);
   const lastAssistantIndex = listed.findLastIndex(({ message }) => message.role === "assistant");
 
   return (
@@ -138,30 +168,36 @@ export function ThreadMessages({
                 </Button>
               </div>
             )}
-            {messages.length === 0 && pending.length === 0 && !error && (
+            {messages.length === 0 && pending.length === 0 && !error && !sandboxPhaseShown && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
             {listed.map(({ message, streaming, sending, space, first }, index) => (
-              <RiseIn
-                key={handoffs[message.id]?.key ?? message.id}
-                when={sending || streaming}
-                className={space}
-              >
-                <ThreadMessage
-                  message={message}
-                  threadId={threadId}
-                  runtimeId={runtimeId}
-                  viewer={viewer}
-                  streaming={streaming}
-                  sending={sending}
-                  previews={handoffs[message.id]?.previews}
-                  showAuthor={first}
-                  narrations={narrations}
-                  prChecks={index === lastAssistantIndex ? prChecks : undefined}
-                  onOpenChanges={onOpenChanges}
-                />
-              </RiseIn>
+              <Fragment key={handoffs[message.id]?.key ?? message.id}>
+                <RiseIn when={sending || streaming} className={space}>
+                  <ThreadMessage
+                    message={message}
+                    threadId={threadId}
+                    runtimeId={runtimeId}
+                    viewer={viewer}
+                    streaming={streaming}
+                    sending={sending}
+                    previews={handoffs[message.id]?.previews}
+                    showAuthor={first}
+                    narrations={narrations}
+                    prChecks={index === lastAssistantIndex ? prChecks : undefined}
+                    onOpenChanges={onOpenChanges}
+                  />
+                </RiseIn>
+                {sandboxPhaseShown && index === firstPersonIndex && (
+                  <div className={sandboxSpace}>
+                    <SandboxPreparationRow phase={sandboxPhaseShown} />
+                  </div>
+                )}
+              </Fragment>
             ))}
+            {sandboxPhaseShown && firstPersonIndex === -1 && (
+              <SandboxPreparationRow phase={sandboxPhaseShown} />
+            )}
             {queued.map(({ steer, space, first }) => (
               <RiseIn key={steer.id} when className={space}>
                 <QueuedMessage
@@ -172,10 +208,9 @@ export function ThreadMessages({
                 />
               </RiseIn>
             ))}
-            <div className={cn(working.space, error && !running ? "empty:hidden" : "min-h-7")}>
+            <div className={cn(working.space, error && !showWorking ? "empty:hidden" : "min-h-7")}>
               <WorkingIndicator
-                running={running}
-                threadId={threadId}
+                running={showWorking}
                 runtimeId={runtimeId}
                 projectId={projectId}
                 color={markColor}

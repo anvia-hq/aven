@@ -383,6 +383,81 @@ describe("where a run's agent runs (decision 0222)", () => {
     }
   });
 
+  test("notifies onSandboxPhase preparing only for non-compact cold cloud sandboxes and marks run.sandbox", async () => {
+    const coldHub = () =>
+      ({
+        get: (runtimeId: string) =>
+          runtimeId === LOCAL_RUNTIME_ID
+            ? {
+                offers: () => true,
+                startRun() {},
+                endRun() {},
+                post() {},
+              }
+            : undefined,
+        cancelRun() {},
+        closeAll() {},
+      }) as unknown as RuntimeHub;
+
+    const coldRemote = () =>
+      new RemoteRuntime(
+        coldHub(),
+        { issue: () => model, revoke() {} },
+        { issue: () => "avid", revoke() {} },
+        true,
+      );
+
+    const manualPhases: string[] = [];
+    const manualRun = await coldRemote().start({
+      thread: { ...thread, runtimeId: "rt-manual-cold" },
+      prompt: "go",
+      onSandboxPhase: (phase) => {
+        manualPhases.push(phase);
+      },
+    });
+    expect(manualPhases).toEqual([]);
+    expect(manualRun.sandbox).toBe(false);
+
+    providerOf.mockImplementation(async () => "spaces");
+    try {
+      const { remote } = runtime();
+      const connectedPhases: string[] = [];
+      const connectedRun = await remote.start({
+        thread: { ...thread, runtimeId: "rt-cloud-connected" },
+        prompt: "go",
+        onSandboxPhase: (phase) => {
+          connectedPhases.push(phase);
+        },
+      });
+      expect(connectedPhases).toEqual([]);
+      expect(connectedRun.sandbox).toBe(true);
+
+      const compactPhases: string[] = [];
+      await coldRemote().start({
+        thread: { ...thread, runtimeId: "rt-cloud-compact" },
+        prompt: "compact",
+        compact: true,
+        onSandboxPhase: (phase) => {
+          compactPhases.push(phase);
+        },
+      });
+      expect(compactPhases).toEqual([]);
+
+      const coldPhases: string[] = [];
+      const coldRun = await coldRemote().start({
+        thread: { ...thread, runtimeId: "rt-cloud-cold" },
+        prompt: "go",
+        onSandboxPhase: (phase) => {
+          coldPhases.push(phase);
+        },
+      });
+      expect(coldPhases).toEqual(["preparing"]);
+      expect(coldRun.sandbox).toBe(true);
+    } finally {
+      providerOf.mockImplementation(async () => "manual");
+    }
+  });
+
   test("a thread on the control plane's own runtime runs there, naming no machine", async () => {
     const { posted, remote } = runtime();
     await remote.start({
