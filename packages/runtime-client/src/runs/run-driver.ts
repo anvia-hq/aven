@@ -34,6 +34,7 @@ import { toolsForRun } from "../tools/run-tools";
 import { verifyWith } from "./goal-assessment";
 import { goalReport, goalSessionMessage } from "./goal-report";
 import { createHostedRunInput } from "./hosted-input";
+import { createSandboxReporter } from "./sandbox-reporter";
 import type {
   RunDrainReason,
   RunModel,
@@ -381,11 +382,19 @@ export function createRunDriver(context: DriverContext) {
 
     if (initial.compact) return compactionScope(initial, state, run, secrets, clock, backend);
 
+    const { forward: send, file, stopIfCancelled } = reporting(initial, state, run);
+    const sandboxReporter = createSandboxReporter(
+      sandboxProvider(thread) !== undefined && !context.boxes.has(thread.id),
+      send,
+    );
+
     const repoAccess = () => context.call("repo.access", { runId });
     const folder = () => context.call("repo.folder", { runId }).then(({ directory }) => directory);
     await context.starting(thread.id);
     run.mcpGoing = connectMcp(run, runId, thread.id, secrets);
     run.mcpGoing.catch(() => undefined);
+    sandboxReporter.preparing();
+
     const box = await context.sandbox.acquire(thread, repoAccess, { lazy: true, folder });
     context.boxes.set(thread.id, box);
     let turnMarked = state.record.kind !== "start" || Boolean(state.record.durableId);
@@ -428,6 +437,7 @@ export function createRunDriver(context: DriverContext) {
 
         await markCurrentTurn();
         clock.mark("turn");
+        sandboxReporter.ready();
       })().catch((error: unknown) => {
         waking = undefined;
 
@@ -490,13 +500,14 @@ export function createRunDriver(context: DriverContext) {
       return tools && redact ? redactingTools(tools, redact) : tools;
     };
 
-    const { forward: send, file, stopIfCancelled } = reporting(initial, state, run);
     let answered = false;
     const forward = ((event, source) => {
       if (!answered && FIRST_OUTPUT.has(event.type)) {
         answered = true;
         clock.mark("first output");
       }
+
+      if (event.type === "text") sandboxReporter.ready();
 
       send(event, source);
     }) as Emit;
