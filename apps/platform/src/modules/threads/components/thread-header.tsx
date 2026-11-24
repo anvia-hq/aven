@@ -57,75 +57,77 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
   const shown = toggles.filter((toggle) => toggle.show);
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 px-3 md:h-10 md:px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-1">
-        {renaming ? (
-          <ThreadTitleField
-            title={thread.title}
-            onDone={(title) => {
-              setRenaming(false);
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-10 bg-linear-to-b from-background from-55% to-transparent px-3 pt-1.5 pb-5 md:px-4">
+      <div className="pointer-events-auto flex h-9 min-w-0 items-center gap-2 md:h-8">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          {renaming ? (
+            <ThreadTitleField
+              title={thread.title}
+              onDone={(title) => {
+                setRenaming(false);
 
-              if (title !== undefined) void rename(thread, title);
-            }}
-          />
-        ) : (
-          <h1
-            className="min-w-0 truncate text-sm font-medium"
-            style={thread.markColor ? { color: thread.markColor } : undefined}
-          >
-            {thread.title}
-          </h1>
-        )}
-        <ThreadOptionsMenu
-          thread={thread}
-          canRun={owned || driven}
-          canColor={owned}
-          onShare={owned ? () => setSharing(true) : undefined}
-          onRename={owned ? () => setRenaming(true) : undefined}
-          trigger={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              className="size-9 shrink-0 rounded-full aria-expanded:bg-accent md:size-7"
-              aria-label="Thread options"
-              title="More"
+                if (title !== undefined) void rename(thread, title);
+              }}
             />
-          }
-        />
-      </div>
-      {owned && <ThreadShareButton thread={thread} onClick={() => setSharing(true)} />}
-      {owned && <ThreadShare thread={thread} open={sharing} onOpenChange={setSharing} />}
-      {onClose && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          className="rounded-full"
-          aria-label={`Close ${thread.title}`}
-          title="Close"
-          onClick={onClose}
-        >
-          <IconX />
-        </Button>
-      )}
-      <div
-        role="group"
-        aria-label="Panels"
-        className={cn(
-          "hidden items-center gap-0.5 rounded-full bg-muted/50 p-0.5 sm:flex",
-          onClose && "sm:hidden",
-        )}
-      >
-        {shown.map(({ label, icon, panel }) => (
-          <PanelToggle
-            key={label}
-            label={label}
-            icon={icon}
-            open={panel.open}
-            onToggle={panel.toggle}
+          ) : (
+            <h1
+              className="min-w-0 truncate text-sm font-medium"
+              style={thread.markColor ? { color: thread.markColor } : undefined}
+            >
+              {thread.title}
+            </h1>
+          )}
+          <ThreadOptionsMenu
+            thread={thread}
+            canRun={owned || driven}
+            canColor={owned}
+            onShare={owned ? () => setSharing(true) : undefined}
+            onRename={owned ? () => setRenaming(true) : undefined}
+            trigger={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="size-9 shrink-0 rounded-full aria-expanded:bg-accent md:size-7"
+                aria-label="Thread options"
+                title="More"
+              />
+            }
           />
-        ))}
+        </div>
+        {owned && <ThreadShareButton thread={thread} onClick={() => setSharing(true)} />}
+        {owned && <ThreadShare thread={thread} open={sharing} onOpenChange={setSharing} />}
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="rounded-full"
+            aria-label={`Close ${thread.title}`}
+            title="Close"
+            onClick={onClose}
+          >
+            <IconX />
+          </Button>
+        )}
+        <div
+          role="group"
+          aria-label="Panels"
+          className={cn(
+            "hidden items-center gap-0.5 rounded-full bg-muted/50 p-0.5 sm:flex",
+            onClose && "sm:hidden",
+          )}
+        >
+          {shown.map(({ label, icon, panel }) => (
+            <PanelToggle
+              key={label}
+              label={label}
+              icon={icon}
+              open={panel.open}
+              onToggle={panel.toggle}
+            />
+          ))}
+        </div>
+        {!onClose && <PanelsMenu toggles={shown} className="sm:hidden" />}
       </div>
-      {!onClose && <PanelsMenu toggles={shown} className="sm:hidden" />}
     </header>
   );
 }
