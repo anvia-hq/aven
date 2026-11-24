@@ -226,6 +226,11 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await startThread(page, "Catch up with main");
 
+    await expect(page.getByText("Up to date.")).toBeVisible();
+    const worked = page.locator('[data-role="worked"]');
+    await expect(worked).toHaveAttribute("aria-expanded", "false");
+    await worked.click();
+
     const row = page.getByRole("button", { name: "Fetched default branch" });
     await expect(row).toBeVisible();
     await row.click();

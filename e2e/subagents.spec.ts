@@ -24,6 +24,11 @@ test.describe("subagents", () => {
     await page.getByRole("textbox", { name: "Prompt" }).fill("find auth and test it");
     await page.getByRole("button", { name: "Send" }).click();
 
+    await expect(page.getByText("the test could not be written")).toBeVisible();
+    const worked = page.locator('[data-role="worked"]');
+    await expect(worked).toHaveAttribute("aria-expanded", "false");
+    await worked.click();
+
     await expect(page.getByText("Find the auth middleware")).toBeVisible();
     await expect(page.getByText("Add a test")).toBeVisible();
     await expect(page.getByText("1 tool call")).toHaveCount(0);
@@ -31,6 +36,5 @@ test.describe("subagents", () => {
     await expect(page.getByText("Auth lives in")).toHaveCount(0);
     await expect(page.getByText("The model refused.")).toBeVisible();
     await expect(page.getByLabel("Failed")).toBeVisible();
-    await expect(page.getByText("the test could not be written")).toBeVisible();
   });
 });
