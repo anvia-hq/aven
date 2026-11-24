@@ -217,8 +217,8 @@ test.describe("an agent on the control plane", () => {
     await expect(page.getByText("Wrote proof.txt on the computer.")).toBeVisible({
       timeout: 45_000,
     });
-    await page.locator("[data-role='worked']").click();
-    await expect(page.getByText("Ran a command")).toBeVisible();
+    await expect(page.locator("[data-role='worked']")).toBeVisible();
+    await expect(page.locator("[data-role='timeline']")).toContainText("proof.txt");
     await expect(page.getByRole("img", { name: "Working" })).toHaveCount(0, { timeout: 15_000 });
     await expect(page.locator("[data-role='working']")).toHaveCount(0);
 

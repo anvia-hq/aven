@@ -1,5 +1,7 @@
 import type { accounts } from "./accounts";
 import type { announcements } from "./announcements";
+import type { automationRuns } from "./automation-runs";
+import type { automations } from "./automations";
 import type { botGoals } from "./bot-goals";
 import type { botSchedules } from "./bot-schedules";
 import type { botWebhooks } from "./bot-webhooks";
@@ -25,6 +27,7 @@ import type { providers } from "./providers";
 import type { runtimes } from "./runtimes";
 import type { sessions } from "./sessions";
 import type { skills } from "./skills";
+import type { threadNarrations } from "./thread-narrations";
 import type { threads } from "./threads";
 import type { users } from "./users";
 import type { variableEvents } from "./variable-events";
@@ -90,3 +93,9 @@ export type NewVariableEventRow = typeof variableEvents.$inferInsert;
 export type DecisionModelRow = typeof decisionModels.$inferSelect;
 
 export type Announcement = typeof announcements.$inferSelect;
+
+export type ThreadNarrationRow = typeof threadNarrations.$inferSelect;
+
+export type AutomationRow = typeof automations.$inferSelect;
+
+export type AutomationRunRow = typeof automationRuns.$inferSelect;

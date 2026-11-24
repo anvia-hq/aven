@@ -293,6 +293,7 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
     case "steer_queued":
     case "steer_applied":
     case "steer_rejected":
+    case "narration":
     case "usage":
     case "limits":
       return messages;

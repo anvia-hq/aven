@@ -4,16 +4,18 @@ import {
   memoryContinuations,
   memoryFailures,
   memoryLimits,
+  memoryNarrations,
   memorySenders,
   memoryWorkedTimes,
 } from "../../testing/memory-continuations";
 import { RunManager } from "./service";
 import type { ConversationStore } from "../../types";
 import type { RunResult, RunThread, Runtime, RuntimeRun } from "./types";
-import type { PlanLimit, RunEvent } from "@aven/protocol/types";
+import type { PlanLimit, RunEvent, ToolPart } from "@aven/protocol/types";
 
 type FakeRun = {
   handle: RuntimeRun;
+  emit(event: RunEvent): void;
   say(delta: string): void;
   report(limits: PlanLimit[]): void;
   finish(outcome?: RunResult): void;
@@ -45,6 +47,7 @@ function fakeRun(): FakeRun {
   };
   return {
     handle,
+    emit: (event) => void said.push(event),
     say: (delta) => void said.push({ type: "text", delta }),
     report: (limits) => void said.push({ type: "limits", limits }),
     finish: (outcome: RunResult = { type: "response" }) => {
@@ -370,5 +373,111 @@ describe("draining before a shutdown", () => {
 
     expect(await manager.drain(5000)).toBe(0);
     expect(Date.now() - started).toBeLessThan(1000);
+  });
+});
+
+describe("sidecar tool narrations", () => {
+  const editTool = (id: string): ToolPart => ({
+    id,
+    name: "edit",
+    target: `src/${id}.ts`,
+    status: "running",
+  });
+
+  test("persists narrations, broadcasts to live subscribers, hydrates snapshots, and bounds concurrency", async () => {
+    const narrations = memoryNarrations();
+    const { runtime, current } = scriptedRuntime();
+    let inFlight = 0;
+    let peak = 0;
+    const gates: PromiseWithResolvers<void>[] = [];
+
+    const manager = managerFor(runtime, {
+      narrations: narrations.store,
+      narrator: {
+        narrate: async (tool) => {
+          inFlight += 1;
+          peak = Math.max(peak, inFlight);
+          const gate = Promise.withResolvers<void>();
+          gates.push(gate);
+          await gate.promise;
+          inFlight -= 1;
+          return { toolId: tool.id, label: `Patched ${tool.id}`, tone: "success" };
+        },
+      },
+    });
+
+    const thread = newThread();
+    const watcher = attach(manager, thread);
+    await until(() => watcher.events.some((event) => event.type === "snapshot"));
+
+    await manager.start(thread, "fix four files");
+    for (const id of ["t1", "t2", "t3", "t4"]) {
+      current().emit({ type: "tool_start", tool: editTool(id) });
+      current().emit({ type: "tool_end", id, status: "done", output: "ok" });
+    }
+
+    await until(() => gates.length === 2);
+    await Bun.sleep(20);
+    expect(peak).toBe(2);
+
+    gates[0]!.resolve();
+    gates[1]!.resolve();
+    await until(() => gates.length === 4);
+
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+
+    gates[2]!.resolve();
+    gates[3]!.resolve();
+
+    await until(() => watcher.events.filter((event) => event.type === "narration").length === 4);
+    await watcher.detach();
+
+    const stored = await narrations.store.read(thread.id);
+    expect(Object.keys(stored).sort()).toEqual(["t1", "t2", "t3", "t4"]);
+
+    const reconnected = attach(manager, thread);
+    await until(() => reconnected.events.some((event) => event.type === "snapshot"));
+    await reconnected.detach();
+    const snap = reconnected.events.find((event) => event.type === "snapshot");
+    expect(snap?.type === "snapshot" && Object.keys(snap.narrations ?? {}).sort()).toEqual([
+      "t1",
+      "t2",
+      "t3",
+      "t4",
+    ]);
+  });
+
+  test("aborts pending narrations when a run is cancelled", async () => {
+    const narrations = memoryNarrations();
+    const { runtime, current } = scriptedRuntime();
+    let aborted = false;
+    const manager = managerFor(runtime, {
+      narrations: narrations.store,
+      narrator: {
+        narrate: async (_tool, signal) => {
+          await new Promise<void>((resolve) => {
+            signal?.addEventListener("abort", () => {
+              aborted = true;
+              resolve();
+            });
+          });
+          return { toolId: "t1", label: "Should not emit" };
+        },
+      },
+    });
+    const thread = newThread();
+
+    await manager.start(thread, "edit");
+    current().emit({ type: "tool_start", tool: editTool("t1") });
+    current().emit({ type: "tool_end", id: "t1", status: "done", output: "ok" });
+    await Bun.sleep(20);
+
+    manager.cancel(thread.id);
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await until(() => aborted);
+
+    expect(await narrations.store.read(thread.id)).toEqual({});
   });
 });

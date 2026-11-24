@@ -19,6 +19,8 @@ import type {
   FailureStore,
   ContextSplitStore,
   LimitStore,
+  NarrationStore,
+  RunNarrator,
   SenderStore,
   WorkedTimeStore,
   FinishedRun,
@@ -36,6 +38,8 @@ import type {
   RunAttachment,
   RunEvent,
   ThreadUsage,
+  ToolNarration,
+  ToolPart,
 } from "@aven/protocol/types";
 
 const answerMark = (messages: ChatMessage[]) =>
@@ -46,6 +50,10 @@ type ActiveRun = {
   markAtStart: string;
   messages: ChatMessage[];
   usage: ThreadUsage;
+  narrations: Record<string, ToolNarration>;
+  narrationController: AbortController;
+  narrationQueue: ToolPart[];
+  narrationInFlight: number;
   cancelled: boolean;
   startedAt: number;
   lastEventAt: number;
@@ -71,6 +79,8 @@ export class RunBusyError extends ConflictError {
 
 const PING_MS = 5_000;
 const DRAIN_POLL_MS = 250;
+const MAX_NARRATION_CONCURRENCY = 2;
+const MAX_NARRATION_QUEUE = 20;
 
 export class RunManager {
   #channels = new Map<string, Channel>();
@@ -79,6 +89,7 @@ export class RunManager {
   #onRunFinished: (thread: RunThread, ending: RunEnding, run: FinishedRun) => void | Promise<void>;
   #continuations: ContinuationStore;
   #failures: FailureStore;
+  #narrator?: RunNarrator;
   #draining = false;
 
   constructor(deps: {
@@ -91,6 +102,8 @@ export class RunManager {
     senders: SenderStore;
     limits: LimitStore;
     splits?: ContextSplitStore;
+    narrations?: NarrationStore;
+    narrator?: RunNarrator;
   }) {
     this.#history = new ThreadHistory(
       deps.store,
@@ -98,11 +111,13 @@ export class RunManager {
       deps.senders,
       deps.limits,
       deps.splits,
+      deps.narrations,
     );
     this.#onRunFinished = deps.onRunFinished;
     this.#runtime = deps.runtime;
     this.#continuations = deps.continuations;
     this.#failures = deps.failures;
+    this.#narrator = deps.narrator;
   }
 
   runningCount() {
@@ -282,6 +297,10 @@ export class RunManager {
       markAtStart: "",
       messages: [],
       usage: usageFromHistory([]),
+      narrations: {},
+      narrationController: new AbortController(),
+      narrationQueue: [],
+      narrationInFlight: 0,
       cancelled: false,
       startedAt: Date.now(),
       lastEventAt: Date.now(),
@@ -293,9 +312,10 @@ export class RunManager {
     channel.run = run;
     const loaded = this.#history
       .loadState(thread)
-      .then(({ messages, usage }) => {
+      .then(({ messages, usage, narrations }) => {
         run.messages = messages;
         run.usage = run.usage.limits ? applyLimits(usage, run.usage.limits) : usage;
+        run.narrations = { ...narrations, ...run.narrations };
       })
       .then(prepare);
     run.ready = loaded.catch(() => undefined);
@@ -325,6 +345,8 @@ export class RunManager {
     if (!run) return false;
 
     run.cancelled = true;
+    run.narrationQueue.length = 0;
+    run.narrationController.abort();
     run.handle.cancel("Cancelled by user");
     return true;
   }
@@ -410,7 +432,13 @@ export class RunManager {
   }
 
   dispose() {
-    for (const channel of this.#channels.values()) channel.run?.handle.cancel("Shutting down");
+    for (const channel of this.#channels.values()) {
+      if (channel.run) {
+        channel.run.narrationQueue.length = 0;
+        channel.run.narrationController.abort();
+        channel.run.handle.cancel("Shutting down");
+      }
+    }
     this.#runtime.dispose();
   }
 
@@ -444,7 +472,7 @@ export class RunManager {
 
         queue.length = 0;
         const shown = latestMessages(run.messages);
-        return {
+        const liveSnapshot: Omit<Extract<RunEvent, { type: "snapshot" }>, "type"> = {
           messages: shown.messages,
           hidden: shown.hidden,
           running: true,
@@ -452,6 +480,10 @@ export class RunManager {
           runningMs: Date.now() - run.startedAt,
           steers: [...run.steers.values()],
         };
+
+        if (Object.keys(run.narrations).length > 0) liveSnapshot.narrations = { ...run.narrations };
+
+        return liveSnapshot;
       }
 
       const [state, failure] = await Promise.all([
@@ -471,6 +503,8 @@ export class RunManager {
       };
 
       if (failure) snapshot.error = failure;
+
+      if (Object.keys(state.narrations).length > 0) snapshot.narrations = state.narrations;
 
       return snapshot;
     }
@@ -499,6 +533,55 @@ export class RunManager {
     if (event.type === "limits") this.#history.recordLimits(channel.thread.id, event.limits);
 
     for (const subscriber of channel.subscribers) subscriber(event);
+
+    if (event.type === "tool_end" && run && this.#narrator) {
+      const finishedTool = findTool(run.messages, event.id);
+
+      if (finishedTool) this.#enqueueNarration(channel.thread.id, run, finishedTool);
+    }
+  }
+
+  #enqueueNarration(threadId: string, run: ActiveRun, tool: ToolPart) {
+    if (run.narrationController.signal.aborted) return;
+
+    if (run.narrationQueue.length >= MAX_NARRATION_QUEUE) run.narrationQueue.shift();
+
+    run.narrationQueue.push(tool);
+    this.#pumpNarrations(threadId, run);
+  }
+
+  #pumpNarrations(threadId: string, run: ActiveRun) {
+    while (
+      !run.narrationController.signal.aborted &&
+      run.narrationInFlight < MAX_NARRATION_CONCURRENCY &&
+      run.narrationQueue.length > 0
+    ) {
+      const tool = run.narrationQueue.shift()!;
+      run.narrationInFlight += 1;
+      void this.#narrate(threadId, run, tool).finally(() => {
+        run.narrationInFlight -= 1;
+        this.#pumpNarrations(threadId, run);
+      });
+    }
+  }
+
+  async #narrate(threadId: string, run: ActiveRun, tool: ToolPart) {
+    const narration = await this.#narrator
+      ?.narrate(tool, run.narrationController.signal)
+      .catch(() => null);
+
+    if (!narration || run.narrationController.signal.aborted) return;
+
+    const currentChannel = this.#channels.get(threadId);
+
+    if (currentChannel?.run === run) run.narrations[narration.toolId] = narration;
+
+    this.#history.recordNarration(threadId, narration);
+
+    if (!currentChannel) return;
+
+    const event: RunEvent = { type: "narration", narration };
+    for (const subscriber of currentChannel.subscribers) subscriber(event);
   }
 
   async #consume(channel: Channel, run: ActiveRun) {
@@ -592,6 +675,21 @@ export class RunManager {
     });
     this.#release(channel);
   }
+}
+
+function findTool(messages: readonly ChatMessage[], id: string): ToolPart | undefined {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]!;
+
+    if (message.role !== "assistant") continue;
+
+    for (let partAt = message.parts.length - 1; partAt >= 0; partAt -= 1) {
+      const part = message.parts[partAt]!;
+
+      if (part.type === "tool" && part.tool.id === id) return part.tool;
+    }
+  }
+  return undefined;
 }
 
 function endingOf(cancelled: boolean, asked: boolean, failure: string | undefined): RunEnding {

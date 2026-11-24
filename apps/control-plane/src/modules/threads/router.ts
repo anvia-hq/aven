@@ -18,6 +18,7 @@ import {
 } from "./schema";
 import { threadMentionsService } from "./mentions";
 import { threadPinsService } from "./pins";
+import { threadPullRequestChecks } from "./pull-request-checks";
 import { threadsService } from "./service";
 import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
@@ -92,6 +93,11 @@ export const threadsRouter = (
       params: threadParams,
       query: messagesBeforeQuery,
     })
+    .get(
+      "/:id/pull-requests/checks",
+      ({ organizationId, thread }) => threadPullRequestChecks(organizationId, thread),
+      { thread: "read", params: threadParams },
+    )
     .patch(
       "/:id",
       async ({ params, body, organizationId, user }) => {

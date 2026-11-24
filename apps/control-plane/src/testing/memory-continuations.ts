@@ -1,9 +1,10 @@
-import type { PlanLimit } from "@aven/protocol/types";
+import type { PlanLimit, ToolNarration } from "@aven/protocol/types";
 
 import type {
   ContinuationStore,
   FailureStore,
   LimitStore,
+  NarrationStore,
   SenderStore,
   WorkedTimeStore,
 } from "../modules/runs/types";
@@ -60,6 +61,18 @@ export function memoryLimits() {
       saved.set(threadId, kept.concat(limits));
     },
     read: async (threadId) => (saved.get(threadId) ?? []).slice(),
+  };
+  return { store, saved };
+}
+
+export function memoryNarrations() {
+  const saved = new Map<string, Record<string, ToolNarration>>();
+  const store: NarrationStore = {
+    record: async (threadId, narration) => {
+      const existing = saved.get(threadId) ?? {};
+      saved.set(threadId, { ...existing, [narration.toolId]: narration });
+    },
+    read: async (threadId) => ({ ...saved.get(threadId) }),
   };
   return { store, saved };
 }

@@ -81,6 +81,7 @@ test.describe("a thread that is running", () => {
 
     await page.locator(`a[href="/threads/${threadId}"]`).first().click();
     await expect(page).toHaveURL(new RegExp(`/threads/${threadId}`));
+    await page.getByRole("button", { name: /Model & usage/ }).click();
     await expect(page.getByText("Shown after the agent's first reply")).toBeVisible();
     expect(await page.getByRole("img", { name: "Working" }).count()).toBe(0);
   });

@@ -209,6 +209,7 @@ export function useThread(threadId: string) {
     loaded: loaded && (session != null || !isPending),
     messages: state.messages,
     handoffs: state.handoffs,
+    narrations: state.narrations,
     earlier: state.earlier,
     hidden: state.hidden,
     loadingEarlier,

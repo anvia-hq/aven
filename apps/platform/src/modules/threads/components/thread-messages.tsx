@@ -1,3 +1,4 @@
+import { liveStepOf } from "@aven/protocol/timeline";
 import { useMemo, type ReactNode } from "react";
 
 import { cn } from "cn";
@@ -8,7 +9,15 @@ import { useTextSize } from "@/modules/theme/hooks/use-text-size";
 import { useScrollToBottom } from "../hooks/use-scroll-to-bottom";
 import { mergedRuns } from "../merged-runs";
 import { sameSpeaker, spaceBefore, speakerOf, steerSpeakerOf } from "../message-spacing";
-import type { ChatMessage, Handoff, QueuedSteer, Speaker, Viewer } from "../types";
+import type {
+  ChatMessage,
+  Handoff,
+  QueuedSteer,
+  Speaker,
+  ThreadPullRequestCheck,
+  ToolNarration,
+  Viewer,
+} from "../types";
 import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { RiseIn } from "./rise-in";
@@ -26,6 +35,9 @@ type Props = {
   loadingEarlier?: boolean;
   onLoadEarlier?: () => void;
   handoffs?: Record<string, Handoff>;
+  narrations?: Readonly<Record<string, ToolNarration>>;
+  prChecks?: readonly ThreadPullRequestCheck[];
+  onOpenChanges?: () => void;
   pending?: ChatMessage[];
   steers?: QueuedSteer[];
   running?: boolean;
@@ -47,6 +59,9 @@ export function ThreadMessages({
   loadingEarlier = false,
   onLoadEarlier,
   handoffs = {},
+  narrations,
+  prChecks,
+  onOpenChanges,
   pending = [],
   steers = [],
   running = false,
@@ -96,6 +111,12 @@ export function ThreadMessages({
   const queued = entries.queued.map((entry) => ({ ...entry, ...place(entry.speaker) }));
   const working = place({ kind: "agent" });
 
+  const liveStep = useMemo(
+    () => (running ? liveStepOf(messages, narrations) : null),
+    [running, messages, narrations],
+  );
+  const lastAssistantIndex = listed.findLastIndex(({ message }) => message.role === "assistant");
+
   return (
     <div
       ref={scrollRef}
@@ -120,7 +141,7 @@ export function ThreadMessages({
             {messages.length === 0 && pending.length === 0 && !error && (
               <p className="text-sm text-muted-foreground">Send a message to start.</p>
             )}
-            {listed.map(({ message, streaming, sending, space, first }) => (
+            {listed.map(({ message, streaming, sending, space, first }, index) => (
               <RiseIn
                 key={handoffs[message.id]?.key ?? message.id}
                 when={sending || streaming}
@@ -135,6 +156,9 @@ export function ThreadMessages({
                   sending={sending}
                   previews={handoffs[message.id]?.previews}
                   showAuthor={first}
+                  narrations={narrations}
+                  prChecks={index === lastAssistantIndex ? prChecks : undefined}
+                  onOpenChanges={onOpenChanges}
                 />
               </RiseIn>
             ))}
@@ -156,6 +180,7 @@ export function ThreadMessages({
                 projectId={projectId}
                 color={markColor}
                 startedAt={startedAt}
+                liveStep={liveStep}
               />
             </div>
             {owned && (

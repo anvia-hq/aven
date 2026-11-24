@@ -83,4 +83,41 @@ describe("reduceThreadStream", () => {
       reason: "Run ended",
     });
   });
+
+  test("hydrates narrations from snapshots and applies live narration events", () => {
+    const snapped = reduceThreadStream(INITIAL_THREAD_STREAM_STATE, {
+      type: "event",
+      now: 1000,
+      event: {
+        type: "snapshot",
+        messages: [],
+        running: true,
+        narrations: {
+          t1: { toolId: "t1", label: "Patching export.ts", outcome: "Added null check" },
+        },
+      },
+    });
+    expect(snapped.narrations.t1?.label).toBe("Patching export.ts");
+
+    const updated = reduceThreadStream(snapped, {
+      type: "event",
+      now: 1500,
+      event: {
+        type: "narration",
+        narration: {
+          toolId: "t2",
+          label: "Running tests",
+          outcome: "84/84 passed",
+          tone: "success",
+        },
+      },
+    });
+    expect(updated.narrations.t1?.label).toBe("Patching export.ts");
+    expect(updated.narrations.t2).toEqual({
+      toolId: "t2",
+      label: "Running tests",
+      outcome: "84/84 passed",
+      tone: "success",
+    });
+  });
 });
