@@ -2,6 +2,7 @@ import { IconPlugConnected } from "@tabler/icons-react";
 import type { ComponentType, SVGProps } from "react";
 
 import {
+  AlibabaMark,
   AzureColorMark,
   BedrockMark,
   ClaudeColorMark,
@@ -9,11 +10,14 @@ import {
   GeminiColorMark,
   GroqMark,
   MistralMark,
+  MoonshotMark,
   OllamaMark,
   OpenAiMark,
+  OpenCodeMark,
   OpenRouterMark,
   VertexMark,
   XaiMark,
+  ZaiMark,
 } from "@/components/brand-icons";
 
 import { presetOf } from "../presets";
@@ -36,6 +40,10 @@ const PRESET_LOGOS = {
   deepseek: DeepSeekMark,
   mistral: MistralMark,
   xai: XaiMark,
+  alibaba: AlibabaMark,
+  "opencode-go": OpenCodeMark,
+  moonshot: MoonshotMark,
+  zai: ZaiMark,
   ollama: OllamaMark,
 } as const satisfies Record<CompatiblePreset["id"], unknown>;
 

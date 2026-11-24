@@ -20,6 +20,13 @@ export const COMPATIBLE_VENDORS: Readonly<Record<CompatibleVendorId, CompatibleV
   deepseek: { baseUrl: "https://api.deepseek.com", catalog: "deepseek" },
   mistral: { baseUrl: "https://api.mistral.ai/v1", catalog: "mistral" },
   xai: { baseUrl: "https://api.x.ai/v1", catalog: "xai" },
+  alibaba: {
+    baseUrl: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+    catalog: "alibaba",
+  },
+  "opencode-go": { baseUrl: "https://opencode.ai/inference/go/openai/v1", catalog: "opencode-go" },
+  moonshot: { baseUrl: "https://api.moonshot.ai/v1", catalog: "moonshotai" },
+  zai: { baseUrl: "https://api.z.ai/api/paas/v4", catalog: "zai" },
   ollama: { baseUrl: "http://localhost:11434/v1", catalog: null },
 };
 

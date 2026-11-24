@@ -528,7 +528,17 @@ export type Provider = (typeof PROVIDERS)[number];
 
 export type ModelApi = (typeof MODEL_APIS)[number];
 
-export type CompatibleVendorId = "openrouter" | "groq" | "deepseek" | "mistral" | "xai" | "ollama";
+export type CompatibleVendorId =
+  | "openrouter"
+  | "groq"
+  | "deepseek"
+  | "mistral"
+  | "xai"
+  | "alibaba"
+  | "opencode-go"
+  | "moonshot"
+  | "zai"
+  | "ollama";
 
 export type CompatibleVendor = { baseUrl: string; catalog: string | null };
 
