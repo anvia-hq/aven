@@ -98,12 +98,13 @@ test.describe("settings", () => {
     await page.getByRole("button", { name: "Save changes" }).click();
     await expect(azure).toContainText("deploy-two · …1234");
 
+    await azure.getByRole("button", { name: "Edit" }).click();
     await azure.getByRole("button", { name: "Remove Azure OpenAI" }).click();
     await expect(azure.getByRole("button", { name: "Set up" })).toBeVisible();
     await expect(
       page
         .getByRole("listitem", { name: "OpenAI-compatible" })
-        .getByRole("button", { name: "Add" }),
+        .getByRole("button", { name: "Set up" }),
     ).toBeVisible();
   });
 
@@ -131,7 +132,7 @@ test.describe("settings", () => {
 
     await page
       .getByRole("listitem", { name: "Amazon Bedrock" })
-      .getByRole("button", { name: "Add" })
+      .getByRole("button", { name: "Set up" })
       .click();
     await page.getByLabel("Region").fill("us-west-2");
     await page.getByLabel("API key").fill("bedrock-secret-4321");
@@ -145,7 +146,7 @@ test.describe("settings", () => {
 
     await page
       .getByRole("listitem", { name: "Google Vertex AI" })
-      .getByRole("button", { name: "Add" })
+      .getByRole("button", { name: "Set up" })
       .click();
     await page.getByLabel("Project ID").fill("my-project-123");
     await page.getByLabel("Location").fill("global");
@@ -202,7 +203,7 @@ test.describe("settings", () => {
     await expect(
       page
         .getByRole("listitem", { name: "OpenAI-compatible" })
-        .getByRole("button", { name: "Add" }),
+        .getByRole("button", { name: "Set up" }),
     ).toBeVisible();
   });
 

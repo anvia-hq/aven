@@ -18,7 +18,7 @@ export function useRefetchModels() {
     );
     setFetching(null);
 
-    if (!result) return;
+    if (!result) return undefined;
 
     setCache((all) => ({ ...all, [provider.id]: result }));
     const count = result.models.length;
@@ -27,6 +27,7 @@ export function useRefetchModels() {
       description: `${provider.name}: ${count} ${count === 1 ? "model" : "models"}`,
       type: "success",
     });
+    return result;
   }
 
   return { refetch, fetching };
