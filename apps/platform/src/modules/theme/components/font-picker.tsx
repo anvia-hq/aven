@@ -14,7 +14,7 @@ export function FontPicker() {
           {(value: SansFont) => SANS_FONTS.find((option) => option.id === value)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="w-auto min-w-(--anchor-width)">
+      <SelectContent>
         {SANS_FONTS.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             <span style={{ fontFamily: option.family }}>{option.label}</span>

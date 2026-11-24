@@ -14,7 +14,7 @@ export function TextSizePicker({ scope, label }: { scope: TextSizeScope; label: 
           {(value: TextSize) => TEXT_SIZES.find((option) => option.id === value)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="w-auto min-w-(--anchor-width)">
+      <SelectContent>
         {TEXT_SIZES.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.label}

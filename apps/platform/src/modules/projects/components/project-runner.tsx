@@ -23,7 +23,7 @@ export function ProjectRunner({ project }: { project: Project }) {
         value={project.runtimeId}
         onValueChange={(next) => next && next !== project.runtimeId && moveProject(project, next)}
       >
-        <SelectTrigger size="sm" aria-label="Runner">
+        <SelectTrigger aria-label="Runner">
           <SelectValue placeholder="Runner revoked" />
         </SelectTrigger>
         <SelectContent>

@@ -19,18 +19,13 @@ export function ProjectPicker({ value, onChange }: Props) {
       onValueChange={(next) => next && onChange(next)}
     >
       <SelectTrigger
-        size="sm"
         aria-label="Project"
         className="max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-muted-foreground dark:bg-muted/50"
       >
         <IconFolderFilled />
         <SelectValue placeholder="Choose a project" />
       </SelectTrigger>
-      <SelectContent
-        alignItemWithTrigger={false}
-        align="start"
-        className="w-auto min-w-(--anchor-width)"
-      >
+      <SelectContent align="start">
         {projects.map((project) => (
           <SelectItem key={project.id} value={project.id}>
             <span className="flex min-w-0 items-center gap-2">

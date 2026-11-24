@@ -14,7 +14,7 @@ export function ModePicker() {
           {(value: Theme) => THEMES.find((option) => option.id === value)?.label}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent className="w-auto min-w-(--anchor-width)">
+      <SelectContent>
         {THEMES.map((option) => (
           <SelectItem key={option.id} value={option.id}>
             {option.label}
