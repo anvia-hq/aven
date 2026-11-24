@@ -14,6 +14,7 @@ import type {
   QuestionPrompt,
   QueuedSteer,
   RunEvent,
+  SandboxPhase,
   SubagentPart,
   ThreadPullRequestCheck,
   ThreadUsage,
@@ -37,6 +38,7 @@ export type {
   QueuedSteer,
   QuestionAnswer,
   QuestionPrompt,
+  SandboxPhase,
   SubagentPart,
   ThreadPullRequestCheck,
   TimelineIcon,
@@ -59,6 +61,8 @@ export type OutgoingMessage = {
 };
 
 export type RunSelection = { providerId?: string; modelId?: string; reasoningEffort?: string };
+
+export type SendMessageOptions = { sandbox?: boolean };
 
 export type SecretChoice = { secretScope: "project" | "personal"; skipSecrets?: boolean };
 
@@ -237,6 +241,8 @@ export type ThreadStreamState = {
   messages: ChatMessage[];
   handoffs: Record<string, Handoff>;
   narrations: Record<string, ToolNarration>;
+  sandboxPhase: SandboxPhase | null;
+  sandboxOptimistic: boolean;
   earlier: ChatMessage[];
   hidden: number;
   running: boolean;
@@ -256,5 +262,5 @@ export type ThreadStreamAction =
   | { type: "earlier_loaded"; before: number; messages: ChatMessage[]; hidden: number }
   | { type: "steer_add"; steer: QueuedSteer }
   | { type: "steer_drop"; id: string }
-  | { type: "pending_add"; item: PendingMessage }
+  | { type: "pending_add"; item: PendingMessage; sandbox?: boolean }
   | { type: "pending_drop"; id: string };

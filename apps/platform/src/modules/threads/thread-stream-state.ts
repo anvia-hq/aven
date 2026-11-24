@@ -1,13 +1,27 @@
 import { applyEvent, applyLimits, applyUsage, isRunning, messageId } from "@aven/protocol/events";
-import type { RunEvent } from "@aven/protocol/types";
+import type { ChatMessage, RunEvent } from "@aven/protocol/types";
 
 import { handoffOf, settlePending, withoutPending } from "./pending-messages";
 import type { ThreadStreamAction, ThreadStreamState } from "./types";
+
+function hasDeliveredOutput(messages: readonly ChatMessage[]) {
+  return messages.some(
+    (message) =>
+      message.role === "assistant" &&
+      message.parts.some(
+        (part) =>
+          part.type === "text" ||
+          (part.type === "tool" && (part.tool.status === "done" || Boolean(part.tool.questions))),
+      ),
+  );
+}
 
 export const INITIAL_THREAD_STREAM_STATE: ThreadStreamState = {
   messages: [],
   handoffs: {},
   narrations: {},
+  sandboxPhase: null,
+  sandboxOptimistic: false,
   earlier: [],
   hidden: 0,
   running: false,
@@ -33,6 +47,8 @@ export function reduceThreadStream(
         running: false,
         startedAt: null,
         error: "Lost the connection to the server",
+        sandboxPhase: state.sandboxPhase === "preparing" ? null : state.sandboxPhase,
+        sandboxOptimistic: false,
       };
     case "earlier_loaded":
       if (state.hidden !== action.before) return state;
@@ -46,10 +62,30 @@ export function reduceThreadStream(
       return { ...state, steers: [...state.steers, action.steer] };
     case "steer_drop":
       return { ...state, steers: state.steers.filter((steer) => steer.id !== action.id) };
-    case "pending_add":
-      return { ...state, pending: [...state.pending, action.item] };
-    case "pending_drop":
-      return { ...state, pending: withoutPending(state.pending, action.id) };
+    case "pending_add": {
+      const optimistic =
+        action.sandbox === true && state.messages.length === 0 && state.sandboxPhase === null;
+      return {
+        ...state,
+        pending: [...state.pending, action.item],
+        sandboxPhase: optimistic ? "preparing" : state.sandboxPhase,
+        sandboxOptimistic: optimistic ? true : state.sandboxOptimistic,
+      };
+    }
+    case "pending_drop": {
+      const pending = withoutPending(state.pending, action.id);
+      const clearOptimistic =
+        state.sandboxOptimistic &&
+        pending.length === 0 &&
+        state.messages.length === 0 &&
+        !state.running;
+      return {
+        ...state,
+        pending,
+        sandboxPhase: clearOptimistic ? null : state.sandboxPhase,
+        sandboxOptimistic: clearOptimistic ? false : state.sandboxOptimistic,
+      };
+    }
     case "event":
       return applyStreamEvent(state, action.event, action.now);
   }
@@ -90,11 +126,19 @@ function applyStreamEvent(
             : state.rejectedNotice,
       };
     }
-    case "snapshot":
+    case "snapshot": {
+      const keepOptimistic =
+        event.sandboxPhase === undefined &&
+        state.sandboxOptimistic &&
+        pending.length > 0 &&
+        messages.length === 0;
+      const sandboxPhase = keepOptimistic ? state.sandboxPhase : (event.sandboxPhase ?? null);
       return {
         ...next,
         handoffs: {},
         narrations: event.narrations ?? {},
+        sandboxPhase,
+        sandboxOptimistic: keepOptimistic,
         hidden: event.hidden ?? 0,
         earlier: [],
         steers: event.steers ?? [],
@@ -105,6 +149,25 @@ function applyStreamEvent(
           : null,
         startedAt: event.running ? now - (event.runningMs ?? 0) : null,
       };
+    }
+    case "sandbox_status":
+      return {
+        ...next,
+        sandboxPhase: event.phase,
+        sandboxOptimistic: false,
+      };
+    case "text":
+    case "tool_start":
+    case "tool_end":
+      if (state.sandboxOptimistic && state.sandboxPhase === "preparing") {
+        return {
+          ...next,
+          sandboxPhase: "ready",
+          sandboxOptimistic: false,
+        };
+      }
+
+      return next;
     case "narration":
       return {
         ...next,
@@ -118,9 +181,27 @@ function applyStreamEvent(
     case "run_resume":
       return { ...next, error: null, startedAt: now };
     case "error":
-      return { ...next, error: event.message, startedAt: null };
-    case "done":
-      return { ...next, startedAt: null };
+      return {
+        ...next,
+        error: event.message,
+        startedAt: null,
+        sandboxPhase: state.sandboxPhase === "preparing" ? null : state.sandboxPhase,
+        sandboxOptimistic: false,
+      };
+    case "done": {
+      let sandboxPhase = state.sandboxPhase;
+
+      if (sandboxPhase === "preparing") {
+        sandboxPhase = hasDeliveredOutput(messages) ? "ready" : null;
+      }
+
+      return {
+        ...next,
+        startedAt: null,
+        sandboxPhase,
+        sandboxOptimistic: false,
+      };
+    }
     default:
       return next;
   }

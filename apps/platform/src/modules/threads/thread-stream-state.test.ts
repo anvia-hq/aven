@@ -120,4 +120,148 @@ describe("reduceThreadStream", () => {
       tone: "success",
     });
   });
+
+  test("manages optimistic and server sandboxPhase across send, output, cancel, error, disconnect, and snapshot", () => {
+    const pendingItem = {
+      id: "p1",
+      message: {
+        id: "pending-p1",
+        role: "user" as const,
+        parts: [{ type: "text" as const, text: "hi" }],
+      },
+    };
+
+    const nonSandbox = reduceThreadStream(INITIAL_THREAD_STREAM_STATE, {
+      type: "pending_add",
+      item: pendingItem,
+      sandbox: false,
+    });
+    expect(nonSandbox.sandboxPhase).toBeNull();
+
+    const optimistic = reduceThreadStream(INITIAL_THREAD_STREAM_STATE, {
+      type: "pending_add",
+      item: pendingItem,
+      sandbox: true,
+    });
+    expect(optimistic.sandboxPhase).toBe("preparing");
+    expect(optimistic.sandboxOptimistic).toBe(true);
+
+    const emptySnapshot = reduceThreadStream(optimistic, {
+      type: "event",
+      now: 900,
+      event: { type: "snapshot", messages: [], running: false },
+    });
+    expect(emptySnapshot.sandboxPhase).toBe("preparing");
+    expect(emptySnapshot.sandboxOptimistic).toBe(true);
+
+    const populatedSnapshot = reduceThreadStream(optimistic, {
+      type: "event",
+      now: 950,
+      event: {
+        type: "snapshot",
+        messages: [{ id: "m-0", role: "user", parts: [{ type: "text", text: "existing" }] }],
+        running: false,
+      },
+    });
+    expect(populatedSnapshot.sandboxPhase).toBeNull();
+    expect(populatedSnapshot.sandboxOptimistic).toBe(false);
+
+    const dropped = reduceThreadStream(optimistic, { type: "pending_drop", id: "p1" });
+    expect(dropped.sandboxPhase).toBeNull();
+
+    const warmStarted = reduceThreadStream(optimistic, {
+      type: "event",
+      now: 1000,
+      event: { type: "run_start", prompt: "hi" },
+    });
+    expect(warmStarted.sandboxPhase).toBe("preparing");
+
+    const warmTool = reduceThreadStream(warmStarted, {
+      type: "event",
+      now: 1200,
+      event: {
+        type: "tool_start",
+        tool: { id: "t1", name: "list_files", target: ".", status: "running" },
+      },
+    });
+    expect(warmTool.sandboxPhase).toBe("ready");
+
+    const cancelledMidPrep = reduceThreadStream(warmStarted, {
+      type: "event",
+      now: 1500,
+      event: { type: "done" },
+    });
+    expect(cancelledMidPrep.sandboxPhase).toBeNull();
+
+    const serverPreparing = reduceThreadStream(warmStarted, {
+      type: "event",
+      now: 1100,
+      event: { type: "sandbox_status", phase: "preparing" },
+    });
+    expect(serverPreparing.sandboxPhase).toBe("preparing");
+    expect(serverPreparing.sandboxOptimistic).toBe(false);
+
+    const waitingOnWakeTool = reduceThreadStream(serverPreparing, {
+      type: "event",
+      now: 1200,
+      event: {
+        type: "tool_start",
+        tool: { id: "t1", name: "list_files", target: ".", status: "running" },
+      },
+    });
+    expect(waitingOnWakeTool.sandboxPhase).toBe("preparing");
+
+    const serverCleared = reduceThreadStream(serverPreparing, {
+      type: "event",
+      now: 1300,
+      event: { type: "sandbox_status", phase: null },
+    });
+    expect(serverCleared.sandboxPhase).toBeNull();
+
+    const serverReady = reduceThreadStream(serverPreparing, {
+      type: "event",
+      now: 2000,
+      event: { type: "sandbox_status", phase: "ready" },
+    });
+    expect(serverReady.sandboxPhase).toBe("ready");
+
+    const doneWithOutput = reduceThreadStream(
+      reduceThreadStream(serverPreparing, {
+        type: "event",
+        now: 1800,
+        event: { type: "text", delta: "Done" },
+      }),
+      { type: "event", now: 1900, event: { type: "done", workedMs: 900 } },
+    );
+    expect(doneWithOutput.sandboxPhase).toBe("ready");
+
+    const erroredAfterReady = reduceThreadStream(serverReady, {
+      type: "event",
+      now: 3000,
+      event: { type: "error", message: "later failure" },
+    });
+    expect(erroredAfterReady.sandboxPhase).toBe("ready");
+
+    const erroredWhilePreparing = reduceThreadStream(serverPreparing, {
+      type: "event",
+      now: 3000,
+      event: { type: "error", message: "boot failed" },
+    });
+    expect(erroredWhilePreparing.sandboxPhase).toBeNull();
+
+    const lostWhilePreparing = reduceThreadStream(serverPreparing, { type: "connection_lost" });
+    expect(lostWhilePreparing.sandboxPhase).toBeNull();
+
+    const snapped = reduceThreadStream(INITIAL_THREAD_STREAM_STATE, {
+      type: "event",
+      now: 4000,
+      event: {
+        type: "snapshot",
+        messages: [],
+        running: false,
+        sandboxPhase: "preparing",
+      },
+    });
+    expect(snapped.sandboxPhase).toBe("preparing");
+  });
 });

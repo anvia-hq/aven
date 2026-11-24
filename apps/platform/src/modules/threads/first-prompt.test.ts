@@ -47,6 +47,13 @@ test("the thread page takes a handed over prompt once, as it was given", () => {
   });
   expect(takeFirstPrompt(threadId)).toBeUndefined();
   expect(reports).not.toHaveBeenCalled();
+
+  handed.push("thread-sandbox");
+  handOverFirstPrompt("thread-sandbox", message("Boot sandbox"), {}, { sandbox: true });
+  expect(takeFirstPrompt("thread-sandbox")).toMatchObject({
+    message: { prompt: "Boot sandbox" },
+    sandbox: true,
+  });
 });
 
 test("a prompt handed over just before its lifetime runs out is still taken", () => {

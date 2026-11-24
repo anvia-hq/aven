@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "r
 import { toast } from "@aven/ui/toast";
 import { api, attempt, postJson } from "@/lib/api";
 import { authClient } from "@/lib/auth-client";
+import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
+import { isSandbox } from "@/modules/runtimes/sandbox";
 
 import { messageBody } from "../message-body";
 import { pendingMessage, pendingShip } from "../pending-messages";
@@ -16,6 +18,7 @@ import type {
   QueuedSteer,
   RunSelection,
   SecretChoice,
+  SendMessageOptions,
 } from "../types";
 import { rememberModelSelection } from "./use-model-selection";
 import { useThreads } from "./use-threads";
@@ -39,6 +42,8 @@ export function useThread(threadId: string) {
   const { all, loaded, setRunning: setThreadRunning, refresh } = useThreads();
   const { data: session, isPending } = authClient.useSession();
   const thread = all.find((candidate) => candidate.id === threadId);
+  const { runtime } = useRuntime(thread?.runtimeId ?? "");
+  const isSandboxThread = isSandbox(runtime);
   const wasArchived = thread !== undefined && thread.state !== "open";
   const owned = thread !== undefined && thread.createdBy === session?.user.id;
   const driven = thread !== undefined && !owned && isDriving(thread.drivingUntil);
@@ -126,7 +131,11 @@ export function useThread(threadId: string) {
   }, [threadId]);
 
   const send = useCallback(
-    async (message: OutgoingMessage, selection: RunSelection = {}) => {
+    async (
+      message: OutgoingMessage,
+      selection: RunSelection = {},
+      options: SendMessageOptions = {},
+    ) => {
       const id = newSteerId();
       const steering = stateRef.current.running;
 
@@ -139,7 +148,9 @@ export function useThread(threadId: string) {
 
         dispatch({ type: "steer_add", steer: queued });
       } else {
-        dispatch({ type: "pending_add", item: pendingMessage(id, message) });
+        const sandbox =
+          stateRef.current.messages.length === 0 && (options.sandbox === true || isSandboxThread);
+        dispatch({ type: "pending_add", item: pendingMessage(id, message), sandbox });
       }
 
       const sent = await attempt("Could not send message", async () => {
@@ -159,7 +170,7 @@ export function useThread(threadId: string) {
 
       return sent !== null;
     },
-    [threadId, wasArchived, refresh],
+    [threadId, wasArchived, refresh, isSandboxThread],
   );
 
   const showShip = useCallback(() => {
@@ -210,6 +221,7 @@ export function useThread(threadId: string) {
     messages: state.messages,
     handoffs: state.handoffs,
     narrations: state.narrations,
+    sandboxPhase: state.sandboxPhase,
     earlier: state.earlier,
     hidden: state.hidden,
     loadingEarlier,

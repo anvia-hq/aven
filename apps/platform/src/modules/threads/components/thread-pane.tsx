@@ -47,6 +47,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     messages,
     handoffs,
     narrations,
+    sandboxPhase,
     earlier,
     hidden,
     loadingEarlier,
@@ -140,6 +141,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   messages={messages}
                   handoffs={handoffs}
                   narrations={narrations}
+                  sandboxPhase={sandboxPhase}
                   prChecks={prChecks}
                   onOpenChanges={split ? undefined : diff.show}
                   earlier={earlier}
