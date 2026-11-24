@@ -5,6 +5,10 @@ import {
   LIZARD_STORAGE_MICROS_PER_GB_MONTH,
   lizardComputeMicrosPerHour,
 } from "@aven/sandbox/lizard/config";
+import {
+  SPRITES_COMPUTE_MICROS_PER_HOUR,
+  SPRITES_STORAGE_MICROS_PER_GB_MONTH,
+} from "@aven/sandbox/sprites/config";
 import { setSandboxSettings } from "@aven/sandbox/settings";
 import type { SandboxProviderName, SandboxSettings } from "@aven/sandbox/settings";
 import type { ProviderCredentials } from "@aven/sandbox/types";
@@ -48,7 +52,12 @@ async function readActiveConfig(): Promise<CloudProviderConfigRow | null> {
 }
 
 function asProviderName(provider: string): SandboxProviderName | null {
-  return provider === "boat" || provider === "spaces" || provider === "lizard" ? provider : null;
+  return provider === "boat" ||
+    provider === "spaces" ||
+    provider === "lizard" ||
+    provider === "sprites"
+    ? provider
+    : null;
 }
 
 function defaultRatesFor(provider: SandboxProviderName) {
@@ -56,6 +65,13 @@ function defaultRatesFor(provider: SandboxProviderName) {
     return {
       computeMicrosPerHour: lizardComputeMicrosPerHour("default"),
       storageMicrosPerGbMonth: LIZARD_STORAGE_MICROS_PER_GB_MONTH,
+    };
+  }
+
+  if (provider === "sprites") {
+    return {
+      computeMicrosPerHour: SPRITES_COMPUTE_MICROS_PER_HOUR,
+      storageMicrosPerGbMonth: SPRITES_STORAGE_MICROS_PER_GB_MONTH,
     };
   }
 
@@ -67,6 +83,8 @@ function defaultRatesFor(provider: SandboxProviderName) {
 
 function baseLabelFor(provider: SandboxProviderName) {
   if (provider === "lizard") return "The Lizard API address";
+
+  if (provider === "sprites") return "The Sprites API address";
 
   return "The boat API address";
 }

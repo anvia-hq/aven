@@ -49,6 +49,7 @@ export const SANDBOX_PROVIDER_LABELS: Record<SandboxProvider, string> = {
   spaces: "Spaces",
   boat: "boat.dev",
   lizard: "lizard.build",
+  sprites: "Sprites",
 };
 
 export type CloudSettings = {
