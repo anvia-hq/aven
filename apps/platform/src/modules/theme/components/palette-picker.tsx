@@ -1,4 +1,5 @@
 import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { cn } from "cn";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@aven/ui/button";
@@ -59,21 +60,37 @@ export function PalettePicker() {
           </Button>
         </div>
       </div>
-      <div
-        ref={rail}
-        onScroll={onScroll}
-        className="snap-x snap-proximity overflow-x-auto p-1 [scrollbar-color:var(--input)_transparent] [scrollbar-width:thin]"
-      >
-        <ToggleGroup
-          value={[palette]}
-          onValueChange={([next]) => next && setPalette(next as Palette)}
-          aria-label="Theme"
-          className="w-max items-stretch gap-2.5"
+      <div className="relative">
+        <div
+          ref={rail}
+          onScroll={onScroll}
+          className="snap-x snap-proximity overflow-x-auto p-1 [scrollbar-color:var(--input)_transparent] [scrollbar-width:thin]"
         >
-          {PALETTES.map((option) => (
-            <PaletteCard key={option.id} option={option} mode={resolvedTheme} />
-          ))}
-        </ToggleGroup>
+          <ToggleGroup
+            value={[palette]}
+            onValueChange={([next]) => next && setPalette(next as Palette)}
+            aria-label="Theme"
+            className="w-max items-stretch gap-2.5"
+          >
+            {PALETTES.map((option) => (
+              <PaletteCard key={option.id} option={option} mode={resolvedTheme} />
+            ))}
+          </ToggleGroup>
+        </div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-y-0 left-0 w-7 bg-gradient-to-r from-background to-transparent transition-opacity duration-150",
+            atStart ? "opacity-0" : "opacity-100",
+          )}
+        />
+        <span
+          aria-hidden="true"
+          className={cn(
+            "pointer-events-none absolute inset-y-0 right-0 w-7 bg-gradient-to-l from-background to-transparent transition-opacity duration-150",
+            atEnd ? "opacity-0" : "opacity-100",
+          )}
+        />
       </div>
     </div>
   );
