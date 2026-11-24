@@ -25,8 +25,8 @@ async function projectId(page: Page, name: string) {
 }
 
 async function pickModel(page: Page, model: string) {
-  await page.getByRole("button", { name: /^(Provider default|gpt-4o|o3)$/ }).click();
-  await page.getByRole("option", { name: model }).click();
+  await page.getByRole("menuitem", { name: /^Model\b/ }).hover();
+  await page.getByRole("menuitem", { name: model, exact: true }).click();
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );
@@ -65,25 +65,28 @@ test.describe("prompt composer", () => {
 
     await createProject(page);
     const menu = page.getByRole("button", { name: "Model and reasoning effort" });
-    const effort = page.getByRole("slider", { name: "Reasoning effort" });
+    const reasoning = page.getByRole("menuitem", { name: /^Reasoning\b/ });
 
     await menu.click();
-    await expect(effort).toHaveCount(0);
+    await expect(reasoning).toHaveCount(0);
     await pickModel(page, "o3");
-    await expect(effort).toBeVisible();
-    await effort.focus();
-    await page.keyboard.press("End");
-    await expect(effort).toHaveAttribute("aria-valuetext", "high");
+    await menu.click();
+    await expect(reasoning).toBeVisible();
+    await reasoning.hover();
+    await page.getByRole("menuitem", { name: "High", exact: true }).click();
+    await expect(menu).toContainText("High");
 
+    await menu.click();
     await pickModel(page, "gpt-4o");
-    await expect(effort).toHaveCount(0);
+    await menu.click();
+    await expect(reasoning).toHaveCount(0);
 
     await pickModel(page, "o3");
-    await expect(effort).toHaveAttribute("aria-valuetext", "medium");
-    await effort.focus();
-    await page.keyboard.press("End");
-    await expect(effort).toHaveAttribute("aria-valuetext", "high");
-    await page.keyboard.press("Escape");
+    await expect(menu).toContainText("Medium");
+    await menu.click();
+    await reasoning.hover();
+    await page.getByRole("menuitem", { name: "High", exact: true }).click();
+    await expect(menu).toContainText("High");
 
     await page.reload();
     await expect(menu).toContainText("High");
