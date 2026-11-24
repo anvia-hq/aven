@@ -1,14 +1,15 @@
-export const LIVE_TIMELINE_WINDOW = 4;
+export const LIVE_TIMELINE_LIMIT = 4;
 
-const LIVE_EXIT_BUFFER = 4;
+export const LIVE_RECENT_TAIL = 3;
 
 export function timelineWindow<T>(items: readonly T[], windowed: boolean) {
-  if (!windowed || items.length <= LIVE_TIMELINE_WINDOW) {
-    return { items, visibleFrom: 0 };
+  if (!windowed || items.length <= LIVE_TIMELINE_LIMIT) {
+    return { older: [] as readonly T[], recent: items };
   }
 
-  const start = Math.max(0, items.length - LIVE_TIMELINE_WINDOW - LIVE_EXIT_BUFFER);
-  const sliced = items.slice(start);
-  const visibleFrom = sliced.length - LIVE_TIMELINE_WINDOW;
-  return { items: sliced, visibleFrom };
+  const split = items.length - LIVE_RECENT_TAIL;
+  return {
+    older: items.slice(0, split),
+    recent: items.slice(split),
+  };
 }
