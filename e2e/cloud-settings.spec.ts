@@ -37,6 +37,26 @@ test.describe("the platform's sandbox page", () => {
     await expect(page.getByLabel("Lizard project (optional if account has one)")).toHaveValue("");
 
     await page.getByRole("combobox", { name: "Sandbox platform" }).click();
+    await page.getByRole("option", { name: "Sprites", exact: true }).click();
+
+    await expect(page.getByLabel("Sprites API address (optional)")).toHaveValue("");
+
+    await page.getByLabel("API key").fill("anvia/org-id/token-id/secret");
+
+    const sprites = page.waitForRequest(
+      (request) => request.method() === "PUT" && request.url().endsWith("/api/platform/cloud"),
+    );
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+
+    expect((await sprites).postDataJSON()).toMatchObject({
+      provider: "sprites",
+      base: "",
+      project: "",
+      runnerUrl: "",
+      apiKey: "anvia/org-id/token-id/secret",
+    });
+
+    await page.getByRole("combobox", { name: "Sandbox platform" }).click();
     await page.getByRole("option", { name: "boat.dev", exact: true }).click();
 
     await expect(page.getByLabel("Boat API address (optional)")).toHaveValue("");
