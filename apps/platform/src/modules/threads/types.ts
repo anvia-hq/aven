@@ -5,31 +5,47 @@ import type {
   AgentBackendKind,
   ChatMessage,
   DiffLine,
+  LiveStep,
   MessageAttachment,
   MessageMention,
   MessagePart,
+  PlanTask,
   QuestionAnswer,
   QuestionPrompt,
   QueuedSteer,
   RunEvent,
   SubagentPart,
+  ThreadPullRequestCheck,
   ThreadUsage,
+  TimelineIcon,
+  TimelineItem,
+  TimelineTone,
   ToolArtifact,
+  ToolNarration,
   ToolPart,
+  TurnProof,
 } from "@aven/protocol/types";
 
 export type {
   ChatMessage,
   DiffLine,
+  LiveStep,
   MessageAttachment,
   MessageMention,
   MessagePart,
+  PlanTask,
   QueuedSteer,
   QuestionAnswer,
   QuestionPrompt,
   SubagentPart,
+  ThreadPullRequestCheck,
+  TimelineIcon,
+  TimelineItem,
+  TimelineTone,
   ToolArtifact,
+  ToolNarration,
   ToolPart,
+  TurnProof,
 };
 
 export type AttachmentUpload = { name: string; mediaType?: string; data: string };
@@ -220,6 +236,7 @@ export type RejectedSteerNotice = { id: string; prompt: string; reason: string }
 export type ThreadStreamState = {
   messages: ChatMessage[];
   handoffs: Record<string, Handoff>;
+  narrations: Record<string, ToolNarration>;
   earlier: ChatMessage[];
   hidden: number;
   running: boolean;

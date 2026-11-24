@@ -23,6 +23,7 @@ import { useElementHeight } from "../hooks/use-element-height";
 import { useFirstPrompt } from "../hooks/use-first-prompt";
 import { useFollowUps } from "../hooks/use-follow-ups";
 import { useModelSelection } from "../hooks/use-model-selection";
+import { usePullRequestChecks } from "../hooks/use-pull-request-checks";
 import { useThread } from "../hooks/use-thread";
 import { useThreadPanels } from "../hooks/use-thread-panels";
 import { AnswerForm } from "./answer-form";
@@ -45,6 +46,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
     loaded,
     messages,
     handoffs,
+    narrations,
     earlier,
     hidden,
     loadingEarlier,
@@ -78,6 +80,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const sideOpen = useHeldValue(sideWanted || null, PANEL_EXIT_MS).shown !== null;
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running, true, { summaryOnly: true });
+  const prChecks = usePullRequestChecks(threadId, thread?.pullRequests ?? [], running);
   const layout = useDefaultLayout({
     id: `aven.thread.${threadId}.panels.${wide ? "row" : "column"}`,
     panelIds,
@@ -136,6 +139,9 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   markColor={thread.markColor}
                   messages={messages}
                   handoffs={handoffs}
+                  narrations={narrations}
+                  prChecks={prChecks}
+                  onOpenChanges={split ? undefined : diff.show}
                   earlier={earlier}
                   hidden={hidden}
                   loadingEarlier={loadingEarlier}

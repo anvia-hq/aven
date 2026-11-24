@@ -7,6 +7,7 @@ import type { ThreadStreamAction, ThreadStreamState } from "./types";
 export const INITIAL_THREAD_STREAM_STATE: ThreadStreamState = {
   messages: [],
   handoffs: {},
+  narrations: {},
   earlier: [],
   hidden: 0,
   running: false,
@@ -93,6 +94,7 @@ function applyStreamEvent(
       return {
         ...next,
         handoffs: {},
+        narrations: event.narrations ?? {},
         hidden: event.hidden ?? 0,
         earlier: [],
         steers: event.steers ?? [],
@@ -102,6 +104,11 @@ function applyStreamEvent(
           ? { ...event.usage, limits: event.usage.limits ?? state.usage?.limits }
           : null,
         startedAt: event.running ? now - (event.runningMs ?? 0) : null,
+      };
+    case "narration":
+      return {
+        ...next,
+        narrations: { ...state.narrations, [event.narration.toolId]: event.narration },
       };
     case "usage":
       return { ...next, usage: applyUsage(state.usage, event) };

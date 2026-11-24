@@ -1,4 +1,3 @@
-import { cn } from "cn";
 import { useEffect, useState } from "react";
 
 import { elapsed } from "@/lib/format";
@@ -8,38 +7,8 @@ import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palette
 import { useRuntime } from "@/modules/runtimes/hooks/use-runtime";
 import { isSandbox } from "@/modules/runtimes/sandbox";
 
-import { useWorkingWord } from "../hooks/use-working-word";
+import type { LiveStep } from "../types";
 import { ThreadMark } from "./thread-mark";
-
-function WorkingWord() {
-  const { current, previous } = useWorkingWord();
-  return (
-    <>
-      <span role="status" className="sr-only">
-        Working…
-      </span>
-      <span className="relative inline-block" aria-hidden>
-        {previous && (
-          <span
-            key={`out-${previous}`}
-            className="absolute top-0 left-0 whitespace-nowrap motion-safe:animate-[word-out_450ms_ease-in_forwards] motion-reduce:hidden"
-          >
-            {previous}…
-          </span>
-        )}
-        <span
-          key={current}
-          className={cn(
-            "inline-block whitespace-nowrap",
-            previous && "motion-safe:animate-[word-in_450ms_ease-out_both]",
-          )}
-        >
-          {current}…
-        </span>
-      </span>
-    </>
-  );
-}
 
 function WorkingTime({ startedAt }: { startedAt: number }) {
   const [now, setNow] = useState(() => Date.now());
@@ -57,6 +26,7 @@ type Props = {
   projectId: string;
   color?: string | null;
   startedAt?: number | null;
+  liveStep?: LiveStep | null;
 };
 
 export function WorkingIndicator({
@@ -66,6 +36,7 @@ export function WorkingIndicator({
   projectId,
   color,
   startedAt = null,
+  liveStep = null,
 }: Props & { running: boolean }) {
   const palettes = useProjectPalettes();
   const { runtime } = useRuntime(runtimeId);
@@ -74,6 +45,8 @@ export function WorkingIndicator({
   const creating = sandbox && status?.available === true && status.state !== "awake";
 
   if (!running && !creating) return null;
+
+  const label = liveStep ? liveStep.label : "Working";
 
   return (
     <div className="flex flex-col gap-1">
@@ -98,7 +71,9 @@ export function WorkingIndicator({
             working
             decorative
           />
-          <WorkingWord />
+          <span role="status" className="min-w-0 truncate shimmer">
+            {label}…
+          </span>
           {startedAt !== null && (
             <>
               <span aria-hidden>·</span>

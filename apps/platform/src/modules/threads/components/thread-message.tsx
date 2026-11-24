@@ -1,8 +1,10 @@
 import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { shipRequestOf } from "@aven/protocol/ship-request";
 import { systemNoteOf } from "@aven/protocol/system-notes";
+import { latestPlanOf, proofOf } from "@aven/protocol/timeline";
+import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
-import { memo } from "react";
+import { memo, useMemo } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
@@ -12,29 +14,40 @@ import { authorOf } from "../message-author";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
 import { foldedSteps, messageBlocks } from "../message-blocks";
-import type { Block, ChatMessage, MessageAttachment, Viewer } from "../types";
+import type {
+  Block,
+  ChatMessage,
+  MessageAttachment,
+  ThreadPullRequestCheck,
+  ToolNarration,
+  Viewer,
+} from "../types";
+import { ActivityTimeline } from "./activity-timeline";
 import { ArtifactGrid } from "./artifact-grid";
 import { ForkCard } from "./fork-card";
 import { AuthorLabel } from "./author-label";
 import { CompactionDivider } from "./compaction-divider";
 import { mentionCode } from "./mention-code";
+import { PlanCard } from "./plan-card";
+import { ProofStrip } from "./proof-strip";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { SubagentCard } from "./subagent-card";
 import { BrowserOffer } from "./browser-offer";
-import { ToolGroup } from "./tool-group";
 
 function AssistantBlock({
   block,
   live,
   threadId,
   runtimeId,
+  narrations,
 }: {
   block: Block;
   live: boolean;
   threadId: string;
   runtimeId: string;
+  narrations?: Readonly<Record<string, ToolNarration>>;
 }) {
   if (block.type === "text") {
     return <Markdown live={live}>{block.text}</Markdown>;
@@ -65,7 +78,7 @@ function AssistantBlock({
     );
   }
 
-  return <ToolGroup entries={block.entries} live={live} />;
+  return <ActivityTimeline entries={block.entries} narrations={narrations} live={live} />;
 }
 
 export const ThreadMessage = memo(function ThreadMessage({
@@ -77,6 +90,9 @@ export const ThreadMessage = memo(function ThreadMessage({
   sending = false,
   previews,
   showAuthor = true,
+  narrations,
+  prChecks,
+  onOpenChanges,
 }: {
   message: ChatMessage;
   threadId: string;
@@ -86,6 +102,9 @@ export const ThreadMessage = memo(function ThreadMessage({
   sending?: boolean;
   previews?: MessageAttachment[];
   showAuthor?: boolean;
+  narrations?: Readonly<Record<string, ToolNarration>>;
+  prChecks?: readonly ThreadPullRequestCheck[];
+  onOpenChanges?: () => void;
 }) {
   if (message.role === "user") {
     const isShipRequest =
@@ -157,6 +176,9 @@ export const ThreadMessage = memo(function ThreadMessage({
       threadId={threadId}
       runtimeId={runtimeId}
       streaming={streaming}
+      narrations={narrations}
+      prChecks={prChecks}
+      onOpenChanges={onOpenChanges}
     />
   );
 });
@@ -166,36 +188,48 @@ function AssistantMessage({
   threadId,
   runtimeId,
   streaming,
+  narrations,
+  prChecks,
+  onOpenChanges,
 }: {
   message: ChatMessage;
   threadId: string;
   runtimeId: string;
   streaming: boolean;
+  narrations?: Readonly<Record<string, ToolNarration>>;
+  prChecks?: readonly ThreadPullRequestCheck[];
+  onOpenChanges?: () => void;
 }) {
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
+  const shown = useMemo(() => messageBlocks(parts), [parts]);
+  const folded = useMemo(() => (live ? undefined : foldedSteps(shown)), [live, shown]);
+  const plan = useMemo(() => latestPlanOf(parts), [parts]);
+  const proof = useMemo(() => proofOf(parts), [parts]);
 
   if (parts.length === 0) return null;
 
-  const shown = messageBlocks(parts);
-  const folded = live ? undefined : foldedSteps(shown);
-
   if (folded) {
     return (
-      <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
-        <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
+      <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
+        {plan && <PlanCard tasks={plan} live={false} />}
+        <Collapsible className="min-w-0 text-sm" defaultOpen>
           <CollapsibleTrigger
-            className="group flex items-center py-1 text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
+            className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
             data-role="worked"
           >
+            <IconChevronRight
+              aria-hidden
+              className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
+            />
             <span className="font-medium">
               {message.workedMs === undefined
-                ? "Worked"
+                ? "Activity"
                 : `Worked for ${elapsed(message.workedMs)}`}
             </span>
           </CollapsibleTrigger>
           <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
-            <div className="flex min-w-0 flex-col gap-2 pt-2">
+            <div className="flex min-w-0 flex-col gap-2 pt-1.5">
               {folded.steps.map((block, index) => (
                 <AssistantBlock
                   key={index}
@@ -203,6 +237,7 @@ function AssistantMessage({
                   live={false}
                   threadId={threadId}
                   runtimeId={runtimeId}
+                  narrations={narrations}
                 />
               ))}
             </div>
@@ -215,6 +250,7 @@ function AssistantMessage({
             live={false}
             threadId={threadId}
             runtimeId={runtimeId}
+            narrations={narrations}
           />
         ))}
         <AssistantBlock
@@ -222,13 +258,16 @@ function AssistantMessage({
           live={false}
           threadId={threadId}
           runtimeId={runtimeId}
+          narrations={narrations}
         />
+        <ProofStrip proof={proof} prChecks={prChecks} onOpenChanges={onOpenChanges} />
       </div>
     );
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-2" data-role="assistant">
+    <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
+      {plan && <PlanCard tasks={plan} live={live} />}
       {shown.map((block, index, all) => (
         <AssistantBlock
           key={index}
@@ -236,8 +275,10 @@ function AssistantMessage({
           live={live && index === all.length - 1}
           threadId={threadId}
           runtimeId={runtimeId}
+          narrations={narrations}
         />
       ))}
+      {!live && <ProofStrip proof={proof} prChecks={prChecks} onOpenChanges={onOpenChanges} />}
     </div>
   );
 }
