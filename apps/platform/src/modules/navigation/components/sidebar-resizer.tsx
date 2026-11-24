@@ -13,9 +13,7 @@ export function SidebarResizer({ size }: Props) {
       aria-valuemax={size.max}
       tabIndex={0}
       {...size.handlers}
-      className="group/resizer absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize touch-none items-center justify-center outline-hidden group-data-[collapsible=icon]:group-data-[state=collapsed]:hidden md:flex"
-    >
-      <div className="z-10 h-6 w-0.5 shrink-0 rounded-full bg-border opacity-0 transition-opacity group-hover/resizer:opacity-100 group-focus-visible/resizer:opacity-100" />
-    </div>
+      className="absolute inset-y-0 -right-1 z-20 hidden w-2 cursor-col-resize touch-none outline-hidden group-data-[collapsible=icon]:group-data-[state=collapsed]:hidden md:block"
+    />
   );
 }
