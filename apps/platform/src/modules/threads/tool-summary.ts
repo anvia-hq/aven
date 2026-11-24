@@ -14,6 +14,11 @@ const search: Kind = {
   label: (count) => (count === 1 ? "searched once" : `searched ${count} times`),
 };
 const webPage: Kind = { label: (count) => `read ${plural(count, "web page")}` };
+const image: Kind = {
+  label: (count) => (count === 1 ? "inspected an image" : `inspected ${count} images`),
+};
+const browser: Kind = { label: () => "used the browser" };
+const subagent: Kind = { label: (count) => `ran ${plural(count, "subagent")}` };
 const tasks: Kind = { label: () => "updated the task list" };
 const artifacts: Kind = { label: () => "showed files" };
 const fetch: Kind = { label: () => "fetched from GitHub" };
@@ -39,6 +44,7 @@ function kindOf(name: string): Kind {
     case "apply_patch":
       return edit;
     case "read_file":
+    case "read_project_file":
       return read;
     case "list_files":
       return list;
@@ -46,9 +52,18 @@ function kindOf(name: string): Kind {
     case "grep":
     case "find":
     case "glob":
+    case "search_files":
       return search;
     case "web_fetch":
       return webPage;
+    case "view_image":
+      return image;
+    case "open_browser":
+      return browser;
+    case "spawn_agent":
+    case "fork_thread":
+    case "wait_for_forks":
+      return subagent;
     case "todo_write":
       return tasks;
     case "show_artifact":

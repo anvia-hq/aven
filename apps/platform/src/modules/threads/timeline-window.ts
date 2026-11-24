@@ -13,3 +13,20 @@ export function timelineWindow<T>(items: readonly T[], windowed: boolean) {
     recent: items.slice(split),
   };
 }
+
+export function pushedTimelineItems<T extends { id: string }>(
+  previousRecent: readonly T[],
+  nextRecent: readonly T[],
+) {
+  if (previousRecent.length === 0) {
+    return { exiting: [] as readonly T[], enteringIds: new Set<string>() };
+  }
+
+  const nextIds = new Set(nextRecent.map((item) => item.id));
+  const previousIds = new Set(previousRecent.map((item) => item.id));
+  const exiting = previousRecent.slice(-LIVE_RECENT_TAIL).filter((item) => !nextIds.has(item.id));
+  const enteringIds = new Set(
+    nextRecent.flatMap((item) => (previousIds.has(item.id) ? [] : [item.id])),
+  );
+  return { exiting, enteringIds };
+}
