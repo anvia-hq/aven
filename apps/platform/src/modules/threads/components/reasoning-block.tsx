@@ -4,7 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/co
 
 export function ReasoningBlock({ text, thinking = false }: { text: string; thinking?: boolean }) {
   return (
-    <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
+    <Collapsible className="min-w-0 text-xs" defaultOpen={false}>
       <CollapsibleTrigger className="group flex w-fit max-w-full items-center gap-2 py-1 text-left text-muted-foreground transition-colors hover:text-foreground">
         <span className={cn("text-muted-foreground", thinking && "shimmer")}>
           {thinking ? "Thinking" : "Thoughts"}

@@ -43,30 +43,35 @@ const fallback = (name: string): Meta => ({
   done: `Ran ${name}`,
 });
 
+function toolLabelTone(status: ToolPart["status"], notice: string | undefined) {
+  if (notice !== undefined) return "text-destructive";
+
+  if (status === "error") return "text-muted-foreground/50";
+
+  return "text-muted-foreground";
+}
+
 export function ToolCall({ tool }: { tool: ToolPart }) {
   const { running, done } = meta[tool.name] ?? fallback(tool.name);
   const notice = tool.status === "error" ? toolFailureNotice(tool.output) : undefined;
   const additions = tool.diff?.filter((line) => line.type === "add").length ?? 0;
   const deletions = tool.diff?.filter((line) => line.type === "del").length ?? 0;
   const expandable = Boolean(tool.diff?.length || tool.output);
+  const labelTone = toolLabelTone(tool.status, notice);
 
   return (
-    <Collapsible className="min-w-0 text-sm" defaultOpen={false}>
+    <Collapsible className="min-w-0 text-xs" defaultOpen={false}>
       <CollapsibleTrigger
         disabled={!expandable}
         className="group flex w-fit max-w-full items-center gap-2 py-1 text-left disabled:cursor-default"
       >
-        <span
-          className={cn(
-            notice ? "text-destructive" : "text-muted-foreground",
-            tool.status === "running" && "shimmer",
-          )}
-        >
+        <span className={cn(labelTone, tool.status === "running" && "shimmer")}>
           {tool.status === "running" ? running : (notice ?? done)}
         </span>
         <span
           className={cn(
-            "min-w-0 truncate font-mono text-xs text-muted-foreground/60",
+            "min-w-0 truncate font-mono text-xs",
+            tool.status === "error" ? "text-muted-foreground/40" : "text-muted-foreground/60",
             tool.status === "running" && "shimmer",
           )}
         >
@@ -78,7 +83,7 @@ export function ToolCall({ tool }: { tool: ToolPart }) {
           </span>
         )}
         {tool.status === "error" && (
-          <IconAlertCircle className="size-4 text-destructive" aria-label="Failed" />
+          <IconAlertCircle className="size-3.5 text-muted-foreground/50" aria-label="Failed" />
         )}
       </CollapsibleTrigger>
       {expandable && (
