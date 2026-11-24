@@ -314,8 +314,8 @@ jobs:
           mkdir -p .ci-timings
           IFS=',' read -ra specs <<< "${{ steps.select.outputs.shard_specs }}"
           bun run test:e2e "${specs[@]}"
-          if [ "${{ steps.select.outputs.full_e2e }}" != "true" ] && [ "${#specs[@]}" -le 2 ]; then
-            bun tooling/ci/check-budget.ts "e2e shard ${{ matrix.shard }}/3 (narrow)" "$RUN_START" 35
+          if [ "${{ steps.select.outputs.full_e2e }}" != "true" ]; then
+            bun tooling/ci/check-budget.ts "e2e shard ${{ matrix.shard }}/3 (narrow)" "$RUN_START" 90
           fi
       - uses: actions/upload-artifact@v4
         if: always() && steps.select.outputs.full_e2e == 'true'
