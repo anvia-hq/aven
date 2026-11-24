@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { open, rm, writeFile } from "node:fs/promises";
+import { open, rm, utimes, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { git } from "./git-clone";
@@ -36,11 +36,16 @@ async function seedIndex(root: string, destination: string) {
   if (!source) return false;
 
   try {
-    if (!(await source.stat()).isFile()) return false;
+    const info = await source.stat();
+
+    if (!info.isFile()) return false;
 
     await writeFile(destination, await source.readFile());
+    const indexSecond = Math.floor(info.mtimeMs / 1000);
+    await utimes(destination, indexSecond, indexSecond);
     return true;
   } catch {
+    await rm(destination, { force: true }).catch(() => undefined);
     return false;
   } finally {
     await source.close();
