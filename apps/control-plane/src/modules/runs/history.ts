@@ -1,13 +1,14 @@
 import { messagesToChat } from "@aven/agents/projection";
 import { usageFromHistory } from "@aven/agents/usage";
 import { withSenders, withWorkedTimes } from "@aven/protocol/events";
-import type { ContextSegment, PlanLimit } from "@aven/protocol/types";
+import type { ContextSegment, PlanLimit, ToolNarration } from "@aven/protocol/types";
 
 import type { ConversationStore } from "../../types";
 import { withContextSplit } from "./context-split";
 import type {
   ContextSplitStore,
   LimitStore,
+  NarrationStore,
   RunThread,
   SenderStore,
   WorkedTimeStore,
@@ -20,6 +21,7 @@ export class ThreadHistory {
     private senders: SenderStore,
     private limits: LimitStore,
     private splits?: ContextSplitStore,
+    private narrations?: NarrationStore,
   ) {}
 
   scope(thread: RunThread) {
@@ -40,12 +42,13 @@ export class ThreadHistory {
   }
 
   async loadState(thread: RunThread) {
-    const [history, times, senders, stored, split] = await Promise.all([
+    const [history, times, senders, stored, split, narrations] = await Promise.all([
       this.loadRaw(thread),
       this.workedTimes.read(thread.id).catch(() => new Map<number, number>()),
       this.senders.read(thread.id).catch(() => new Map<number, string>()),
       this.storedLimits(thread.id),
       this.storedSplit(thread.id),
+      this.storedNarrations(thread.id),
     ]);
     return {
       messages: withSenders(withWorkedTimes(messagesToChat(history), times), senders),
@@ -53,6 +56,7 @@ export class ThreadHistory {
         ...withContextSplit(usageFromHistory(history), split),
         limits: stored.length > 0 ? stored : undefined,
       },
+      narrations,
     };
   }
 
@@ -92,6 +96,14 @@ export class ThreadHistory {
 
   recordLimits(threadId: string, limits: readonly PlanLimit[]) {
     void this.limits.record(threadId, limits).catch(() => undefined);
+  }
+
+  recordNarration(threadId: string, narration: ToolNarration) {
+    void this.narrations?.record(threadId, narration).catch(() => undefined);
+  }
+
+  private async storedNarrations(threadId: string): Promise<Record<string, ToolNarration>> {
+    return (await this.narrations?.read(threadId).catch(() => ({}))) ?? {};
   }
 
   private async storedSplit(threadId: string) {

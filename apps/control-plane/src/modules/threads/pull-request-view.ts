@@ -39,26 +39,37 @@ function reviewOf(reviews: GithubPullDetail["reviews"], requested: string[]): Bo
   };
 }
 
+const CHECK_STATE_MAP = {
+  success: "passing",
+  failure: "failing",
+  pending: "pending",
+  none: "none",
+} as const;
+
+export function summarizePullRequestChecks(
+  detail: GithubPullDetail,
+  maxFailing = PULL_REQUEST_FAILING_MAX,
+) {
+  const failing = detail.checks.runs.flatMap((run) => (run.state === "failure" ? [run.name] : []));
+  return {
+    state: CHECK_STATE_MAP[detail.checks.state],
+    failing: failing.slice(0, maxFailing).map((name) => clean(name, NAME_MAX)),
+    failingMore: Math.max(0, failing.length - maxFailing),
+  };
+}
+
 export function pullRequestView(
   pull: BotThreadPullRequest,
   detail: GithubPullDetail,
   comments: { author: string | null; path: string; text: string }[] | null,
 ): BotPullRequestDetail {
-  const failing = detail.checks.runs.flatMap((run) => (run.state === "failure" ? [run.name] : []));
-  const checkState = { success: "passing", failure: "failing", pending: "pending", none: "none" }[
-    detail.checks.state
-  ] as "passing" | "failing" | "pending" | "none";
   const view: BotPullRequestDetail = {
     number: pull.number,
     url: pull.url,
     title: clean(detail.title, NAME_MAX),
     state: detail.status,
     mergeable: detail.mergeable,
-    checks: {
-      state: checkState,
-      failing: failing.slice(0, PULL_REQUEST_FAILING_MAX).map((name) => clean(name, NAME_MAX)),
-      failingMore: Math.max(0, failing.length - PULL_REQUEST_FAILING_MAX),
-    },
+    checks: summarizePullRequestChecks(detail),
     review: reviewOf(detail.reviews, detail.requestedReviewers),
     files: detail.files.slice(0, PULL_REQUEST_FILES_MAX).map((file) => ({
       path: clean(file.path, NAME_MAX),
@@ -98,7 +109,7 @@ export function omittedPullRequest(
   };
 }
 
-async function within<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
+export async function within<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
   const timer = Promise.withResolvers<never>();
   const id = setTimeout(() => timer.reject(new Error("timed out")), timeoutMs);
   try {

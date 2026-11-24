@@ -20,6 +20,8 @@ import type {
   RunSkill,
   RunWebSearch,
   SteerResult,
+  ToolNarration,
+  ToolPart,
 } from "@aven/protocol/types";
 
 export type Placement = {
@@ -139,6 +141,15 @@ export type ContextSplitStore = {
 export type SenderStore = {
   record(threadId: string, messageIndex: number, senderId: string): Promise<void>;
   read(threadId: string): Promise<Map<number, string>>;
+};
+
+export type NarrationStore = {
+  record(threadId: string, narration: ToolNarration): Promise<void>;
+  read(threadId: string): Promise<Record<string, ToolNarration>>;
+};
+
+export type RunNarrator = {
+  narrate(tool: ToolPart, signal?: AbortSignal): Promise<ToolNarration | null>;
 };
 
 export type RunEnding =

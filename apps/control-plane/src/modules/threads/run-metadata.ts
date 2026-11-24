@@ -2,6 +2,7 @@ import { db } from "@aven/db/client";
 import { projects } from "@aven/db/schema/projects";
 import { threadContextSplits } from "@aven/db/schema/thread-context-splits";
 import { threadMessageSenders } from "@aven/db/schema/thread-message-senders";
+import { threadNarrations } from "@aven/db/schema/thread-narrations";
 import { threadPlanLimits } from "@aven/db/schema/thread-plan-limits";
 import { threadPullRequests } from "@aven/db/schema/thread-pull-requests";
 import { threadRunTimes } from "@aven/db/schema/thread-run-times";
@@ -13,6 +14,9 @@ import type {
   PlanLimit,
   PlanLimitStatus,
   PlanLimitWindow,
+  TimelineIcon,
+  TimelineTone,
+  ToolNarration,
 } from "@aven/protocol/types";
 import { and, desc, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
 
@@ -134,6 +138,48 @@ export const threadRunMetadata = {
       .from(threadMessageSenders)
       .where(eq(threadMessageSenders.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.id]));
+  },
+
+  async saveNarration(threadId: string, narration: ToolNarration) {
+    await db
+      .insert(threadNarrations)
+      .values({
+        threadId,
+        toolId: narration.toolId,
+        label: narration.label,
+        outcome: narration.outcome ?? null,
+        icon: narration.icon ?? null,
+        tone: narration.tone ?? null,
+      })
+      .onConflictDoUpdate({
+        target: [threadNarrations.threadId, threadNarrations.toolId],
+        set: {
+          label: narration.label,
+          outcome: narration.outcome ?? null,
+          icon: narration.icon ?? null,
+          tone: narration.tone ?? null,
+        },
+      });
+  },
+
+  async narrations(threadId: string): Promise<Record<string, ToolNarration>> {
+    const rows = await db
+      .select()
+      .from(threadNarrations)
+      .where(eq(threadNarrations.threadId, threadId));
+    const map: Record<string, ToolNarration> = {};
+    for (const row of rows) {
+      const entry: ToolNarration = { toolId: row.toolId, label: row.label };
+
+      if (row.outcome) entry.outcome = row.outcome;
+
+      if (row.icon) entry.icon = row.icon as TimelineIcon;
+
+      if (row.tone) entry.tone = row.tone as TimelineTone;
+
+      map[row.toolId] = entry;
+    }
+    return map;
   },
 
   async saveLastError(id: string, message: string | null) {
