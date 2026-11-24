@@ -121,6 +121,22 @@ describe("the end of a process the agent started (decisions 0144 and 0147)", () 
     t.watch.cancelAll();
   });
 
+  test("does not wake the agent for a process stopped via stop_process", async () => {
+    const t = setup([]);
+    t.run(true);
+    t.watch.arm("thread-1");
+    await tick();
+    t.set([proc("dev", "running")]);
+    await tick();
+    t.set([proc("dev", "stopped", 137)]);
+    t.run(false);
+    t.watch.settle("thread-1");
+    await tick();
+    await tick();
+    expect(t.sent).toEqual([]);
+    t.watch.cancelAll();
+  });
+
   test("goes when the run is over and nothing it started is running, and tells nothing after a disarm", async () => {
     const t = setup([]);
     t.run(true);

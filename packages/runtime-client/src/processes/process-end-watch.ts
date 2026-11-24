@@ -229,11 +229,20 @@ export class ProcessEndWatch {
           continue;
         }
 
+        if (process.status === "stopped") {
+          watch.told.add(process.id);
+          watch.tracked.delete(process.id);
+          changed = true;
+          continue;
+        }
+
         const logs = await Promise.resolve()
           .then(() => box.processes.logs(process.id))
           .catch(() => ({ stdout: "", stderr: "", truncated: false }));
 
         if (this.#threads.get(threadId) !== watch || !watch.timer) return;
+
+        if (watch.told.has(process.id)) continue;
 
         watch.told.add(process.id);
         watch.tracked.delete(process.id);
