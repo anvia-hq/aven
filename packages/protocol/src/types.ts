@@ -295,6 +295,84 @@ export type QueuedSteer = {
   senderId?: string;
 };
 
+export type TimelineIcon =
+  | "search"
+  | "file"
+  | "code"
+  | "test"
+  | "check"
+  | "warning"
+  | "error"
+  | "browser"
+  | "pr"
+  | "git"
+  | "terminal"
+  | "task"
+  | "computer"
+  | "globe"
+  | "sparkles";
+
+export type TimelineTone = "muted" | "success" | "warning" | "error";
+
+export type ToolNarration = {
+  toolId: string;
+  label: string;
+  outcome?: string;
+  icon?: TimelineIcon;
+  tone?: TimelineTone;
+};
+
+export type TimelineStat = { additions: number; deletions: number };
+
+export type TimelineOutcome = {
+  icon: TimelineIcon;
+  label: string;
+  tone: TimelineTone;
+};
+
+export type TimelineItem = {
+  id: string;
+  icon: TimelineIcon;
+  label: string;
+  detail?: string;
+  outcome?: TimelineOutcome;
+  stat?: TimelineStat;
+  tone: TimelineTone;
+  running: boolean;
+  tools: ToolPart[];
+  reasoning: string[];
+};
+
+export type TimelineEntryInput =
+  | { type: "tool"; tool: ToolPart }
+  | { type: "reasoning"; text: string };
+
+export type LiveStep = { icon: TimelineIcon; label: string };
+
+export type PlanTaskStatus = "pending" | "in_progress" | "completed";
+
+export type PlanTask = { content: string; status: PlanTaskStatus };
+
+export type ProofCheck = {
+  id: string;
+  label: string;
+  status: "pass" | "fail";
+  detail?: string;
+};
+
+export type ProofFile = { path: string; additions: number; deletions: number };
+
+export type TurnProof = { checks: ProofCheck[]; files: ProofFile[] };
+
+export type ThreadPullRequestCheck = {
+  number: number;
+  url: string;
+  title: string;
+  state: "open" | "draft" | "merged" | "closed";
+  checksState: "passing" | "failing" | "pending" | "none";
+  failing: string[];
+};
+
 export type RunEvent =
   | {
       type: "snapshot";
@@ -305,6 +383,7 @@ export type RunEvent =
       runningMs?: number;
       steers?: QueuedSteer[];
       error?: string;
+      narrations?: Record<string, ToolNarration>;
     }
   | {
       type: "run_start";
@@ -328,6 +407,7 @@ export type RunEvent =
       output?: string;
       artifacts?: ToolArtifact[];
     }
+  | { type: "narration"; narration: ToolNarration }
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "limits"; limits: PlanLimit[] }
   | { type: "subagent"; index: number; event: SubagentEvent }
@@ -1545,6 +1625,47 @@ export type Webhook = {
 };
 
 export type WebhookCreated = Webhook & { token: string; urlPath: string };
+
+export type AutomationTriggerKind = "webhook" | "schedule";
+
+export type AutomationStatus = "running" | "done" | "failed";
+
+export type Automation = {
+  id: string;
+  projectId: string;
+  projectName: string;
+  runtimeId: string;
+  name: string;
+  triggerKind: AutomationTriggerKind;
+  cron: string | null;
+  timezone: string | null;
+  webhookPath: string | null;
+  webhookHint: string | null;
+  prompt: string;
+  enabled: boolean;
+  nextRunAt: string | null;
+  lastRunAt: string | null;
+  lastStatus: AutomationStatus | null;
+  lastThreadId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AutomationCreated = Automation & {
+  webhookToken?: string;
+  webhookUrlPath?: string;
+};
+
+export type AutomationRun = {
+  id: string;
+  automationId: string;
+  threadId: string | null;
+  triggerSummary: string;
+  status: AutomationStatus;
+  error: string | null;
+  createdAt: string;
+  finishedAt: string | null;
+};
 
 export type AnnouncementTemplate = "waves" | "violet" | "pink" | "amber";
 

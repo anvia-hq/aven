@@ -1,0 +1,15 @@
+export const AUTOMATIONS_LIMIT = 50;
+
+export const AUTOMATION_NAME_MAX = 80;
+
+export const AUTOMATION_PROMPT_MAX = 20_000;
+
+export const AUTOMATION_TOKEN_PREFIX = "avnau_";
+
+export const AUTOMATION_BODY_MAX = 256 * 1024;
+
+export const AUTOMATION_MIN_INTERVAL_MS = 15 * 60_000;
+
+export const AUTOMATION_RUNS_LIMIT = 30;
+
+export const AUTOMATION_MAX_CONCURRENT_RUNS = 3;
