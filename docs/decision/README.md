@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-397 decisions: 304 are the answer, 39 are superseded and 54 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+398 decisions: 304 are the answer, 39 are superseded and 55 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -62,7 +62,7 @@ These describe something that is gone. Read what replaced them.
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 | 0391     | The e2e suite runs before the push that makes a branch                                       | 0394                         |
 
-## Superseded in part (54)
+## Superseded in part (55)
 
 These hold, except for the part named.
 
@@ -120,5 +120,6 @@ These hold, except for the part named.
 | 0301     | The Codex agent is behind a flag                                        | 0309                             |
 | 0308     | An Aven Cloud sandbox is stopped when it is idle                        | 0392                             |
 | 0326     | A project's environment is a saved snapshot, for 72 hours               | 0392                             |
+| 0358     | A bot without a computer keeps every tool that needs no machine         | 0401                             |
 | 0379     | The Codex agent runs on an API key                                      | 0309, and its credential is 0321 |
 | 0381     | The installation's one sandbox platform is chosen in Settings > Sandbox | 0328 and 0392                    |

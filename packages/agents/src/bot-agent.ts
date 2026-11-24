@@ -22,6 +22,7 @@ import { createMemoryTool } from "./tools/memory";
 import { createScheduleTools } from "./tools/schedules";
 import { createSendMessageTool } from "./tools/send-message";
 import { createUpdateSelfTool } from "./tools/update-self";
+import { createWebFetchTool } from "./tools/web-fetch";
 import { createWebSearchTool } from "./tools/web-search";
 import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
 import type {
@@ -172,6 +173,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...keepingNotes(notes?.host),
       ...workingCockpit(cockpit),
       ...readingProjects(projectFiles),
+      ...webFetching(computer),
       ...searching(webSearch),
     ].map(withStrictToolOutput),
   };
@@ -205,6 +207,8 @@ const readingProjects = (host?: ProjectFilesHost) =>
   host ? [createReadProjectFileTool(host)] : [];
 const searching = (webSearch?: RunWebSearch) =>
   webSearch ? [createWebSearchTool({ apiKey: webSearch.apiKey })] : [];
+const webFetching = (computer: readonly AnyTool[]) =>
+  computer.length === 0 ? [createWebFetchTool()] : [];
 const usingApi = (host?: ApiHost) => (host ? createApiTools(host) : []);
 const reacting = (react?: ReactToMessage) => (react ? [createReactToMessageTool(react)] : []);
 const keepingNotes = (host?: MemoryHost) => (host ? [createMemoryTool(host)] : []);
