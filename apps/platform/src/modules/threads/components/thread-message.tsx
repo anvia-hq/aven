@@ -33,6 +33,7 @@ import { ProofStrip } from "./proof-strip";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
+import { UserMessageBubble } from "./user-message-bubble";
 import { SubagentCard } from "./subagent-card";
 import { BrowserOffer } from "./browser-offer";
 
@@ -223,7 +224,7 @@ export const ThreadMessage = memo(function ThreadMessage({
           />
         ) : null}
         {text && (
-          <div className="w-fit max-w-full rounded-2xl border border-foreground/10 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) bg-clip-padding px-4 py-2.5 [&_p]:whitespace-pre-line">
+          <UserMessageBubble>
             {message.parts.map((part, index) =>
               part.type === "text" ? (
                 <Markdown key={index} components={{ code: mentionCode }}>
@@ -231,7 +232,7 @@ export const ThreadMessage = memo(function ThreadMessage({
                 </Markdown>
               ) : null,
             )}
-          </div>
+          </UserMessageBubble>
         )}
       </div>
     );
