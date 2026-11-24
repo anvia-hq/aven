@@ -53,7 +53,7 @@ test.describe("shipping a thread", () => {
     runner = child;
 
     await page.goto(`/threads/${threadId}`);
-    await expect(page.getByRole("link", { name: /#7/ })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toHaveCount(0);
     await expect(changesBadge(page)).toHaveText("+2 -1");
 
     await page.request.post(pullsUrl(), {
@@ -69,7 +69,7 @@ test.describe("shipping a thread", () => {
     expect(prompt).toContain(`This thread's branch is aven/${threadId.slice(0, 8)}`);
     expect(prompt).toContain("default branch is main");
 
-    await expect(page.getByRole("link", { name: /#7/ })).toHaveAttribute(
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toHaveAttribute(
       "href",
       "https://github.com/acme/pull/7",
       { timeout: 15_000 },
@@ -77,7 +77,7 @@ test.describe("shipping a thread", () => {
     await expect(page.getByRole("button", { name: "Update PR" })).toBeVisible();
 
     await page.reload();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible();
   });
 
   test("shows the ship card at once, before the server has answered", async ({ page }) => {
@@ -122,7 +122,9 @@ test.describe("shipping a thread", () => {
     await page.goto(`/threads/${threadId}`);
     await page.request.post(pullsUrl(), { data: { head: branch, title: "Add the export button" } });
     await shipButton(page).click();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByRole("button", { name: "Update PR" })).toBeVisible();
 
     await page.request.post(pullsUrl(), {
@@ -136,12 +138,14 @@ test.describe("shipping a thread", () => {
     expect(prompt).toContain("- #7 open");
     expect(prompt).not.toContain("#8");
 
-    await expect(page.getByRole("link", { name: /#8/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "#8", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
 
     await page.route(UNSHIPPED, (route) => route.fulfill({ json: NO_CHANGES }));
     await page.reload();
 
-    await expect(page.getByRole("link", { name: /#8/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "#8", exact: true })).toBeVisible();
     await expect(shipButton(page)).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
     await page.getByRole("button", { name: "+1" }).click();
@@ -202,7 +206,9 @@ test.describe("shipping a thread", () => {
     await page.goto(`/threads/${threadId}`);
     await page.request.post(pullsUrl(), { data: { head: branch, title: "Add the export button" } });
     await shipButton(page).click();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByRole("button", { name: "Update PR" })).toBeVisible();
 
     const held = Promise.withResolvers<void>();
@@ -214,7 +220,7 @@ test.describe("shipping a thread", () => {
     });
     try {
       await page.reload();
-      const chip = page.getByRole("link", { name: /#7/ });
+      const chip = page.getByRole("link", { name: "#7", exact: true });
       await expect(chip).toBeVisible();
       await expect(page.getByRole("button", { name: "Update PR" })).toHaveCount(0);
     } finally {
@@ -312,7 +318,9 @@ test.describe("shipping a thread", () => {
 
     await page.goto(`/threads/${threadId}`);
 
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByRole("button", { name: "Open a PR" })).toHaveCount(0);
     await expect(shipButton(page)).toHaveCount(0);
   });
@@ -368,7 +376,9 @@ test.describe("shipping a thread", () => {
       data: { head: `aven/${threadId.slice(0, 8)}`, title: "Add the export button" },
     });
     await shipButton(page).click();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
 
     await page.route("**/api/github/user", (route) =>
       route.fulfill({ json: { connected: false, login: null } }),
@@ -376,7 +386,7 @@ test.describe("shipping a thread", () => {
     await page.reload();
 
     await expect(connectButton(page)).toBeVisible();
-    await expect(page.getByRole("link", { name: /#7/ })).toBeVisible();
+    await expect(page.getByRole("link", { name: "#7", exact: true })).toBeVisible();
     await expect(shipButton(page)).toHaveCount(0);
   });
 
