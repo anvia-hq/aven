@@ -25,18 +25,29 @@ export function usePullRequestChecks(
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let inFlight = false;
+    let wantResume = false;
     let polls = 0;
     let emptyPolls = 0;
 
     const schedule = () => {
-      if (cancelled || polls >= MAX_POLLS || document.hidden) return;
+      if (cancelled || polls >= MAX_POLLS) return;
 
+      if (document.hidden) {
+        wantResume = true;
+        return;
+      }
+
+      wantResume = false;
       timer = setTimeout(() => void load(), POLL_PENDING_MS);
     };
 
     const load = async () => {
-      if (cancelled) return;
+      if (cancelled || inFlight) return;
 
+      timer = undefined;
+      wantResume = false;
+      inFlight = true;
       polls += 1;
       try {
         const result = await api<ThreadPullRequestCheck[]>(
@@ -56,6 +67,8 @@ export function usePullRequestChecks(
         if (pending || waitingForFirst) schedule();
       } catch {
         if (!cancelled && polls < MAX_POLLS) schedule();
+      } finally {
+        inFlight = false;
       }
     };
 
@@ -64,12 +77,13 @@ export function usePullRequestChecks(
         if (timer) {
           clearTimeout(timer);
           timer = undefined;
+          wantResume = true;
         }
 
         return;
       }
 
-      if (!timer && polls < MAX_POLLS) void load();
+      if (wantResume && !inFlight && !timer && polls < MAX_POLLS) void load();
     };
 
     document.addEventListener("visibilitychange", onVisibility);
