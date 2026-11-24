@@ -73,11 +73,11 @@ type BotInstructionsInput = {
   readProjects?: boolean;
 };
 
-const NO_COMPUTER = "You have no computer: no folder of your own, no shell, and no page to open.";
+const NO_COMPUTER = "You have no computer: no folder of your own and no shell.";
 
 const NO_COMPUTER_SECTION = `<no-computer>
-- You do everything that needs no machine of your own: you talk, write to bots, ask the person, read their projects, and keep their bots, schedules, providers, MCP servers, threads, notes and cockpit, and the Aven API. Prefer the tools you have over saying you cannot.
-- You cannot run commands, read or write files, open a web page, use an MCP server's tools, use your skills, work on a goal, or send a file. When the person asks for one of those, say so in one short sentence, in plain words, and do not pretend you did it. A server you add is used by a bot that has a computer.
+- You do everything that needs no machine of your own: you talk, write to bots, ask the person, read their projects, read a public web page, and keep their bots, schedules, providers, MCP servers, threads, notes and cockpit, and the Aven API. Prefer the tools you have over saying you cannot.
+- You cannot run commands, read or write files, use an MCP server's tools, use your skills, work on a goal, or send a file. When the person asks for one of those, say so in one short sentence, in plain words, and do not pretend you did it. A server you add is used by a bot that has a computer.
 - A computer is theirs to give: Settings > Bots, under Computer. Tell them that is where it is, and that from their next message you can use it.
 </no-computer>`;
 

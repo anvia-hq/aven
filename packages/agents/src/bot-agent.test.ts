@@ -11,6 +11,7 @@ import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
 import { REACT_TO_MESSAGE_TOOL_NAME } from "./tools/react-to-message";
 import { LIST_BOTS_TOOL_NAME } from "./tools/list-bots";
 import { UPDATE_SELF_TOOL_NAME } from "./tools/update-self";
+import { WEB_FETCH_TOOL_NAME } from "./tools/web-fetch";
 import type { BotPeer } from "@aven/protocol/types";
 
 const send = (message: string) => toolCall(SEND_MESSAGE_TOOL_NAME, { text: message });
@@ -208,6 +209,7 @@ describe("createBotAgent", () => {
     expect(agent.tools.map((tool) => tool.name)).toEqual([
       SEND_MESSAGE_TOOL_NAME,
       LIST_BOTS_TOOL_NAME,
+      WEB_FETCH_TOOL_NAME,
     ]);
 
     const outcome = await agent.generate({
@@ -216,6 +218,38 @@ describe("createBotAgent", () => {
     });
     expect(outcome.type).toBe("response");
     expect(delivered).toEqual(["hey!", "how was your day?"]);
+  });
+
+  test("reads a public page with no computer of its own, and never a private address", async () => {
+    const bare = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+    });
+    const page = bare.tools.find((tool) => tool.name === WEB_FETCH_TOOL_NAME)!;
+
+    expect(page).toBeDefined();
+    await expect(page.call({ url: "http://127.0.0.1:3000/" })).rejects.toThrow("private address");
+  });
+
+  test("takes the page reader from its computer when it has one, rather than a second of its own", () => {
+    const onAMachine = createBotAgent({
+      ...base,
+      model: scriptedModel([]),
+      send: async () => "Sent",
+      memory: { store: fakeStore(), savePolicy: "turn" },
+      computer: [
+        createTool({
+          name: WEB_FETCH_TOOL_NAME,
+          description: "Runs something on the computer.",
+          inputSchema: z.object({}),
+          handler: async () => "42",
+        }),
+      ],
+    });
+
+    expect(onAMachine.tools.filter((tool) => tool.name === WEB_FETCH_TOOL_NAME)).toHaveLength(1);
   });
 
   test("tells what it is doing: thinking, then each tool, and nothing when it is done", async () => {
@@ -347,6 +381,7 @@ describe("createBotAgent", () => {
       SEND_MESSAGE_TOOL_NAME,
       LIST_BOTS_TOOL_NAME,
       CREATE_BOT_TOOL_NAME,
+      WEB_FETCH_TOOL_NAME,
     ]);
     await maker.generate({ prompt: "make me a research bot", session: { sessionId: "b1" } });
     expect(made).toEqual(["Scout"]);
@@ -660,6 +695,7 @@ describe("createBotAgent", () => {
       SEND_MESSAGE_TOOL_NAME,
       LIST_BOTS_TOOL_NAME,
       UPDATE_SELF_TOOL_NAME,
+      WEB_FETCH_TOOL_NAME,
     ]);
     await agent.generate({ prompt: "call yourself Scout", session: { sessionId: "b1" } });
     expect(changes).toEqual([{ name: "Scout" }]);
