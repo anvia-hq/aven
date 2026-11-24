@@ -19,7 +19,6 @@ import type {
   ToolNarration,
   Viewer,
 } from "../types";
-import { BackgroundChip } from "./background-chip";
 import { QueuedMessage } from "./queued-message";
 import { RiseIn } from "./rise-in";
 import { SandboxPreparationRow } from "./sandbox-preparation-row";
@@ -44,7 +43,6 @@ type Props = {
   pending?: ChatMessage[];
   steers?: QueuedSteer[];
   running?: boolean;
-  owned?: boolean;
   viewer: Viewer;
   startedAt?: number | null;
   error?: string | null;
@@ -69,7 +67,6 @@ export function ThreadMessages({
   pending = [],
   steers = [],
   running = false,
-  owned = false,
   viewer,
   startedAt = null,
   error,
@@ -218,11 +215,6 @@ export function ThreadMessages({
                 liveStep={liveStep}
               />
             </div>
-            {owned && (
-              <div className="mt-4 empty:hidden">
-                <BackgroundChip threadId={threadId} running={running} />
-              </div>
-            )}
             {error && (
               <p
                 role="alert"

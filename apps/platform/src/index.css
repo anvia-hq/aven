@@ -1924,35 +1924,6 @@
   animation: none;
 }
 
-/* The background-task chip's surface: the ship gradient faded into the page, drifting sideways so a task
-   running behind the conversation reads as alive. The gradient starts and ends on the same color, so the
-   loop has no seam. */
-@keyframes wash-drift {
-  from {
-    background-position-x: 0%;
-  }
-  to {
-    background-position-x: 200%;
-  }
-}
-
-@utility wash {
-  background-image: linear-gradient(
-    100deg,
-    color-mix(in oklch, var(--ship-from), var(--background) 66%) 0%,
-    color-mix(in oklch, var(--ship-via), var(--background) 66%) 25%,
-    color-mix(in oklch, var(--ship-to), var(--background) 66%) 50%,
-    color-mix(in oklch, var(--ship-via), var(--background) 66%) 75%,
-    color-mix(in oklch, var(--ship-from), var(--background) 66%) 100%
-  );
-  background-size: 200% 100%;
-  animation: wash-drift 9s linear infinite;
-
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
-  }
-}
-
 /* The word of the working indicator blurs in as it arrives and out as it leaves. */
 @keyframes word-in {
   from {
