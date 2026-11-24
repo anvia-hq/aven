@@ -5,6 +5,7 @@ import { Button } from "@aven/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import type { ThreadAction } from "@aven/protocol/types";
+import { FLOATING_BUTTON } from "@/lib/floating-button";
 
 import { useThreadActions } from "../hooks/use-thread-actions";
 import type { Thread } from "../types";
@@ -42,7 +43,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
           key={action.name}
           variant="outline"
           size="sm"
-          className="rounded-full shadow-md"
+          className={FLOATING_BUTTON}
           disabled={disabled(action)}
           onClick={() => void start(action)}
         >
@@ -53,12 +54,7 @@ export function ActionButtons({ thread }: { thread: Thread }) {
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           render={
-            <Button
-              variant="outline"
-              size="sm"
-              className="rounded-full shadow-md"
-              aria-label="Actions"
-            />
+            <Button variant="outline" size="sm" className={FLOATING_BUTTON} aria-label="Actions" />
           }
         >
           <IconPlayerPlay />

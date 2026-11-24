@@ -18,33 +18,20 @@ import {
 } from "@tabler/icons-react";
 import { cn } from "cn";
 
-import type { TimelineIcon, TimelineTone } from "../types";
-
-function toneClass(tone: TimelineTone) {
-  if (tone === "success") return "text-success";
-
-  if (tone === "error") return "text-destructive";
-
-  if (tone === "warning") return "text-meter";
-
-  return "text-muted-foreground";
-}
+import type { TimelineIcon } from "../types";
 
 export function TimelineIconGlyph({
   icon,
-  tone = "muted",
   running = false,
   className,
 }: {
   icon: TimelineIcon;
-  tone?: TimelineTone;
   running?: boolean;
   className?: string;
 }) {
-  const classes = cn("size-4 shrink-0", toneClass(tone), className);
+  const classes = cn("size-4 shrink-0 text-muted-foreground", className);
 
-  if (running)
-    return <IconLoader2 aria-hidden className={cn(classes, "animate-spin text-meter")} />;
+  if (running) return <IconLoader2 aria-hidden className={cn(classes, "animate-spin")} />;
 
   switch (icon) {
     case "search":

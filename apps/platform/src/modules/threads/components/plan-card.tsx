@@ -5,14 +5,14 @@ import type { PlanTask } from "../types";
 
 function TaskGlyph({ status, live }: { status: PlanTask["status"]; live: boolean }) {
   if (status === "completed") {
-    return <IconCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-success" />;
+    return <IconCheck aria-hidden className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />;
   }
 
   if (status === "in_progress") {
     return (
       <IconLoader2
         aria-hidden
-        className={cn("mt-0.5 size-3.5 shrink-0 text-meter", live && "animate-spin")}
+        className={cn("mt-0.5 size-3.5 shrink-0 text-foreground/80", live && "animate-spin")}
       />
     );
   }

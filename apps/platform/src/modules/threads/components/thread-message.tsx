@@ -4,7 +4,7 @@ import { systemNoteOf } from "@aven/protocol/system-notes";
 import { latestPlanOf, proofOf } from "@aven/protocol/timeline";
 import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
@@ -202,6 +202,10 @@ function AssistantMessage({
 }) {
   const { parts, draining } = useSmoothParts(message, streaming);
   const live = streaming || draining;
+  const [seenLive, setSeenLive] = useState(live);
+
+  if (live && !seenLive) setSeenLive(true);
+
   const shown = useMemo(() => messageBlocks(parts), [parts]);
   const folded = useMemo(() => (live ? undefined : foldedSteps(shown)), [live, shown]);
   const plan = useMemo(() => latestPlanOf(parts), [parts]);
@@ -214,20 +218,22 @@ function AssistantMessage({
       <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
         {plan && <PlanCard tasks={plan} live={false} />}
         <Collapsible className="min-w-0 text-sm" defaultOpen>
-          <CollapsibleTrigger
-            className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
-            data-role="worked"
-          >
-            <IconChevronRight
-              aria-hidden
-              className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
-            />
-            <span className="font-medium">
-              {message.workedMs === undefined
-                ? "Activity"
-                : `Worked for ${elapsed(message.workedMs)}`}
-            </span>
-          </CollapsibleTrigger>
+          <div className={cn(seenLive && "worked-in")}>
+            <CollapsibleTrigger
+              className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
+              data-role="worked"
+            >
+              <IconChevronRight
+                aria-hidden
+                className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
+              />
+              <span className="font-medium">
+                {message.workedMs === undefined
+                  ? "Activity"
+                  : `Worked for ${elapsed(message.workedMs)}`}
+              </span>
+            </CollapsibleTrigger>
+          </div>
           <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
             <div className="flex min-w-0 flex-col gap-2 pt-1.5">
               {folded.steps.map((block, index) => (
@@ -260,7 +266,12 @@ function AssistantMessage({
           runtimeId={runtimeId}
           narrations={narrations}
         />
-        <ProofStrip proof={proof} prChecks={prChecks} onOpenChanges={onOpenChanges} />
+        <ProofStrip
+          proof={proof}
+          prChecks={prChecks}
+          onOpenChanges={onOpenChanges}
+          animate={seenLive}
+        />
       </div>
     );
   }
@@ -278,7 +289,14 @@ function AssistantMessage({
           narrations={narrations}
         />
       ))}
-      {!live && <ProofStrip proof={proof} prChecks={prChecks} onOpenChanges={onOpenChanges} />}
+      {!live && (
+        <ProofStrip
+          proof={proof}
+          prChecks={prChecks}
+          onOpenChanges={onOpenChanges}
+          animate={seenLive}
+        />
+      )}
     </div>
   );
 }
