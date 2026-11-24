@@ -1,7 +1,6 @@
 import {
   IconBell,
   IconBook,
-  IconCode,
   IconCodeblock,
   IconCpu,
   IconExternalLink,
@@ -41,19 +40,13 @@ const groups = [
     ],
   },
   {
-    label: "AI",
+    label: "Agents",
     items: [
       { to: "/settings/providers", label: "Providers", icon: IconCpu },
       { to: "/settings/bots", label: "Bots", icon: BotLine },
       { to: "/settings/memory", label: "Memory", icon: IconId },
-    ],
-  },
-  {
-    label: "Agents and integrations",
-    items: [
       { to: "/settings/skills", label: "Skills", icon: IconBook },
-      { to: "/settings/mcp", label: "MCP Integrations", icon: McpLine },
-      { to: "/settings/mcp-access", label: "MCP access", icon: IconCode },
+      { to: "/settings/mcp", label: "MCP", icon: McpLine },
       { to: "/settings/webhooks", label: "Webhooks", icon: IconWebhook },
     ],
   },
