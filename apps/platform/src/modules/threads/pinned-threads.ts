@@ -62,8 +62,8 @@ export function withoutPinned(
   groups: readonly RecencyGroup[],
   pinnedIds: ReadonlySet<string>,
 ): RecencyGroup[] {
-  return groups.map((group) => ({
-    ...group,
-    threads: group.threads.filter((thread) => !pinnedIds.has(thread.id)),
-  }));
+  return groups.flatMap((group) => {
+    const remaining = group.threads.filter((thread) => !pinnedIds.has(thread.id));
+    return remaining.length > 0 ? [{ ...group, threads: remaining }] : [];
+  });
 }

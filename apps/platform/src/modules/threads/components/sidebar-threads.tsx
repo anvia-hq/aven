@@ -327,6 +327,7 @@ export function SidebarThreads() {
           <SidebarSection
             id="archived"
             label={`Archived (${archived.length})`}
+            collapsible
             defaultOpen={false}
             lazy
           >

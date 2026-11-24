@@ -4,8 +4,10 @@ const DAY_MS = 86_400_000;
 
 const LABELS: Record<RecencyGroupId, string> = {
   today: "Today",
+  yesterday: "Yesterday",
   week: "Last 7 days",
   month: "Last 30 days",
+  older: "Older",
 };
 
 function rootOf(thread: Thread, byId: ReadonlyMap<string, Thread>) {
@@ -24,7 +26,9 @@ function rootOf(thread: Thread, byId: ReadonlyMap<string, Thread>) {
 
 export function recencyGroups(threads: readonly Thread[], now = new Date()): RecencyGroup[] {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - DAY_MS;
   const weekAgo = now.getTime() - 7 * DAY_MS;
+  const monthAgo = now.getTime() - 30 * DAY_MS;
   const byId = new Map(threads.map((thread) => [thread.id, thread]));
   const latest = new Map<string, number>();
   for (const thread of threads) {
@@ -36,11 +40,16 @@ export function recencyGroups(threads: readonly Thread[], now = new Date()): Rec
 
     if (at >= startOfToday) return "today";
 
-    return at >= weekAgo ? "week" : "month";
+    if (at >= startOfYesterday) return "yesterday";
+
+    if (at >= weekAgo) return "week";
+
+    if (at >= monthAgo) return "month";
+
+    return "older";
   };
-  return (["today", "week", "month"] as const).map((id) => ({
-    id,
-    label: LABELS[id],
-    threads: threads.filter((thread) => idOf(thread) === id),
-  }));
+  return (["today", "yesterday", "week", "month", "older"] as const).flatMap((id) => {
+    const bucket = threads.filter((thread) => idOf(thread) === id);
+    return bucket.length > 0 ? [{ id, label: LABELS[id], threads: bucket }] : [];
+  });
 }

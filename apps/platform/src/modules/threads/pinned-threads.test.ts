@@ -62,8 +62,6 @@ describe("withoutPinned", () => {
     const groups = withoutPinned(recencyGroups([parent, fork], NOW), pinnedIds);
     expect(groups.map((group) => [group.label, group.threads.map((item) => item.id)])).toEqual([
       ["Today", ["parent"]],
-      ["Last 7 days", []],
-      ["Last 30 days", []],
     ]);
   });
 });

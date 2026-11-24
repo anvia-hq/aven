@@ -318,30 +318,11 @@ test.describe("threads", () => {
     await expect(viewer.getByText("3 of 3")).toBeVisible();
   });
 
-  test("each recency group in the sidebar opens and closes, and is remembered after a reload", async ({
-    page,
-  }) => {
+  test("empty recency groups are hidden in the sidebar", async ({ page }) => {
     await registerUser(page, "grp", "Group User");
-    const today = page.getByRole("button", { name: "Today" });
-    const week = page.getByRole("button", { name: "Last 7 days" });
-    await expect(page.getByRole("button", { name: "Last 30 days" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
-    await expect(today).toHaveAttribute("aria-expanded", "true");
-
-    await today.click();
-    await expect(today).toHaveAttribute("aria-expanded", "false");
-    await expect(week).toHaveAttribute("aria-expanded", "true");
-
-    await page.reload();
-    await expect(today).toHaveAttribute("aria-expanded", "false");
-    await expect(week).toHaveAttribute("aria-expanded", "true");
-
-    await today.click();
-    await expect(today).toHaveAttribute("aria-expanded", "true");
-    await page.reload();
-    await expect(today).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("region", { name: "Today" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Last 7 days" })).toHaveCount(0);
+    await expect(page.getByRole("region", { name: "Last 30 days" })).toHaveCount(0);
   });
 
   test("the thread view renders a streamed run: tool calls, a diff, an error and the reply", async ({

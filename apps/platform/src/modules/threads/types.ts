@@ -227,7 +227,7 @@ export type SplitPair = [string, string];
 
 export type Speaker = { kind: "agent" } | { kind: "person"; key: string; mine: boolean };
 
-export type RecencyGroupId = "today" | "week" | "month";
+export type RecencyGroupId = "today" | "yesterday" | "week" | "month" | "older";
 
 export type RecencyGroup = { id: RecencyGroupId; label: string; threads: Thread[] };
 
