@@ -11,9 +11,11 @@ export const WEBHOOK_HEADERS = [
   "x-event-key",
   "x-sentry-event",
   "x-linear-event",
+  "x-event-type",
+  "x-webhook-event",
 ] as const;
 
-const oneLine = (text: string) => text.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
+export const oneLine = (text: string) => text.replace(/[<>]/g, "").replace(/\s+/g, " ").trim();
 
 function readable(body: string) {
   const text = body.trim();

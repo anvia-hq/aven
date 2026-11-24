@@ -4,6 +4,7 @@ import { cloudSettingsService } from "./modules/cloud-settings/service";
 import { shutdownDrainMs } from "./modules/runs/drain";
 import { app } from "./app";
 import {
+  automationScheduler,
   botApiApp,
   botRunner,
   cloudReconciler,
@@ -67,6 +68,7 @@ export async function startControlPlane(edition: Edition) {
     previewListener?.stop();
     await localRunner?.stop();
     await scheduler.close();
+    await automationScheduler.close();
     await goalDriver.close();
     await threadWatcher.close();
     await pullRequestWatch.close();
@@ -80,6 +82,7 @@ export async function startControlPlane(edition: Edition) {
   process.on("SIGTERM", shutdown);
 
   scheduler.start();
+  automationScheduler.start();
   goalDriver.start();
   threadWatcher.start();
   pullRequestWatch.start();

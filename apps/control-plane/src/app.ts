@@ -1,6 +1,7 @@
 import { Elysia } from "elysia";
 
 import {
+  automations,
   botApi,
   botChats,
   botDefaultRuntime,
@@ -23,6 +24,7 @@ import { foreignOrigin } from "@aven/server-kit/origin-guard";
 import { trustedOrigins } from "./modules/auth/service";
 import { artifactsRouter } from "./modules/artifacts/router";
 import { authRouter } from "./modules/auth/router";
+import { automationsRouter } from "./modules/automations/router";
 import { botComputerRouter } from "./modules/bots/computer-router";
 import { botsRouter } from "./modules/bots/router";
 import { webhooksRouter } from "./modules/webhooks/router";
@@ -72,6 +74,7 @@ export const app = new Elysia()
   .get("/health", () => ({ status: "ok" }))
   .use(artifactsRouter(runtimeHub))
   .use(authRouter)
+  .use(automationsRouter(automations))
   .use(botsRouter(botChats))
   .use(webhooksRouter(webhooks))
   .use(botComputerRouter(runtimeHub, botRuntimeId, botDefaultRuntime))

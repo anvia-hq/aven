@@ -11,6 +11,8 @@ import { BotRunner } from "./modules/bots/runner";
 import { botsService } from "./modules/bots/service";
 import { preferencesService } from "./modules/preferences/service";
 import { createScheduler } from "./modules/schedules/scheduler";
+import { createAutomations } from "./modules/automations/service";
+import { createAutomationScheduler } from "./modules/automations/scheduler";
 import { createWebhooks } from "./modules/webhooks/service";
 import { schedulesService } from "./modules/schedules/service";
 import { cockpitService } from "./modules/cockpit/service";
@@ -20,7 +22,9 @@ import { RemoteRuntime } from "./modules/runs/remote-runtime";
 import { LensProxy } from "./modules/lens/proxy";
 import { lensSettingsService } from "./modules/lens/service";
 import { runIdentities } from "./modules/workload-identity/grants";
+import { createRunNarrator } from "./modules/runs/narrator";
 import { RunManager } from "./modules/runs/service";
+import type { RunEnding } from "./modules/runs/types";
 import { runGateway } from "./modules/runtimes/gateway";
 import { DEFAULT_GRACE_MS, RuntimeHub } from "./modules/runtimes/hub";
 import { localRunnerMode } from "./modules/runtimes/local";
@@ -87,6 +91,19 @@ export const lensProxy = new LensProxy(
   (runtimeId) => runtimeHub.isOnline(runtimeId),
 );
 
+function automationEndingOf(ending: RunEnding): {
+  status: "done" | "failed";
+  error?: string;
+} {
+  if (ending.outcome === "done") return { status: "done" };
+
+  if (ending.outcome === "failed") return { status: "failed", error: ending.error };
+
+  if (ending.outcome === "cancelled") return { status: "failed", error: "Cancelled" };
+
+  return { status: "failed", error: "Stopped to ask a question" };
+}
+
 export const runsService = new RunManager({
   store: memoryStore,
   runtime: new RemoteRuntime(
@@ -119,6 +136,15 @@ export const runsService = new RunManager({
     }
 
     await runtimeHub.forks.ended(thread, ending);
+    const automationEnd = automationEndingOf(ending);
+    await automations
+      .recordThreadEnded(thread.id, automationEnd.status, automationEnd.error)
+      .catch((error: unknown) => {
+        console.warn(
+          `Could not record automation completion for thread ${thread.id}:`,
+          describeError(error),
+        );
+      });
   },
   continuations: {
     save: (threadId, continuation) => threadsService.saveContinuation(threadId, continuation),
@@ -144,9 +170,45 @@ export const runsService = new RunManager({
     record: (threadId, index, senderId) => threadsService.saveSender(threadId, index, senderId),
     read: (threadId) => threadsService.senders(threadId),
   },
+  narrations: {
+    record: (threadId, narration) => threadsService.saveNarration(threadId, narration),
+    read: (threadId) => threadsService.narrations(threadId),
+  },
+  narrator: createRunNarrator(),
 });
 
 export const threadMessages = createThreadMessages(runsService);
+
+export const automations = createAutomations({
+  runner: {
+    createThread: async ({ organizationId, userId, projectId, runtimeId, title }) => {
+      const thread = await threadsService.create(organizationId, userId, {
+        projectId,
+        runtimeId,
+        title,
+      });
+      return { threadId: thread.id, runtimeId: thread.runtimeId };
+    },
+    startRun: async ({ organizationId, userId, threadId, prompt }) => {
+      await threadMessages.start(
+        organizationId,
+        userId,
+        threadId,
+        { prompt, attachments: [], mentions: [] },
+        { onPersonsWord: false },
+      );
+    },
+    abandonThread: async ({ organizationId, userId, threadId, runtimeId }) => {
+      await threadsService.update({ organizationId, userId }, threadId, { state: "archived" });
+      putAwayThread({ id: threadId, runtimeId });
+    },
+  },
+});
+
+export const automationScheduler = createAutomationScheduler({
+  fireDue: (id, now) => automations.fireScheduled(id, now),
+  intervalMs: 30_000,
+});
 
 export const followUps = createFollowUps({
   messagesOf: async (viewer, threadId) =>
