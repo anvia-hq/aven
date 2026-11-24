@@ -9,7 +9,7 @@ test.describe("providers", () => {
       data: { kind: "openai", name: "Work", apiKey: "sk-test-1234" },
     });
 
-    const lists = [["gpt-4o"], ["gpt-4o", "o3"], ["gpt-4o", "o3", "gpt-5"], null];
+    const lists = [["gpt-4o"], ["gpt-4o"], ["gpt-4o", "o3"], ["gpt-4o", "o3", "gpt-5"], null];
     let asked = 0;
     await page.route("**/api/providers/*/models", (route) => {
       const list = lists[asked++];
@@ -19,7 +19,10 @@ test.describe("providers", () => {
     });
 
     await page.goto("/settings/providers");
-    const refetch = page.getByRole("button", { name: "Refetch models" });
+    const work = page.getByRole("listitem", { name: "Work" });
+    await work.getByRole("button", { name: "Edit" }).click();
+    await expect(work.getByRole("combobox", { name: "Model" })).toContainText("gpt-4o");
+    const refetch = work.getByRole("button", { name: "Refetch models" });
 
     await refetch.click();
     await revealToast(page, "Work: 2 models");
@@ -32,7 +35,7 @@ test.describe("providers", () => {
     await refetch.click();
     await expect(page.getByText("Could not list the models of Work")).toBeVisible();
     await expect(refetch).toBeEnabled();
-    expect(asked).toBe(4);
+    expect(asked).toBe(5);
   });
 });
 
@@ -42,9 +45,43 @@ test("the model of a provider is picked from a list that loads by itself", async
     route.fulfill({ json: { models: ["claude-haiku-5-5", "claude-sonnet-5"] } }),
   );
   await page.goto("/settings/providers");
-  await page.getByRole("button", { name: "Set up" }).nth(2).click();
-  const dialog = page.getByRole("dialog");
-  await expect(dialog.getByRole("button", { name: "Load models" })).toHaveCount(0);
-  await dialog.getByLabel("API key").fill("sk-ant-test-1234");
-  await expect(dialog.getByRole("combobox", { name: "Model" })).toContainText("claude-haiku-5-5");
+  const anthropic = page.getByRole("listitem", { name: "Anthropic" });
+  await anthropic.getByRole("button", { name: "Set up" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(anthropic.getByRole("button", { name: "Load models" })).toHaveCount(0);
+  await anthropic.getByLabel("API key").fill("sk-ant-test-1234");
+  await expect(anthropic.getByRole("combobox", { name: "Model" })).toContainText(
+    "claude-haiku-5-5",
+  );
+});
+
+test("a connected provider and custom OpenAI-compatible server can rotate their API keys inline", async ({
+  page,
+}) => {
+  await registerUser(page, "prk", "Key Rotate User");
+  await page.route("**/api/providers/models", (route) =>
+    route.fulfill({ json: { models: ["vllm-70b", "vllm-8b"] } }),
+  );
+  await page.route("**/api/providers/*/models", (route) =>
+    route.fulfill({ json: { models: ["vllm-70b", "vllm-8b"], efforts: {} } }),
+  );
+  await page.goto("/settings/providers");
+
+  const custom = page.getByRole("listitem", { name: "OpenAI-compatible" });
+  await expect(custom.locator("svg").first()).toBeVisible();
+  await custom.getByRole("button", { name: "Set up" }).click();
+  await custom.getByLabel("Name").fill("Local vLLM");
+  await custom.getByLabel("Base URL").fill("http://localhost:8080/v1");
+  await custom.getByLabel("API key (optional)").fill("sk-old-1111");
+  await expect(custom.getByRole("combobox", { name: "Model" })).toContainText("vllm-70b");
+  await custom.getByRole("button", { name: "Add provider" }).click();
+
+  const connected = page.getByRole("listitem", { name: "Local vLLM" });
+  await expect(connected).toContainText("Configured");
+  await expect(connected).toContainText("http://localhost:8080/v1 · vllm-70b · …1111");
+
+  await connected.getByRole("button", { name: "Edit" }).click();
+  await connected.getByLabel("API key (optional)").fill("sk-new-9999");
+  await connected.getByRole("button", { name: "Save changes" }).click();
+  await expect(connected).toContainText("http://localhost:8080/v1 · vllm-70b · …9999");
 });

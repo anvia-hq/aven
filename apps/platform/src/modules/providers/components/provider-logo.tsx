@@ -1,3 +1,4 @@
+import { IconPlugConnected } from "@tabler/icons-react";
 import type { ComponentType, SVGProps } from "react";
 
 import {
@@ -53,6 +54,7 @@ export function ProviderLogo({ kind, baseUrl = null, preset, size = "sm" }: Prop
 
   if (kind !== "openai-compatible") Logo = LOGOS[kind];
   else if (service) Logo = PRESET_LOGOS[service];
+  else Logo = IconPlugConnected;
 
   if (!Logo) return null;
 

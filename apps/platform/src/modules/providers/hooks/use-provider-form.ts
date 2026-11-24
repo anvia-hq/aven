@@ -1,5 +1,5 @@
 import { bedrockBaseUrl, vertexBaseUrl } from "@aven/protocol/providers";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import { errorMessage } from "@/lib/api";
 
@@ -7,6 +7,7 @@ import {
   isSubscription,
   PROVIDER_LABELS,
   type CompatiblePreset,
+  type ListedModels,
   type ModelsState,
   type Provider,
   type ProviderKind,
@@ -28,6 +29,18 @@ export function useProviderForm(
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(0);
   const formRef = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    setModelId(provider?.modelId ?? "");
+  }, [provider?.modelId]);
+
+  useEffect(
+    () => () => {
+      clearTimeout(timer.current);
+      latest.current += 1;
+    },
+    [],
+  );
   const { create, update, listModels, listSavedModels } = useProviders();
   const compatible = kind === "openai-compatible";
   const azure = kind === "azure";
@@ -55,11 +68,23 @@ export function useProviderForm(
     return compatible || azure ? readTrimmedField("baseUrl") : undefined;
   }
 
-  function reset() {
+  function reset(nextModelId = provider?.modelId ?? "") {
     clearTimeout(timer.current);
     latest.current += 1;
+    formRef.current?.reset();
     setModelsState({ status: "idle", models: null });
-    setModelId(provider?.modelId ?? "");
+    setModelId(nextModelId);
+  }
+
+  function applyModels(listed: ListedModels) {
+    const list = [...new Set([provider?.modelId ?? "", ...listed.models])].filter(Boolean).sort();
+    setModelsState({
+      status: list.length ? "ready" : "error",
+      models: list,
+      labels: listed.labels,
+      error: list.length ? undefined : "No models found",
+    });
+    setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
   }
 
   async function loadModels() {
@@ -88,14 +113,7 @@ export function useProviderForm(
 
       if (request !== latest.current) return;
 
-      const list = [...new Set([provider?.modelId ?? "", ...listed.models])].filter(Boolean).sort();
-      setModelsState({
-        status: list.length ? "ready" : "error",
-        models: list,
-        labels: listed.labels,
-        error: list.length ? undefined : "No models found",
-      });
-      setModelId((current) => (list.includes(current) ? current : (list[0] ?? "")));
+      applyModels(listed);
     } catch (failure) {
       if (request !== latest.current) return;
 
@@ -139,7 +157,7 @@ export function useProviderForm(
     setSubmitting(false);
 
     if (done) {
-      reset();
+      reset(provider ? (chosenModel ?? "") : "");
       onDone();
     }
   }
@@ -155,6 +173,7 @@ export function useProviderForm(
     modelId,
     submitting,
     selectModel: setModelId,
+    applyModels,
     scheduleLoad,
     loadOnOpen,
     reset,

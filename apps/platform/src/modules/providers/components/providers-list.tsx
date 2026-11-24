@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 
 import { Badge } from "@aven/ui/badge";
+import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
 
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
@@ -14,6 +15,7 @@ import type { CompatiblePreset, Provider, ProviderKind } from "../types";
 import { ProviderActions } from "./provider-actions";
 import { ProviderDialog } from "./provider-dialog";
 import { ProviderLogo } from "./provider-logo";
+import { ProviderPanel } from "./provider-panel";
 
 const MANY = new Set<ProviderKind>(["openai-compatible", "bedrock", "vertex"]);
 const FEATURED: ProviderKind[] = ["claude-subscription", "codex-subscription"];
@@ -28,7 +30,6 @@ type Row = {
   preset?: CompatiblePreset;
   title: string;
   description: string;
-  label: string;
 };
 
 const detail = (provider: Provider, label: string | undefined) =>
@@ -92,11 +93,27 @@ function Highlight({
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+function Group({
+  title,
+  description,
+  toolbar,
+  children,
+}: {
+  title: string;
+  description?: string;
+  toolbar?: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <section className="flex flex-col gap-4 border-t py-6 md:py-8">
-      <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-      <ul className="flex flex-col divide-y">{children}</ul>
+    <section className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+        {description && <p className="text-xs text-pretty text-muted-foreground">{description}</p>}
+      </div>
+      {toolbar}
+      <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-xl border border-border bg-card/50">
+        {children}
+      </ul>
     </section>
   );
 }
@@ -123,10 +140,11 @@ const OFFERED_BACKEND: Partial<Record<ProviderKind, "claudeBackend" | "codexBack
 };
 
 export function ProvidersList() {
-  const { providers, loaded } = useProviders();
+  const { providers, loaded, makeDefault } = useProviders();
   const { byProvider } = useProvidersModels(providers.map((item) => item.id));
   const { config } = usePlatformConfig();
   const [query, setQuery] = useState("");
+  const [openPanel, setOpenPanel] = useState<string | null>(null);
 
   if (!loaded) return null;
 
@@ -152,7 +170,6 @@ export function ProvidersList() {
     kind,
     title: PROVIDER_LABELS[kind],
     description: PROVIDER_DESCRIPTIONS[kind],
-    label: MANY.has(kind) ? "Add" : "Set up",
   });
   const rows: Row[] = [
     ...availableRows.flatMap((kind) => (kind !== "openai-compatible" ? [kindRow(kind)] : [])),
@@ -162,20 +179,28 @@ export function ProvidersList() {
       preset,
       title: preset.name,
       description: preset.description,
-      label: "Set up",
     })),
     ...availableRows.flatMap((kind) => (kind === "openai-compatible" ? [kindRow(kind)] : [])),
   ];
 
   const needle = query.trim().toLowerCase();
-  const matching = needle
+  const matchingConnected = needle
+    ? connected.filter((provider) =>
+        `${provider.name} ${PROVIDER_LABELS[provider.kind]} ${provider.baseUrl ?? ""} ${provider.modelId ?? ""}`
+          .toLowerCase()
+          .includes(needle),
+      )
+    : connected;
+  const matchingRows = needle
     ? rows.filter((row) => `${row.title} ${row.description}`.toLowerCase().includes(needle))
     : rows;
+  const totalRows = connected.length + rows.length;
+  const matchingCount = matchingConnected.length + matchingRows.length;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-8 pt-2">
       {featured.length > 0 && (
-        <section className="flex flex-col gap-4 border-t py-6 md:py-8">
+        <section className="flex flex-col gap-3">
           <div className="flex flex-col gap-1">
             <h2 className="text-base font-semibold tracking-tight">Subscription plans</h2>
             <p className="max-w-2xl text-xs text-pretty text-muted-foreground">
@@ -202,53 +227,11 @@ export function ProvidersList() {
           </ul>
         </section>
       )}
-      {connected.length > 0 && (
-        <Group title="Connected">
-          {connected.map((provider) => (
-            <li
-              key={provider.id}
-              aria-label={provider.name}
-              className="flex items-center gap-3.5 py-3.5"
-            >
-              <Tile kind={provider.kind} baseUrl={provider.baseUrl} />
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium">{provider.name}</span>
-                  {provider.managed && <Badge variant="secondary">Managed</Badge>}
-                  {isSubscription(provider) && <Badge variant="outline">Subscription</Badge>}
-                  {provider.isDefault && <Badge variant="secondary">Default</Badge>}
-                </div>
-                <p className="truncate font-mono text-xs text-muted-foreground">
-                  {detail(
-                    provider,
-                    provider.modelId
-                      ? byProvider[provider.id]?.labels?.[provider.modelId]
-                      : undefined,
-                  )}
-                </p>
-              </div>
-              {!provider.managed && (
-                <ProviderActions
-                  provider={provider}
-                  edit={
-                    provider.kind === "openai-compatible" && !presetOf(provider) ? undefined : (
-                      <ProviderDialog
-                        kind={provider.kind}
-                        provider={provider}
-                        preset={presetOf(provider)}
-                        label="Edit"
-                      />
-                    )
-                  }
-                />
-              )}
-            </li>
-          ))}
-        </Group>
-      )}
-      <Group title={providers.length > 0 ? "Add a provider" : "Set up a provider"}>
-        {rows.length > SEARCH_FROM && (
-          <li className="py-3.5">
+      <Group
+        title="Model providers"
+        description="Keys are encrypted and never shown again. They follow you across workspaces."
+        toolbar={
+          totalRows > SEARCH_FROM ? (
             <Input
               type="search"
               aria-label="Search providers"
@@ -256,20 +239,99 @@ export function ProvidersList() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
             />
-          </li>
-        )}
-        {matching.map((row) => (
-          <li key={row.key} aria-label={row.title} className="flex items-center gap-3.5 py-3.5">
-            <Tile kind={row.kind} preset={row.preset?.id} />
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
-              <span className="text-sm font-medium">{row.title}</span>
-              <span className="truncate text-xs text-muted-foreground">{row.description}</span>
+          ) : undefined
+        }
+      >
+        {matchingConnected.map((provider) => {
+          const summary = (
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="truncate text-sm font-medium">{provider.name}</span>
+                <Badge variant="outline">Configured</Badge>
+                {provider.managed && <Badge variant="secondary">Managed</Badge>}
+                {isSubscription(provider) && <Badge variant="outline">Subscription</Badge>}
+                {provider.isDefault && <Badge variant="secondary">Default</Badge>}
+              </div>
+              <p className="truncate font-mono text-xs text-muted-foreground">
+                {detail(
+                  provider,
+                  provider.modelId
+                    ? byProvider[provider.id]?.labels?.[provider.modelId]
+                    : undefined,
+                )}
+              </p>
             </div>
-            <ProviderDialog kind={row.kind} preset={row.preset} label={row.label} />
-          </li>
-        ))}
-        {needle && matching.length === 0 && (
-          <li className="py-6 text-sm text-muted-foreground">
+          );
+
+          if (provider.managed) {
+            return (
+              <li
+                key={provider.id}
+                aria-label={provider.name}
+                className="flex items-center gap-3.5 px-4 py-3"
+              >
+                <Tile kind={provider.kind} baseUrl={provider.baseUrl} />
+                {summary}
+              </li>
+            );
+          }
+
+          const panelId = `connected:${provider.id}`;
+
+          return (
+            <ProviderPanel
+              key={provider.id}
+              ariaLabel={provider.name}
+              kind={provider.kind}
+              provider={provider}
+              preset={presetOf(provider)}
+              triggerLabel="Edit"
+              open={openPanel === panelId}
+              onOpenChange={(next) => setOpenPanel(next ? panelId : null)}
+              leading={<Tile kind={provider.kind} baseUrl={provider.baseUrl} />}
+              summary={summary}
+              actions={(trigger) => (
+                <>
+                  {!provider.isDefault && (
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      className="relative z-10"
+                      onClick={() => void makeDefault(provider)}
+                    >
+                      Make default
+                    </Button>
+                  )}
+                  {trigger}
+                </>
+              )}
+            />
+          );
+        })}
+        {matchingRows.map((row) => {
+          const panelId = `add:${row.key}`;
+
+          return (
+            <ProviderPanel
+              key={row.key}
+              ariaLabel={row.title}
+              kind={row.kind}
+              preset={row.preset}
+              triggerLabel="Set up"
+              open={openPanel === panelId}
+              onOpenChange={(next) => setOpenPanel(next ? panelId : null)}
+              leading={<Tile kind={row.kind} preset={row.preset?.id} />}
+              summary={
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2.5">
+                  <span className="text-sm font-medium">{row.title}</span>
+                  <span className="truncate text-xs text-muted-foreground">{row.description}</span>
+                </div>
+              }
+            />
+          );
+        })}
+        {needle && matchingCount === 0 && (
+          <li className="px-4 py-6 text-sm text-muted-foreground">
             No provider matches “{query.trim()}”.
           </li>
         )}
