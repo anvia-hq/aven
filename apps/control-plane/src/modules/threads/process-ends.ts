@@ -29,6 +29,8 @@ export function createProcessEnds({
 }): ProcessEnds {
   return {
     async ended(runtimeId, ended) {
+      if (ended.status === "stopped") return;
+
       const thread = await threadsService.byId(ended.threadId);
 
       if (!thread || thread.runtimeId !== runtimeId || thread.state === "archived") return;

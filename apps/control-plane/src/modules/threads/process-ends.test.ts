@@ -24,6 +24,25 @@ describe("the note a finished process wakes the agent with", () => {
     expect(note).toContain("<process_output>\n3 failed\n</process_output>");
     expect(note.match(/<\/process_output>/g)).toHaveLength(2);
   });
+
+  test("ignores processes that were explicitly stopped", async () => {
+    const sent: string[] = [];
+    const processEnds = createProcessEnds({
+      messages: {
+        send: async (_org: string, _user: string, thread: string) => {
+          sent.push(thread);
+          return { steered: false };
+        },
+      } as never,
+    });
+
+    await processEnds.ended("runtime-1", {
+      ...ended(crypto.randomUUID()),
+      status: "stopped",
+      exitCode: 137,
+    });
+    expect(sent).toEqual([]);
+  });
 });
 
 const run = process.env.DATABASE_URL ? describe : describe.skip;
