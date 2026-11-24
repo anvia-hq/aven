@@ -1,4 +1,4 @@
-import { IconFolder, IconMessageCircle } from "@tabler/icons-react";
+import { IconBolt, IconFolder, IconMessageCircle } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
@@ -6,6 +6,7 @@ import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sideba
 const tabs = [
   { to: "/threads", label: "New thread", icon: IconMessageCircle, exact: true },
   { to: "/projects", label: "Projects", icon: IconFolder, exact: false },
+  { to: "/automations", label: "Automations", icon: IconBolt, exact: false },
 ] as const;
 
 export function SidebarTabs() {

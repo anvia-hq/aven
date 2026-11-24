@@ -18,6 +18,7 @@ import { useCommandMenu } from "../hooks/use-command-menu";
 const pages = [
   { label: "New thread", to: "/threads" },
   { label: "Projects", to: "/projects" },
+  { label: "Automations", to: "/automations" },
   { label: "Personal settings", to: "/settings/general" },
   { label: "Workspace members", to: "/settings/members" },
 ] as const;

@@ -1,4 +1,11 @@
-import { IconEdit, IconFolder, IconGitFork, IconSearch, IconSettings } from "@tabler/icons-react";
+import {
+  IconBolt,
+  IconEdit,
+  IconFolder,
+  IconGitFork,
+  IconSearch,
+  IconSettings,
+} from "@tabler/icons-react";
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import type { CSSProperties } from "react";
 
@@ -71,6 +78,13 @@ export function AppShell({ user }: Props) {
           <div className="mt-[0.45rem] flex flex-col items-center gap-[0.45rem]">
             <RailLink to="/projects" label="Projects" active={pathname.startsWith("/projects")}>
               <IconFolder className="size-[17px]" />
+            </RailLink>
+            <RailLink
+              to="/automations"
+              label="Automations"
+              active={pathname.startsWith("/automations")}
+            >
+              <IconBolt className="size-[17px]" />
             </RailLink>
             <RailLink to="/git" label="Git Center" active={pathname.startsWith("/git")}>
               <IconGitFork className="size-[17px]" />

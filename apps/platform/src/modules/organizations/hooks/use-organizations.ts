@@ -1,11 +1,13 @@
 import { toast } from "@aven/ui/toast";
 import { authClient } from "@/lib/auth-client";
+import { resetAutomations } from "@/modules/automations/hooks/use-automations";
 import { resetProjects } from "@/modules/projects/hooks/use-projects";
 import { resetRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { resetThreads } from "@/modules/threads/hooks/use-threads";
 import { resetVariables } from "@/modules/variables/hooks/use-variables";
 
 export function resetOrganizationData() {
+  resetAutomations();
   resetProjects();
   resetThreads();
   resetRuntimes();

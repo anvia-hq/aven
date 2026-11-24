@@ -14,6 +14,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
+import { Route as AuthedAutomationsIndexRouteImport } from './routes/_authed/automations/index'
 import { Route as AuthedBotIndexRouteImport } from './routes/_authed/bot/index'
 import { Route as AuthedBotBotIdRouteImport } from './routes/_authed/bot/$botId'
 import { Route as AuthedBotAvatarsRouteImport } from './routes/_authed/bot/avatars'
@@ -74,6 +75,11 @@ const AcceptInvitationInvitationIdRoute =
     path: '/accept-invitation/$invitationId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthedAutomationsIndexRoute = AuthedAutomationsIndexRouteImport.update({
+  id: '/automations/',
+  path: '/automations/',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedBotIndexRoute = AuthedBotIndexRouteImport.update({
   id: '/bot/',
   path: '/bot/',
@@ -282,6 +288,7 @@ export interface FileRoutesByFullPath {
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/automations/': typeof AuthedAutomationsIndexRoute
   '/bot/': typeof AuthedBotIndexRoute
   '/cockpit/': typeof AuthedCockpitIndexRoute
   '/git/': typeof AuthedGitIndexRoute
@@ -322,6 +329,7 @@ export interface FileRoutesByTo {
   '/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/automations': typeof AuthedAutomationsIndexRoute
   '/bot': typeof AuthedBotIndexRoute
   '/cockpit': typeof AuthedCockpitIndexRoute
   '/git': typeof AuthedGitIndexRoute
@@ -364,6 +372,7 @@ export interface FileRoutesById {
   '/_authed/settings/webhooks': typeof AuthedSettingsWebhooksRoute
   '/_authed/settings/workspace-variables': typeof AuthedSettingsWorkspaceVariablesRoute
   '/_authed/threads/$threadId': typeof AuthedThreadsThreadIdRoute
+  '/_authed/automations/': typeof AuthedAutomationsIndexRoute
   '/_authed/bot/': typeof AuthedBotIndexRoute
   '/_authed/cockpit/': typeof AuthedCockpitIndexRoute
   '/_authed/git/': typeof AuthedGitIndexRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/settings/webhooks'
     | '/settings/workspace-variables'
     | '/threads/$threadId'
+    | '/automations/'
     | '/bot/'
     | '/cockpit/'
     | '/git/'
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/settings/webhooks'
     | '/settings/workspace-variables'
     | '/threads/$threadId'
+    | '/automations'
     | '/bot'
     | '/cockpit'
     | '/git'
@@ -487,6 +498,7 @@ export interface FileRouteTypes {
     | '/_authed/settings/webhooks'
     | '/_authed/settings/workspace-variables'
     | '/_authed/threads/$threadId'
+    | '/_authed/automations/'
     | '/_authed/bot/'
     | '/_authed/cockpit/'
     | '/_authed/git/'
@@ -539,6 +551,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/accept-invitation/$invitationId'
       preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/automations/': {
+      id: '/_authed/automations/'
+      path: '/automations'
+      fullPath: '/automations/'
+      preLoaderRoute: typeof AuthedAutomationsIndexRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/bot/': {
       id: '/_authed/bot/'
@@ -810,6 +829,7 @@ interface AuthedRouteChildren {
   AuthedSettingsWebhooksRoute: typeof AuthedSettingsWebhooksRoute
   AuthedSettingsWorkspaceVariablesRoute: typeof AuthedSettingsWorkspaceVariablesRoute
   AuthedThreadsThreadIdRoute: typeof AuthedThreadsThreadIdRoute
+  AuthedAutomationsIndexRoute: typeof AuthedAutomationsIndexRoute
   AuthedBotIndexRoute: typeof AuthedBotIndexRoute
   AuthedCockpitIndexRoute: typeof AuthedCockpitIndexRoute
   AuthedGitIndexRoute: typeof AuthedGitIndexRoute
@@ -848,6 +868,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSettingsWebhooksRoute: AuthedSettingsWebhooksRoute,
   AuthedSettingsWorkspaceVariablesRoute: AuthedSettingsWorkspaceVariablesRoute,
   AuthedThreadsThreadIdRoute: AuthedThreadsThreadIdRoute,
+  AuthedAutomationsIndexRoute: AuthedAutomationsIndexRoute,
   AuthedBotIndexRoute: AuthedBotIndexRoute,
   AuthedCockpitIndexRoute: AuthedCockpitIndexRoute,
   AuthedGitIndexRoute: AuthedGitIndexRoute,
