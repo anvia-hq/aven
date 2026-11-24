@@ -484,8 +484,14 @@ test.describe("threads", () => {
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
 
     const timeline = page.locator('[data-role="timeline"]');
-    await expect(timeline.locator("> div:not([aria-hidden='true'])")).toHaveCount(4);
+    await expect(timeline.locator("> div")).toHaveCount(4);
+    const parent = timeline.locator('[data-role="timeline-parent"]');
+    await expect(parent.getByRole("button", { name: "Edited 3 files" })).toBeVisible();
     await expect(timeline.getByText("Patched src/five.ts")).toBeVisible();
+    await expect(timeline.getByText("Patched src/one.ts")).toBeHidden();
+
+    await parent.getByRole("button", { name: "Edited 3 files" }).click();
+    await expect(timeline.getByText("Patched src/one.ts")).toBeVisible();
 
     const plan = page.locator('[data-role="plan-card"]');
     await expect(plan).toBeVisible();
@@ -496,6 +502,49 @@ test.describe("threads", () => {
     await expect(plan.getByText("Patch files")).toBeHidden();
     await expect(plan.getByRole("button")).toContainText("Verify build");
     await expect(plan.getByRole("button")).toContainText("1/2");
+  });
+
+  test("collapses tool calls into one collapsible parent line as soon as text starts streaming", async ({
+    page,
+  }) => {
+    const tools = [
+      { id: "t1", name: "exec_command", target: "bun test", status: "done", output: "4 pass" },
+      { id: "t2", name: "edit", target: "src/app.ts", status: "done", output: "ok" },
+    ];
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\ndata: ${JSON.stringify({
+          type: "snapshot",
+          running: true,
+          messages: [
+            { id: "m-0", role: "user", parts: [{ type: "text", text: "Fix and verify" }] },
+            {
+              id: "m-1",
+              role: "assistant",
+              parts: [
+                ...tools.map((tool) => ({ type: "tool", tool })),
+                { type: "text", text: "Streaming the summary now." },
+              ],
+            },
+          ],
+        })}\n\n`,
+      }),
+    );
+
+    await registerUser(page, "thr", "Thread User");
+    await startThread(page, "Fix and verify");
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    await expect(page.getByText("Streaming the summary now.")).toBeVisible();
+    const worked = page.locator('[data-role="worked"]');
+    await expect(worked).toHaveText("Ran a command, edited a file");
+    await expect(worked).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByText("Patched src/app.ts")).toBeHidden();
+
+    await worked.click();
+    await expect(page.getByText("Patched src/app.ts")).toBeVisible();
   });
 
   test("a running thread shows it is working, and its composer offers Stop alone, even once there is something to say", async ({
