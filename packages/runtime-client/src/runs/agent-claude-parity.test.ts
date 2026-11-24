@@ -108,7 +108,21 @@ describe("Claude parity with the native agent", () => {
     await backend.close();
     const ends = reported.filter((message) => message.type === "run.end");
     expect(ends.at(-1)).toMatchObject({ outcome: "response" });
-    expect(JSON.stringify(reported)).toContain("color: red");
+    const answerEvent = reported.find(
+      (message) =>
+        message.type === "run.event" &&
+        message.event.type === "tool_end" &&
+        message.event.id === "q1",
+    );
+    expect(answerEvent).toMatchObject({
+      type: "run.event",
+      event: {
+        type: "tool_end",
+        id: "q1",
+        status: "done",
+        output: JSON.stringify({ answers: [{ questionId: "color", value: "red" }] }),
+      },
+    });
     expect(inputs).toHaveLength(1);
   });
 
@@ -407,7 +421,22 @@ describe("Claude parity with the native agent", () => {
     expect(inputs[1]?.sessionId).toBe("sess-q");
     expect(end.type).toBe("response");
 
-    if (end.type === "response") expect(JSON.stringify(end.messages)).toContain("color: red");
+    if (end.type === "response") {
+      const expected = { answers: [{ questionId: "color", value: "red" }] };
+      expect(end.messages).toContainEqual({
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: asked.interaction.toolCallId,
+            toolName: "ask_user",
+            output: { type: "json", value: expected },
+          },
+        ],
+      });
+      const assistant = end.messages.find((message) => message.role === "assistant");
+      expect(assistant?.content).toEqual([{ type: "text", text: JSON.stringify(expected) }]);
+    }
   });
 });
 
