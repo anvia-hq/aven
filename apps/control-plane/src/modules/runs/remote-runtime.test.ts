@@ -411,7 +411,9 @@ describe("where a run's agent runs (decision 0222)", () => {
     const manualRun = await coldRemote().start({
       thread: { ...thread, runtimeId: "rt-manual-cold" },
       prompt: "go",
-      onSandboxPhase: (phase) => manualPhases.push(phase),
+      onSandboxPhase: (phase) => {
+        manualPhases.push(phase);
+      },
     });
     expect(manualPhases).toEqual([]);
     expect(manualRun.sandbox).toBe(false);
@@ -423,7 +425,9 @@ describe("where a run's agent runs (decision 0222)", () => {
       const connectedRun = await remote.start({
         thread: { ...thread, runtimeId: "rt-cloud-connected" },
         prompt: "go",
-        onSandboxPhase: (phase) => connectedPhases.push(phase),
+        onSandboxPhase: (phase) => {
+          connectedPhases.push(phase);
+        },
       });
       expect(connectedPhases).toEqual([]);
       expect(connectedRun.sandbox).toBe(true);
@@ -433,7 +437,9 @@ describe("where a run's agent runs (decision 0222)", () => {
         thread: { ...thread, runtimeId: "rt-cloud-compact" },
         prompt: "compact",
         compact: true,
-        onSandboxPhase: (phase) => compactPhases.push(phase),
+        onSandboxPhase: (phase) => {
+          compactPhases.push(phase);
+        },
       });
       expect(compactPhases).toEqual([]);
 
@@ -441,7 +447,9 @@ describe("where a run's agent runs (decision 0222)", () => {
       const coldRun = await coldRemote().start({
         thread: { ...thread, runtimeId: "rt-cloud-cold" },
         prompt: "go",
-        onSandboxPhase: (phase) => coldPhases.push(phase),
+        onSandboxPhase: (phase) => {
+          coldPhases.push(phase);
+        },
       });
       expect(coldPhases).toEqual(["preparing"]);
       expect(coldRun.sandbox).toBe(true);

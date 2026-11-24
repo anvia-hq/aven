@@ -492,7 +492,7 @@ describe("sandbox preparation status", () => {
     const runtime: typeof base = {
       ...base,
       async start(input) {
-        input.onSandboxPhase?.("preparing");
+        await input.onSandboxPhase?.("preparing");
         await bootGate.promise;
         return { ...(await base.start(input)), sandbox: true };
       },
@@ -537,7 +537,7 @@ describe("sandbox preparation status", () => {
     const runtime: typeof base = {
       ...base,
       async start(input) {
-        input.onSandboxPhase?.("preparing");
+        await input.onSandboxPhase?.("preparing");
         throw new Error("cloud boot failed");
       },
     };
@@ -564,7 +564,7 @@ describe("sandbox preparation status", () => {
     const runtime: typeof base = {
       ...base,
       async start(input) {
-        input.onSandboxPhase?.("preparing");
+        await input.onSandboxPhase?.("preparing");
         return { ...(await base.start(input)), sandbox: true };
       },
     };
@@ -626,7 +626,7 @@ describe("sandbox preparation status", () => {
     const runtime: typeof base = {
       ...base,
       async start(input) {
-        input.onSandboxPhase?.("preparing");
+        await input.onSandboxPhase?.("preparing");
         return { ...(await base.start(input)), sandbox: allowSandbox };
       },
     };
@@ -671,7 +671,7 @@ describe("sandbox preparation status", () => {
     const runtime: typeof base = {
       ...base,
       async start(input) {
-        input.onSandboxPhase?.("preparing");
+        await input.onSandboxPhase?.("preparing");
         return { ...(await base.start(input)), sandbox: true };
       },
     };

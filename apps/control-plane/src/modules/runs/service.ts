@@ -176,10 +176,6 @@ export class RunManager {
     }: RunExtras = {},
   ) {
     await this.#reserved(this.#channel(thread), async (channel) => {
-      const firstRun =
-        !compact &&
-        channel.sandboxPhase === undefined &&
-        (await this.#history.loadMessages(thread).catch(() => [])).length === 0;
       let handle: RuntimeRun;
       try {
         handle = await this.#runtime.start({
@@ -204,7 +200,15 @@ export class RunManager {
           codexToken,
           codexModel,
           codexEffort,
-          onSandboxPhase: firstRun ? (phase) => this.#setSandboxPhase(channel, phase) : undefined,
+          onSandboxPhase: !compact
+            ? async (phase) => {
+                if (channel.sandboxPhase !== undefined) return;
+
+                const prior = await this.#history.loadMessages(thread).catch(() => []);
+
+                if (channel.starting && prior.length === 0) this.#setSandboxPhase(channel, phase);
+              }
+            : undefined,
         });
       } catch (error) {
         this.#clearSandboxPhase(channel);
@@ -218,7 +222,7 @@ export class RunManager {
 
       if (mentions.length > 0) opening.mentions = mentions;
 
-      await this.#begin(channel, handle, opening, undefined, firstRun);
+      await this.#begin(channel, handle, opening, undefined, !compact);
     });
   }
 
@@ -304,12 +308,12 @@ export class RunManager {
     handle: RuntimeRun,
     opening: RunEvent,
     prepare: () => Promise<void> = async () => undefined,
-    firstRun = false,
+    allowSandbox = false,
   ) {
     const { thread } = channel;
     const run: ActiveRun = {
       handle,
-      trackSandbox: firstRun && handle.sandbox === true,
+      trackSandbox: false,
       markAtStart: "",
       messages: [],
       usage: usageFromHistory([]),
@@ -347,6 +351,7 @@ export class RunManager {
     }
 
     if (opening.type === "run_start") {
+      run.trackSandbox = allowSandbox && handle.sandbox === true && run.messages.length === 0;
       this.#history.recordSender(channel.thread.id, run.messages.length, opening.senderId);
     }
 

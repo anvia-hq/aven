@@ -90,7 +90,7 @@ export type StartRunInput = RunSharedInput & {
   compact?: boolean;
   attachments?: RunAttachment[];
   mentions?: MessageMention[];
-  onSandboxPhase?: (phase: SandboxPhase) => void;
+  onSandboxPhase?: (phase: SandboxPhase) => void | Promise<void>;
 };
 
 export type ResumeRunInput = RunSharedInput & {

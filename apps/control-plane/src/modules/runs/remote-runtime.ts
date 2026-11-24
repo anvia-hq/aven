@@ -181,13 +181,13 @@ export class RemoteRuntime implements Runtime {
       placed: RunThreadInfo,
       runnerLens: StartRunInput["lens"],
     ) => ControlPlaneToRuntime,
-    onSandboxPhase?: (phase: SandboxPhase) => void,
+    onSandboxPhase?: (phase: SandboxPhase) => void | Promise<void>,
   ): Promise<RuntimeRun> {
     const provider = await runtimesService.providerOf(thread.runtimeId);
     const isCloud = provider !== undefined && provider !== "manual";
 
     if (isCloud && !this.hub.get(thread.runtimeId)) {
-      onSandboxPhase?.("preparing");
+      await onSandboxPhase?.("preparing");
     }
 
     const { connection, hostId, machine } = await this.#placementFor(thread);
