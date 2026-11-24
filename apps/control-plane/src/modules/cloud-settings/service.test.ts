@@ -7,6 +7,12 @@ import { setSandboxSettings } from "@aven/sandbox/settings";
 import { boatApiBase, boatApiKey } from "@aven/sandbox/boat/client";
 import { lizardApiBase, lizardApiKey, lizardProject } from "@aven/sandbox/lizard/config";
 import { spacesApiBase, spacesApiKey, spacesRunnerUrl } from "@aven/sandbox/spaces/config";
+import {
+  SPRITES_COMPUTE_MICROS_PER_HOUR,
+  SPRITES_STORAGE_MICROS_PER_GB_MONTH,
+  spritesApiBase,
+  spritesApiKey,
+} from "@aven/sandbox/sprites/config";
 import { eq, inArray } from "drizzle-orm";
 
 import { cloudSettingsService } from "./service";
@@ -131,6 +137,43 @@ describe("the Aven Cloud sandbox settings", () => {
     expect(lizardApiBase()).toBe("https://lizard.build");
     expect(lizardProject()).toBe("aven-prod");
     expect(boatApiKey()).toBeNull();
+    expect(enabledCloudProviders()).toEqual(["lizard"]);
+
+    const sprites = await cloudSettingsService.save({
+      provider: "sprites",
+      base: "",
+      project: "",
+      runnerUrl: "",
+      apiKey: "anvia/org-id/token-id/secret",
+    });
+
+    expect(sprites).toMatchObject({ provider: "sprites", base: "", project: "" });
+    expect(spritesApiKey()).toBe("anvia/org-id/token-id/secret");
+    expect(spritesApiBase()).toBe("https://api.sprites.dev");
+    expect(enabledCloudProviders()).toEqual(["sprites"]);
+    expect(lizardApiKey()).toBeNull();
+
+    const [rates] = await db
+      .select({
+        compute: cloudProviderConfigs.computeMicrosPerHour,
+        storage: cloudProviderConfigs.storageMicrosPerGbMonth,
+      })
+      .from(cloudProviderConfigs)
+      .where(eq(cloudProviderConfigs.status, "active"));
+
+    expect(rates).toEqual({
+      compute: SPRITES_COMPUTE_MICROS_PER_HOUR,
+      storage: SPRITES_STORAGE_MICROS_PER_GB_MONTH,
+    });
+
+    await cloudSettingsService.save({
+      provider: "lizard",
+      base: "",
+      project: "aven-prod",
+      runnerUrl: "",
+      apiKey: "liz_saved_key",
+    });
+
     expect(enabledCloudProviders()).toEqual(["lizard"]);
   });
 

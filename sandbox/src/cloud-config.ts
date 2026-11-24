@@ -1,11 +1,17 @@
 import { boatModule } from "./boat/module";
 import { lizardModule } from "./lizard/module";
 import { spacesModule } from "./spaces/module";
-import { CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, SPACES_RUNTIME_ID } from "./cloud-id";
+import { spritesModule } from "./sprites/module";
+import {
+  CLOUD_RUNTIME_ID,
+  LIZARD_RUNTIME_ID,
+  SPACES_RUNTIME_ID,
+  SPRITES_RUNTIME_ID,
+} from "./cloud-id";
 import { SANDBOX_PROVIDERS } from "./settings";
 import type { CloudProviderModule, ProviderCredentials } from "./types";
 
-export { CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, SPACES_RUNTIME_ID };
+export { CLOUD_RUNTIME_ID, LIZARD_RUNTIME_ID, SPACES_RUNTIME_ID, SPRITES_RUNTIME_ID };
 
 export const CLOUD_OFF = "Aven Cloud is turned off on this server";
 
@@ -13,6 +19,7 @@ const CLOUD_PROVIDERS = {
   boat: { templateId: CLOUD_RUNTIME_ID, module: boatModule },
   spaces: { templateId: SPACES_RUNTIME_ID, module: spacesModule },
   lizard: { templateId: LIZARD_RUNTIME_ID, module: lizardModule },
+  sprites: { templateId: SPRITES_RUNTIME_ID, module: spritesModule },
 } as const;
 
 export type CloudProviderName = keyof typeof CLOUD_PROVIDERS;
@@ -45,6 +52,7 @@ const CLOUD_PROVIDER_LABELS: Record<CloudProviderName, string> = {
   boat: "boat.dev",
   spaces: "Spaces",
   lizard: "lizard.build",
+  sprites: "Sprites",
 };
 
 export const cloudTemplateName = (name: CloudProviderName) => CLOUD_PROVIDER_LABELS[name];

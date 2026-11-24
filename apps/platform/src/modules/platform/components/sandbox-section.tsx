@@ -21,12 +21,14 @@ const PROVIDER_KEY_HINTS: Record<SandboxProvider, string> = {
   spaces: "spk_…",
   boat: "boat_…",
   lizard: "liz_…",
+  sprites: "org-slug/org-id/token-id/token-value",
 };
 
 const BASE_LABELS: Record<SandboxProvider, { label: string; placeholder: string }> = {
   spaces: { label: "Spaces server", placeholder: "https://spaces.example.com/api/v1" },
   boat: { label: "Boat API address (optional)", placeholder: "https://boat.dev/api/v1" },
   lizard: { label: "Lizard API address (optional)", placeholder: "https://lizard.build" },
+  sprites: { label: "Sprites API address (optional)", placeholder: "https://api.sprites.dev" },
 };
 
 const OPTIONS = SANDBOX_PROVIDERS.map((value) => ({

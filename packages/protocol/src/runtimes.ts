@@ -8,4 +8,4 @@ export function isRunnerTokenFormat(token: string) {
   return token.startsWith(RUNNER_TOKEN_PREFIX) && token.length >= RUNNER_TOKEN_MIN_LENGTH;
 }
 
-export const SANDBOX_PROVIDERS = ["boat", "spaces", "lizard"] as const;
+export const SANDBOX_PROVIDERS = ["boat", "spaces", "lizard", "sprites"] as const;

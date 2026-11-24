@@ -19,6 +19,13 @@ const SETTINGS = {
     apiKey: "liz_test_key",
     runnerUrl: "",
   },
+  sprites: {
+    provider: "sprites",
+    base: "",
+    project: "",
+    apiKey: "sprites_test_token",
+    runnerUrl: "",
+  },
 } as const;
 
 export async function useSandboxPlatform(provider: SandboxProviderName, apiKey?: string) {

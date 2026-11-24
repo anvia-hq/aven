@@ -17,6 +17,7 @@ describe("the sandbox platform", () => {
     expect(cloudEnabled("boat")).toBe(false);
     expect(cloudEnabled("spaces")).toBe(false);
     expect(cloudEnabled("lizard")).toBe(false);
+    expect(cloudEnabled("sprites")).toBe(false);
   });
 
   test("boat is offered with its key alone, and spaces or lizard are not", () => {
@@ -62,10 +63,10 @@ describe("the sandbox platform", () => {
     setSandboxSettings({ provider: "boat", base: "", apiKey: "boat_test_key", runnerUrl: "" });
 
     expect(enabledTemplateIds()).toHaveLength(1);
-    expect(disabledTemplateIds()).toHaveLength(2);
+    expect(disabledTemplateIds()).toHaveLength(3);
   });
 
   test("the registry names one cloud provider per folder", () => {
-    expect(cloudProviderNames()).toEqual(["boat", "spaces", "lizard"]);
+    expect(cloudProviderNames()).toEqual(["boat", "spaces", "lizard", "sprites"]);
   });
 });

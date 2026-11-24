@@ -1548,7 +1548,7 @@ export type WebhookCreated = Webhook & { token: string; urlPath: string };
 
 export type AnnouncementTemplate = "waves" | "violet" | "pink" | "amber";
 
-export type SandboxProviderName = "boat" | "spaces" | "lizard";
+export type SandboxProviderName = "boat" | "spaces" | "lizard" | "sprites";
 
 export type DecisionKind = "jev" | "jev-openrouter";
 

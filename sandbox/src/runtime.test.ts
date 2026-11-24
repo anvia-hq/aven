@@ -180,6 +180,7 @@ describe("reaching a runtime's sandbox", () => {
       { provider: "boat", revoked: true },
       { provider: "spaces", revoked: true },
       { provider: "lizard", revoked: true },
+      { provider: "sprites", revoked: true },
     ]);
   });
 });
