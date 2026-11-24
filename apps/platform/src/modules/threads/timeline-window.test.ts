@@ -1,27 +1,28 @@
 import { describe, expect, test } from "bun:test";
 
-import { LIVE_TIMELINE_WINDOW, timelineWindow } from "./timeline-window";
+import { LIVE_RECENT_TAIL, LIVE_TIMELINE_LIMIT, timelineWindow } from "./timeline-window";
 
 describe("timelineWindow", () => {
-  test("returns all items when not windowed or within the live window", () => {
+  test("returns all items directly when not windowed or within the live limit", () => {
     const few = ["a", "b", "c", "d"];
-    expect(timelineWindow(few, true)).toEqual({ items: few, visibleFrom: 0 });
+    expect(few).toHaveLength(LIVE_TIMELINE_LIMIT);
+    expect(timelineWindow(few, true)).toEqual({ older: [], recent: few });
 
     const many = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"];
-    expect(timelineWindow(many, false)).toEqual({ items: many, visibleFrom: 0 });
+    expect(timelineWindow(many, false)).toEqual({ older: [], recent: many });
   });
 
-  test("keeps the latest live rows visible and retains a small exiting buffer for older rows", () => {
+  test("folds older items under a parent while keeping a steady tail of recent rows", () => {
     const five = ["1", "2", "3", "4", "5"];
-    const stepFive = timelineWindow(five, true);
-    expect(stepFive.items).toEqual(["1", "2", "3", "4", "5"]);
-    expect(stepFive.items.slice(stepFive.visibleFrom)).toEqual(["2", "3", "4", "5"]);
+    expect(timelineWindow(five, true)).toEqual({
+      older: ["1", "2"],
+      recent: ["3", "4", "5"],
+    });
 
     const ten = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
     const stepTen = timelineWindow(ten, true);
-    expect(stepTen.items.slice(stepTen.visibleFrom)).toEqual(["7", "8", "9", "10"]);
-    expect(stepTen.items.slice(stepTen.visibleFrom)).toHaveLength(LIVE_TIMELINE_WINDOW);
-    expect(stepTen.visibleFrom).toBeGreaterThan(0);
-    expect(stepTen.items.length).toBeLessThan(ten.length);
+    expect(stepTen.older).toEqual(["1", "2", "3", "4", "5", "6", "7"]);
+    expect(stepTen.recent).toEqual(["8", "9", "10"]);
+    expect(stepTen.recent).toHaveLength(LIVE_RECENT_TAIL);
   });
 });

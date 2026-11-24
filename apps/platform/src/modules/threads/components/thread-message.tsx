@@ -4,7 +4,7 @@ import { systemNoteOf } from "@aven/protocol/system-notes";
 import { proofOf } from "@aven/protocol/timeline";
 import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
@@ -14,6 +14,7 @@ import { authorOf } from "../message-author";
 import { useSmoothParts } from "../hooks/use-smooth-parts";
 import { markMentions } from "../mentions";
 import { foldedSteps, messageBlocks } from "../message-blocks";
+import { summarizeBlocks } from "../tool-summary";
 import type {
   Block,
   ChatMessage,
@@ -39,6 +40,7 @@ function AssistantBlock({
   block,
   live,
   windowed = live,
+  collapsed = false,
   threadId,
   runtimeId,
   narrations,
@@ -46,6 +48,7 @@ function AssistantBlock({
   block: Block;
   live: boolean;
   windowed?: boolean;
+  collapsed?: boolean;
   threadId: string;
   runtimeId: string;
   narrations?: Readonly<Record<string, ToolNarration>>;
@@ -85,6 +88,7 @@ function AssistantBlock({
       narrations={narrations}
       live={live}
       windowed={windowed}
+      collapsed={collapsed}
     />
   );
 }
@@ -92,6 +96,7 @@ function AssistantBlock({
 function WorkedSteps({
   steps,
   workedMs,
+  live,
   seenLive,
   threadId,
   runtimeId,
@@ -99,52 +104,41 @@ function WorkedSteps({
 }: {
   steps: Block[];
   workedMs?: number;
+  live: boolean;
   seenLive: boolean;
   threadId: string;
   runtimeId: string;
   narrations?: Readonly<Record<string, ToolNarration>>;
 }) {
-  const [open, setOpen] = useState(seenLive);
-  const [autoClosing, setAutoClosing] = useState(seenLive);
+  const [open, setOpen] = useState(false);
+  const label =
+    !live && workedMs !== undefined ? `Worked for ${elapsed(workedMs)}` : summarizeBlocks(steps);
+  const [labelState, setLabelState] = useState({ label, rev: 0 });
 
-  useEffect(() => {
-    if (!autoClosing) return;
-
-    let inner = 0;
-    const outer = requestAnimationFrame(() => {
-      inner = requestAnimationFrame(() => {
-        setOpen(false);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(outer);
-      cancelAnimationFrame(inner);
-    };
-  }, [autoClosing]);
+  if (labelState.label !== label) {
+    setLabelState({ label, rev: labelState.rev + 1 });
+  }
 
   return (
-    <Collapsible
-      className="min-w-0 text-sm"
-      open={open}
-      onOpenChange={(next) => {
-        setAutoClosing(false);
-        setOpen(next);
-      }}
-    >
-      <div className={cn(seenLive && "worked-in")}>
-        <CollapsibleTrigger
-          className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
-          data-role="worked"
+    <Collapsible className="min-w-0 text-sm" open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger
+        className={cn(
+          "group flex h-6 items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none",
+          seenLive && "timeline-in",
+        )}
+        data-role="worked"
+      >
+        <IconChevronRight
+          aria-hidden
+          className="size-3.5 shrink-0 transition-transform duration-150 ease-out group-data-[panel-open]:rotate-90 motion-reduce:transition-none"
+        />
+        <span
+          key={labelState.rev}
+          className={cn("min-w-0 truncate font-medium", labelState.rev > 0 && "narration-in")}
         >
-          <IconChevronRight
-            aria-hidden
-            className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
-          />
-          <span className="font-medium">
-            {workedMs === undefined ? "Activity" : `Worked for ${elapsed(workedMs)}`}
-          </span>
-        </CollapsibleTrigger>
-      </div>
+          {label}
+        </span>
+      </CollapsibleTrigger>
       <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
         <div className="flex min-w-0 flex-col gap-2 pt-1.5">
           {steps.map((block, index) => (
@@ -152,7 +146,7 @@ function WorkedSteps({
               key={index}
               block={block}
               live={false}
-              windowed={autoClosing}
+              windowed={false}
               threadId={threadId}
               runtimeId={runtimeId}
               narrations={narrations}
@@ -290,7 +284,7 @@ function AssistantMessage({
   if (live && !seenLive) setSeenLive(true);
 
   const shown = useMemo(() => messageBlocks(parts), [parts]);
-  const folded = useMemo(() => (live ? undefined : foldedSteps(shown)), [live, shown]);
+  const folded = useMemo(() => foldedSteps(shown), [shown]);
   const proof = useMemo(() => proofOf(parts), [parts]);
 
   if (parts.length === 0) return null;
@@ -301,6 +295,7 @@ function AssistantMessage({
         <WorkedSteps
           steps={folded.steps}
           workedMs={message.workedMs}
+          live={live}
           seenLive={seenLive}
           threadId={threadId}
           runtimeId={runtimeId}
@@ -318,17 +313,19 @@ function AssistantMessage({
         ))}
         <AssistantBlock
           block={folded.answer}
-          live={false}
+          live={live}
           threadId={threadId}
           runtimeId={runtimeId}
           narrations={narrations}
         />
-        <ProofStrip
-          proof={proof}
-          prChecks={prChecks}
-          onOpenChanges={onOpenChanges}
-          animate={seenLive}
-        />
+        {!live && (
+          <ProofStrip
+            proof={proof}
+            prChecks={prChecks}
+            onOpenChanges={onOpenChanges}
+            animate={seenLive}
+          />
+        )}
       </div>
     );
   }
@@ -340,7 +337,8 @@ function AssistantMessage({
           key={index}
           block={block}
           live={live && index === all.length - 1}
-          windowed={live}
+          windowed={live && index === all.length - 1}
+          collapsed={block.type === "tools" && index < all.length - 1}
           threadId={threadId}
           runtimeId={runtimeId}
           narrations={narrations}

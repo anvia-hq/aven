@@ -1,5 +1,6 @@
 import { projectTimeline } from "@aven/protocol/timeline";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
+import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
 import { useMemo, useState } from "react";
 
@@ -7,6 +8,7 @@ import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import { timelineWindow } from "../timeline-window";
 import { groupFailureNotice } from "../tool-failure";
+import { summarizeTimelineItems } from "../tool-summary";
 import type { TimelineItem, ToolGroupEntry, ToolNarration } from "../types";
 import { ReasoningBlock } from "./reasoning-block";
 import { TimelineIconGlyph } from "./timeline-icon";
@@ -44,7 +46,7 @@ function TimelineRow({
     >
       <CollapsibleTrigger
         disabled={!expandable}
-        className="group flex w-fit max-w-full items-center gap-2 py-0.5 text-left transition-colors hover:text-foreground disabled:cursor-default"
+        className="group flex h-6 w-fit max-w-full items-center gap-2 text-left transition-colors hover:text-foreground disabled:cursor-default"
       >
         <TimelineIconGlyph icon={item.icon} running={item.running} className={labelTone} />
         <span
@@ -95,16 +97,46 @@ function TimelineRow({
   );
 }
 
+function TimelineParentGroup({ items }: { items: readonly TimelineItem[] }) {
+  const tools = items.flatMap((item) => item.tools);
+  const notice = groupFailureNotice(tools);
+  const summary = summarizeTimelineItems(items);
+
+  return (
+    <Collapsible className="min-w-0 text-xs" defaultOpen={false} data-role="timeline-parent">
+      <CollapsibleTrigger className="group flex h-6 w-fit max-w-full items-center gap-1.5 text-left text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none">
+        <IconChevronRight
+          aria-hidden
+          className="size-3.5 shrink-0 transition-transform duration-150 ease-out group-data-[panel-open]:rotate-90 motion-reduce:transition-none"
+        />
+        <span className="min-w-0 truncate font-medium">
+          {notice && <span className="font-normal text-destructive">{notice} · </span>}
+          {summary}
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
+        <div className="mt-1 ml-1.75 flex flex-col gap-1 border-l border-border/70 pl-3.5">
+          {items.map((item) => (
+            <TimelineRow key={item.id} item={item} live={false} turnLive={false} />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export function ActivityTimeline({
   entries,
   narrations,
   live = false,
   windowed = live,
+  collapsed = false,
 }: {
   entries: ToolGroupEntry[];
   narrations?: Readonly<Record<string, ToolNarration>>;
   live?: boolean;
   windowed?: boolean;
+  collapsed?: boolean;
 }) {
   const items = useMemo(() => projectTimeline(entries, narrations), [entries, narrations]);
   const hasTools = entries.some((entry) => entry.type === "tool");
@@ -121,36 +153,27 @@ export function ActivityTimeline({
     );
   }
 
-  const { items: rendered, visibleFrom } = timelineWindow(items, windowed);
+  if (collapsed) {
+    return (
+      <div className="flex min-w-0 flex-col gap-1" data-role="timeline">
+        <TimelineParentGroup items={items} />
+      </div>
+    );
+  }
+
+  const { older, recent } = timelineWindow(items, windowed);
 
   return (
-    <div className="flex min-w-0 flex-col" data-role="timeline">
-      {rendered.map((item, index) => {
-        const rolledOff = index < visibleFrom;
-        return (
-          <div
-            key={item.id}
-            inert={rolledOff || undefined}
-            aria-hidden={rolledOff || undefined}
-            className={cn(
-              "grid transition-[grid-template-rows,opacity,transform] duration-250 ease-out motion-reduce:transition-none",
-              rolledOff
-                ? "pointer-events-none -translate-y-1.5 grid-rows-[0fr] opacity-0"
-                : "translate-y-0 grid-rows-[1fr] opacity-100",
-            )}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <div className={cn(index < rendered.length - 1 && "pb-1")}>
-                <TimelineRow
-                  item={item}
-                  live={live && index === rendered.length - 1}
-                  turnLive={live}
-                />
-              </div>
-            </div>
-          </div>
-        );
-      })}
+    <div className="flex min-w-0 flex-col gap-1" data-role="timeline">
+      {older.length > 0 && <TimelineParentGroup items={older} />}
+      {recent.map((item, index) => (
+        <TimelineRow
+          key={item.id}
+          item={item}
+          live={live && index === recent.length - 1}
+          turnLive={live}
+        />
+      ))}
     </div>
   );
 }
