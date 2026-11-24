@@ -150,17 +150,24 @@ function parsePrNumber(output: string | undefined): string | undefined {
   return match?.[1];
 }
 
-function checkOutcome(
+function classifyCheckCommand(
   running: boolean,
   failed: boolean,
   output: string | undefined,
+  runningIcon: TimelineIcon,
+  runningLabel: string,
   okLabel: string,
-  failFallback: string,
-): TimelineOutcome | undefined {
-  if (running) return undefined;
+  failLabel: string,
+): { icon: TimelineIcon; label: string; detail?: string; tone: TimelineTone } {
+  if (running) return { icon: runningIcon, label: runningLabel, tone: "muted" };
 
   if (failed) {
-    return { icon: "warning", label: extractErrorLine(output) ?? failFallback, tone: "error" };
+    return {
+      icon: "warning",
+      label: failLabel,
+      detail: extractErrorLine(output),
+      tone: "error",
+    };
   }
 
   return { icon: "check", label: okLabel, tone: "success" };
@@ -176,7 +183,6 @@ function classifyCommand(tool: ToolPart): {
   icon: TimelineIcon;
   label: string;
   detail?: string;
-  outcome?: TimelineOutcome;
   tone: TimelineTone;
 } {
   const cmd = tool.target.trim();
@@ -184,53 +190,60 @@ function classifyCommand(tool: ToolPart): {
   const failed = tool.status === "error";
 
   if (TEST_CMD.test(cmd)) {
+    if (running) return { icon: "test", label: "Running tests", tone: "muted" };
+
+    const outcome = parseTestOutcome(tool.output, failed);
+    const errorDetail = failed ? extractErrorLine(tool.output) : undefined;
     return {
-      icon: "test",
-      label: "Running tests",
-      outcome: running ? undefined : parseTestOutcome(tool.output, failed),
-      tone: failed ? "error" : "muted",
+      icon: outcome.icon,
+      label: outcome.label,
+      detail: errorDetail && errorDetail !== outcome.label ? errorDetail : undefined,
+      tone: outcome.tone,
     };
   }
 
   if (TYPECHECK_CMD.test(cmd)) {
-    return {
-      icon: "code",
-      label: "Checking types",
-      outcome: checkOutcome(running, failed, tool.output, "Typecheck clean", "Typecheck failed"),
-      tone: failed ? "error" : "muted",
-    };
+    return classifyCheckCommand(
+      running,
+      failed,
+      tool.output,
+      "code",
+      "Checking types",
+      "Typecheck clean",
+      "Typecheck failed",
+    );
   }
 
   if (LINT_CMD.test(cmd)) {
-    return {
-      icon: "code",
-      label: "Checking lint",
-      outcome: checkOutcome(running, failed, tool.output, "Lint clean", "Lint issues found"),
-      tone: failed ? "error" : "muted",
-    };
+    return classifyCheckCommand(
+      running,
+      failed,
+      tool.output,
+      "code",
+      "Checking lint",
+      "Lint clean",
+      "Lint issues found",
+    );
   }
 
   if (BUILD_CMD.test(cmd)) {
-    return {
-      icon: "test",
-      label: "Building project",
-      outcome: checkOutcome(running, failed, tool.output, "Build succeeded", "Build failed"),
-      tone: failed ? "error" : "muted",
-    };
+    return classifyCheckCommand(
+      running,
+      failed,
+      tool.output,
+      "test",
+      "Building project",
+      "Build succeeded",
+      "Build failed",
+    );
   }
 
   if (GH_PR_CREATE.test(cmd)) {
     const number = parsePrNumber(tool.output);
     return {
-      icon: "pr",
+      icon: failed ? "warning" : "pr",
       label: prCreateLabel(number, running),
-      outcome: failed
-        ? {
-            icon: "warning",
-            label: extractErrorLine(tool.output) ?? "Could not open PR",
-            tone: "error",
-          }
-        : undefined,
+      detail: failed ? (extractErrorLine(tool.output) ?? "Could not open PR") : undefined,
       tone: failed ? "error" : "muted",
     };
   }
@@ -239,78 +252,60 @@ function classifyCommand(tool: ToolPart): {
     const output = tool.output ?? "";
     const checksFail = failed || /\bfail\b|\berror\b/i.test(output);
     const checksPass = !checksFail && /\bpass\b|\bsuccess\b/i.test(output);
-    let outcome: TimelineOutcome | undefined;
 
-    if (!running) {
-      if (checksPass) outcome = { icon: "check", label: "CI passing", tone: "success" };
-      else if (checksFail) outcome = { icon: "warning", label: "CI failing", tone: "error" };
-    }
+    if (!running && checksPass) return { icon: "check", label: "CI passing", tone: "success" };
+
+    if (!running && checksFail) return { icon: "warning", label: "CI failing", tone: "error" };
 
     return {
       icon: "pr",
       label: running ? "Checking CI status" : "Checked CI status",
-      outcome,
-      tone: checksFail && !running ? "error" : "muted",
+      tone: "muted",
     };
   }
 
   if (BROWSER_CMD.test(cmd)) {
     return {
-      icon: "browser",
+      icon: failed ? "warning" : "browser",
       label: running ? "Verifying in browser" : "Verified in browser",
-      outcome: failed
-        ? {
-            icon: "warning",
-            label: extractErrorLine(tool.output) ?? "Verification failed",
-            tone: "error",
-          }
-        : undefined,
+      detail: failed ? (extractErrorLine(tool.output) ?? "Verification failed") : undefined,
       tone: failed ? "error" : "muted",
     };
   }
 
   if (GIT_PUSH.test(cmd)) {
     return {
-      icon: "git",
+      icon: failed ? "warning" : "git",
       label: running ? "Pushing branch" : "Pushed branch",
-      outcome: failed
-        ? { icon: "warning", label: extractErrorLine(tool.output) ?? "Push failed", tone: "error" }
-        : undefined,
+      detail: failed ? (extractErrorLine(tool.output) ?? "Push failed") : undefined,
       tone: failed ? "error" : "muted",
     };
   }
 
   if (GIT_COMMIT.test(cmd)) {
     return {
-      icon: "git",
+      icon: failed ? "warning" : "git",
       label: running ? "Committing changes" : "Committed changes",
-      outcome: failed
-        ? {
-            icon: "warning",
-            label: extractErrorLine(tool.output) ?? "Commit failed",
-            tone: "error",
-          }
-        : undefined,
+      detail: failed ? (extractErrorLine(tool.output) ?? "Commit failed") : undefined,
       tone: failed ? "error" : "muted",
     };
   }
 
   if (GIT_FETCH.test(cmd)) {
     return {
-      icon: "git",
+      icon: failed ? "warning" : "git",
       label: running ? "Syncing git history" : "Synced git history",
+      detail: failed ? extractErrorLine(tool.output) : undefined,
       tone: failed ? "error" : "muted",
     };
   }
 
   const label = tool.name === "start_process" ? "Starting process" : "Running command";
+  const failedDetail = failed ? (extractErrorLine(tool.output) ?? "Command failed") : undefined;
   return {
-    icon: "terminal",
+    icon: failed ? "warning" : "terminal",
     label: running ? label : clipLine(cmd, 64) || "Ran command",
-    detail: running ? clipLine(cmd, 64) : undefined,
-    outcome: failed
-      ? { icon: "warning", label: extractErrorLine(tool.output) ?? "Command failed", tone: "error" }
-      : undefined,
+    detail: running ? clipLine(cmd, 64) : failedDetail,
     tone: failed ? "error" : "muted",
   };
 }
@@ -327,14 +322,6 @@ function computerLabel(name: string, running: boolean) {
   return running ? "Checking computer" : "Checked computer";
 }
 
-function outcomeIconOf(tone: TimelineTone | undefined): TimelineIcon {
-  if (tone === "success") return "check";
-
-  if (tone === "error" || tone === "warning") return "warning";
-
-  return "code";
-}
-
 function planStatusOf(mark: string): PlanTask["status"] {
   if (mark === "x") return "completed";
 
@@ -347,7 +334,6 @@ function classifySingleTool(tool: ToolPart): {
   icon: TimelineIcon;
   label: string;
   detail?: string;
-  outcome?: TimelineOutcome;
   stat?: TimelineStat;
   tone: TimelineTone;
 } {
@@ -361,10 +347,8 @@ function classifySingleTool(tool: ToolPart): {
     return {
       icon: "file",
       label: `${editVerb(tool.name, running)} ${file}`,
+      detail: failed ? (extractErrorLine(tool.output) ?? "Edit failed") : undefined,
       stat: diffStatOf(tool),
-      outcome: failed
-        ? { icon: "warning", label: extractErrorLine(tool.output) ?? "Edit failed", tone: "error" }
-        : undefined,
       tone: failed ? "error" : "muted",
     };
   }
@@ -446,13 +430,15 @@ function classifySingleTool(tool: ToolPart): {
   }
 
   const words = tool.name.replace(/[^a-zA-Z0-9]+/g, " ").trim();
+  let detail: string | undefined;
+
+  if (failed) detail = extractErrorLine(tool.output) ?? "Tool failed";
+  else if (tool.target) detail = clipLine(tool.target, 50);
+
   return {
-    icon: "terminal",
+    icon: failed ? "warning" : "terminal",
     label: running ? `Running ${words || "tool"}` : `Used ${words || "tool"}`,
-    detail: tool.target ? clipLine(tool.target, 50) : undefined,
-    outcome: failed
-      ? { icon: "warning", label: extractErrorLine(tool.output) ?? "Tool failed", tone: "error" }
-      : undefined,
+    detail,
     tone: failed ? "error" : "muted",
   };
 }
@@ -486,22 +472,14 @@ function exploreSummary(tools: readonly ToolPart[], running: boolean): string {
 function applyNarration(item: TimelineItem, narration: ToolNarration | undefined): TimelineItem {
   if (!narration) return item;
 
-  const next: TimelineItem = {
+  return {
     ...item,
     label: narration.label,
+    detail: undefined,
+    outcome: undefined,
     icon: narration.icon ?? item.icon,
     tone: narration.tone ?? item.tone,
   };
-
-  if (narration.outcome) {
-    next.outcome = {
-      icon: outcomeIconOf(narration.tone),
-      label: narration.outcome,
-      tone: narration.tone ?? "muted",
-    };
-  }
-
-  return next;
 }
 
 export function projectTimeline(
@@ -593,7 +571,6 @@ export function projectTimeline(
       icon: classified.icon,
       label: classified.label,
       detail: classified.detail,
-      outcome: classified.outcome,
       stat: classified.stat,
       tone: classified.tone,
       running,

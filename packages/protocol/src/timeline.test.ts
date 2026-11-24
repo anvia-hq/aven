@@ -50,8 +50,9 @@ describe("projectTimeline", () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
       label: "Checked missing.ts",
-      outcome: { label: "File not found", tone: "error" },
+      tone: "error",
     });
+    expect(items[0]?.outcome).toBeUndefined();
     expect(items[1]).toMatchObject({ label: "Explored src/a.ts" });
   });
 
@@ -100,8 +101,9 @@ describe("projectTimeline", () => {
     expect(items[1]).toMatchObject({
       icon: "file",
       tone: "error",
-      outcome: { label: "Error: target text not found", tone: "error" },
+      detail: "Error: target text not found",
     });
+    expect(items[1]?.outcome).toBeUndefined();
   });
 
   test("does not merge an unnarrated edit into a narrated edit row", () => {
@@ -126,12 +128,13 @@ describe("projectTimeline", () => {
     expect(items).toHaveLength(2);
     expect(items[0]).toMatchObject({
       label: "Added null guard",
-      outcome: { label: "Guarded export handler", tone: "success" },
+      tone: "success",
     });
+    expect(items[0]?.outcome).toBeUndefined();
     expect(items[1]).toMatchObject({ label: "Patching src/a.ts", running: true });
   });
 
-  test("parses test runner commands into action and verified outcome", () => {
+  test("parses test runner commands into a single verified line", () => {
     const items = projectTimeline([
       {
         type: "tool",
@@ -146,13 +149,14 @@ describe("projectTimeline", () => {
     ]);
 
     expect(items[0]).toMatchObject({
-      icon: "test",
-      label: "Running tests",
-      outcome: { icon: "check", label: "84/84 passed", tone: "success" },
+      icon: "check",
+      label: "84/84 passed",
+      tone: "success",
     });
+    expect(items[0]?.outcome).toBeUndefined();
   });
 
-  test("extracts error lines, PR numbers, and gh pr checks states", () => {
+  test("extracts error lines, PR numbers, and gh pr checks states on a single line", () => {
     const items = projectTimeline([
       {
         type: "tool",
@@ -206,15 +210,16 @@ describe("projectTimeline", () => {
       },
     ]);
 
-    expect(items[0]?.outcome).toMatchObject({
+    expect(items[0]).toMatchObject({
       icon: "warning",
-      label: "Uncaught TypeError: Cannot read properties of null",
+      detail: "Uncaught TypeError: Cannot read properties of null",
       tone: "error",
     });
     expect(items[1]).toMatchObject({ icon: "pr", label: "Opened PR #3201" });
-    expect(items[2]?.outcome).toMatchObject({ label: "CI passing", tone: "success" });
-    expect(items[3]?.outcome).toMatchObject({ label: "CI failing", tone: "error" });
-    expect(items[4]?.outcome).toBeUndefined();
+    expect(items[2]).toMatchObject({ icon: "check", label: "CI passing", tone: "success" });
+    expect(items[3]).toMatchObject({ icon: "warning", label: "CI failing", tone: "error" });
+    expect(items[4]).toMatchObject({ icon: "pr", label: "Checked CI status", tone: "muted" });
+    expect(items.every((item) => item.outcome === undefined)).toBe(true);
   });
 
   test("uses present participle for running todo_write", () => {
@@ -227,7 +232,7 @@ describe("projectTimeline", () => {
     expect(items[0]).toMatchObject({ icon: "task", label: "Updating plan (1/3 done)" });
   });
 
-  test("applies sidecar narration overrides when present", () => {
+  test("applies sidecar narration overrides as a single line even when legacy outcome exists", () => {
     const items = projectTimeline(
       [
         {
@@ -238,8 +243,8 @@ describe("projectTimeline", () => {
       {
         e1: {
           toolId: "e1",
-          label: "Patching dashboard/export.ts",
-          outcome: "Added null check in PDF renderer",
+          label: "Added null check in PDF renderer",
+          outcome: "Legacy second line",
           icon: "file",
           tone: "success",
         },
@@ -247,9 +252,12 @@ describe("projectTimeline", () => {
     );
 
     expect(items[0]).toMatchObject({
-      label: "Patching dashboard/export.ts",
-      outcome: { icon: "check", label: "Added null check in PDF renderer", tone: "success" },
+      label: "Added null check in PDF renderer",
+      icon: "file",
+      tone: "success",
     });
+    expect(items[0]?.outcome).toBeUndefined();
+    expect(items[0]?.detail).toBeUndefined();
   });
 });
 
