@@ -41,17 +41,19 @@ export function WorkingIndicator({
   return (
     <div
       data-role="working"
-      className="indicator-in flex h-7 min-w-0 items-center gap-2 px-1 text-sm whitespace-nowrap text-muted-foreground"
+      className="indicator-in flex h-7 min-w-0 items-center gap-2 text-sm whitespace-nowrap text-muted-foreground"
     >
-      <ThreadMark
-        projectId={projectId}
-        runtimeId={runtimeId}
-        palette={palettes.get(projectId)}
-        color={color}
-        speed={2}
-        working
-        decorative
-      />
+      <span className="flex size-3.5 shrink-0 items-center justify-center">
+        <ThreadMark
+          projectId={projectId}
+          runtimeId={runtimeId}
+          palette={palettes.get(projectId)}
+          color={color}
+          speed={2}
+          working
+          decorative
+        />
+      </span>
       <span role="status" className="min-w-0 truncate shimmer">
         {label}…
       </span>
