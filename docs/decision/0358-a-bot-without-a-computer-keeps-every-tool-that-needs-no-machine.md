@@ -1,6 +1,6 @@
 # A bot without a computer keeps every tool that needs no machine
 
-Status: accepted. Supersedes the "Not done" part of 0324, and says what 0060 means now that a new bot has no computer.
+Status: accepted. Supersedes the "Not done" part of 0324, and says what 0060 means now that a new bot has no computer. Superseded in part by 0401.
 
 ## Context
 
