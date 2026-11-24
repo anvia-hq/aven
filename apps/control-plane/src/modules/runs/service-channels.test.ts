@@ -481,3 +481,211 @@ describe("sidecar tool narrations", () => {
     expect(await narrations.store.read(thread.id)).toEqual({});
   });
 });
+
+describe("sandbox preparation status", () => {
+  const sandboxPhases = (events: RunEvent[]) =>
+    events.flatMap((event) => (event.type === "sandbox_status" ? [event.phase] : []));
+
+  test("broadcasts preparing before run_start, hydrates snapshots, deduplicates preparing, and stays ready", async () => {
+    const bootGate = Promise.withResolvers<void>();
+    const { runtime: base, current } = scriptedRuntime();
+    const runtime: typeof base = {
+      ...base,
+      async start(input) {
+        input.onSandboxPhase?.("preparing");
+        await bootGate.promise;
+        return { ...(await base.start(input)), sandbox: true };
+      },
+    };
+    const manager = managerFor(runtime);
+    const thread = newThread();
+
+    const watcher = attach(manager, thread);
+    await until(() => watcher.events.some((event) => event.type === "snapshot"));
+
+    const starting = manager.start(thread, "first message");
+    await until(() => sandboxPhases(watcher.events).includes("preparing"));
+
+    const midBoot = attach(manager, thread);
+    await until(() => midBoot.events.some((event) => event.type === "snapshot"));
+    const midSnap = midBoot.events.find((event) => event.type === "snapshot");
+    expect(midSnap?.type === "snapshot" && midSnap.sandboxPhase).toBe("preparing");
+    await midBoot.detach();
+
+    bootGate.resolve();
+    await starting;
+
+    current().emit({ type: "sandbox_status", phase: "preparing" });
+    current().emit({ type: "sandbox_status", phase: "ready" });
+    current().emit({ type: "text", delta: "Done." });
+    current().finish({ type: "response" });
+    await until(() => !manager.isRunning(thread.id));
+    await until(() => watcher.events.some((event) => event.type === "done"));
+
+    expect(sandboxPhases(watcher.events)).toEqual(["preparing", "ready"]);
+
+    const after = attach(manager, thread);
+    await until(() => after.events.some((event) => event.type === "snapshot"));
+    const afterSnap = after.events.find((event) => event.type === "snapshot");
+    expect(afterSnap?.type === "snapshot" && afterSnap.sandboxPhase).toBe("ready");
+    await after.detach();
+    await watcher.detach();
+  });
+
+  test("broadcasts clear to live subscribers when runtime start throws before a run begins", async () => {
+    const { runtime: base } = scriptedRuntime();
+    const runtime: typeof base = {
+      ...base,
+      async start(input) {
+        input.onSandboxPhase?.("preparing");
+        throw new Error("cloud boot failed");
+      },
+    };
+    const manager = managerFor(runtime);
+    const thread = newThread();
+
+    const live = attach(manager, thread);
+    await until(() => live.events.some((event) => event.type === "snapshot"));
+
+    await expect(manager.start(thread, "first message")).rejects.toThrow("cloud boot failed");
+    await until(() => sandboxPhases(live.events).length === 2);
+    expect(sandboxPhases(live.events)).toEqual(["preparing", null]);
+    await live.detach();
+
+    const after = attach(manager, thread);
+    await until(() => after.events.some((event) => event.type === "snapshot"));
+    const snap = after.events.find((event) => event.type === "snapshot");
+    expect(snap?.type === "snapshot" && snap.sandboxPhase).toBeUndefined();
+    await after.detach();
+  });
+
+  test("clears preparing when cancelled mid-prep and resolves to ready on question outcome", async () => {
+    const { runtime: base, current } = scriptedRuntime();
+    const runtime: typeof base = {
+      ...base,
+      async start(input) {
+        input.onSandboxPhase?.("preparing");
+        return { ...(await base.start(input)), sandbox: true };
+      },
+    };
+    const manager = managerFor(runtime);
+
+    const cancelledThread = newThread();
+    const cancelWatcher = attach(manager, cancelledThread);
+    await until(() => cancelWatcher.events.some((event) => event.type === "snapshot"));
+    await manager.start(cancelledThread, "first");
+    manager.cancel(cancelledThread.id);
+    current().finish({ type: "response" });
+    await until(() => cancelWatcher.events.some((event) => event.type === "done"));
+    expect(sandboxPhases(cancelWatcher.events)).toEqual(["preparing", null]);
+    await cancelWatcher.detach();
+
+    const questionThread = newThread();
+    const questionWatcher = attach(manager, questionThread);
+    await until(() => questionWatcher.events.some((event) => event.type === "snapshot"));
+    await manager.start(questionThread, "ask me");
+    current().emit({
+      type: "tool_start",
+      tool: {
+        id: "q1",
+        name: "ask_user",
+        target: "",
+        status: "running",
+        questions: [{ id: "a", text: "Pick one" }],
+      },
+    });
+    current().finish({
+      type: "interaction",
+      continuation: {
+        version: 1,
+        agentId: "run-1",
+        sourceRunId: "d1",
+        interaction: {
+          type: "tool-question",
+          id: "i1",
+          toolName: "ask_user",
+          toolCallId: "q1",
+          internalCallId: "ic1",
+          questions: [{ id: "a", text: "Pick one" }],
+        },
+        state: {},
+      },
+    });
+    await until(() => questionWatcher.events.some((event) => event.type === "done"));
+    expect(sandboxPhases(questionWatcher.events)).toEqual(["preparing", "ready"]);
+    await questionWatcher.detach();
+  });
+
+  test("ignores sandbox_status from non-sandbox runners and does not emit on subsequent turns after channel release", async () => {
+    const { runtime: base, current } = scriptedRuntime();
+    const historyMessages = [
+      { role: "user" as const, content: "earlier" },
+      { role: "assistant" as const, content: "replied" },
+    ];
+    let allowSandbox = false;
+    const runtime: typeof base = {
+      ...base,
+      async start(input) {
+        input.onSandboxPhase?.("preparing");
+        return { ...(await base.start(input)), sandbox: allowSandbox };
+      },
+    };
+    const store = {
+      load: async () => historyMessages,
+    } as unknown as ConversationStore;
+    const manager = managerFor(runtime, { store });
+
+    const spoofThread = newThread();
+    const spoofRuntime: typeof base = {
+      ...base,
+      async start(input) {
+        return { ...(await base.start(input)), sandbox: false };
+      },
+    };
+    const spoofManager = managerFor(spoofRuntime);
+    const spoofWatcher = attach(spoofManager, spoofThread);
+    await until(() => spoofWatcher.events.some((event) => event.type === "snapshot"));
+    await spoofManager.start(spoofThread, "hi");
+    current().emit({ type: "sandbox_status", phase: "preparing" });
+    current().emit({ type: "sandbox_status", phase: "ready" });
+    current().finish({ type: "response" });
+    await until(() => spoofWatcher.events.some((event) => event.type === "done"));
+    expect(sandboxPhases(spoofWatcher.events)).toEqual([]);
+    await spoofWatcher.detach();
+
+    allowSandbox = true;
+    const secondTurnThread = newThread();
+    const secondWatcher = attach(manager, secondTurnThread);
+    await until(() => secondWatcher.events.some((event) => event.type === "snapshot"));
+    await manager.start(secondTurnThread, "second message");
+    current().emit({ type: "sandbox_status", phase: "preparing" });
+    current().emit({ type: "sandbox_status", phase: "ready" });
+    current().finish({ type: "response" });
+    await until(() => secondWatcher.events.some((event) => event.type === "done"));
+    expect(sandboxPhases(secondWatcher.events)).toEqual([]);
+    await secondWatcher.detach();
+  });
+
+  test("resolves preparing to ready automatically when an older runner emits text without sandbox_status", async () => {
+    const { runtime: base, current } = scriptedRuntime();
+    const runtime: typeof base = {
+      ...base,
+      async start(input) {
+        input.onSandboxPhase?.("preparing");
+        return { ...(await base.start(input)), sandbox: true };
+      },
+    };
+    const manager = managerFor(runtime);
+    const thread = newThread();
+    const watcher = attach(manager, thread);
+    await until(() => watcher.events.some((event) => event.type === "snapshot"));
+
+    await manager.start(thread, "hello");
+    current().emit({ type: "text", delta: "hi there" });
+    current().finish({ type: "response" });
+    await until(() => watcher.events.some((event) => event.type === "done"));
+
+    expect(sandboxPhases(watcher.events)).toEqual(["preparing", "ready"]);
+    await watcher.detach();
+  });
+});
