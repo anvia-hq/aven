@@ -37,22 +37,14 @@ function labelToneClass(tone: TimelineItem["tone"]) {
   return "text-muted-foreground";
 }
 
-function TimelineRowContent({ item, labelRev }: { item: TimelineItem; labelRev: number }) {
+function TimelineRowContent({ item }: { item: TimelineItem }) {
   const notice = groupFailureNotice(item.tools);
   const labelTone = labelToneClass(item.tone);
 
   return (
     <>
       <TimelineIconGlyph icon={item.icon} running={item.running} className={labelTone} />
-      <span
-        key={labelRev}
-        className={cn(
-          "min-w-0 truncate",
-          labelTone,
-          item.running && "shimmer",
-          labelRev > 0 && "narration-in",
-        )}
-      >
+      <span className={cn("min-w-0 truncate", labelTone, item.running && "shimmer")}>
         {notice && <span className="text-destructive">{notice} · </span>}
         {item.label}
       </span>
@@ -81,7 +73,7 @@ function ExitingTimelineRow({ item }: { item: TimelineItem }) {
       aria-hidden
       className="pointer-events-none flex h-6 w-fit max-w-full shrink-0 items-center gap-2 text-left text-xs timeline-push-out"
     >
-      <TimelineRowContent item={item} labelRev={0} />
+      <TimelineRowContent item={item} />
     </div>
   );
 }
@@ -101,11 +93,6 @@ function TimelineRow({
 }) {
   const expandable = item.tools.length > 0 || item.reasoning.length > 0;
   const [enteredLive] = useState(animateEntry);
-  const [labelState, setLabelState] = useState({ label: item.label, rev: 0 });
-
-  if (labelState.label !== item.label) {
-    setLabelState({ label: item.label, rev: labelState.rev + 1 });
-  }
 
   return (
     <Collapsible
@@ -118,7 +105,7 @@ function TimelineRow({
         disabled={!expandable}
         className="group flex h-6 w-fit max-w-full items-center gap-2 text-left transition-colors hover:text-foreground disabled:cursor-default"
       >
-        <TimelineRowContent item={item} labelRev={labelState.rev} />
+        <TimelineRowContent item={item} />
       </CollapsibleTrigger>
       {expandable && (
         <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
@@ -288,22 +275,8 @@ export function ActivityTimeline({
     );
   }
 
-  if (older.length === 0) {
-    return (
-      <div className="flex min-w-0 flex-col gap-1" data-role="timeline">
-        {recent.map((item, index) => (
-          <TimelineRow
-            key={item.id}
-            item={item}
-            live={live && index === recent.length - 1}
-            animateEntry={live}
-          />
-        ))}
-      </div>
-    );
-  }
-
-  const pushing = push.exiting.length > 0;
+  const hasOlder = older.length > 0;
+  const pushing = hasOlder && push.exiting.length > 0;
   const pushClass = push.seq % 2 === 1 ? "timeline-push-a" : "timeline-push-b";
   const pushStyle = pushing
     ? ({ "--timeline-push": `${push.exiting.length * -1.75}rem` } as CSSProperties)
@@ -311,26 +284,27 @@ export function ActivityTimeline({
 
   return (
     <div className="flex min-w-0 flex-col gap-1" data-role="timeline">
-      <TimelineParentGroup items={older} animateEntry={live} />
+      {hasOlder && <TimelineParentGroup items={older} animateEntry={live} />}
       <div
         data-role="timeline-viewport"
-        className={cn("min-w-0", hasExpandedRecent ? "overflow-visible" : "h-20 overflow-hidden")}
+        className={cn("min-w-0", hasOlder && !hasExpandedRecent ? "h-20 overflow-hidden" : "")}
       >
         <div
           className={cn("flex min-w-0 flex-col gap-1", pushing && pushClass)}
           style={pushStyle}
           onAnimationEnd={pushing ? handleTrackAnimationEnd : undefined}
         >
-          {push.exiting.map((item) => (
-            <ExitingTimelineRow key={`exit-${item.id}`} item={item} />
-          ))}
+          {pushing &&
+            push.exiting.map((item) => <ExitingTimelineRow key={`exit-${item.id}`} item={item} />)}
           {recent.map((item, index) => (
             <TimelineRow
               key={item.id}
               item={item}
               live={live && index === recent.length - 1}
-              animateEntry={false}
-              rowClassName={push.enteringIds.has(item.id) ? "timeline-push-in" : undefined}
+              animateEntry={live && !hasOlder}
+              rowClassName={
+                pushing && push.enteringIds.has(item.id) ? "timeline-push-in" : undefined
+              }
               onOpenChange={(open) => handleRowOpenChange(item.id, open)}
             />
           ))}

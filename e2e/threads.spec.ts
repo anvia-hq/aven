@@ -611,7 +611,7 @@ test.describe("threads", () => {
     await expect(timelines.getByText("Patched src/one.ts")).toBeHidden();
     await expect(timelines.getByText("Running tests")).toBeVisible();
 
-    const [parentTextLeft, rowTextLeft, workingTextLeft] = await page.evaluate(() => {
+    const [parentTextLeft, rowTextLeft, workingTextLeft, workingWord] = await page.evaluate(() => {
       const parentLabel = document.querySelector<HTMLElement>(
         '[data-role="timeline-parent"] button > span',
       );
@@ -619,16 +619,19 @@ test.describe("threads", () => {
         '[data-role="timeline-viewport"] [data-role="timeline-row"] button > span',
       );
       const workingLabel = document.querySelector<HTMLElement>(
-        '[data-role="working"] [role="status"]',
+        '[data-role="working"] [data-role="working-label"]',
       );
       return [
         parentLabel?.getBoundingClientRect().left ?? -1,
         rowLabel?.getBoundingClientRect().left ?? -2,
         workingLabel?.getBoundingClientRect().left ?? -3,
+        workingLabel?.textContent ?? "",
       ];
     });
     expect(Math.abs(parentTextLeft - rowTextLeft)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(workingTextLeft - rowTextLeft)).toBeLessThanOrEqual(0.5);
+    expect(workingWord).toMatch(/^[A-Z][a-z]+…$/);
+    expect(workingWord).not.toBe("Working…");
   });
 
   test("pushes older live tool rows into the parent group with zero working-indicator shift", async ({
@@ -694,6 +697,12 @@ test.describe("threads", () => {
       await expect(timeline.locator('[data-role="timeline-row"]')).toHaveCount(4);
       await expect(timeline.locator('[data-role="timeline-parent"]')).toHaveCount(0);
 
+      const row4Handle = await page.evaluateHandle(() => {
+        const rows = [...document.querySelectorAll('[data-role="timeline-row"]')];
+        const row = rows.find((el) => el.textContent?.includes("echo step-4")) ?? null;
+        return { row, label: row?.querySelector("button > span") ?? null };
+      });
+
       const working = page.locator('[data-role="working"]');
       await expect(working).toBeVisible();
       const topAt4 = await working.evaluate((el) => el.getBoundingClientRect().top);
@@ -704,6 +713,20 @@ test.describe("threads", () => {
       ).toHaveText("Ran 2 commands");
       const topAt5 = await working.evaluate((el) => el.getBoundingClientRect().top);
       expect(Math.abs(topAt5 - topAt4)).toBeLessThanOrEqual(1);
+
+      push({
+        type: "narration",
+        narration: { toolId: "c4", label: "Completed step four" },
+      });
+      await expect(timeline.getByText("Completed step four")).toBeVisible();
+      const preserved = await page.evaluate(({ row, label }) => {
+        const rows = [...document.querySelectorAll('[data-role="timeline-row"]')];
+        const currentRow = rows.find((el) => el.textContent?.includes("Completed step four"));
+        const currentLabel = currentRow?.querySelector("button > span");
+        return { sameRow: currentRow === row, sameLabel: currentLabel === label };
+      }, row4Handle);
+      await row4Handle.dispose();
+      expect(preserved).toEqual({ sameRow: true, sameLabel: true });
 
       push(snapshotWith(6));
       await expect(

@@ -113,11 +113,6 @@ function WorkedSteps({
   const [open, setOpen] = useState(false);
   const label =
     !live && workedMs !== undefined ? `Worked for ${elapsed(workedMs)}` : summarizeBlocks(steps);
-  const [labelState, setLabelState] = useState({ label, rev: 0 });
-
-  if (labelState.label !== label) {
-    setLabelState({ label, rev: labelState.rev + 1 });
-  }
 
   return (
     <Collapsible className="min-w-0 text-sm" open={open} onOpenChange={setOpen}>
@@ -132,15 +127,7 @@ function WorkedSteps({
           aria-hidden
           className="size-3.5 shrink-0 transition-transform duration-150 ease-out group-data-[panel-open]:rotate-90 motion-reduce:transition-none"
         />
-        <span
-          key={labelState.rev}
-          className={cn(
-            "min-w-0 truncate font-medium tabular-nums",
-            labelState.rev > 0 && "narration-in",
-          )}
-        >
-          {label}
-        </span>
+        <span className="min-w-0 truncate font-medium tabular-nums">{label}</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
         <div className="flex min-w-0 flex-col gap-2 pt-1.5">

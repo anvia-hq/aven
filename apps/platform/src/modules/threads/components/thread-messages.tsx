@@ -1,4 +1,3 @@
-import { liveStepOf } from "@aven/protocol/timeline";
 import { Fragment, useMemo, type ReactNode } from "react";
 
 import { cn } from "cn";
@@ -134,10 +133,6 @@ export function ThreadMessages({
   const queued = entries.queued.map((entry) => ({ ...entry, ...place(entry.speaker) }));
   const working = place({ kind: "agent" });
 
-  const liveStep = useMemo(
-    () => (running ? liveStepOf(messages, narrations) : null),
-    [running, messages, narrations],
-  );
   const onlyFirstTurn =
     firstPersonIndex === -1 ||
     entries.listed.slice(firstPersonIndex + 1).every(({ speaker }) => speaker?.kind !== "person");
@@ -212,7 +207,6 @@ export function ThreadMessages({
                 projectId={projectId}
                 color={markColor}
                 startedAt={startedAt}
-                liveStep={liveStep}
               />
             </div>
             {error && (
