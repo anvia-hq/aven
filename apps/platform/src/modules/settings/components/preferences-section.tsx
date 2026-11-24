@@ -79,7 +79,7 @@ export function PreferencesSection() {
             <SelectTrigger aria-label="Timezone">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="w-auto min-w-(--anchor-width)">
+            <SelectContent>
               {zones(timezone).map((zone) => (
                 <SelectItem key={zone} value={zone}>
                   {zone}

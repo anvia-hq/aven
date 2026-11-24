@@ -43,7 +43,7 @@ export function BotRuntimeRow({ bot }: { bot: Bot }) {
         <SelectTrigger aria-label={`Computer of ${bot.name}`} className="w-48">
           <SelectValue />
         </SelectTrigger>
-        <SelectContent className="w-auto min-w-(--anchor-width)">
+        <SelectContent>
           <SelectItem value={NONE}>No computer</SelectItem>
           <SelectItem value={DEFAULT}>Default</SelectItem>
           {choices.map((runtime) => (

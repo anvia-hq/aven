@@ -23,17 +23,12 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
       onValueChange={(next) => next && onChange(next)}
     >
       <SelectTrigger
-        size="sm"
         aria-label="Computer"
         className="border-transparent bg-muted/40 dark:bg-muted/40 max-w-48 min-w-0 rounded-full! px-3 text-muted-foreground"
       >
         <SelectValue placeholder="Choose a computer" />
       </SelectTrigger>
-      <SelectContent
-        alignItemWithTrigger={false}
-        align="start"
-        className="w-auto min-w-(--anchor-width)"
-      >
+      <SelectContent align="start">
         {choices.map((choice) => (
           <SelectItem
             key={choice.runtime.id}

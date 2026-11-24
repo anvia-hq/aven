@@ -109,13 +109,12 @@ export function ProjectFilterBar({ filters, counts, runtimes, onChange, children
             }
           >
             <SelectTrigger
-              size="sm"
               aria-label="Runner"
               className={filters.runnerId ? "max-w-32" : "max-w-32 text-muted-foreground"}
             >
               <SelectValue />
             </SelectTrigger>
-            <SelectContent alignItemWithTrigger={false} align="end">
+            <SelectContent align="end">
               <SelectItem value={ANY_RUNNER}>All runners</SelectItem>
               {runtimes.map((runtime) => (
                 <SelectItem key={runtime.id} value={runtime.id}>

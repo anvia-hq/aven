@@ -65,11 +65,7 @@ export function TaskTable({
                   value={task.status}
                   onValueChange={(value) => void update(task, { status: value as TaskStatus })}
                 >
-                  <SelectTrigger
-                    size="sm"
-                    aria-label={`Status of ${taskKey(task)}`}
-                    className="w-full"
-                  >
+                  <SelectTrigger aria-label={`Status of ${taskKey(task)}`} className="w-full">
                     <SelectValue>
                       {(value: TaskStatus) => (
                         <>
@@ -92,11 +88,7 @@ export function TaskTable({
                   value={task.priority}
                   onValueChange={(value) => void update(task, { priority: value as TaskPriority })}
                 >
-                  <SelectTrigger
-                    size="sm"
-                    aria-label={`Priority of ${taskKey(task)}`}
-                    className="w-full"
-                  >
+                  <SelectTrigger aria-label={`Priority of ${taskKey(task)}`} className="w-full">
                     <SelectValue>
                       {(value: TaskPriority) => (
                         <>

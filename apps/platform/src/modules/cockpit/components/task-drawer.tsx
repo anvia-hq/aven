@@ -50,7 +50,7 @@ type Fields = {
 };
 
 const QUIET =
-  "h-8 w-auto border-0 bg-transparent px-1 shadow-none hover:bg-muted/60 dark:bg-transparent dark:hover:bg-muted/60";
+  "w-auto border-0 bg-transparent px-1 shadow-none hover:bg-muted/60 dark:bg-transparent dark:hover:bg-muted/60";
 
 function DueInput({
   value,
