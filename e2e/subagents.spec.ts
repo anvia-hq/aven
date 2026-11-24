@@ -24,7 +24,6 @@ test.describe("subagents", () => {
     await page.getByRole("textbox", { name: "Prompt" }).fill("find auth and test it");
     await page.getByRole("button", { name: "Send" }).click();
 
-    await page.locator('[data-role="worked"]').click();
     await expect(page.getByText("Find the auth middleware")).toBeVisible();
     await expect(page.getByText("Add a test")).toBeVisible();
     await expect(page.getByText("1 tool call")).toHaveCount(0);

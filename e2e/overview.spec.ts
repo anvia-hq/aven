@@ -50,6 +50,8 @@ test.describe("a thread's overview", () => {
     await expect(environment).toContainText("acme/docs-site");
     await expect(environment).toContainText(`aven/${threadId.slice(0, 8)}`);
 
+    await page.getByRole("button", { name: /Model & usage/ }).click();
+
     const context = page.getByRole("region", { name: "Context" });
     await expect(context).toContainText("33% used");
     await expect(context).toContainText("330K / 1M");
@@ -73,7 +75,9 @@ test.describe("a thread's overview", () => {
     await registerUser(page, "ins", "Overview User");
     await streamSnapshot(page, {});
     const threadId = await newThread(page);
+    await page.setViewportSize({ width: 1400, height: 760 });
     await page.goto(`/threads/${threadId}`);
+    await page.getByRole("button", { name: /Model & usage/ }).click();
 
     await expect(page.getByRole("region", { name: "Context" })).toContainText(
       "Shown after the agent's first reply",
@@ -238,7 +242,9 @@ test("the column keeps its height while another thread's usage arrives", async (
   await page.setViewportSize({ width: 1500, height: 800 });
   await page.goto(`/threads/${ids[0]}`);
   const overview = page.getByRole("complementary", { name: "Overview" });
-  await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
+  await expect(overview.getByRole("button", { name: /Model & usage/ })).toContainText(
+    "33% context",
+  );
   await expect(overview).toContainText("docs-site · acme/docs-site");
 
   await page.evaluate(() => {
@@ -254,7 +260,9 @@ test("the column keeps its height while another thread's usage arrives", async (
   await page.locator(`a[href="/threads/${ids[1]}"]`).first().click();
   await expect(page).toHaveURL(new RegExp(`/threads/${ids[1]}$`));
   await expect.poll(() => secondServed).toBe(true);
-  await expect(page.getByRole("region", { name: "Context" })).toContainText("33% used");
+  await expect(overview.getByRole("button", { name: /Model & usage/ })).toContainText(
+    "33% context",
+  );
   await page.evaluate(
     () => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
   );

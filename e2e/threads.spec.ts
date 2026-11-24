@@ -226,11 +226,10 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await startThread(page, "Catch up with main");
 
-    await page.locator('[data-role="worked"]').click();
-    const group = page.getByRole("button", { name: "Fetched from GitHub" });
-    await expect(group).toBeVisible();
-    await group.click();
-    const call = page.getByRole("button", { name: /Fetched.*default branch/ });
+    const row = page.getByRole("button", { name: "Fetched default branch" });
+    await expect(row).toBeVisible();
+    await row.click();
+    const call = page.getByRole("button", { name: /Fetched.*default branch/ }).nth(1);
     await expect(call).toBeVisible();
     await call.click();
     await expect(page.getByText("origin/main is now at bbbbbbb (was aaaaaaa).")).toBeVisible();
@@ -403,30 +402,35 @@ test.describe("threads", () => {
 
     await expect(page.locator('[data-role="user"]')).toContainText("Rename hello to bye");
     await expect(page.getByText("All done.")).toBeVisible();
-    await expect(page.getByText("Reading the file.")).toBeHidden();
     await expect(page.locator('[data-role="worked"]')).toHaveText("Worked for 2m 4s");
-    await page.locator('[data-role="worked"]').click();
     await expect(page.getByText("Reading the file.")).toBeVisible();
 
-    const group = page.getByRole("button", { name: /^Read 2 files, edited a file/ });
-    await expect(group).toBeVisible();
-    await expect(page.getByLabel("Failed")).toHaveCount(0);
-    await group.click();
+    const readFirstRow = page.getByRole("button", { name: /Explored a\.txt/ });
+    await expect(readFirstRow).toBeVisible();
+    await readFirstRow.click();
+    await page
+      .getByRole("button", { name: /Read.*a\.txt/ })
+      .first()
+      .click();
+
+    const patchRow = page.getByRole("button", { name: /Patched a\.txt/ });
+    await expect(patchRow).toBeVisible();
+    await patchRow.click();
 
     const edit = page.getByRole("button", { name: /Edited.*a\.txt/ });
     await expect(edit).toBeVisible();
     await edit.click();
     await expect(page.getByText("bye", { exact: true })).toBeVisible();
 
+    const missingRow = page.getByRole("button", { name: /Explored missing\.txt/ });
+    await expect(missingRow).toBeVisible();
+    await missingRow.click();
+
     const missing = page.getByRole("button", { name: /Read.*missing\.txt/ });
     await expect(missing).toBeVisible();
     await expect(page.getByLabel("Failed")).toHaveCount(1);
     await missing.click();
     await expect(page.getByText("File not found: missing.txt", { exact: true })).toBeVisible();
-    await page
-      .getByRole("button", { name: /Read.*a\.txt/ })
-      .first()
-      .click();
 
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);

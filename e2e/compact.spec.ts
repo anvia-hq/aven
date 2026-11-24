@@ -41,6 +41,7 @@ test.describe("compacting a thread", () => {
 
   test("the Context card's button sends the runner a run that only compacts", async ({ page }) => {
     const events = await openThread(page);
+    await page.getByRole("button", { name: /Model & usage/ }).click();
     const context = page.getByRole("region", { name: "Context" });
     await expect(context).toContainText("70% used");
 
@@ -55,6 +56,7 @@ test.describe("compacting a thread", () => {
 
   test("the button waits until a quarter of the window is used", async ({ page }) => {
     await openThread(page, 240_000);
+    await page.getByRole("button", { name: /Model & usage/ }).click();
     const context = page.getByRole("region", { name: "Context" });
     await expect(context).toContainText("24% used");
     await expect(context.getByRole("button", { name: "Compact" })).toHaveCount(0);
@@ -62,6 +64,7 @@ test.describe("compacting a thread", () => {
 
   test("the button shows at a quarter", async ({ page }) => {
     await openThread(page, 250_000);
+    await page.getByRole("button", { name: /Model & usage/ }).click();
     const context = page.getByRole("region", { name: "Context" });
     await expect(context).toContainText("25% used");
     await expect(context.getByRole("button", { name: "Compact" })).toBeVisible();

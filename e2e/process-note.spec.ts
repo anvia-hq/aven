@@ -98,8 +98,9 @@ test.describe("a background process that ended", () => {
     await expect(page.getByText("Everything passed.")).toBeVisible();
     await expect(page.locator('[data-role="worked"]')).toHaveCount(1);
     await expect(page.locator('[data-role="worked"]')).toHaveText("Worked for 1m 35s");
-    await page.locator('[data-role="worked"]').click();
     await expect(page.getByText("Suite is running in the background.")).toBeVisible();
     await expect(page.getByText("CI is still running.")).toBeVisible();
+    await page.locator('[data-role="worked"]').click();
+    await expect(page.getByText("Suite is running in the background.")).toBeHidden();
   });
 });
