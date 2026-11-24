@@ -26,7 +26,7 @@ import {
   UnprocessableError,
 } from "@aven/server-kit/errors";
 import { issueOpaqueToken, verifyOpaqueTokenHash } from "@aven/server-kit/tokens";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, sql } from "drizzle-orm";
 
 import { preferencesService } from "../preferences/service";
 import { projectsService } from "../projects/service";
@@ -34,6 +34,8 @@ import { runtimesService } from "../runtimes/service";
 import { buildAutomationPrompt, summarizeWebhookPayload } from "./prompt";
 import type { CreateAutomationBody, UpdateAutomationBody } from "./schema";
 import type { AutomationDelivery, AutomationRunner, Automations, AutomationViewer } from "./types";
+
+const STALE_RUN_MS = 2 * 60 * 60_000;
 
 async function defaultIsMember(organizationId: string, userId: string) {
   const [row] = await db
@@ -134,10 +136,17 @@ export function createAutomations({
     });
     const runRow = await db.transaction(async (tx) => {
       await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`automation-run:${row.id}`}))`);
+      const staleBefore = new Date(now.getTime() - STALE_RUN_MS);
       const [active] = await tx
         .select({ total: count() })
         .from(automationRuns)
-        .where(and(eq(automationRuns.automationId, row.id), eq(automationRuns.status, "running")));
+        .where(
+          and(
+            eq(automationRuns.automationId, row.id),
+            eq(automationRuns.status, "running"),
+            gt(automationRuns.createdAt, staleBefore),
+          ),
+        );
 
       if ((active?.total ?? 0) >= maxConcurrentRuns) {
         throw new ConflictError("This automation already has too many runs in progress");
