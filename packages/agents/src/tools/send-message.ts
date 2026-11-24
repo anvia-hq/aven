@@ -21,7 +21,7 @@ export const sendMessageSchema = z.object({
     .min(1)
     .max(2000)
     .describe(
-      "One message, as you would text it: short, one thought. Light markdown (bold, a short list) is shown as such; use it only when it helps. Start each list item on its own line with a hyphen, never a bullet character. Write another bot as @Name and it is shown as that bot.",
+      "One short chat bubble when writing to the person: one thought, usually 1 to 3 sentences, never multiple paragraphs, headings, or a wall of text. If you have another paragraph, point, list or follow-up question, make another send_message call instead of putting blank lines in one message. Light markdown (bold, a short list) is shown as such; use it only when it helps. Start each list item on its own line with a hyphen, never a bullet character. Write another bot as @Name and it is shown as that bot. When writing to another bot, one complete task in plain words is fine.",
     ),
   quote: z
     .string()
@@ -59,7 +59,7 @@ export function createSendMessageTool(send: SendMessage) {
   return createTool({
     name: SEND_MESSAGE_TOOL_NAME,
     description:
-      "Send a message to the person or to one of their other bots. It is the only way anyone hears from you: nothing you write outside this tool is seen, so use it for every reply, even a greeting or one word. Call it again for another message; they arrive in order, those to the person each after a short pause as if typed. A bot you write to answers in a message of its own, later, not as the result of this call. Quote the message you are answering by its id, and do not repeat what it said.",
+      "Send one chat bubble to the person, or a message to one of their other bots. It is the only way anyone hears from you: nothing you write outside this tool is seen, so use it for every reply, even a greeting or one word. For the person, never send a long or multi-paragraph reply in one call: split it into separate short send_message calls (one thought per bubble, 1 to 3 sentences) in the order you want them read; they arrive in order, each after a short pause as if typed. A bot you write to answers in a message of its own, later, not as the result of this call. Quote the message you are answering by its id, and do not repeat what it said.",
     inputSchema: sendMessageSchema,
     async handler(input, context) {
       return send(input, { abortSignal: context?.abortSignal });
