@@ -11,6 +11,7 @@ import { useHeldValue } from "@aven/ui/use-held";
 import { safeStorage } from "@aven/ui/use-local-storage";
 import { useMediaQuery } from "@aven/ui/use-media-query";
 import { cn } from "cn";
+import { useMemo } from "react";
 
 import { NotFound } from "@/components/not-found";
 import { useThreadDiff } from "@/modules/diff/hooks/use-thread-diff";
@@ -18,6 +19,7 @@ import { OverviewColumn } from "@/modules/overview/components/overview-column";
 import { usePreviewOffer } from "@/modules/preview/hooks/use-preview-offer";
 import { ProjectInfo } from "@/modules/projects/components/project-info";
 
+import { activePlanOf } from "../active-plan";
 import { useCompactThread } from "../hooks/use-compact-thread";
 import { useElementHeight } from "../hooks/use-element-height";
 import { useFirstPrompt } from "../hooks/use-first-prompt";
@@ -28,6 +30,7 @@ import { useThread } from "../hooks/use-thread";
 import { useThreadPanels } from "../hooks/use-thread-panels";
 import { AnswerForm } from "./answer-form";
 import { FollowUpChips } from "./follow-up-chips";
+import { PlanCard } from "./plan-card";
 import { PromptInput } from "./prompt-input";
 import { SharedNotice } from "./shared-notice";
 import { ShipBar } from "./ship-bar";
@@ -82,6 +85,10 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   const panelIds = sideOpen ? ["conversation", "side"] : ["conversation"];
   const unshipped = useThreadDiff(threadId, "unshipped", running, true, { summaryOnly: true });
   const prChecks = usePullRequestChecks(threadId, thread?.pullRequests ?? [], running);
+  const activePlan = useMemo(
+    () => activePlanOf(messages, running, pending.length > 0),
+    [messages, running, pending.length],
+  );
   const layout = useDefaultLayout({
     id: `aven.thread.${threadId}.panels.${wide ? "row" : "column"}`,
     panelIds,
@@ -151,7 +158,6 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                   pending={pending}
                   steers={steers}
                   running={running}
-                  owned={owned}
                   viewer={viewer}
                   startedAt={startedAt}
                   error={error}
@@ -176,6 +182,16 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                     )
                   }
                 />
+                {activePlan && (
+                  <div
+                    className={cn(
+                      "pointer-events-none absolute right-4 bottom-[var(--composer-height,9rem)] z-10",
+                      overview.open && !split && "@4xl:right-76",
+                    )}
+                  >
+                    <PlanCard key={thread.id} tasks={activePlan} live={running} />
+                  </div>
+                )}
                 <div
                   ref={composer}
                   className={cn(

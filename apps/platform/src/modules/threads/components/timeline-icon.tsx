@@ -29,7 +29,7 @@ export function TimelineIconGlyph({
   running?: boolean;
   className?: string;
 }) {
-  const classes = cn("size-4 shrink-0 text-muted-foreground", className);
+  const classes = cn("size-3.5 shrink-0 text-muted-foreground", className);
 
   if (running) return <IconLoader2 aria-hidden className={cn(classes, "animate-spin")} />;
 

@@ -226,6 +226,11 @@ test.describe("threads", () => {
     await registerUser(page, "thr", "Thread User");
     await startThread(page, "Catch up with main");
 
+    await expect(page.getByText("Up to date.")).toBeVisible();
+    const worked = page.locator('[data-role="worked"]');
+    await expect(worked).toHaveAttribute("aria-expanded", "false");
+    await worked.click();
+
     const row = page.getByRole("button", { name: "Fetched default branch" });
     await expect(row).toBeVisible();
     await row.click();
@@ -403,6 +408,8 @@ test.describe("threads", () => {
     await expect(page.locator('[data-role="user"]')).toContainText("Rename hello to bye");
     await expect(page.getByText("All done.")).toBeVisible();
     await expect(page.locator('[data-role="worked"]')).toHaveText("Worked for 2m 4s");
+    await expect(page.getByText("Reading the file.")).toBeHidden();
+    await page.locator('[data-role="worked"]').click();
     await expect(page.getByText("Reading the file.")).toBeVisible();
 
     const readFirstRow = page.getByRole("button", { name: /Explored a\.txt/ });
@@ -434,6 +441,61 @@ test.describe("threads", () => {
 
     await expect(page.getByRole("textbox", { name: "Prompt" })).toBeEnabled();
     await expect(page.getByRole("button", { name: "Stop" })).toHaveCount(0);
+  });
+
+  test("caps live timeline rows to four while running and shows a collapsible floating plan", async ({
+    page,
+  }) => {
+    const tools = [
+      { id: "t1", name: "edit", target: "src/one.ts", status: "done", output: "ok" },
+      { id: "t2", name: "edit", target: "src/two.ts", status: "done", output: "ok" },
+      { id: "t3", name: "edit", target: "src/three.ts", status: "done", output: "ok" },
+      { id: "t4", name: "edit", target: "src/four.ts", status: "done", output: "ok" },
+      { id: "t5", name: "edit", target: "src/five.ts", status: "done", output: "ok" },
+      {
+        id: "td1",
+        name: "todo_write",
+        target: "1/2 done",
+        status: "done",
+        output: "Task list (1/2 done):\n[x] Patch files\n[~] Verify build",
+      },
+    ];
+    await page.route("**/api/threads/*/events", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "text/event-stream",
+        body: `retry: 600000\n\ndata: ${JSON.stringify({
+          type: "snapshot",
+          running: true,
+          messages: [
+            { id: "m-0", role: "user", parts: [{ type: "text", text: "Patch five files" }] },
+            {
+              id: "m-1",
+              role: "assistant",
+              parts: tools.map((tool) => ({ type: "tool", tool })),
+            },
+          ],
+        })}\n\n`,
+      }),
+    );
+
+    await registerUser(page, "thr", "Thread User");
+    await startThread(page, "Patch five files");
+    await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
+
+    const timeline = page.locator('[data-role="timeline"]');
+    await expect(timeline.locator("> div:not([aria-hidden='true'])")).toHaveCount(4);
+    await expect(timeline.getByText("Patched src/five.ts")).toBeVisible();
+
+    const plan = page.locator('[data-role="plan-card"]');
+    await expect(plan).toBeVisible();
+    await expect(plan.getByText("Patch files")).toBeVisible();
+    await expect(plan.getByText("Verify build")).toBeVisible();
+
+    await plan.getByRole("button").click();
+    await expect(plan.getByText("Patch files")).toBeHidden();
+    await expect(plan.getByRole("button")).toContainText("Verify build");
+    await expect(plan.getByRole("button")).toContainText("1/2");
   });
 
   test("a running thread shows it is working, and its composer offers Stop alone, even once there is something to say", async ({

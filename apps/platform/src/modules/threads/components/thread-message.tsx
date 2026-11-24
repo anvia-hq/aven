@@ -1,10 +1,10 @@
 import { parseDriverPrompt } from "@aven/protocol/drivers";
 import { shipRequestOf } from "@aven/protocol/ship-request";
 import { systemNoteOf } from "@aven/protocol/system-notes";
-import { latestPlanOf, proofOf } from "@aven/protocol/timeline";
+import { proofOf } from "@aven/protocol/timeline";
 import { IconChevronRight } from "@tabler/icons-react";
 import { cn } from "cn";
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@aven/ui/collapsible";
 import { Markdown } from "@/components/markdown";
@@ -28,7 +28,6 @@ import { ForkCard } from "./fork-card";
 import { AuthorLabel } from "./author-label";
 import { CompactionDivider } from "./compaction-divider";
 import { mentionCode } from "./mention-code";
-import { PlanCard } from "./plan-card";
 import { ProofStrip } from "./proof-strip";
 import { QuestionBlock } from "./question-block";
 import { SentAttachments } from "./sent-attachments";
@@ -39,12 +38,14 @@ import { BrowserOffer } from "./browser-offer";
 function AssistantBlock({
   block,
   live,
+  windowed = live,
   threadId,
   runtimeId,
   narrations,
 }: {
   block: Block;
   live: boolean;
+  windowed?: boolean;
   threadId: string;
   runtimeId: string;
   narrations?: Readonly<Record<string, ToolNarration>>;
@@ -78,7 +79,89 @@ function AssistantBlock({
     );
   }
 
-  return <ActivityTimeline entries={block.entries} narrations={narrations} live={live} />;
+  return (
+    <ActivityTimeline
+      entries={block.entries}
+      narrations={narrations}
+      live={live}
+      windowed={windowed}
+    />
+  );
+}
+
+function WorkedSteps({
+  steps,
+  workedMs,
+  seenLive,
+  threadId,
+  runtimeId,
+  narrations,
+}: {
+  steps: Block[];
+  workedMs?: number;
+  seenLive: boolean;
+  threadId: string;
+  runtimeId: string;
+  narrations?: Readonly<Record<string, ToolNarration>>;
+}) {
+  const [open, setOpen] = useState(seenLive);
+  const [autoClosing, setAutoClosing] = useState(seenLive);
+
+  useEffect(() => {
+    if (!autoClosing) return;
+
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => {
+        setOpen(false);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
+  }, [autoClosing]);
+
+  return (
+    <Collapsible
+      className="min-w-0 text-sm"
+      open={open}
+      onOpenChange={(next) => {
+        setAutoClosing(false);
+        setOpen(next);
+      }}
+    >
+      <div className={cn(seenLive && "worked-in")}>
+        <CollapsibleTrigger
+          className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
+          data-role="worked"
+        >
+          <IconChevronRight
+            aria-hidden
+            className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
+          />
+          <span className="font-medium">
+            {workedMs === undefined ? "Activity" : `Worked for ${elapsed(workedMs)}`}
+          </span>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
+        <div className="flex min-w-0 flex-col gap-2 pt-1.5">
+          {steps.map((block, index) => (
+            <AssistantBlock
+              key={index}
+              block={block}
+              live={false}
+              windowed={autoClosing}
+              threadId={threadId}
+              runtimeId={runtimeId}
+              narrations={narrations}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 export const ThreadMessage = memo(function ThreadMessage({
@@ -208,7 +291,6 @@ function AssistantMessage({
 
   const shown = useMemo(() => messageBlocks(parts), [parts]);
   const folded = useMemo(() => (live ? undefined : foldedSteps(shown)), [live, shown]);
-  const plan = useMemo(() => latestPlanOf(parts), [parts]);
   const proof = useMemo(() => proofOf(parts), [parts]);
 
   if (parts.length === 0) return null;
@@ -216,39 +298,14 @@ function AssistantMessage({
   if (folded) {
     return (
       <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
-        {plan && <PlanCard tasks={plan} live={false} />}
-        <Collapsible className="min-w-0 text-sm" defaultOpen>
-          <div className={cn(seenLive && "worked-in")}>
-            <CollapsibleTrigger
-              className="group flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground motion-reduce:transition-none"
-              data-role="worked"
-            >
-              <IconChevronRight
-                aria-hidden
-                className="size-3.5 transition-transform group-data-[panel-open]:rotate-90"
-              />
-              <span className="font-medium">
-                {message.workedMs === undefined
-                  ? "Activity"
-                  : `Worked for ${elapsed(message.workedMs)}`}
-              </span>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent className="h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 ease-out data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none">
-            <div className="flex min-w-0 flex-col gap-2 pt-1.5">
-              {folded.steps.map((block, index) => (
-                <AssistantBlock
-                  key={index}
-                  block={block}
-                  live={false}
-                  threadId={threadId}
-                  runtimeId={runtimeId}
-                  narrations={narrations}
-                />
-              ))}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        <WorkedSteps
+          steps={folded.steps}
+          workedMs={message.workedMs}
+          seenLive={seenLive}
+          threadId={threadId}
+          runtimeId={runtimeId}
+          narrations={narrations}
+        />
         {folded.kept.map((block, index) => (
           <AssistantBlock
             key={index}
@@ -278,12 +335,12 @@ function AssistantMessage({
 
   return (
     <div className="flex min-w-0 flex-col gap-2.5" data-role="assistant">
-      {plan && <PlanCard tasks={plan} live={live} />}
       {shown.map((block, index, all) => (
         <AssistantBlock
           key={index}
           block={block}
           live={live && index === all.length - 1}
+          windowed={live}
           threadId={threadId}
           runtimeId={runtimeId}
           narrations={narrations}
