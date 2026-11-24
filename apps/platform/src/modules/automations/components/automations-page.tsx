@@ -18,7 +18,7 @@ import { Switch } from "@aven/ui/switch";
 import { timeAgo } from "@/lib/format";
 
 import { useAutomations } from "../hooks/use-automations";
-import type { Automation, AutomationRun } from "../types";
+import type { Automation, AutomationFilter, AutomationRun } from "../types";
 import { AutomationDialog } from "./automation-dialog";
 import { AutomationRunsList } from "./automation-runs-list";
 
@@ -150,8 +150,25 @@ function AutomationRow({ automation }: { automation: Automation }) {
   );
 }
 
-export function AutomationsPage() {
+export function AutomationsPage({
+  filter = "all",
+  selectedId,
+}: {
+  filter?: AutomationFilter;
+  selectedId?: string;
+}) {
   const { automations, loaded } = useAutomations();
+  const visible = automations.filter((automation) => {
+    if (selectedId) return automation.id === selectedId;
+
+    if (filter === "schedule") return automation.triggerKind === "schedule";
+
+    if (filter === "webhook") return automation.triggerKind === "webhook";
+
+    if (filter === "paused") return !automation.enabled;
+
+    return true;
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 md:px-8">
@@ -173,9 +190,14 @@ export function AutomationsPage() {
           <AutomationDialog />
         </div>
       )}
-      {loaded && automations.length > 0 && (
+      {loaded && automations.length > 0 && visible.length === 0 && (
+        <p className="rounded-xl border border-dashed border-border/80 px-6 py-10 text-center text-sm text-muted-foreground">
+          No matching automations.
+        </p>
+      )}
+      {loaded && visible.length > 0 && (
         <ul aria-label="Automations" className="flex flex-col gap-3">
-          {automations.map((automation) => (
+          {visible.map((automation) => (
             <AutomationRow key={automation.id} automation={automation} />
           ))}
         </ul>

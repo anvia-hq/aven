@@ -1,6 +1,7 @@
 import { useRouterState } from "@tanstack/react-router";
 import { useLayoutEffect } from "react";
 
+import { AutomationsSidebar } from "@/modules/automations/components/automations-sidebar";
 import { BotSidebar } from "@/modules/bots/components/bot-sidebar";
 import { CockpitSidebar } from "@/modules/cockpit/components/cockpit-sidebar";
 import { GitShellSidebar } from "@/modules/git-center/components/git-shell-sidebar";
@@ -9,9 +10,11 @@ import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 
 import { SidebarTabs } from "./sidebar-tabs";
 
-type Section = "threads" | "settings" | "bot" | "cockpit" | "git";
+type Section = "threads" | "automations" | "settings" | "bot" | "cockpit" | "git";
 
 function sectionOf(pathname: string): Section {
+  if (pathname.startsWith("/automations")) return "automations";
+
   if (pathname.startsWith("/settings")) return "settings";
 
   if (pathname.startsWith("/bot")) return "bot";
@@ -32,6 +35,8 @@ export function ShellSidebar() {
 
     if (content) content.scrollTop = 0;
   }, [section]);
+
+  if (section === "automations") return <AutomationsSidebar />;
 
   if (section === "settings") return <SettingsSidebar />;
 
