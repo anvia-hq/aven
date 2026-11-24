@@ -23,6 +23,7 @@ describe("the Claude process environment", () => {
     );
     expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBe(TOKEN);
     expect(env.CLAUDE_CONFIG_DIR).toBe("/runner/claude/thread-1");
+    expect(env.MCP_TOOL_TIMEOUT).toBe("86400000");
     expect(env.PATH).toBe("/project/bin");
     expect(env.HOME).toBe("/home/runner");
     expect(JSON.stringify(env)).not.toContain("sk-ant-machine-key");

@@ -130,6 +130,7 @@ export type HostedTurnLike = {
   queueArtifacts(artifacts: ToolArtifact[]): void;
   openQuestion(name: string): string | undefined;
   ensureQuestion(id: string, name: string, questions: QuestionPrompt[]): RunEvent | undefined;
+  recordToolResult(id: string, name: string, rawOutput: string, failed?: boolean): RunEvent[];
   release(prompt: string): Message[];
   messages(prompt: string): Message[];
 };
@@ -166,6 +167,7 @@ export type HostedOpenOptions<TLive> = {
   signal?: AbortSignal;
   onLive?: (live: TLive) => void;
   maxTurns?: number;
+  answeredQuestion?: { id: string; name: string; output: string };
 };
 
 export type BackendSessionPrefix = "claude" | "codex";

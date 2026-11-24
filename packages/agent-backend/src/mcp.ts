@@ -312,6 +312,10 @@ export async function backendMcpTools(
     const combinedImages = steered?.images.length ? [...images, ...steered.images] : images;
     return textResult(steered ? `${text}\n\n${steered.text}` : text, isError, combinedImages);
   };
+  const plain = (invoke: (args: unknown) => Promise<AvenToolResult>) => async (args: unknown) => {
+    const { text, isError, images = [] } = await invoke(args);
+    return textResult(text, isError, images);
+  };
   const tools: BackendMcpTool[] = [];
 
   if (host.questions !== false) {
@@ -320,14 +324,14 @@ export async function backendMcpTools(
       description:
         "Ask the person one or more questions and wait. The run pauses, the question appears as a card, and their answer comes back as this tool's result. Use it only when you cannot go on without their decision.",
       shape: questionShape,
-      handler: wrap((args) => callAvenToolResult(QUESTION_TOOL_NAME, args, host)),
+      handler: plain((args) => callAvenToolResult(QUESTION_TOOL_NAME, args, host)),
     });
     tools.push({
       name: SECRET_TOOL_NAME,
       description:
         "Ask the person for a secret (an API key, a token, a password). The run pauses on a private form. You never see the value: the result says which environment variable now holds it. Each question id is that variable's name, in UPPER_SNAKE_CASE.",
       shape: questionShape,
-      handler: wrap((args) => callAvenToolResult(SECRET_TOOL_NAME, args, host)),
+      handler: plain((args) => callAvenToolResult(SECRET_TOOL_NAME, args, host)),
     });
   }
 

@@ -168,6 +168,10 @@ export abstract class HostedAgentBackend<
       onEvent,
       durableId: `${this.kind}-${asked.runId}-answer`,
       sessionId: stored.sessionId || undefined,
+      answeredQuestion:
+        response.type === "tool-question"
+          ? { id: stored.toolCallId, name: stored.toolName, output: text }
+          : undefined,
     });
   }
 
@@ -312,13 +316,19 @@ export abstract class HostedAgentBackend<
         steers: [],
         gate: gate(),
         onEvent: options.onEvent,
-        promptPending: true,
+        promptPending: !options.answeredQuestion,
         prompt: options.prompt.trim() || "Continue.",
         images: options.images ?? [],
         cwd,
       },
       context,
     );
+
+    if (options.answeredQuestion) {
+      const { id, name, output } = options.answeredQuestion;
+      for (const event of live.turn.recordToolResult(id, name, output)) live.onEvent(event);
+    }
+
     this.byDurable.set(durableId, live);
     this.byThread.set(options.threadId, live);
     options.onLive?.(live);
@@ -522,6 +532,7 @@ export abstract class HostedAgentBackend<
     });
     const messages = live.turn.release(live.promptPending ? live.prompt : "");
     live.promptPending = false;
+    live.onEvent = () => undefined;
     const finished = live.gate;
     live.gate = gate();
     finished.resolve({

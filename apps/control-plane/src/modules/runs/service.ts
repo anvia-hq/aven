@@ -657,7 +657,9 @@ export class RunManager {
       if (outcome.type === "interaction") {
         await this.#suspend(channel.thread, outcome.continuation);
         asked = true;
-      } else if (outcome.type !== "response") {
+      } else if (outcome.type === "response") {
+        await this.#continuations.clear(channel.thread.id);
+      } else {
         failure = `Run ended without a response (${outcome.type})`;
       }
     } catch (error) {
