@@ -16,3 +16,9 @@ export type Skill = {
 };
 
 export type SkillUploadFile = { path: string; data: string };
+
+export type SkillChoice = { name: string; folder: string };
+
+export type SkillInstall =
+  | { status: "installed"; skill: Skill }
+  | { status: "choose"; choices: SkillChoice[] };

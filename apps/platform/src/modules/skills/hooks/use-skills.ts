@@ -9,7 +9,7 @@ import { fileSize } from "@/lib/format";
 import { createListStore } from "@/lib/list-store";
 
 import { builtinSkillsAtom, skillsAtom } from "../atoms/skills-atom";
-import type { BuiltinSkill, Skill, SkillUploadFile } from "../types";
+import type { BuiltinSkill, Skill, SkillInstall, SkillUploadFile } from "../types";
 
 class UploadRefused extends Error {}
 
@@ -128,6 +128,24 @@ export function useSkills() {
     return true;
   }
 
+  async function install(source: string, folder?: string) {
+    const body: { source: string; folder?: string } = { source };
+
+    if (folder !== undefined) body.folder = folder;
+
+    const installed = await attempt("Could not install skill", () =>
+      postJson<SkillInstall>("/skills/install", body),
+    );
+
+    if (!installed) return null;
+
+    if (installed.status === "choose") return installed;
+
+    await refresh();
+    toast.add({ title: "Skill installed", description: installed.skill.name, type: "success" });
+    return installed;
+  }
+
   function setEnabled(skill: Skill, enabled: boolean) {
     return change("Could not update skill", () =>
       postJson<Skill>(`/skills/${skill.id}`, { enabled }, "PATCH"),
@@ -147,6 +165,7 @@ export function useSkills() {
     personal: skills ?? [],
     loaded: skills !== null && builtIn !== null,
     upload,
+    install,
     setEnabled,
     remove,
   };

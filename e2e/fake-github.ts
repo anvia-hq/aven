@@ -41,6 +41,21 @@ function searchTitles(pulls: boolean, open: boolean) {
   return open ? ["Open issue two", "Open issue one"] : ["Closed issue"];
 }
 
+const skillMd = (name: string, description: string) =>
+  `---\nname: ${name}\ndescription: ${description}\n---\n\n# ${name}\n\nUse this when the task is about ${name}.\n`;
+
+const skillBlobs = [
+  {
+    path: "design-review/SKILL.md",
+    content: skillMd("design-review", "Reviews a design against the checklist"),
+  },
+  {
+    path: "design-review/references/checklist.md",
+    content: "# Checklist\n\n- Contrast\n- Spacing\n",
+  },
+  { path: "release/SKILL.md", content: skillMd("release", "Cuts a release of the project") },
+].map((blob, index) => ({ ...blob, mode: "100644", type: "blob", sha: `skill${index}` }));
+
 const changedFiles = [
   {
     filename: "src/login.ts",
@@ -109,6 +124,27 @@ Bun.serve({
     }
 
     if (pathname === "/health") return new Response("ok");
+
+    const tree = pathname.match(/^\/repos\/acme\/([\w.-]+)\/git\/trees\/[^/]+$/);
+
+    if (tree) {
+      if (tree[1] !== "agent-skills") return new Response("not found", { status: 404 });
+
+      return Response.json({ tree: skillBlobs, truncated: false });
+    }
+
+    const blob = pathname.match(/^\/repos\/acme\/([\w.-]+)\/git\/blobs\/([\w.-]+)$/);
+
+    if (blob) {
+      const skill = skillBlobs.find((entry) => entry.sha === blob[2]);
+
+      if (blob[1] !== "agent-skills" || !skill) return new Response("not found", { status: 404 });
+
+      return Response.json({
+        content: Buffer.from(skill.content).toString("base64"),
+        encoding: "base64",
+      });
+    }
 
     if (pathname === "/login/oauth/authorize") {
       const state = new URL(request.url).searchParams.get("state") ?? "";

@@ -1,17 +1,105 @@
-import { IconArchive, IconFolder, IconTrash } from "@tabler/icons-react";
+import { IconArchive, IconCheck, IconDownload, IconFolder, IconTrash } from "@tabler/icons-react";
 import { useRef, useState, type DragEvent } from "react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
+import { Form } from "@aven/ui/form";
 import { Input } from "@aven/ui/input";
 import { SettingsSection } from "@aven/ui/settings-section";
 import { Switch } from "@aven/ui/switch";
 import { fileSize } from "@/lib/format";
 
 import { useSkills } from "../hooks/use-skills";
-import type { Skill } from "../types";
+import type { Skill, SkillChoice } from "../types";
 
 const folderPicker = { webkitdirectory: "" } as Record<string, string>;
+
+function InstallSkill() {
+  const { install } = useSkills();
+  const [source, setSource] = useState("");
+  const [choices, setChoices] = useState<SkillChoice[]>([]);
+  const [installed, setInstalled] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  async function find() {
+    if (busy || source.trim().length === 0) return;
+
+    setBusy(true);
+    setInstalled([]);
+    try {
+      const found = await install(source);
+      setChoices(found?.status === "choose" ? found.choices : []);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pick(choice: SkillChoice) {
+    if (busy) return;
+
+    setBusy(true);
+    try {
+      const added = await install(source, choice.folder);
+
+      if (added?.status === "installed") setInstalled((folders) => [...folders, choice.folder]);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2 border-t pt-3">
+      <Form
+        className="flex w-full max-w-xl gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void find();
+        }}
+      >
+        <Input
+          aria-label="A skill to install"
+          placeholder="vercel-labs/agent-skills@web-design-guidelines"
+          value={source}
+          onChange={(event) => {
+            setSource(event.target.value);
+            setChoices([]);
+            setInstalled([]);
+          }}
+        />
+        <Button
+          type="submit"
+          size="sm"
+          variant="outline"
+          disabled={busy || source.trim().length === 0}
+        >
+          <IconDownload />
+          Install
+        </Button>
+      </Form>
+      {choices.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs text-muted-foreground">
+            That repository has {choices.length} skills. Install the ones you want:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {choices.map((choice) => (
+              <Button
+                key={choice.folder}
+                size="sm"
+                variant="outline"
+                disabled={busy || installed.includes(choice.folder)}
+                onClick={() => void pick(choice)}
+              >
+                {installed.includes(choice.folder) ? <IconCheck /> : null}
+                {choice.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function UploadSkill() {
   const { upload } = useSkills();
@@ -58,8 +146,9 @@ function UploadSkill() {
       <p className="text-xs text-muted-foreground">
         A skill is a folder with a <code className="font-mono">SKILL.md</code>, and optionally{" "}
         <code className="font-mono">references/</code> and{" "}
-        <code className="font-mono">scripts/</code>. Upload the folder, or drop a .zip of it here.
-        Uploading a skill with the same name replaces it.
+        <code className="font-mono">scripts/</code>. Upload the folder, or drop a .zip of it here,
+        or install one from a link to GitHub or skills.sh. A skill with the same name replaces one
+        you have.
       </p>
       <div className="flex gap-2">
         <Input
@@ -91,6 +180,7 @@ function UploadSkill() {
           Upload .zip
         </Button>
       </div>
+      <InstallSkill />
     </div>
   );
 }

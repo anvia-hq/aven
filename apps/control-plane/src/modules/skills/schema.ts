@@ -17,4 +17,11 @@ export const uploadSkillBody = z.object({
 
 export const updateSkillBody = z.object({ enabled: z.boolean() });
 
+export const installSkillBody = z.object({
+  source: z.string().trim().min(1).max(500),
+  folder: z.string().max(300).optional(),
+});
+
+export type InstallSkillBody = z.infer<typeof installSkillBody>;
+
 export type UploadSkillBody = z.infer<typeof uploadSkillBody>;
