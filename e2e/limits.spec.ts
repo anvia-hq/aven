@@ -42,7 +42,6 @@ test.describe("the Limits card", () => {
     );
     runner = child;
     await runOnce(page, threadId);
-    await page.getByRole("button", { name: /Model & usage/ }).click();
 
     const limits = page.getByRole("region", { name: "Limits" });
     await expect(limits).toContainText("5-hour");
@@ -75,7 +74,6 @@ test.describe("the Limits card", () => {
     await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByText("Done.")).toBeVisible();
-    await page.getByRole("button", { name: /Model & usage/ }).click();
     await expect(page.getByRole("region", { name: "Context" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Limits" })).toHaveCount(0);
   });
