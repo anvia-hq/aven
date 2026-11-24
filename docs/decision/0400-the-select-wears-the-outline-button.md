@@ -4,7 +4,7 @@ Status: accepted. Decided 2026-11-24. Records the select's own look, which had n
 
 ## Context
 
-The vendored shadcn trigger was a 36 px bordered field with a `size` prop, and a menu that
+The vendored shadcn trigger was a 32 px bordered field (28 px with `size="sm"`), and a menu that
 centred itself on the chosen row, zoomed in from 95% and took its width from the trigger. On
 a short list the menu landed under the cursor; on a long one it opened at an offset that did
 not line up with the field that opened it. Call sites patched around it: six of eighteen
@@ -12,10 +12,10 @@ triggers passed `size="sm"`, seven re-declared `w-auto min-w-(--anchor-width)`, 
 `alignItemWithTrigger={false}`, and three stripped the border and the background to blend
 into a toolbar, the header or a pill.
 
-The first rework made the trigger a filled field with no border at all: 32 px tall,
-`bg-foreground/10`. In a settings row it became the only control without an edge, so it read
-as a tinted chip rather than something you could open, and in the dark palettes the 10%
-foreground over the page is barely a shade. The person put it next to the `Change photo`
+An earlier revision of this change made the trigger a filled field with no border at all:
+32 px tall, `bg-foreground/10`. In a settings row it became the only control without an edge,
+so it read as a tinted chip rather than something you could open, and in the dark palettes the
+10% foreground over the page is barely a shade. The person put it next to the `Change photo`
 button, which is a `Button variant="outline" size="sm"`, and asked for the select to look like
 that. Its colours were left to us.
 
@@ -49,8 +49,9 @@ that. Its colours were left to us.
 ## Consequences
 
 - One trigger height everywhere, the same 28 px as `Button size="sm"`, so a select and a
-  button sit level in a row and in a dialog footer. It is 4 px shorter than the 32 px field
-  it replaces, and the 36 px shadcn trigger before that.
+  button sit level in a row and in a dialog footer. That is 4 px shorter than the 32 px
+  default field it replaces, and the same as the six call sites that already asked for
+  `size="sm"`.
 - A select in a table cell or a dialog reads as an outlined control instead of a tinted one;
   where an outline button would be wrong (inside the task drawer's text lines, the header's
   chip, the pill), the call site says so with `border-0` or `border-transparent`.
