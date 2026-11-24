@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,9 +10,9 @@ import type { Git } from "../types";
 
 const folders: string[] = [];
 
-afterEach(async () => {
-  await Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true })));
-});
+afterAll(() =>
+  Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true, force: true }))),
+);
 
 const scratch = async () => {
   const folder = await mkdtemp(join(tmpdir(), "aven-repository-"));
