@@ -14,23 +14,24 @@ export function flatten(
 
   files.forEach((file, index) => {
     const open = opened[file.path] ?? startsOpen(file);
-    items.push({ kind: "file", file, open, first: index === 0 });
+    items.push({ kind: "file", key: `${file.path}:file`, file, open, first: index === 0 });
 
     if (!open) return;
 
     if (file.hunks.length === 0) {
-      items.push({ kind: "note", file });
+      items.push({ kind: "note", key: `${file.path}:note`, file });
       return;
     }
 
     file.hunks.forEach((hunk, at) => {
-      items.push({ kind: "hunk", file, header: hunk.header });
+      items.push({ kind: "hunk", key: `${file.path}:h:${at}`, file, header: hunk.header });
       const lastHunk = at === file.hunks.length - 1;
 
       if (layout === "unified") {
         hunk.rows.forEach((row, place) =>
           items.push({
             kind: "unified",
+            key: `${file.path}:u:${at}:${place}`,
             file,
             row,
             last: lastHunk && place === hunk.rows.length - 1,
@@ -41,7 +42,13 @@ export function flatten(
 
       const pairs = splitRows(hunk.rows);
       pairs.forEach((pair, place) =>
-        items.push({ kind: "split", file, pair, last: lastHunk && place === pairs.length - 1 }),
+        items.push({
+          kind: "split",
+          key: `${file.path}:s:${at}:${place}`,
+          file,
+          pair,
+          last: lastHunk && place === pairs.length - 1,
+        }),
       );
     });
   });
