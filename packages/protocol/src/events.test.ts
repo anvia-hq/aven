@@ -365,6 +365,17 @@ describe("answerableQuestion", () => {
     expect(pendingQuestion(ended)?.name).toBe("ask_user");
     expect(answerableQuestion(ended, false, false)?.name).toBe("ask_user");
   });
+
+  test("finds a running question even when trailing text follows it in the same assistant turn", () => {
+    const withTrailingText: ChatMessage[] = [
+      {
+        ...asking[0]!,
+        parts: [...asking[0]!.parts, { type: "text", text: "Let me know which you prefer." }],
+      },
+    ];
+    expect(pendingQuestion(withTrailingText)?.id).toBe("q1");
+    expect(answerableQuestion(withTrailingText, false, false)?.id).toBe("q1");
+  });
 });
 
 describe("usage and plan limits", () => {

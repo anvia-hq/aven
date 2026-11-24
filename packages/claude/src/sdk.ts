@@ -29,6 +29,8 @@ export const CLAUDE_DISALLOWED_TOOLS = [
 
 const BLOCKED_ENV_PREFIXES = ["ANTHROPIC_", "CLAUDE_"];
 
+export const CLAUDE_MCP_TOOL_TIMEOUT_MS = "86400000";
+
 export function claudeProcessEnv(
   project: readonly RunEnvVar[],
   token: string,
@@ -44,6 +46,7 @@ export function claudeProcessEnv(
       CLAUDE_CODE_OAUTH_TOKEN: token,
       CLAUDE_CONFIG_DIR: configDir,
       CLAUDE_AGENT_SDK_CLIENT_APP: "aven",
+      MCP_TOOL_TIMEOUT: CLAUDE_MCP_TOOL_TIMEOUT_MS,
       ...extra,
     },
   });

@@ -130,8 +130,7 @@ export function continuationOf(
 export function answered(response: AgentInteractionResponse) {
   if (response.type !== "tool-question") return "The person did not answer.";
 
-  const lines = response.answers.map((answer) => `${answer.questionId}: ${answer.value}`);
-  return `The person answered:\n${lines.join("\n")}`;
+  return JSON.stringify({ answers: response.answers });
 }
 
 export function assistantText(messages: readonly Message[]) {

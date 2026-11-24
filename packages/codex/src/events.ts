@@ -123,6 +123,10 @@ export class CodexTurn {
     return this.#turn.ensureQuestion(id, name, questions);
   }
 
+  recordToolResult(id: string, name: string, rawOutput: string, failed = false): RunEvent[] {
+    return this.#turn.recordToolResult(id, name, rawOutput, failed);
+  }
+
   release(prompt: string): Message[] {
     return this.#turn.release(prompt);
   }

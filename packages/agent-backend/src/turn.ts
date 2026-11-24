@@ -1,12 +1,11 @@
-import type { Message, ToolCallPart } from "@anvia/core";
-import { projectToolCall, toolTarget } from "@aven/agents/tool-projection";
+import type { Message, ToolCallPart, ToolResultOutput } from "@anvia/core";
+import { projectToolCall, projectToolOutput, toolTarget } from "@aven/agents/tool-projection";
 import { isPlainObject } from "@aven/agents/values";
 import {
   addUsage,
   QUESTION_TOOL_NAME,
   SECRET_TOOL_NAME,
   SHOW_ARTIFACT_TOOL_NAME,
-  SPAWN_AGENT_TOOL_NAME,
 } from "@aven/protocol/events";
 import type {
   ContextUsage,
@@ -17,11 +16,14 @@ import type {
   ToolPart,
 } from "@aven/protocol/types";
 
+import { STEER_NOTE } from "./hosted-helpers";
 import type { TurnRecorderOptions } from "./types";
 
 const MAX_OUTPUT = 8_000;
 
 type Part = Record<string, unknown>;
+
+type JsonValue = Extract<ToolResultOutput, { type: "json" }>["value"];
 
 type Generation = { usage: TokenUsage; context?: ContextUsage };
 
@@ -72,7 +74,7 @@ function redactJson(
   value: unknown,
   redact: (text: string) => string,
   seen = new WeakSet<object>(),
-): unknown {
+): JsonValue {
   if (typeof value === "string") return redact(value);
 
   if (value === null || typeof value === "number" || typeof value === "boolean") return value;
@@ -88,7 +90,7 @@ function redactJson(
   if (Array.isArray(value)) return value.map((item) => redactJson(item, redact, seen));
 
   try {
-    const out: Record<string, unknown> = {};
+    const out: Record<string, JsonValue> = {};
     for (const [key, item] of Object.entries(value)) {
       out[key] = redactJson(item, redact, seen);
     }
@@ -98,9 +100,16 @@ function redactJson(
   }
 }
 
-function parseStructuredJson(raw: string, redact: (text: string) => string): unknown | undefined {
+const STEER_SEPARATOR = `\n\n${STEER_NOTE}`;
+
+function withoutSteerTrailer(raw: string) {
+  const index = raw.indexOf(STEER_SEPARATOR);
+  return index === -1 ? raw : raw.slice(0, index);
+}
+
+function parseStructuredJson(raw: string, redact: (text: string) => string): JsonValue | undefined {
   try {
-    const parsed: unknown = JSON.parse(raw);
+    const parsed: unknown = JSON.parse(withoutSteerTrailer(raw));
 
     if (!isPlainObject(parsed)) return undefined;
 
@@ -108,24 +117,6 @@ function parseStructuredJson(raw: string, redact: (text: string) => string): unk
   } catch {
     return undefined;
   }
-}
-
-function artifactsFromStructured(value: unknown): ToolArtifact[] | undefined {
-  if (!isPlainObject(value) || !Array.isArray(value.artifacts)) return undefined;
-
-  const kept: ToolArtifact[] = [];
-  for (const entry of value.artifacts) {
-    if (!isPlainObject(entry)) continue;
-
-    if (typeof entry.name !== "string" || typeof entry.mediaType !== "string") continue;
-
-    const artifact: ToolArtifact = { name: entry.name, mediaType: entry.mediaType };
-
-    if (typeof entry.caption === "string") artifact.caption = entry.caption;
-
-    kept.push(artifact);
-  }
-  return kept.length > 0 ? kept : undefined;
 }
 
 export class TurnRecorder {
@@ -235,28 +226,36 @@ export class TurnRecorder {
     return this.beginTool(id, name, input, target);
   }
 
+  recordToolResult(id: string, name: string, rawOutput: string, failed = false): RunEvent[] {
+    if (!this.#names.has(id)) this.#names.set(id, name);
+
+    return this.finishTool(id, rawOutput, failed);
+  }
+
   finishTool(id: string, rawOutput: string, failed: boolean): RunEvent[] {
-    const output = clip(this.#redact(rawOutput));
     const aliased = this.#alias.get(id) ?? id;
     this.#open.delete(aliased);
     const name = this.#names.get(aliased) ?? this.#names.get(id);
-    const structured =
-      !failed && (name === SHOW_ARTIFACT_TOOL_NAME || name === SPAWN_AGENT_TOOL_NAME)
-        ? parseStructuredJson(rawOutput, this.#redact)
-        : undefined;
-    this.#pushTool(aliased, output, failed, structured);
+    const structured = failed ? undefined : parseStructuredJson(rawOutput, this.#redact);
+    const redacted = clip(this.#redact(rawOutput));
+    let toolOutput: ToolResultOutput;
+
+    if (failed) toolOutput = { type: "error-text", value: redacted };
+    else if (structured !== undefined) toolOutput = { type: "json", value: structured };
+    else toolOutput = { type: "text", value: redacted };
+
+    this.#pushTool(aliased, toolOutput);
+    const projected = projectToolOutput(toolOutput, name);
     const event: Extract<RunEvent, { type: "tool_end" }> = {
       type: "tool_end",
       id: aliased,
-      status: failed ? "error" : "done",
-      output,
+      ...projected,
     };
 
     if (name === SHOW_ARTIFACT_TOOL_NAME) {
       const queued = this.#shown.shift();
-      const artifacts = queued?.length ? queued : artifactsFromStructured(structured);
 
-      if (artifacts?.length) event.artifacts = artifacts;
+      if (queued?.length) event.artifacts = queued;
     }
 
     return [event];
@@ -376,17 +375,8 @@ export class TurnRecorder {
     });
   }
 
-  #pushTool(id: string, output: string, failed: boolean, structured?: unknown) {
+  #pushTool(id: string, resultOutput: ToolResultOutput) {
     this.#flushAssistant();
-    let resultOutput:
-      | { type: "error-text"; value: string }
-      | { type: "text"; value: string }
-      | { type: "json"; value: unknown };
-
-    if (failed) resultOutput = { type: "error-text", value: output };
-    else if (structured !== undefined) resultOutput = { type: "json", value: structured };
-    else resultOutput = { type: "text", value: output };
-
     this.#tools.push({
       type: "tool-result",
       toolCallId: id,

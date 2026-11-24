@@ -88,13 +88,22 @@ export const mentionToken = ({ type, name }: Pick<MessageMention, "type" | "name
   `${type === "file" ? "@" : "/"}${name}`;
 
 export function pendingQuestion(messages: readonly ChatMessage[]): ToolPart | undefined {
-  const part = messages.at(-1)?.parts.at(-1);
+  const last = messages.at(-1);
 
-  if (part?.type !== "tool") return undefined;
+  if (!last || last.role !== "assistant") return undefined;
 
-  const { tool } = part;
-  const asks = tool.name === QUESTION_TOOL_NAME || tool.name === SECRET_TOOL_NAME;
-  return asks && tool.questions && tool.status === "running" ? tool : undefined;
+  for (let index = last.parts.length - 1; index >= 0; index -= 1) {
+    const part = last.parts[index];
+
+    if (part?.type !== "tool") continue;
+
+    const { tool } = part;
+    const asks = tool.name === QUESTION_TOOL_NAME || tool.name === SECRET_TOOL_NAME;
+
+    if (asks && tool.questions && tool.status === "running") return tool;
+  }
+
+  return undefined;
 }
 
 export function answerableQuestion(
