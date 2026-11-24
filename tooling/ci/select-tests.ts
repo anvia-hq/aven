@@ -94,7 +94,7 @@ const MODULE_E2E_MAP: Record<string, readonly string[]> = {
   "server-models": ["e2e/providers.spec.ts"],
   settings: ["e2e/workspace.spec.ts", "e2e/profile.spec.ts", "e2e/cloud-settings.spec.ts"],
   ship: ["e2e/ship.spec.ts"],
-  skills: ["e2e/threads.spec.ts"],
+  skills: ["e2e/skills.spec.ts"],
   terminal: ["e2e/terminal.spec.ts"],
   theme: ["e2e/themes.spec.ts"],
   "thread-events": ["e2e/threads.spec.ts", "e2e/thread-running.spec.ts"],
