@@ -58,7 +58,7 @@ function InstallSkill() {
       >
         <Input
           aria-label="A skill to install"
-          placeholder="vercel-labs/agent-skills@web-design-guidelines"
+          placeholder="owner/repo@skill-name"
           value={source}
           onChange={(event) => {
             setSource(event.target.value);
