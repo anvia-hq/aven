@@ -41,6 +41,15 @@ describe("botInstructions on how a bot speaks", () => {
     expect(text).toContain("an answer written as plain text is an answer that was never sent");
     expect(text).toContain("Before you stop, check that what you meant to say was sent");
   });
+
+  test("tells bots to split multi-thought replies into separate short chat bubbles", () => {
+    const text = botInstructions({ ...pip, instruction: "" });
+
+    expect(text).toContain("Each send_message call to the person renders as one chat bubble");
+    expect(text).toContain("Never pack multiple paragraphs, headings, or a wall of text");
+    expect(text).toContain("split it across multiple send_message calls");
+    expect(text).toContain("do not cram thoughts into one bubble to avoid pauses");
+  });
 });
 
 describe("botInstructions with the person's work", () => {

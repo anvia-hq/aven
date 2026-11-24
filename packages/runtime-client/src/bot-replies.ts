@@ -117,7 +117,7 @@ const sleep = (ms: number, signal?: AbortSignal) =>
   });
 
 const UNSENT_NOTE =
-  "You answered without sending anything: the person sees only what you send with send_message, and nothing of what you wrote outside it. Send your answer now with send_message, the way you would text it, and do not repeat what you did.";
+  "You answered without sending anything: the person sees only what you send with send_message, and nothing of what you wrote outside it. Send your answer now with send_message, split into short bubbles (one thought per call, never one long block), and do not repeat what you did.";
 
 type Reply = { botId: string; abort: AbortController; spoke: boolean; machine?: string };
 
