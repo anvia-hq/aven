@@ -291,6 +291,8 @@ describe("applyEvent with a steering message", () => {
       { type: "steer_queued", id: "s1", prompt: "wait" },
       { type: "steer_applied", id: "s1" },
       { type: "steer_rejected", id: "s1", reason: "no" },
+      { type: "sandbox_status", phase: "preparing" },
+      { type: "sandbox_status", phase: "ready" },
     ] satisfies RunEvent[]) {
       expect(applyEvent(base, event)).toBe(base);
     }

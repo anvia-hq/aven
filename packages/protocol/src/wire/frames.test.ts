@@ -15,6 +15,21 @@ describe("run events from a runtime", () => {
     expect(fits).toBe(true);
     expect(ALLOWED_RUN_EVENT_TYPES).toContain("text");
     expect(ALLOWED_RUN_EVENT_TYPES).toContain("limits");
+    expect(ALLOWED_RUN_EVENT_TYPES).toContain("sandbox_status");
+  });
+
+  test("sandbox_status events accept preparing and ready phases and refuse unknown phases", () => {
+    for (const phase of ["preparing", "ready"] as const) {
+      const event = { type: "sandbox_status", phase } as const;
+      expect(parseRuntimeFrame(eventFrame(event))).toEqual({
+        type: "run.event",
+        runId: "r1",
+        seq: 1,
+        event,
+      });
+    }
+    expect(parseRuntimeFrame(eventFrame({ type: "sandbox_status", phase: "booting" }))).toBeNull();
+    expect(parseRuntimeFrame(eventFrame({ type: "sandbox_status" }))).toBeNull();
   });
 
   test("a usage event is accepted, with or without the context", () => {
