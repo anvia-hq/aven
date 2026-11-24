@@ -55,6 +55,8 @@ describe("catalogVendorOf", () => {
     expect(catalogVendorOf("https://api.deepseek.com/v1")).toBe("deepseek");
     expect(catalogVendorOf("https://api.mistral.ai/v1")).toBe("mistral");
     expect(catalogVendorOf("https://api.x.ai/v1")).toBe("xai");
+    expect(catalogVendorOf("https://api.moonshot.ai/v1")).toBe("moonshotai");
+    expect(catalogVendorOf("https://opencode.ai/inference/go/openai/v1")).toBe("opencode-go");
     expect(catalogVendorOf(COMPATIBLE_VENDORS.ollama.baseUrl)).toBeNull();
     expect(catalogVendorOf("https://example.com/v1")).toBeNull();
     expect(catalogVendorOf("not-a-url")).toBeNull();

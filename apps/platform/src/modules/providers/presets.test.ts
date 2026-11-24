@@ -3,13 +3,17 @@ import { describe, expect, test } from "bun:test";
 import { COMPATIBLE_PRESETS, presetOf } from "./presets";
 
 describe("COMPATIBLE_PRESETS", () => {
-  test("are the six services, each with its own id, name and address", () => {
+  test("are the ten services, each with its own id, name and address", () => {
     expect(COMPATIBLE_PRESETS.map((preset) => preset.id)).toEqual([
       "openrouter",
       "groq",
       "deepseek",
       "mistral",
       "xai",
+      "alibaba",
+      "opencode-go",
+      "moonshot",
+      "zai",
       "ollama",
     ]);
     for (const key of ["id", "name", "baseUrl"] as const) {
