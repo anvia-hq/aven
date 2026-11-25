@@ -226,8 +226,8 @@ test.describe("a thread on the Codex backend", () => {
 
     await page.goto(`${WEB}/threads?project=${project.id}`);
     await page.getByRole("button", { name: "Model and reasoning effort" }).click();
-    await page.getByRole("button", { name: /^(Provider default|Default · Astra)$/ }).click();
-    await page.getByRole("option", { name: "Default · Astra" }).click();
+    await page.getByRole("menuitem", { name: /^Model\b/ }).hover();
+    await page.getByRole("menuitem", { name: "Default · Astra", exact: true }).click();
     await expect(page.getByRole("button", { name: "Model and reasoning effort" })).toContainText(
       "Default · Astra",
     );

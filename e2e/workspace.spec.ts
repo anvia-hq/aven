@@ -89,14 +89,16 @@ test.describe("settings", () => {
     await expect(page.getByRole("combobox", { name: "Deployment" })).toContainText("deploy-one");
     await page.getByRole("button", { name: "Add provider" }).click();
 
-    await expect(azure).toContainText("https://my-resource.openai.azure.com · deploy-one · …1234");
+    await expect(azure).toContainText("deploy-one");
+    await expect(azure).toContainText("Configured");
     await expect(azure.getByRole("button", { name: "Set up" })).toHaveCount(0);
 
     await azure.getByRole("button", { name: "Edit" }).click();
     await page.getByRole("combobox", { name: "Deployment" }).click();
     await page.getByRole("option", { name: "deploy-two" }).click();
     await page.getByRole("button", { name: "Save changes" }).click();
-    await expect(azure).toContainText("deploy-two · …1234");
+    await expect(page.getByRole("button", { name: "Save changes" })).toHaveCount(0);
+    await expect(azure).toContainText("deploy-two");
 
     await azure.getByRole("button", { name: "Edit" }).click();
     await azure.getByRole("button", { name: "Remove Azure OpenAI" }).click();
@@ -140,9 +142,9 @@ test.describe("settings", () => {
       "openai.gpt-oss-120b",
     );
     await page.getByRole("button", { name: "Add provider" }).click();
-    await expect(
-      page.getByRole("listitem", { name: "Amazon Bedrock", exact: true }).first(),
-    ).toContainText("https://bedrock-mantle.us-west-2.api.aws/v1 · openai.gpt-oss-120b · …4321");
+    const bedrock = page.getByRole("listitem", { name: "Amazon Bedrock", exact: true }).first();
+    await expect(bedrock).toContainText("openai.gpt-oss-120b");
+    await expect(bedrock).toContainText("Configured");
 
     await page
       .getByRole("listitem", { name: "Google Vertex AI" })
@@ -155,17 +157,15 @@ test.describe("settings", () => {
       "google/gemini-2.5-flash",
     );
     await page.getByRole("button", { name: "Add provider" }).click();
-    await expect(
-      page.getByText(
-        "https://aiplatform.googleapis.com/v1/projects/my-project-123/locations/global/endpoints/openapi · google/gemini-2.5-flash · …9876",
-      ),
-    ).toBeVisible();
+    const vertex = page.getByRole("listitem", { name: "Google Vertex AI", exact: true }).first();
+    await expect(vertex).toContainText("google/gemini-2.5-flash");
+    await expect(vertex).toContainText("Configured");
 
     const gemini = page.getByRole("listitem", { name: "Google Gemini" });
     await gemini.getByRole("button", { name: "Set up" }).click();
     await page.getByLabel("API key").fill("AIza-secret-5555");
     await page.getByRole("button", { name: "Add provider" }).click();
-    await expect(gemini).toContainText("…5555");
+    await expect(gemini).toContainText("Configured");
     await expect(gemini.getByRole("button", { name: "Set up" })).toHaveCount(0);
     await expect(connected).toBeVisible();
 
@@ -184,8 +184,9 @@ test.describe("settings", () => {
     );
     await page.getByRole("button", { name: "Add provider" }).click();
     await expect(page.getByRole("listitem", { name: "Groq" })).toContainText(
-      "https://api.groq.com/openai/v1 · llama-3.3-70b-versatile · …7777",
+      "llama-3.3-70b-versatile",
     );
+    await expect(page.getByRole("listitem", { name: "Groq" })).toContainText("Configured");
     await expect(
       page.getByRole("listitem", { name: "Groq" }).getByRole("button", { name: "Set up" }),
     ).toHaveCount(0);
@@ -197,9 +198,8 @@ test.describe("settings", () => {
     await expect(page.getByLabel("API key (optional)")).not.toHaveAttribute("required", "");
     await expect(page.getByRole("combobox", { name: "Model" })).toContainText("llama3.1");
     await page.getByRole("button", { name: "Add provider" }).click();
-    await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText(
-      "http://localhost:11434/v1 · llama3.1",
-    );
+    await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText("llama3.1");
+    await expect(page.getByRole("listitem", { name: "Ollama" })).toContainText("Configured");
     await expect(
       page
         .getByRole("listitem", { name: "OpenAI-compatible" })

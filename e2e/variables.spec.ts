@@ -11,6 +11,7 @@ async function openProject(page: Page) {
     .getByRole("region", { name: "Project list" })
     .getByRole("link", { name: /^shiny-app/ })
     .click();
+  await page.getByRole("tab", { name: "Settings" }).click();
   return page.getByRole("region", { name: "Environment variables" });
 }
 
