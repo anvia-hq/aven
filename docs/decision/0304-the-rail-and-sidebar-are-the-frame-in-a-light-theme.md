@@ -1,6 +1,6 @@
 # The rail and the sidebar are the frame in a light theme
 
-Status: accepted. Corrects the shell colours of 0266, which the flattened shell no longer followed.
+Status: accepted. Corrects the shell colours of 0266, which the flattened shell no longer followed. Superseded in part by 0405: the rail is no longer darkened below the sidebar.
 
 ## Context
 

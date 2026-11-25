@@ -1,6 +1,6 @@
 # Color themes, each with light and dark
 
-Status: accepted. Builds on the semantic color tokens in `index.css`. Superseded in part by 0224: the "Dark mode" switch and the header's toggle. The mode is a select with a system choice.
+Status: accepted. Builds on the semantic color tokens in `index.css`. Superseded in part by 0224 and by 0404: ten palettes leave the catalog, the mechanism stands.
 
 ## Decision
 

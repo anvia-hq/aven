@@ -26,6 +26,9 @@ export function useTheme() {
   const [interfaceSize] = useAtom(textSizeAtoms.interface);
   const [systemDark, setSystemDark] = useState(() => window.matchMedia(DARK_QUERY).matches);
   const resolvedTheme = resolveTheme(theme, systemDark);
+  const activePalette = PALETTES.some((option) => option.id === palette)
+    ? palette
+    : DEFAULT_PALETTE;
 
   useEffect(() => {
     const query = window.matchMedia(DARK_QUERY);
@@ -39,10 +42,10 @@ export function useTheme() {
   }, [resolvedTheme]);
 
   useEffect(() => {
-    if (palette === DEFAULT_PALETTE) document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", palette);
+    if (activePalette === DEFAULT_PALETTE) document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", activePalette);
 
-    const heading = PALETTES.find((option) => option.id === palette)?.heading;
+    const heading = PALETTES.find((option) => option.id === activePalette)?.heading;
 
     if (heading)
       document.documentElement.style.setProperty("--palette-heading-font", heading.family);
@@ -64,7 +67,7 @@ export function useTheme() {
     link.href = `https://fonts.googleapis.com/css2?${heading.googleQuery}&display=swap`;
 
     if (!existing) document.head.appendChild(link);
-  }, [palette]);
+  }, [activePalette]);
 
   useEffect(() => {
     const scale = scaleOf(interfaceSize);
