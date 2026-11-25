@@ -2,6 +2,7 @@ import { IconTrash } from "@tabler/icons-react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
+import { Skeleton } from "@aven/ui/skeleton";
 import { timeAgo } from "@/lib/format";
 
 import { useAccessTokens } from "../hooks/use-access-tokens";
@@ -28,7 +29,7 @@ function AccessTokenRow({ token }: { token: AccessToken }) {
             </Badge>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground tabular-nums">
           <span className="font-mono">avn_…{token.hint}</span>
           {" · "}
           {token.lastUsedAt ? `Used ${timeAgo(token.lastUsedAt, true)}` : "Never used"}
@@ -49,12 +50,19 @@ function AccessTokenRow({ token }: { token: AccessToken }) {
 export function AccessTokensList() {
   const { tokens, loaded } = useAccessTokens();
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-14 rounded-xl" />
+        <Skeleton className="h-14 rounded-xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-8">
       {tokens.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+        <p className="rounded-xl bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
           No access tokens yet. Make one for each tool that should reach Aven.
         </p>
       ) : (

@@ -30,7 +30,7 @@ export function TokensChart({ days, today, tokens }: Props) {
         </p>
       </div>
       {tokens === 0 ? (
-        <div className="flex h-48 items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+        <div className="flex h-48 items-center justify-center rounded-xl bg-muted/30 text-sm text-muted-foreground">
           Your first thread starts this chart.
         </div>
       ) : (

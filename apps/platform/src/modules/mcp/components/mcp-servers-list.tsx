@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
+import { Skeleton } from "@aven/ui/skeleton";
 import { Switch } from "@aven/ui/switch";
 import { timeAgo } from "@/lib/format";
 
@@ -64,11 +65,18 @@ function McpServerRow({ server }: { server: McpServer }) {
 export function McpServersList() {
   const { servers, loaded } = useMcpServers();
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-16 rounded-xl" />
+        <Skeleton className="h-16 rounded-xl" />
+      </div>
+    );
+  }
 
   if (servers.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+      <p className="rounded-xl bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
         No MCP servers yet. Add one, or ask one of your bots to.
       </p>
     );

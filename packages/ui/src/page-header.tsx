@@ -10,7 +10,7 @@ export function PageHeader({ title, description, actions }: Props) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 flex-1 flex-col">
-        <h1 className="text-base font-semibold">{title}</h1>
+        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
         {description && (
           <p className="hidden truncate text-sm text-muted-foreground md:block">{description}</p>
         )}

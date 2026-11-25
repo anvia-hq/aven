@@ -27,7 +27,9 @@ function statusBadge(status: Automation["lastStatus"]) {
 
   if (status === "failed") return <Badge variant="destructive">Failed</Badge>;
 
-  if (status === "done") return <Badge variant="outline">Passed</Badge>;
+  if (status === "done") {
+    return <Badge className="border-transparent bg-success text-primary-foreground">Passed</Badge>;
+  }
 
   return null;
 }
@@ -77,12 +79,12 @@ function AutomationRow({ automation }: { automation: Automation }) {
               <IconClock aria-hidden className="size-4 text-muted-foreground" />
             )}
             <span className="truncate text-sm font-semibold">{automation.name}</span>
-            <Badge variant="outline">{automation.projectName}</Badge>
+            <Badge variant="secondary">{automation.projectName}</Badge>
             {statusBadge(automation.lastStatus)}
             {!automation.enabled && <Badge variant="secondary">Paused</Badge>}
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">{automation.prompt}</p>
-          <div className="flex flex-wrap items-center gap-3 pt-0.5 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 pt-0.5 text-xs text-muted-foreground tabular-nums">
             {automation.triggerKind === "webhook" && automation.webhookPath && (
               <span className="font-mono">/api{automation.webhookPath}/…</span>
             )}
@@ -175,14 +177,14 @@ export function AutomationsPage({
       <PageHeader
         title="Automations"
         description="Trigger autonomous coding threads from webhooks or recurring schedules."
-        actions={<AutomationDialog />}
+        actions={loaded && automations.length === 0 ? undefined : <AutomationDialog />}
       />
       {loaded && automations.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 px-6 py-12 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-muted/30 px-6 py-12 text-center">
           <IconBolt aria-hidden className="size-7 text-muted-foreground" />
           <div className="flex max-w-md flex-col gap-1">
             <p className="text-sm font-medium">No automations yet</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-pretty text-muted-foreground">
               Connect a webhook (Sentry, Slack, GitHub) or schedule to automatically reproduce bugs,
               patch code, run checks, and open pull requests.
             </p>
@@ -191,7 +193,7 @@ export function AutomationsPage({
         </div>
       )}
       {loaded && automations.length > 0 && visible.length === 0 && (
-        <p className="rounded-xl border border-dashed border-border/80 px-6 py-10 text-center text-sm text-muted-foreground">
+        <p className="rounded-xl bg-muted/30 px-6 py-10 text-center text-sm text-muted-foreground">
           No matching automations.
         </p>
       )}
