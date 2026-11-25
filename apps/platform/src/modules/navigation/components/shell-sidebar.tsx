@@ -8,6 +8,8 @@ import { GitShellSidebar } from "@/modules/git-center/components/git-shell-sideb
 import { ProjectsSidebar } from "@/modules/projects/components/projects-sidebar";
 import { SettingsSidebar } from "@/modules/settings/components/settings-sidebar";
 import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
+import { useRunningThreadsPoll } from "@/modules/threads/hooks/use-running-threads-poll";
+import { useThreads } from "@/modules/threads/hooks/use-threads";
 
 import { SidebarTabs } from "./sidebar-tabs";
 
@@ -32,6 +34,11 @@ function sectionOf(pathname: string): Section {
 export function ShellSidebar() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const section = sectionOf(pathname);
+  const { all, refresh } = useThreads();
+  useRunningThreadsPoll(
+    all.some((thread) => thread.running),
+    refresh,
+  );
 
   useLayoutEffect(() => {
     const content = document.querySelector("[data-slot=sidebar-content]");

@@ -16,7 +16,6 @@ import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { usePinThread } from "../hooks/use-pin-thread";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useRestoreThread } from "../hooks/use-restore-thread";
-import { useRunningThreadsPoll } from "../hooks/use-running-threads-poll";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useThreads } from "../hooks/use-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
@@ -35,6 +34,7 @@ function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runt
   if (thread.running) {
     return (
       <Spinner
+        role="img"
         aria-label="Working"
         style={thread.markColor ? { color: thread.markColor } : undefined}
         className="size-4 shrink-0 text-muted-foreground"
@@ -163,7 +163,7 @@ function ThreadTitle({
 }
 
 export function SidebarThreads() {
-  const { threads: own, shared: others, refresh } = useThreads();
+  const { threads: own, shared: others } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   const archived = own.filter((thread) => thread.state === "archived");
   const shared = others.filter((thread) => thread.state === "open");
@@ -185,9 +185,6 @@ export function SidebarThreads() {
     () => new Map(runtimes.map((runtime) => [runtime.id, runtime])),
     [runtimes],
   );
-
-  const anyRunning = [...own, ...others].some((thread) => thread.running);
-  useRunningThreadsPoll(anyRunning, refresh);
 
   function hostLabel(thread: Thread) {
     const host = runtimesById.get(thread.runtimeId)?.name ?? "a runner";
