@@ -88,7 +88,7 @@ export function NotesIndex({
           onChange={(event) => setQuery(event.target.value)}
           className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
-        <Button size="sm" onClick={() => void startNote()}>
+        <Button onClick={() => void startNote()}>
           <IconPlus /> New note
         </Button>
       </div>

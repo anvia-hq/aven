@@ -69,7 +69,7 @@ export function VariableRows({
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 aria-label={`Remove row ${index + 1}`}
                 onClick={() => onRemove(row.id)}
               >

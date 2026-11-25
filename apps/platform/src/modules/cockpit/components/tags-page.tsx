@@ -130,7 +130,7 @@ export function TagsPage() {
           className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
         {taken && <span className="shrink-0 text-xs text-muted-foreground">Already a tag</span>}
-        <Button type="submit" size="sm" disabled={!valid || taken || busy}>
+        <Button type="submit" disabled={!valid || taken || busy}>
           Add tag
         </Button>
       </Form>

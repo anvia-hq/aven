@@ -89,7 +89,7 @@ export function ProjectFilterBar({ filters, runtimes, onChange, children }: Prop
           >
             <SelectTrigger
               aria-label="Runner"
-              className={filters.runnerId ? "max-w-32" : "max-w-32 text-muted-foreground"}
+              className={filters.runnerId ? "max-w-44" : "max-w-44 text-muted-foreground"}
             >
               <SelectValue />
             </SelectTrigger>
