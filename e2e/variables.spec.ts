@@ -26,7 +26,7 @@ async function add(page: Page, name: string, value: string, secret = false) {
   if (secret) await page.getByRole("switch", { name: "Secret" }).click();
 
   await page.getByRole("button", { name: "Add variable" }).click();
-  await expect(page.getByText("Variable saved")).toBeVisible();
+  await expect(page.getByText("Variable saved").last()).toBeVisible();
 }
 
 async function pasteIntoName(page: Page, text: string) {
