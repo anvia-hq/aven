@@ -69,7 +69,7 @@ export function GitToolbar({
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-1.5 border-b border-border/70 bg-background px-3 py-1.5">
       <div
-        className="mr-1 flex max-w-56 min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2 py-1 text-xs"
+        className="mr-1 flex h-7 max-w-56 min-w-0 items-center gap-1.5 rounded-md border border-border/60 bg-muted/40 px-2.5 text-xs"
         title={currentBranch ?? undefined}
       >
         <IconGitBranch className="size-3.5 shrink-0 text-primary" />
@@ -80,8 +80,8 @@ export function GitToolbar({
 
       {activeThread && (
         <Badge
-          variant="outline"
-          className="max-w-44 truncate text-[0.6875rem] font-normal text-muted-foreground"
+          variant="secondary"
+          className="h-7 max-w-44 truncate px-2 text-xs font-normal text-muted-foreground"
           title={activeThread.title}
         >
           Thread: {activeThread.title}
@@ -93,7 +93,7 @@ export function GitToolbar({
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
-          size="xs"
+          size="sm"
           disabled={!canMutate || busy}
           onClick={() => onAction({ op: "fetch", prune: true })}
         >
@@ -103,7 +103,7 @@ export function GitToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
+            render={<Button variant="outline" size="sm" disabled={!canMutate || busy} />}
           >
             <IconArrowDown className="size-3.5" />
             <span>Pull</span>
@@ -124,7 +124,7 @@ export function GitToolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="xs" disabled={!canMutate || busy} />}
+            render={<Button variant="outline" size="sm" disabled={!canMutate || busy} />}
           >
             <IconArrowUp className="size-3.5" />
             <span>Push</span>
@@ -148,7 +148,7 @@ export function GitToolbar({
       <div className="flex items-center gap-1">
         <Button
           variant="outline"
-          size="xs"
+          size="sm"
           disabled={!canMutate || busy}
           onClick={onOpenCreateBranch}
         >
@@ -156,13 +156,13 @@ export function GitToolbar({
           <span>Branch</span>
         </Button>
 
-        <Button variant="outline" size="xs" disabled={!canMutate || busy} onClick={onOpenStash}>
+        <Button variant="outline" size="sm" disabled={!canMutate || busy} onClick={onOpenStash}>
           <IconArchive className="size-3.5" />
           <span>Stash</span>
         </Button>
 
         {snapshot.project.repoFullName && (
-          <Button variant="outline" size="xs" disabled={busy} onClick={onOpenCreatePr}>
+          <Button variant="outline" size="sm" disabled={busy} onClick={onOpenCreatePr}>
             <IconGitPullRequest className="size-3.5" />
             <span>New PR</span>
           </Button>
@@ -170,18 +170,18 @@ export function GitToolbar({
       </div>
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
-        <Button variant="ghost" size="xs" disabled={!isLive || busy} onClick={onOpenReflog}>
+        <Button variant="ghost" size="sm" disabled={!isLive || busy} onClick={onOpenReflog}>
           <IconHistory className="size-3.5" />
           <span>Undo / Reflog</span>
         </Button>
 
-        <Button variant="ghost" size="xs" disabled={!isLive || busy} onClick={onOpenHygiene}>
+        <Button variant="ghost" size="sm" disabled={!isLive || busy} onClick={onOpenHygiene}>
           <IconTrash className="size-3.5" />
           <span>Cleanup</span>
           {hygieneCount > 0 && (
             <Badge
               variant="secondary"
-              className="ml-0.5 h-4 px-1.5 font-mono text-[0.625rem] tabular-nums"
+              className="ml-0.5 h-4 px-1.5 font-mono text-[11px] tabular-nums"
             >
               {hygieneCount}
             </Badge>
@@ -190,7 +190,7 @@ export function GitToolbar({
 
         <Button
           variant="ghost"
-          size="icon-xs"
+          size="icon-sm"
           aria-label="Refresh Git Center"
           title="Refresh Git Center"
           className="shrink-0"

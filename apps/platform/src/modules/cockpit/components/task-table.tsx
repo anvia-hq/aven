@@ -25,7 +25,7 @@ export function TaskTable({
 
   if (rows.length === 0) {
     return (
-      <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+      <p className="rounded-xl bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
         No tasks yet.
       </p>
     );
@@ -47,7 +47,9 @@ export function TaskTable({
         <TableBody>
           {rows.map((task) => (
             <TableRow key={task.id}>
-              <TableCell className="text-xs text-muted-foreground">{taskKey(task)}</TableCell>
+              <TableCell className="text-xs text-muted-foreground tabular-nums">
+                {taskKey(task)}
+              </TableCell>
               <TableCell>
                 <div className="flex min-w-48 flex-col gap-1">
                   <Button
@@ -109,7 +111,7 @@ export function TaskTable({
               <TableCell>
                 <DueDate task={task} />
               </TableCell>
-              <TableCell className="text-xs text-muted-foreground">
+              <TableCell className="text-xs text-muted-foreground tabular-nums">
                 {timeAgo(task.updatedAt, true)}
               </TableCell>
             </TableRow>

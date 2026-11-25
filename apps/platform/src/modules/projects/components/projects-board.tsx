@@ -35,7 +35,7 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
               <Link
                 to="/projects/$projectId"
                 params={{ projectId: project.id }}
-                className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 outline-none focus-visible:bg-muted/50"
+                className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 outline-none focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
               >
                 <ProjectTile
                   projectId={project.id}
@@ -71,7 +71,7 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                   <Link
                     to="/threads/$threadId"
                     params={{ threadId: thread.id }}
-                    className="flex items-center gap-2.5 px-3 py-1.5 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50"
+                    className="flex items-center gap-2.5 px-3 py-1.5 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                   >
                     <span className="flex size-4 shrink-0 items-center justify-center">
                       {thread.running ? (
@@ -99,7 +99,7 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                       {thread.title}
                     </span>
                     {thread.state !== "open" && (
-                      <Badge variant="secondary" className="h-4 px-1.5 text-[10px] capitalize">
+                      <Badge variant="secondary" className="h-4 px-1.5 text-[11px] capitalize">
                         {thread.state}
                       </Badge>
                     )}
@@ -117,7 +117,7 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                   <Link
                     to="/projects/$projectId"
                     params={{ projectId: project.id }}
-                    className="flex py-1.5 pr-3 pl-9.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+                    className="flex py-1.5 pr-3 pl-9.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                   >
                     {threads.length - limit} more
                   </Link>

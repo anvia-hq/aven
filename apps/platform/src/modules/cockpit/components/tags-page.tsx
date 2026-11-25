@@ -112,8 +112,8 @@ export function TagsPage() {
 
   return (
     <div className="cockpit-doc mx-auto w-full max-w-[46rem] px-(--doc-gutter) pt-12 pb-24 md:pt-20">
-      <h1 className="text-[2.5rem] leading-tight font-bold tracking-tight">Tags</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h1 className="text-2xl leading-tight font-semibold tracking-tight">Tags</h1>
+      <p className="mt-1 text-sm text-muted-foreground tabular-nums">
         {tags.length === 1 ? "1 tag" : `${tags.length} tags`}. A tag's color shows wherever it is.
       </p>
       <Form
@@ -148,7 +148,9 @@ export function TagsPage() {
             >
               <ColorPicker tag={tag} />
               <TagBadge tag={tag.name} />
-              <span className="ml-auto truncate text-xs text-muted-foreground">{usedBy(tag)}</span>
+              <span className="ml-auto truncate text-xs text-muted-foreground tabular-nums">
+                {usedBy(tag)}
+              </span>
             </li>
           ))}
         </ul>
