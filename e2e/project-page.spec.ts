@@ -40,10 +40,13 @@ test.describe("the project page", () => {
       "https://github.com/acme/shiny-app/blob/main/docs/guide.md",
     );
 
-    await expect(page.getByRole("region", { name: "About" })).toContainText("main");
+    await page.getByRole("tab", { name: /^Threads/ }).click();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads in this project yet.",
     );
+
+    await page.getByRole("tab", { name: "Settings" }).click();
+    await expect(page.getByRole("region", { name: "About" })).toContainText("main");
     await expect(page.getByText("Environment variables")).toBeVisible();
   });
 
@@ -53,6 +56,7 @@ test.describe("the project page", () => {
     await registerUser(page, "repo", "Repo Person");
     const project = await projectOf(page, "shiny-app");
     await page.goto(`/projects/${project.id}`);
+    await page.getByRole("tab", { name: "Activity" }).click();
 
     const commits = page.getByRole("region", { name: "Commits" });
     const rows = commits.getByRole("listitem");
@@ -101,6 +105,7 @@ test.describe("the project page", () => {
     await registerUser(page, "tracked", "Tracked Person");
     const project = await projectOf(page, "shiny-app");
     await page.goto(`/projects/${project.id}`);
+    await page.getByRole("tab", { name: "Activity" }).click();
 
     const card = page.getByRole("region", { name: "Pull requests and issues" });
     const rows = card.getByRole("listitem");
@@ -141,6 +146,7 @@ test.describe("the project page", () => {
     const second = await page.request.post("/api/runtimes", { data: { name: "second" } });
     expect(second.ok()).toBe(true);
     await page.goto(`/projects/${project.id}`);
+    await page.getByRole("tab", { name: "Settings" }).click();
 
     const runner = page.getByRole("combobox", { name: "Runner" });
     await expect(runner).toContainText("runner");
@@ -167,6 +173,7 @@ test.describe("the project page", () => {
     const made = await page.request.post("/api/threads", { data: { projectId: project.id } });
     const thread = (await made.json()) as { id: string };
     await page.goto(`/projects/${project.id}`);
+    await page.getByRole("tab", { name: "Settings" }).click();
 
     await page.getByRole("button", { name: "Delete project" }).click();
     const dialog = page.getByRole("alertdialog");
@@ -226,6 +233,7 @@ test.describe("the project page", () => {
     await page.getByRole("button", { name: "Send" }).click();
     await expect(page).toHaveURL(/\/threads\/[0-9a-f-]{36}$/);
     await page.goto(`/projects/${id}`);
+    await page.getByRole("tab", { name: /^Threads/ }).click();
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "Look at the docs",
     );

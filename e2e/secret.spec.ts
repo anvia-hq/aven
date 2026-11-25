@@ -73,6 +73,7 @@ test.describe("the agent asks for a secret", () => {
     expect(await personal.json()).toEqual([]);
 
     await page.goto(`/projects/${projectId}`);
+    await page.getByRole("tab", { name: "Settings" }).click();
     await page
       .getByRole("region", { name: "Environment variables" })
       .getByRole("button", { name: "History" })
