@@ -60,7 +60,7 @@ test.describe("themes", () => {
     expect(await background("github")).not.toBe(await background("aven"));
     expect(await background("github")).toBe("rgb(13, 17, 23)");
     await chooseMode(page, "Light");
-    expect(await background("github")).toBe("rgb(255, 255, 255)");
+    expect(await background("github")).toBe("rgb(250, 250, 250)");
   });
 
   test("a palette can lend the headings a face of its own", async ({ page }) => {
