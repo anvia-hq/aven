@@ -195,9 +195,10 @@ describe("a runner that works on this machine", () => {
         stderr: "pipe",
       });
       const out = await new Response(proc.stdout).text();
+      const err = await new Response(proc.stderr).text();
 
-      expect(out).toContain(`its own copy of ${await realpath(dir)}`);
-      expect(out).toContain("on branch aven/t1");
+      expect(out).toContain("aven/t1 (isolated copy)");
+      expect(err).not.toContain("default interactive shell is now zsh");
       expect(shell.env.AVEN_THREAD_DIR).toBe(sandbox.paths("t1").workspace);
     });
 

@@ -312,6 +312,7 @@ export class HostSandboxes implements ThreadWorkspaces {
         ...withoutRunnerSecrets(process.env),
         ...project,
         AVEN_THREAD_DIR: root,
+        BASH_SILENCE_DEPRECATION_WARNING: "1",
         TERM: "xterm-256color",
       } as Record<string, string>,
       hangup: ["true"],
