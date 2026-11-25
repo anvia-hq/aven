@@ -13,6 +13,8 @@ import { DiffStat } from "@/modules/diff/components/diff-stat";
 
 import type { ThreadPullRequestCheck, TurnProof } from "../types";
 
+const PILL = "h-auto px-2.5 py-1 has-data-[icon=inline-start]:pl-2";
+
 function prStatusLabel(pull: ThreadPullRequestCheck) {
   if (pull.checksState === "passing") return "CI passing";
 
@@ -88,6 +90,7 @@ export function ProofStrip({
           key={check.id}
           variant={check.status === "pass" ? "secondary" : "destructive"}
           title={check.detail}
+          className={PILL}
         >
           {check.status === "pass" ? (
             <IconCheck aria-hidden data-icon="inline-start" className="text-muted-foreground" />
@@ -103,13 +106,15 @@ export function ProofStrip({
             type="button"
             variant="secondary"
             size="xs"
-            className="h-5 rounded-4xl px-2"
+            className={cn(PILL, "rounded-4xl")}
             onClick={onOpenChanges}
           >
             {filesLabel}
           </Button>
         ) : (
-          <Badge variant="secondary">{filesLabel}</Badge>
+          <Badge variant="secondary" className={PILL}>
+            {filesLabel}
+          </Badge>
         ))}
       {prChecks.map((pull) => {
         const failing = pull.checksState === "failing";
@@ -117,6 +122,7 @@ export function ProofStrip({
           <Badge
             key={pull.number}
             variant={failing ? "destructive" : "secondary"}
+            className={PILL}
             render={<a href={pull.url} target="_blank" rel="noreferrer" />}
           >
             <PrStatusGlyph state={pull.checksState} />
