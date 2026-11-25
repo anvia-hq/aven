@@ -3,7 +3,6 @@ import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
-
 import { DEFAULT_PALETTE, PALETTES } from "../apps/platform/src/modules/theme/catalog";
 import { registerUser, threadOnFakeRunner } from "./helpers";
 const shotsDir = join(process.cwd(), "e2e", "theme-gallery", "shots");
@@ -15,8 +14,10 @@ async function chooseMode(page: Page, name: "Light" | "Dark") {
 
 async function expectPalette(page: Page, id: string, dark: boolean) {
   const html = page.locator("html");
+
   if (id === DEFAULT_PALETTE) await expect(html).not.toHaveAttribute("data-theme", /.+/);
   else await expect(html).toHaveAttribute("data-theme", id);
+
   if (dark) await expect(html).toHaveClass(/dark/);
   else await expect(html).not.toHaveClass(/dark/);
 }
