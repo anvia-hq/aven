@@ -28,7 +28,8 @@
 }
 
 /* Semantic color tokens (shadcn/ui structure; Aven's light neutrals are a cool gray like its dark ones, decision 0305). Use these, never raw palette colors. */
-:root {
+:root,
+[data-theme="aven"]:not(:root) {
   --radius: 0.5rem;
   --background: oklch(0.99 0.002 280);
   --foreground: oklch(0.2 0.003 280);
@@ -72,7 +73,8 @@
 }
 
 /* Aven, the default dark theme: Mint lifted and turned to a blue-green gray. */
-.dark {
+.dark,
+[data-theme="aven"][data-mode="dark"]:not(:root) {
   --background: oklch(0.22 0.003 280);
   --foreground: oklch(0.9 0.003 280);
   --card: oklch(0.24 0.003 280);

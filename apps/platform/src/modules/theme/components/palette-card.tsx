@@ -2,7 +2,6 @@ import { IconCheck } from "@tabler/icons-react";
 import { ToggleGroupItem } from "@aven/ui/toggle-group";
 import { cn } from "cn";
 
-import { DEFAULT_PALETTE } from "../catalog";
 import type { PaletteOption } from "../types";
 
 type Props = {
@@ -17,7 +16,7 @@ export function PaletteCard({ option, mode }: Props) {
       aria-label={option.label}
       data-palette={option.id}
       data-mode={mode}
-      data-theme={option.id === DEFAULT_PALETTE ? undefined : option.id}
+      data-theme={option.id}
       className={cn(
         "group/card relative h-auto w-[176px] shrink-0 snap-start flex-col items-stretch justify-start gap-0 overflow-hidden rounded-xl border border-border bg-background p-0 text-left text-foreground transition-[border-color,box-shadow] duration-150 hover:border-foreground/25 hover:bg-background",
         "aria-pressed:border-primary aria-pressed:bg-background aria-pressed:ring-2 aria-pressed:ring-primary/20",
