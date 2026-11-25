@@ -7,7 +7,7 @@ const TRIGGER =
   "group/bot-badge pointer-events-auto flex h-auto max-w-full flex-col items-center gap-1.5 bg-transparent p-0 hover:bg-transparent dark:hover:bg-transparent";
 
 const BADGE =
-  "max-w-full truncate rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background shadow-md transition-colors group-hover/bot-badge:bg-foreground/90";
+  "max-w-full truncate rounded-full bg-foreground px-4 py-1.5 text-sm font-semibold text-background shadow-xs transition-colors group-hover/bot-badge:bg-foreground/90";
 
 function BotPill({ bot }: { bot: Bot }) {
   const working = useBotsWorking();
@@ -18,7 +18,7 @@ function BotPill({ bot }: { bot: Bot }) {
       <BotAvatar
         bot={bot}
         mood={online ? "working" : "idle"}
-        className="size-12 shrink-0 drop-shadow-md transition-transform group-hover/bot-badge:scale-105"
+        className="size-12 shrink-0 transition-transform group-hover/bot-badge:scale-105"
         follow
       />
       <span className={BADGE}>{bot.name}</span>

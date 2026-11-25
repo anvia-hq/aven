@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 import { Input } from "@aven/ui/input";
+import { Skeleton } from "@aven/ui/skeleton";
 
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { COMPATIBLE_PRESETS, presetOf } from "../presets";
@@ -48,18 +49,10 @@ function Highlight({
   return (
     <li
       aria-label={PROVIDER_LABELS[kind]}
-      className="relative flex flex-col gap-4 overflow-hidden rounded-xl bg-card p-5 shadow-sm ring-1 ring-foreground/10 sm:p-6"
+      className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 sm:p-6"
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-primary/40 to-transparent"
-      />
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-24 -right-16 size-48 rounded-full bg-primary/[0.07] blur-2xl"
-      />
-      <div className="relative flex items-center gap-3.5">
-        <span className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-muted/70 ring-1 ring-foreground/10">
+      <div className="flex items-center gap-3.5">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-muted/60">
           <ProviderLogo kind={kind} size="lg" />
         </span>
         <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -68,11 +61,11 @@ function Highlight({
           {provider?.isDefault && <Badge variant="secondary">Default</Badge>}
         </span>
       </div>
-      <p className="relative max-w-prose text-sm leading-relaxed text-pretty text-muted-foreground">
+      <p className="max-w-prose text-sm leading-relaxed text-pretty text-muted-foreground">
         {PROVIDER_DESCRIPTIONS[kind]}
       </p>
       {provider ? (
-        <div className="relative mt-auto flex flex-col gap-2 border-t pt-3">
+        <div className="mt-auto flex flex-col gap-2 border-t pt-3">
           {detail(provider, modelLabel) && (
             <p className="truncate font-mono text-xs text-muted-foreground">
               {detail(provider, modelLabel)}
@@ -86,7 +79,7 @@ function Highlight({
           </div>
         </div>
       ) : (
-        <div className="relative mt-auto flex items-center pt-1">
+        <div className="mt-auto flex items-center pt-1">
           <ProviderDialog kind={kind} label="Set up" prominent />
         </div>
       )}
@@ -129,7 +122,7 @@ function Tile({
   preset?: CompatiblePreset["id"];
 }) {
   return (
-    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
+    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted/60">
       <ProviderLogo kind={kind} baseUrl={baseUrl} preset={preset} />
     </span>
   );
@@ -147,7 +140,21 @@ export function ProvidersList() {
   const [query, setQuery] = useState("");
   const [openPanel, setOpenPanel] = useState<string | null>(null);
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-8 pt-2">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Skeleton className="h-44 rounded-xl" />
+          <Skeleton className="h-44 rounded-xl" />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-14 rounded-xl" />
+          <Skeleton className="h-14 rounded-xl" />
+          <Skeleton className="h-14 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
 
   const offered = (kind: ProviderKind) => {
     const flag = OFFERED_BACKEND[kind];

@@ -67,9 +67,11 @@ export function ProofStrip({
   const filesLabel = (
     <>
       <IconFileDiff aria-hidden data-icon="inline-start" className="text-muted-foreground" />
-      <span>{proof.files.length === 1 ? "1 file" : `${proof.files.length} files`}</span>
+      <span className="tabular-nums">
+        {proof.files.length === 1 ? "1 file" : `${proof.files.length} files`}
+      </span>
       {(totalAdd > 0 || totalDel > 0) && (
-        <span className="font-mono">
+        <span className="font-mono tabular-nums">
           <DiffStat additions={totalAdd} deletions={totalDel} />
         </span>
       )}
@@ -118,7 +120,7 @@ export function ProofStrip({
             render={<a href={pull.url} target="_blank" rel="noreferrer" />}
           >
             <PrStatusGlyph state={pull.checksState} />
-            <span>
+            <span className="tabular-nums">
               PR #{pull.number} · {prStatusLabel(pull)}
             </span>
           </Badge>
