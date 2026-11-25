@@ -1,8 +1,7 @@
-import { IconPlus } from "@tabler/icons-react";
-import { Link, useNavigate, useSearch } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 
-import { Button, buttonVariants } from "@aven/ui/button";
+import { Button } from "@aven/ui/button";
 import { PageHeader } from "@aven/ui/page-header";
 import { Skeleton } from "@aven/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
@@ -38,14 +37,6 @@ export function ProjectsPage() {
     () => new Set(threads.flatMap((thread) => (thread.running ? [thread.projectId] : []))),
     [threads],
   );
-  const counts = useMemo(
-    () => ({
-      all: projects.length,
-      mine: filterProjects(projects, { view: "mine" }, { me, running }).length,
-      working: filterProjects(projects, { view: "working" }, { me, running }).length,
-    }),
-    [projects, me, running],
-  );
   const archived = threads.filter((thread) => thread.state === "archived").length;
   const shown = filterProjects(projects, filters, { me, running });
   const entries = projectActivity(shown, threads, shelf).filter(
@@ -66,7 +57,7 @@ export function ProjectsPage() {
     board = (
       <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3 min-[120rem]:grid-cols-4">
         {[0, 1, 2, 3].map((card) => (
-          <Skeleton key={card} className="h-36 w-full" />
+          <Skeleton key={card} className="h-44 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -102,23 +93,15 @@ export function ProjectsPage() {
   }
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4 p-4 lg:h-[calc(100svh-2px)]">
+    <div className="flex w-full min-w-0 flex-col gap-5 p-4 md:p-6 lg:h-[calc(100svh-2px)]">
       <PageHeader
         title="Projects"
-        description="Each project with its threads. Open one to see its files, README and commits."
-        actions={
-          <>
-            <Link to="/threads" className={buttonVariants({ variant: "outline" })}>
-              <IconPlus />
-              New thread
-            </Link>
-            <AddProjectDialog />
-          </>
-        }
+        description="Your repositories and workspaces. Open one to browse files, threads, activity and settings."
+        actions={<AddProjectDialog />}
       />
 
-      <section aria-label="Project list" className="flex min-h-0 flex-1 flex-col gap-3">
-        <ProjectFilterBar filters={filters} counts={counts} runtimes={runtimes} onChange={change}>
+      <section aria-label="Project list" className="flex min-h-0 flex-1 flex-col gap-4">
+        <ProjectFilterBar filters={filters} runtimes={runtimes} onChange={change}>
           <Tabs value={shelf} onValueChange={(next) => setShelf(next as ThreadShelf)}>
             <TabsList aria-label="Thread state" className="h-8">
               <TabsTrigger value="open" className="gap-1 px-2.5 text-xs">

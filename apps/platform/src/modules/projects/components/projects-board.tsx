@@ -24,13 +24,10 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
     <div className="min-h-0 flex-1 overflow-y-auto">
       <ul
         aria-label="Projects"
-        className="columns-1 gap-4 lg:columns-2 2xl:columns-3 min-[120rem]:columns-4"
+        className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3 min-[120rem]:grid-cols-4"
       >
         {entries.map(({ project, threads, working }) => (
-          <li
-            key={project.id}
-            className="mb-4 flex break-inside-avoid flex-col overflow-hidden rounded-xl border bg-card"
-          >
+          <li key={project.id} className="flex flex-col overflow-hidden rounded-xl border bg-card">
             <div className="flex items-center gap-1 pr-2">
               <Link
                 to="/projects/$projectId"

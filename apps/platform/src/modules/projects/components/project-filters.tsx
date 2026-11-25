@@ -3,17 +3,14 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { Input } from "@aven/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 import type { Runtime } from "@/modules/runtimes/types";
 
-import { PROJECT_VIEWS } from "../filters";
-import type { ProjectFilters, ProjectsSearch, ProjectsView } from "../types";
+import type { ProjectFilters, ProjectsSearch } from "../types";
 
 const ANY_RUNNER = "__any__";
 
 type Props = {
   filters: ProjectFilters;
-  counts: Record<ProjectsView, number>;
   runtimes: Runtime[];
   onChange: (next: ProjectsSearch) => void;
   children?: ReactNode;
@@ -72,31 +69,13 @@ function SearchField({
   );
 }
 
-export function ProjectFilterBar({ filters, counts, runtimes, onChange, children }: Props) {
+export function ProjectFilterBar({ filters, runtimes, onChange, children }: Props) {
   return (
     <div className="flex shrink-0 flex-wrap items-center gap-2">
       <div className="w-full sm:w-64">
         <SearchField query={filters.query} onCommit={(q) => onChange({ q })} />
       </div>
       <div className="flex flex-1 items-center gap-2">
-        <Tabs
-          value={filters.view}
-          onValueChange={(view) =>
-            onChange({ view: view === "all" ? undefined : (view as ProjectsView) })
-          }
-          className="shrink-0"
-        >
-          <TabsList aria-label="Project filters" className="h-8">
-            {PROJECT_VIEWS.map((view) => (
-              <TabsTrigger key={view.id} value={view.id} className="gap-1 px-2.5 text-xs">
-                {view.label}
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  {counts[view.id]}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
         {runtimes.length > 1 && (
           <Select
             items={[

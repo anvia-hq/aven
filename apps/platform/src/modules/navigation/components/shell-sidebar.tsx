@@ -5,14 +5,17 @@ import { AutomationsSidebar } from "@/modules/automations/components/automations
 import { BotSidebar } from "@/modules/bots/components/bot-sidebar";
 import { CockpitSidebar } from "@/modules/cockpit/components/cockpit-sidebar";
 import { GitShellSidebar } from "@/modules/git-center/components/git-shell-sidebar";
+import { ProjectsSidebar } from "@/modules/projects/components/projects-sidebar";
 import { SettingsSidebar } from "@/modules/settings/components/settings-sidebar";
 import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 
 import { SidebarTabs } from "./sidebar-tabs";
 
-type Section = "threads" | "automations" | "settings" | "bot" | "cockpit" | "git";
+type Section = "threads" | "projects" | "automations" | "settings" | "bot" | "cockpit" | "git";
 
 function sectionOf(pathname: string): Section {
+  if (pathname.startsWith("/projects")) return "projects";
+
   if (pathname.startsWith("/automations")) return "automations";
 
   if (pathname.startsWith("/settings")) return "settings";
@@ -35,6 +38,8 @@ export function ShellSidebar() {
 
     if (content) content.scrollTop = 0;
   }, [section]);
+
+  if (section === "projects") return <ProjectsSidebar />;
 
   if (section === "automations") return <AutomationsSidebar />;
 
