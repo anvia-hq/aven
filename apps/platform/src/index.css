@@ -1801,12 +1801,18 @@
 :root {
   --user-bubble-from: color-mix(in oklch, var(--accent), var(--background) 45%);
   --user-bubble-to: color-mix(in oklch, var(--accent), var(--primary) 3%);
+  --bot-bubble-from: color-mix(in oklch, var(--card), var(--muted) 30%);
+  --bot-bubble-to: color-mix(in oklch, var(--muted), var(--foreground) 3%);
+  --bot-bubble-border: color-mix(in oklch, var(--foreground) 8%, transparent);
 }
 
 .dark,
 [data-mode="dark"] {
   --user-bubble-from: color-mix(in oklch, var(--accent), var(--background) 15%);
   --user-bubble-to: color-mix(in oklch, var(--accent), var(--primary) 10%);
+  --bot-bubble-from: color-mix(in oklch, var(--accent), var(--card) 35%);
+  --bot-bubble-to: color-mix(in oklch, var(--card), var(--background) 28%);
+  --bot-bubble-border: color-mix(in oklch, var(--foreground) 9%, transparent);
 }
 
 :root {
