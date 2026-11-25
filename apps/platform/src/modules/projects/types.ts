@@ -20,6 +20,8 @@ export type Project = {
 
 export type ProjectsView = "all" | "mine" | "working";
 
+export type ProjectTab = "code" | "threads" | "activity" | "settings";
+
 export type ProjectsSearch = {
   q?: string;
   view?: ProjectsView;

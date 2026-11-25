@@ -1,4 +1,4 @@
-import { EffortTrack } from "@aven/ui/effort-track";
+import { ToggleGroup, ToggleGroupItem } from "@aven/ui/toggle-group";
 
 type Props = {
   levels: string[];
@@ -15,25 +15,27 @@ export function effortName(level: string) {
 
 export function EffortSlider({ levels, value, onChange }: Props) {
   return (
-    <div className="flex flex-col gap-2.5">
-      <EffortTrack
-        max={levels.length - 1}
-        value={Math.max(levels.indexOf(value), 0)}
-        marks={levels}
-        onValueChange={(index) => {
-          const level = levels[index];
+    <ToggleGroup
+      aria-label="Reasoning effort"
+      spacing={0}
+      value={[value]}
+      onValueChange={(next) => {
+        const picked = next[0];
 
-          if (level) onChange(level);
-        }}
-        getAriaValueText={(_formatted, index) => levels[index] ?? ""}
-      />
-      <div className="flex justify-between text-xs text-muted-foreground">
-        {levels.map((level) => (
-          <span key={level} className={level === value ? "font-medium text-foreground" : undefined}>
-            {effortName(level)}
-          </span>
-        ))}
-      </div>
-    </div>
+        if (picked) onChange(picked);
+      }}
+      className="grid w-full auto-cols-fr grid-flow-col rounded-lg bg-muted/60 p-0.5"
+    >
+      {levels.map((level) => (
+        <ToggleGroupItem
+          key={level}
+          value={level}
+          size="sm"
+          className="h-7 min-w-0 rounded-md px-2 text-xs font-medium text-muted-foreground group-data-[spacing=0]/toggle-group:rounded-md hover:bg-transparent hover:text-foreground aria-pressed:bg-background aria-pressed:text-foreground aria-pressed:shadow-xs"
+        >
+          {effortName(level)}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }

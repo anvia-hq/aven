@@ -68,16 +68,18 @@ const FLOWER_LOBES = [0.9, 0.83, 0.9, 0.9, 0.83].map((radius, index) => {
   return { x: Math.cos(angle) * 1.2, y: Math.sin(angle) * 1.2, radius };
 });
 
-const flower: ShapeField = (x, y, z) =>
-  FLOWER_LOBES.reduce(
-    (nearest, lobe) =>
-      smoothMin(
-        nearest,
-        Math.sqrt((x - lobe.x) ** 2 + (y - lobe.y) ** 2 + z * z) - lobe.radius,
-        0.3,
-      ),
-    Math.sqrt(x * x + y * y + z * z) - 1,
-  );
+const flower: ShapeField = (x, y, z) => {
+  let nearest = Math.sqrt(x * x + y * y + z * z) - 1;
+
+  for (let index = 0; index < FLOWER_LOBES.length; index++) {
+    const lobe = FLOWER_LOBES[index]!;
+    const dx = x - lobe.x;
+    const dy = y - lobe.y;
+    nearest = smoothMin(nearest, Math.sqrt(dx * dx + dy * dy + z * z) - lobe.radius, 0.3);
+  }
+
+  return nearest;
+};
 
 const puffed =
   (radius: number, plate: (x: number, y: number) => number): ShapeField =>

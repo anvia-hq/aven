@@ -7,6 +7,8 @@ import type {
 
 export type { Automation, AutomationCreated, AutomationRun, AutomationTriggerKind };
 
+export type AutomationFilter = "all" | "schedule" | "webhook" | "paused";
+
 export type CreateAutomationInput = {
   name: string;
   projectId: string;

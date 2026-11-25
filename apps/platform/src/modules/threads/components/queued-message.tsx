@@ -8,6 +8,7 @@ import type { QueuedSteer, Viewer } from "../types";
 import { AuthorLabel } from "./author-label";
 import { mentionCode } from "./mention-code";
 import { SentAttachments } from "./sent-attachments";
+import { UserMessageBubble } from "./user-message-bubble";
 
 export function QueuedMessage({
   message,
@@ -44,11 +45,11 @@ export function QueuedMessage({
         />
       ) : null}
       {text && (
-        <div className="w-fit max-w-full rounded-2xl border border-foreground/10 bg-clip-padding bg-linear-to-r from-[color-mix(in_oklch,var(--accent),var(--background)_15%)] to-[color-mix(in_oklch,var(--accent),oklch(0.45_0.06_55)_28%)] px-4 py-2.5 [&_p]:whitespace-pre-line">
+        <UserMessageBubble>
           <Markdown components={{ code: mentionCode }}>
             {markMentions(text, message.mentions)}
           </Markdown>
-        </div>
+        </UserMessageBubble>
       )}
       <p className="text-xs text-muted-foreground" role="status">
         Queued: the agent reads it at its next step

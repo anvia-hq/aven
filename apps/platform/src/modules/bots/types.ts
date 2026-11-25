@@ -8,6 +8,7 @@ import type {
   MeshPhysicalMaterial,
   SphereGeometry,
   Texture,
+  TubeGeometry,
 } from "three";
 
 export type {
@@ -176,7 +177,11 @@ export type AvatarLook = {
   steady?: boolean;
 };
 
-export type AvatarHandle = { setMood(mood: BotMood): void; dispose(): void };
+export type AvatarHandle = {
+  setMood(mood: BotMood): void;
+  setOptions(options: { follow: boolean; steady: boolean }): void;
+  dispose(): void;
+};
 
 export type EyeSpot = { position: Vec3; normal: Vec3; scale: number };
 
@@ -199,10 +204,16 @@ export type BodyBase = {
 export type AvatarMaterials = {
   environment: Texture;
   clock: { value: number };
+  wobble: { value: number };
+  body: MeshPhysicalMaterial;
   eye: SphereGeometry;
+  glintGeo: SphereGeometry;
+  smile: TubeGeometry;
   white: MeshPhysicalMaterial;
   pupil: MeshPhysicalMaterial;
+  tongue: MeshPhysicalMaterial;
   glint: MeshBasicMaterial;
+  accessories: Map<string, MeshPhysicalMaterial>;
 };
 
 export type EyeRig = { lid: Group; pupil: Group };
@@ -223,7 +234,7 @@ export type AvatarModel = {
   eyes: EyeRig[];
   mouth: MouthRig;
   accessory: AccessoryRig | null;
-  wobble: { value: number };
+  wobble: number;
   scale: number;
   restY: number;
   dispose(): void;

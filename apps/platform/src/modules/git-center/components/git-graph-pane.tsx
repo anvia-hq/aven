@@ -256,33 +256,30 @@ export function GitGraphPane({
             value={filters.search}
             onChange={(e) => onChangeFilters((prev) => ({ ...prev, search: e.target.value }))}
             placeholder="Search commits by message or SHA…"
-            className="h-6.5 pl-7 text-xs"
+            className="h-7 pl-7 text-xs"
           />
         </div>
         <Input
           value={filters.author}
           onChange={(e) => onChangeFilters((prev) => ({ ...prev, author: e.target.value }))}
           placeholder="Author"
-          className="h-6.5 w-24 text-xs xl:w-28"
+          className="h-7 w-24 text-xs xl:w-28"
         />
         <Input
           value={filters.path}
           onChange={(e) => onChangeFilters((prev) => ({ ...prev, path: e.target.value }))}
           placeholder="File path"
-          className="h-6.5 w-28 font-mono text-xs xl:w-32"
+          className="h-7 w-28 text-xs xl:w-32"
         />
         {filters.branch && (
-          <Badge
-            variant="secondary"
-            className="h-6 max-w-44 gap-1 px-1.5 font-mono text-[0.6875rem]"
-          >
+          <Badge variant="secondary" className="h-7 max-w-44 gap-1 px-2 font-mono text-[11px]">
             <IconGitBranch className="size-3 shrink-0" />
             <span className="truncate">{filters.branch}</span>
             <Button
               variant="ghost"
               size="icon-xs"
               aria-label="Clear branch filter"
-              className="size-3.5 shrink-0 p-0"
+              className="size-4 shrink-0 p-0"
               onClick={() => onChangeFilters((prev) => ({ ...prev, branch: null }))}
             >
               <IconX className="size-2.5" />
@@ -292,8 +289,8 @@ export function GitGraphPane({
         {hasFilters && (
           <Button
             variant="ghost"
-            size="xs"
-            className="h-6.5 px-2 text-xs text-muted-foreground"
+            size="sm"
+            className="px-2 text-xs text-muted-foreground"
             onClick={() =>
               onChangeFilters(() => ({ search: "", branch: null, author: "", path: "" }))
             }
@@ -347,8 +344,8 @@ export function GitGraphPane({
                     >
                       <GraphSvg row={row.graph} lanes={lanes} dashed />
                       <Badge
-                        variant="outline"
-                        className="h-5 shrink-0 gap-1 border-dashed px-1.5 text-[0.625rem] font-medium"
+                        variant="secondary"
+                        className="h-5 shrink-0 gap-1 px-1.5 text-[11px] font-medium"
                       >
                         {row.running ? <Spinner className="size-2.5" /> : null}
                         <span>WIP</span>
@@ -360,13 +357,13 @@ export function GitGraphPane({
                       {row.conflicts && (
                         <Badge
                           variant="destructive"
-                          className="h-5 shrink-0 gap-1 px-1.5 text-[0.625rem]"
+                          className="h-5 shrink-0 gap-1 px-1.5 text-[11px]"
                         >
                           <IconAlertTriangle className="size-3" />
                           <span>{row.conflicts.files.length} conflict(s)</span>
                         </Badge>
                       )}
-                      <span className="shrink-0 font-mono text-[0.6875rem] text-muted-foreground tabular-nums">
+                      <span className="shrink-0 font-mono text-[11px] text-muted-foreground tabular-nums">
                         {dirtyCount} file{dirtyCount === 1 ? "" : "s"}
                       </span>
                     </div>
@@ -415,7 +412,7 @@ export function GitGraphPane({
                             key={name}
                             title={hasOrigin ? `${name} (synced with origin/${name})` : name}
                             variant={row.isHead ? "default" : "secondary"}
-                            className="h-5 max-w-44 shrink-0 gap-1 px-1.5 font-mono text-[0.625rem]"
+                            className="h-5 max-w-44 shrink-0 gap-1 px-1.5 font-mono text-[11px]"
                           >
                             <IconGitBranch className="size-2.5 shrink-0" />
                             {hasOrigin && <IconCloud className="size-2.5 shrink-0 opacity-75" />}
@@ -426,8 +423,8 @@ export function GitGraphPane({
                           <Badge
                             key={ref}
                             title={ref}
-                            variant="outline"
-                            className="h-5 max-w-40 shrink-0 gap-1 px-1.5 font-mono text-[0.625rem] text-muted-foreground"
+                            variant="secondary"
+                            className="h-5 max-w-40 shrink-0 gap-1 px-1.5 font-mono text-[11px] text-muted-foreground"
                           >
                             <IconCloud className="size-2.5 shrink-0 opacity-70" />
                             <span className="truncate">{ref}</span>
@@ -437,8 +434,8 @@ export function GitGraphPane({
                           <Badge
                             key={tag}
                             title={tag}
-                            variant="outline"
-                            className="h-5 max-w-32 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem]"
+                            variant="secondary"
+                            className="h-5 max-w-32 shrink-0 gap-0.5 px-1.5 font-mono text-[11px] text-muted-foreground"
                           >
                             <IconTag className="size-2.5 shrink-0" />
                             <span className="truncate">{tag}</span>
@@ -449,7 +446,7 @@ export function GitGraphPane({
                             key={thread.id}
                             title={thread.title}
                             variant="secondary"
-                            className="h-5 max-w-32 shrink-0 gap-1 px-1.5 text-[0.625rem] text-info"
+                            className="h-5 max-w-32 shrink-0 gap-1 px-1.5 text-[11px] text-muted-foreground"
                           >
                             {thread.running ? (
                               <Spinner className="size-2.5 shrink-0" />
@@ -463,8 +460,8 @@ export function GitGraphPane({
                           <Badge
                             key={pull.number}
                             title={`#${pull.number} ${pull.title}`}
-                            variant="outline"
-                            className="h-5 shrink-0 gap-0.5 px-1.5 font-mono text-[0.625rem] text-success"
+                            variant="secondary"
+                            className="h-5 shrink-0 gap-0.5 px-1.5 font-mono text-[11px] text-muted-foreground tabular-nums"
                           >
                             <IconGitPullRequest className="size-2.5 shrink-0" />
                             <span>#{pull.number}</span>

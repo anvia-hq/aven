@@ -18,7 +18,7 @@ import { Switch } from "@aven/ui/switch";
 import { timeAgo } from "@/lib/format";
 
 import { useAutomations } from "../hooks/use-automations";
-import type { Automation, AutomationRun } from "../types";
+import type { Automation, AutomationFilter, AutomationRun } from "../types";
 import { AutomationDialog } from "./automation-dialog";
 import { AutomationRunsList } from "./automation-runs-list";
 
@@ -27,7 +27,9 @@ function statusBadge(status: Automation["lastStatus"]) {
 
   if (status === "failed") return <Badge variant="destructive">Failed</Badge>;
 
-  if (status === "done") return <Badge variant="outline">Passed</Badge>;
+  if (status === "done") {
+    return <Badge className="border-transparent bg-success text-primary-foreground">Passed</Badge>;
+  }
 
   return null;
 }
@@ -77,12 +79,12 @@ function AutomationRow({ automation }: { automation: Automation }) {
               <IconClock aria-hidden className="size-4 text-muted-foreground" />
             )}
             <span className="truncate text-sm font-semibold">{automation.name}</span>
-            <Badge variant="outline">{automation.projectName}</Badge>
+            <Badge variant="secondary">{automation.projectName}</Badge>
             {statusBadge(automation.lastStatus)}
             {!automation.enabled && <Badge variant="secondary">Paused</Badge>}
           </div>
           <p className="line-clamp-2 text-sm text-muted-foreground">{automation.prompt}</p>
-          <div className="flex flex-wrap items-center gap-3 pt-0.5 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-3 pt-0.5 text-xs text-muted-foreground tabular-nums">
             {automation.triggerKind === "webhook" && automation.webhookPath && (
               <span className="font-mono">/api{automation.webhookPath}/…</span>
             )}
@@ -150,22 +152,39 @@ function AutomationRow({ automation }: { automation: Automation }) {
   );
 }
 
-export function AutomationsPage() {
+export function AutomationsPage({
+  filter = "all",
+  selectedId,
+}: {
+  filter?: AutomationFilter;
+  selectedId?: string;
+}) {
   const { automations, loaded } = useAutomations();
+  const visible = automations.filter((automation) => {
+    if (selectedId) return automation.id === selectedId;
+
+    if (filter === "schedule") return automation.triggerKind === "schedule";
+
+    if (filter === "webhook") return automation.triggerKind === "webhook";
+
+    if (filter === "paused") return !automation.enabled;
+
+    return true;
+  });
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-4 py-6 md:px-8">
       <PageHeader
         title="Automations"
         description="Trigger autonomous coding threads from webhooks or recurring schedules."
-        actions={<AutomationDialog />}
+        actions={loaded && automations.length === 0 ? undefined : <AutomationDialog />}
       />
       {loaded && automations.length === 0 && (
-        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 px-6 py-12 text-center">
+        <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-muted/30 px-6 py-12 text-center">
           <IconBolt aria-hidden className="size-7 text-muted-foreground" />
           <div className="flex max-w-md flex-col gap-1">
             <p className="text-sm font-medium">No automations yet</p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-pretty text-muted-foreground">
               Connect a webhook (Sentry, Slack, GitHub) or schedule to automatically reproduce bugs,
               patch code, run checks, and open pull requests.
             </p>
@@ -173,9 +192,14 @@ export function AutomationsPage() {
           <AutomationDialog />
         </div>
       )}
-      {loaded && automations.length > 0 && (
+      {loaded && automations.length > 0 && visible.length === 0 && (
+        <p className="rounded-xl bg-muted/30 px-6 py-10 text-center text-sm text-muted-foreground">
+          No matching automations.
+        </p>
+      )}
+      {loaded && visible.length > 0 && (
         <ul aria-label="Automations" className="flex flex-col gap-3">
-          {automations.map((automation) => (
+          {visible.map((automation) => (
             <AutomationRow key={automation.id} automation={automation} />
           ))}
         </ul>

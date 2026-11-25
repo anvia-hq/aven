@@ -45,7 +45,7 @@ function InboxRow({
           {item.tags.length > 2 && (
             <span className="shrink-0 text-xs text-muted-foreground">+{item.tags.length - 2}</span>
           )}
-          <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/80">
+          <span className="ml-auto shrink-0 pl-2 text-xs text-muted-foreground/80 tabular-nums">
             {shortTimeAgo(item.createdAt)}
           </span>
         </span>
@@ -91,7 +91,7 @@ export function InboxPane({
         <Tabs value={shown} onValueChange={(value) => onShow(value === "done" ? "done" : "open")}>
           <TabsList variant="line" aria-label="Show" className="h-9 md:h-7">
             <TabsTrigger value="open" className="text-xs">
-              Open{open > 0 && <span className="text-muted-foreground">{open}</span>}
+              Open{open > 0 && <span className="text-muted-foreground tabular-nums">{open}</span>}
             </TabsTrigger>
             <TabsTrigger value="done" className="text-xs">
               Done

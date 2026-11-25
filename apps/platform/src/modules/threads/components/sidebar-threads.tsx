@@ -1,14 +1,14 @@
-import { IconGitBranch, IconShare } from "@tabler/icons-react";
+import { IconCloud, IconDeviceDesktop, IconGitBranch, IconShare } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useMemo, useState } from "react";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
+import { Spinner } from "@aven/ui/spinner";
 import { dragThread } from "@/lib/thread-drag";
-import { useProjectPalettes } from "@/modules/projects/hooks/use-project-palettes";
-import { useProjects } from "@/modules/projects/hooks/use-projects";
-import type { Project } from "@/modules/projects/types";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
+import { isSandbox } from "@/modules/runtimes/sandbox";
+import type { Runtime } from "@/modules/runtimes/types";
 
 import { useArchiveThread } from "../hooks/use-archive-thread";
 import { useFinishedSound } from "../hooks/use-finished-sound";
@@ -16,7 +16,6 @@ import { useMentionedThreads } from "../hooks/use-mentioned-threads";
 import { usePinThread } from "../hooks/use-pin-thread";
 import { useRenameThread } from "../hooks/use-rename-thread";
 import { useRestoreThread } from "../hooks/use-restore-thread";
-import { useRunningThreadsPoll } from "../hooks/use-running-threads-poll";
 import { useSplitPairs } from "../hooks/use-split-pairs";
 import { useThreads } from "../hooks/use-threads";
 import { useUnreadThreads } from "../hooks/use-unread-threads";
@@ -29,30 +28,28 @@ import type { Thread, ThreadStatus } from "../types";
 import { ParticipantStack } from "./participant-stack";
 import { SidebarSection } from "./sidebar-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
-import { ThreadMark } from "./thread-mark";
 import { ThreadTitleField } from "./thread-title-field";
 
-function SidebarThreadMark({
-  thread,
-  project,
-  palette,
-}: {
-  thread: Thread;
-  project?: Project;
-  palette?: number;
-}) {
-  if (!project) return <span className="-mx-0.5 size-5 shrink-0" aria-hidden />;
+function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runtime }) {
+  if (thread.running) {
+    return (
+      <Spinner
+        role="img"
+        aria-label="Working"
+        style={thread.markColor ? { color: thread.markColor } : undefined}
+        className="size-4 shrink-0 text-muted-foreground"
+      />
+    );
+  }
+
+  const Icon = !runtime || isSandbox(runtime) ? IconCloud : IconDeviceDesktop;
 
   return (
-    <span className="relative -mx-0.5 shrink-0">
-      <ThreadMark
-        projectId={project.id}
-        runtimeId={thread.runtimeId}
-        palette={palette}
-        color={thread.markColor}
-        working={thread.running}
-      />
-    </span>
+    <Icon
+      aria-hidden
+      style={thread.markColor ? { color: thread.markColor } : undefined}
+      className="size-4 shrink-0 text-muted-foreground"
+    />
   );
 }
 
@@ -166,13 +163,11 @@ function ThreadTitle({
 }
 
 export function SidebarThreads() {
-  const { threads: own, shared: others, refresh } = useThreads();
+  const { threads: own, shared: others } = useThreads();
   const threads = own.filter((thread) => thread.state === "open");
   const archived = own.filter((thread) => thread.state === "archived");
   const shared = others.filter((thread) => thread.state === "open");
   const { computers: runtimes } = useRuntimes({ poll: true });
-  const { projects } = useProjects();
-  const palettes = useProjectPalettes();
   const archive = useArchiveThread();
   const restore = useRestoreThread();
   const rename = useRenameThread();
@@ -186,17 +181,10 @@ export function SidebarThreads() {
   const groups = withoutPinned(recencyGroups(threads), pinnedIds);
   const pathname = useRouterState({ select: (state) => state.location.pathname });
 
-  const projectsById = useMemo(
-    () => new Map(projects.map((project) => [project.id, project])),
-    [projects],
-  );
   const runtimesById = useMemo(
     () => new Map(runtimes.map((runtime) => [runtime.id, runtime])),
     [runtimes],
   );
-
-  const anyRunning = [...own, ...others].some((thread) => thread.running);
-  useRunningThreadsPoll(anyRunning, refresh);
 
   function hostLabel(thread: Thread) {
     const host = runtimesById.get(thread.runtimeId)?.name ?? "a runner";
@@ -226,11 +214,7 @@ export function SidebarThreads() {
           isActive={pathname === `/threads/${thread.id}`}
           className={cn(nested && "pl-8")}
         >
-          <SidebarThreadMark
-            thread={thread}
-            project={projectsById.get(thread.projectId)}
-            palette={palettes.get(thread.projectId)}
-          />
+          <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
           <SharedMark thread={thread} />
           <ForkMark thread={thread} />
           <ThreadTitle
@@ -277,13 +261,12 @@ export function SidebarThreads() {
           }
           isActive={pathname === `/threads/${left.id}` || pathname === `/threads/${right.id}`}
         >
-          <span className="flex shrink-0 -space-x-1.5">
+          <span className="flex shrink-0 items-center gap-0.5">
             {[left, right].map((thread) => (
               <SidebarThreadMark
                 key={thread.id}
                 thread={thread}
-                project={projectsById.get(thread.projectId)}
-                palette={palettes.get(thread.projectId)}
+                runtime={runtimesById.get(thread.runtimeId)}
               />
             ))}
           </span>
@@ -327,6 +310,7 @@ export function SidebarThreads() {
           <SidebarSection
             id="archived"
             label={`Archived (${archived.length})`}
+            collapsible
             defaultOpen={false}
             lazy
           >
@@ -352,11 +336,7 @@ export function SidebarThreads() {
                   }
                   isActive={pathname === `/threads/${thread.id}`}
                 >
-                  <SidebarThreadMark
-                    thread={thread}
-                    project={projectsById.get(thread.projectId)}
-                    palette={palettes.get(thread.projectId)}
-                  />
+                  <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
                   <SharedMark thread={thread} />
                   <span
                     className="flex-1 truncate"

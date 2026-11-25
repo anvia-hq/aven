@@ -43,7 +43,7 @@ export function VariableRows({
                 spellCheck={false}
                 maxLength={MAX_NAME_LENGTH}
                 placeholder="DATABASE_URL"
-                className="flex-1 font-mono text-xs md:text-xs"
+                className="flex-1"
                 value={row.name}
                 onChange={(event) => onChange(row.id, { name: event.target.value })}
                 onPaste={(event) => {
@@ -62,14 +62,14 @@ export function VariableRows({
                 spellCheck={false}
                 maxLength={MAX_VALUE_LENGTH}
                 placeholder="value"
-                className="flex-1 font-mono text-xs md:text-xs"
+                className="flex-1"
                 value={row.value}
                 onChange={(event) => onChange(row.id, { value: event.target.value })}
               />
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 aria-label={`Remove row ${index + 1}`}
                 onClick={() => onRemove(row.id)}
               >

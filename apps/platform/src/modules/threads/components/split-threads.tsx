@@ -1,7 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  GAP_HANDLE,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -49,7 +48,7 @@ export function SplitThreads({ threadId, split }: Props) {
             <ThreadPane key={threadId} threadId={threadId} split onClose={() => void only(split)} />
           </div>
         </ResizablePanel>
-        <ResizableHandle className={GAP_HANDLE} />
+        <ResizableHandle />
         <ResizablePanel id="split" defaultSize="50" minSize="30">
           <div
             className={PANE}

@@ -18,7 +18,9 @@ export function TerminalViewer({ computer, onExit }: Props) {
 
   return (
     <div className="relative size-full bg-background">
-      <div ref={target} className="size-full p-2" />
+      <div className="size-full p-3">
+        <div ref={target} className="size-full overflow-hidden" />
+      </div>
       {phase !== "connected" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/80 text-sm text-muted-foreground">
           {phase === "connecting" ? (

@@ -78,10 +78,20 @@ test("a connected provider and custom OpenAI-compatible server can rotate their 
 
   const connected = page.getByRole("listitem", { name: "Local vLLM" });
   await expect(connected).toContainText("Configured");
-  await expect(connected).toContainText("http://localhost:8080/v1 · vllm-70b · …1111");
+  await expect(connected).toContainText("vllm-70b");
+  await expect(connected).not.toContainText("http://localhost:8080/v1");
+  await expect(connected).not.toContainText("…1111");
 
   await connected.getByRole("button", { name: "Edit" }).click();
   await connected.getByLabel("API key (optional)").fill("sk-new-9999");
   await connected.getByRole("button", { name: "Save changes" }).click();
-  await expect(connected).toContainText("http://localhost:8080/v1 · vllm-70b · …9999");
+  await expect
+    .poll(async () => {
+      const list = (await (await page.request.get("/api/providers")).json()) as {
+        name: string;
+        keyHint?: string | null;
+      }[];
+      return list.find((item) => item.name === "Local vLLM")?.keyHint;
+    })
+    .toBe("9999");
 });

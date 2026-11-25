@@ -52,7 +52,10 @@ test.describe("projects browser", () => {
     await projects.getByRole("button", { name: "Clear filters" }).click();
     await expect(projects.getByRole("link", { name: /^shiny-app/ })).toBeVisible();
 
-    await projects.getByRole("tab", { name: "Working" }).click();
+    await page
+      .getByRole("navigation", { name: "Projects" })
+      .getByRole("link", { name: /^Working/ })
+      .click();
     await expect(projects.getByText("No projects match these filters.")).toBeVisible();
     await projects.getByRole("button", { name: "Clear filters" }).click();
     await expect(projects.getByRole("link", { name: /^shiny-app/ })).toBeVisible();

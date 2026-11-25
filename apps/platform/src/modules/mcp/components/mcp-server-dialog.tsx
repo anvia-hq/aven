@@ -131,7 +131,7 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
         </FieldDescription>
         <div className="flex flex-col gap-2">
           {headers.map((row) => (
-            <div key={row.key} className="flex gap-2">
+            <div key={row.key} className="flex items-center gap-2">
               <Input
                 aria-label="Header name"
                 placeholder="Authorization"
@@ -151,7 +151,7 @@ function McpServerForm({ server, onDone }: { server?: McpServer; onDone: () => v
               <Button
                 type="button"
                 variant="ghost"
-                size="icon-sm"
+                size="icon"
                 aria-label={`Remove ${row.name || "header"}`}
                 onClick={() => setHeaders((rows) => rows.filter((item) => item.key !== row.key))}
               >

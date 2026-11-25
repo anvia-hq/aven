@@ -109,7 +109,7 @@ export function GitPrInspector({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <IconGitPullRequest className="size-4 shrink-0 text-primary" />
-              <span className="font-mono text-muted-foreground">#{pull.number}</span>
+              <span className="font-mono text-muted-foreground tabular-nums">#{pull.number}</span>
               <Badge variant={pull.status === "merged" ? "default" : "secondary"}>
                 {pull.status}
               </Badge>
@@ -127,12 +127,12 @@ export function GitPrInspector({
           </a>
         </div>
 
-        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[0.6875rem] text-muted-foreground">
-          <Badge variant="outline" className="font-mono text-[0.625rem]">
+        <div className="flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-muted-foreground tabular-nums">
+          <Badge variant="secondary" className="font-mono text-[11px]">
             {pull.head}
           </Badge>
           <span>→</span>
-          <Badge variant="outline" className="font-mono text-[0.625rem]">
+          <Badge variant="secondary" className="font-mono text-[11px]">
             {pull.base}
           </Badge>
           <span>
@@ -142,26 +142,23 @@ export function GitPrInspector({
         </div>
 
         {pull.checks.runs.length > 0 && (
-          <div className="rounded-md border border-border bg-muted/30 p-2">
-            <div className="mb-1.5 flex items-center justify-between text-[0.6875rem] font-semibold">
-              <span>CI Checks ({pull.checks.runs.length})</span>
+          <div className="overflow-hidden rounded-lg border border-border/70 bg-muted/20">
+            <div className="flex items-center justify-between border-b border-border/60 px-2.5 py-1.5 text-[11px] font-medium">
+              <span className="tabular-nums">CI Checks ({pull.checks.runs.length})</span>
               <Badge
                 variant={pull.checks.state === "failure" ? "destructive" : "secondary"}
-                className="text-[0.625rem]"
+                className="text-[11px]"
               >
                 {pull.checks.state}
               </Badge>
             </div>
-            <div className="flex max-h-40 flex-col gap-1 overflow-y-auto">
+            <div className="flex max-h-40 flex-col divide-y divide-border/60 overflow-y-auto">
               {pull.checks.runs.map((run, idx) => {
                 const checkId = run.id;
                 const logData = checkId ? logsByCheck[checkId] : undefined;
                 const isExpanded = checkId !== undefined && expandedCheck === checkId;
                 return (
-                  <div
-                    key={`${run.name}-${idx}`}
-                    className="rounded border border-border/50 bg-background p-1.5"
-                  >
+                  <div key={`${run.name}-${idx}`} className="px-2.5 py-1.5">
                     <div className="flex items-center gap-1.5">
                       {run.state === "success" && (
                         <IconCircleCheck className="size-3.5 shrink-0 text-primary" />

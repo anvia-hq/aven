@@ -50,7 +50,7 @@ export function MemoryList({ sections }: { sections: FolderSection[] }) {
       {shown.map((section) => (
         <SettingsSection key={section.key} title={section.label} description={section.description}>
           {section.notes.length === 0 ? (
-            <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+            <p className="rounded-xl bg-muted/30 px-4 py-6 text-sm text-muted-foreground">
               No notes yet. Your agents keep them as they learn about you, or tell one to remember
               something.
             </p>

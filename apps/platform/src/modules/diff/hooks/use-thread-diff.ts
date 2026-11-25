@@ -8,7 +8,8 @@ import { parsePatch } from "../parse-patch";
 import { sameFile } from "../same-file";
 import type { DiffFile, ThreadDiff, ThreadDiffResponse, ThreadDiffScope } from "../types";
 
-const POLL_MS = 4_000;
+const FULL_POLL_MS = 6_000;
+const SUMMARY_POLL_MS = 10_000;
 
 type ActiveRequest = {
   controller: AbortController;
@@ -18,6 +19,25 @@ type ActiveRequest = {
 
 const inFlight = new Map<string, ActiveRequest>();
 const activeFull = new Map<string, number>();
+
+function sameLoaded(a: ThreadDiffResponse | string | undefined, b: ThreadDiffResponse | string) {
+  if (a === b) return true;
+
+  if (!a || typeof a === "string" || typeof b === "string") return false;
+
+  if (a.available !== b.available) return false;
+
+  if (!a.available || !b.available) return true;
+
+  return (
+    a.patch === b.patch &&
+    a.truncated === b.truncated &&
+    (a.branch ?? null) === (b.branch ?? null) &&
+    a.summary?.files === b.summary?.files &&
+    a.summary?.additions === b.summary?.additions &&
+    a.summary?.deletions === b.summary?.deletions
+  );
+}
 
 function deriveSummary(data: Extract<ThreadDiffResponse, { available: true }>) {
   if (data.summary) return data.summary;
@@ -46,7 +66,7 @@ export function useThreadDiff(
   const fullKey = diffCacheKey(threadId, scope, false);
   const summaryKey = diffCacheKey(threadId, scope, true);
   const fullScopeKey = `${threadId}:${scope}`;
-  const [fetching, setFetching] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
 
   const runFetch = useCallback(
     (force = false) => {
@@ -74,23 +94,38 @@ export function useThreadDiff(
 
           if (!summaryOnly && data.available) {
             const summary = deriveSummary(data);
+            const nextFull: ThreadDiffResponse = { ...data, summary };
+            const nextSummary: ThreadDiffResponse = {
+              available: true,
+              patch: "",
+              truncated: data.truncated,
+              branch: data.branch,
+              summary,
+            };
+
+            if (
+              sameLoaded(current[fullKey]?.loaded, nextFull) &&
+              sameLoaded(current[summaryKey]?.loaded, nextSummary)
+            ) {
+              return;
+            }
+
             store.set(threadDiffCacheAtom, {
               ...current,
-              [fullKey]: { loaded: { ...data, summary } },
-              [summaryKey]: {
-                loaded: {
-                  available: true,
-                  patch: "",
-                  truncated: data.truncated,
-                  branch: data.branch,
-                  summary,
-                },
-              },
+              [fullKey]: { loaded: nextFull },
+              [summaryKey]: { loaded: nextSummary },
             });
             return;
           }
 
           if (!summaryOnly && !data.available) {
+            if (
+              sameLoaded(current[fullKey]?.loaded, data) &&
+              sameLoaded(current[summaryKey]?.loaded, data)
+            ) {
+              return;
+            }
+
             store.set(threadDiffCacheAtom, {
               ...current,
               [fullKey]: { loaded: data },
@@ -99,15 +134,21 @@ export function useThreadDiff(
             return;
           }
 
+          if (sameLoaded(current[key]?.loaded, data)) return;
+
           store.set(threadDiffCacheAtom, { ...current, [key]: { loaded: data } });
         })
         .catch((failure: unknown) => {
           if (controller.signal.aborted) return;
 
+          const message = errorMessage(failure);
           const current = store.get(threadDiffCacheAtom);
+
+          if (sameLoaded(current[key]?.loaded, message)) return;
+
           store.set(threadDiffCacheAtom, {
             ...current,
-            [key]: { loaded: errorMessage(failure) },
+            [key]: { loaded: message },
           });
         })
         .finally(() => {
@@ -138,24 +179,38 @@ export function useThreadDiff(
   useEffect(() => {
     if (!enabled) return;
 
+    const intervalMs = summaryOnly ? SUMMARY_POLL_MS : FULL_POLL_MS;
     let alive = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const tick = async () => {
-      setFetching(true);
-      await runFetch();
+    const schedule = () => {
+      if (!alive || !running || document.visibilityState === "hidden") return;
 
-      if (!alive) return;
-
-      setFetching(false);
-
-      if (running) timer = setTimeout(() => void tick(), POLL_MS);
+      clearTimeout(timer);
+      timer = setTimeout(() => void tick(), intervalMs);
     };
 
-    void tick();
+    const tick = async () => {
+      await runFetch();
+      schedule();
+    };
+
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        clearTimeout(timer);
+        return;
+      }
+
+      if (running) void tick();
+    };
+
+    if (document.visibilityState !== "hidden") void tick();
+
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       alive = false;
       clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
       const pending = inFlight.get(key);
 
       if (pending && pending.waiters <= 1) {
@@ -163,13 +218,13 @@ export function useThreadDiff(
         pending.controller.abort();
       }
     };
-  }, [enabled, key, runFetch, running]);
+  }, [enabled, key, runFetch, running, summaryOnly]);
 
   const refresh = useCallback(() => {
     if (!enabled) return;
 
-    setFetching(true);
-    void runFetch(true).finally(() => setFetching(false));
+    setManualRefreshing(true);
+    void runFetch(true).finally(() => setManualRefreshing(false));
   }, [enabled, runFetch]);
 
   const entry = enabled ? (cache[key] ?? (summaryOnly ? cache[fullKey] : undefined)) : undefined;
@@ -211,7 +266,7 @@ export function useThreadDiff(
   return {
     loaded: shown !== null,
     problem,
-    refreshing: fetching && shown !== null,
+    refreshing: manualRefreshing && shown !== null,
     available: response ? response.available : null,
     truncated: patch?.truncated ?? false,
     branch: patch?.branch ?? null,

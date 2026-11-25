@@ -160,7 +160,6 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
             />
             <Button
               type="button"
-              size="sm"
               variant="outline"
               disabled={creating || !name.trim()}
               onClick={() => void submitName()}
@@ -169,7 +168,7 @@ export function FolderPicker({ runtimeId, path, onChange }: Props) {
             </Button>
             <Button
               type="button"
-              size="icon-sm"
+              size="icon"
               variant="ghost"
               aria-label="Cancel new folder"
               onClick={() => {

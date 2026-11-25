@@ -233,13 +233,18 @@ test.describe("bots settings and composer", () => {
 
     await page.getByRole("button", { name: "Model of Aven" }).click();
     await page.getByRole("option", { name: "gpt-5" }).click();
-    const slider = page.getByRole("slider", { name: "Reasoning effort" });
-    await expect(slider).toBeVisible();
-    await expect(slider).toHaveAttribute("aria-valuetext", "medium");
+    const effort = page.getByRole("group", { name: "Reasoning effort" });
+    await expect(effort).toBeVisible();
+    await expect(effort.getByRole("button", { name: "Medium" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
 
-    await slider.focus();
-    await slider.press("End");
-    await expect(slider).toHaveAttribute("aria-valuetext", "high");
+    await effort.getByRole("button", { name: "High" }).click();
+    await expect(effort.getByRole("button", { name: "High" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     await expect
       .poll(async () => {
         const bots = (await (await page.request.get("/api/bots")).json()) as {
@@ -250,10 +255,9 @@ test.describe("bots settings and composer", () => {
       .toBe("high");
 
     await page.reload();
-    await expect(page.getByRole("slider", { name: "Reasoning effort" })).toHaveAttribute(
-      "aria-valuetext",
-      "high",
-    );
+    await expect(
+      page.getByRole("group", { name: "Reasoning effort" }).getByRole("button", { name: "High" }),
+    ).toHaveAttribute("aria-pressed", "true");
   });
 
   test("the person sets the size past which the chat is summarized", async ({ page }) => {

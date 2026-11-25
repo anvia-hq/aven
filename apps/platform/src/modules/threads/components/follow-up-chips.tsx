@@ -34,7 +34,7 @@ export function FollowUpChips({ suggestions, onPick }: Props) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="max-w-full gap-1.5 rounded-full bg-background/60 pr-2.5 pl-1.5 shadow-md backdrop-blur-md dark:bg-background/60"
+                  className="max-w-full gap-1.5 rounded-full bg-card pr-2.5 pl-1.5 hover:bg-muted dark:bg-card dark:hover:bg-muted"
                   onClick={() => onPick(text)}
                 />
               }

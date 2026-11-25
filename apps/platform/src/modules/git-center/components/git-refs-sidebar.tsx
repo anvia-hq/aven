@@ -153,7 +153,7 @@ export function GitRefsSidebar({
               value={refQuery}
               onChange={(e) => setRefQuery(e.target.value)}
               placeholder="Filter refs…"
-              className="h-6.5 pr-6 pl-6.5 text-xs"
+              className="h-7 pr-6 pl-6.5 text-xs"
             />
             {filtering && (
               <Button

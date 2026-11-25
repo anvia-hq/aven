@@ -48,13 +48,13 @@ type Props = {
 };
 
 function statusTone(status: GitWorkspaceStatusFile["status"]) {
-  if (status === "added" || status === "untracked") return "border-success/40 text-success";
+  if (status === "added" || status === "untracked") return "bg-muted text-success";
 
   if (status === "deleted" || status === "conflicted") {
-    return "border-destructive/40 text-destructive";
+    return "bg-muted text-destructive";
   }
 
-  return "border-info/40 text-info";
+  return "bg-muted text-info";
 }
 
 function FileRow({
@@ -90,23 +90,20 @@ function FileRow({
         onClick={onSelect}
       >
         <Badge
-          variant="outline"
+          variant="secondary"
           className={cn(
-            "h-4 w-4 shrink-0 justify-center px-0 font-mono text-[0.5625rem] uppercase",
+            "h-4 w-4 shrink-0 justify-center rounded px-0 font-mono text-[10px] uppercase",
             statusTone(file.status),
           )}
         >
           {file.status.slice(0, 1)}
         </Badge>
-        <span
-          className="min-w-0 flex-1 truncate text-left font-mono text-[0.6875rem]"
-          title={file.path}
-        >
+        <span className="min-w-0 flex-1 truncate text-left font-mono text-[11px]" title={file.path}>
           {file.path}
         </span>
       </Button>
       {canMutate && (
-        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
           <Button
             variant="ghost"
             size="icon-xs"

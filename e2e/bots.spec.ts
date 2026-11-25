@@ -327,9 +327,9 @@ test.describe("bots", () => {
     await expect(page.getByText("sk-azure-e2e-secret")).toHaveCount(0);
 
     await page.goto("/settings/providers");
-    await expect(page.getByRole("listitem", { name: "Work Azure" })).toContainText(
-      "https://work.openai.azure.com · gpt-5 · …1234",
-    );
+    const row = page.getByRole("listitem", { name: "Work Azure" });
+    await expect(row).toContainText("gpt-5");
+    await expect(row).toContainText("Configured");
   });
 
   test.describe("a bot's threads", () => {

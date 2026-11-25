@@ -23,7 +23,7 @@ export function OverviewColumn({
   return (
     <aside
       aria-label="Overview"
-      className="sticky top-0 hidden w-72 shrink-0 flex-col gap-3 self-start p-3 @4xl:flex"
+      className="sticky top-12 hidden w-72 shrink-0 flex-col gap-3 self-start p-3 @4xl:flex"
     >
       <EnvironmentCard thread={thread} owned={owned} />
       {owned && (

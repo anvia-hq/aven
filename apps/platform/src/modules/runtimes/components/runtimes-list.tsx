@@ -4,6 +4,7 @@ import { cn } from "cn";
 import { Badge } from "@aven/ui/badge";
 import { Button } from "@aven/ui/button";
 import { SettingsEmpty } from "@aven/ui/settings-section";
+import { Skeleton } from "@aven/ui/skeleton";
 import { timeAgo } from "@/lib/format";
 
 import { githubModeNote } from "../github-mode";
@@ -72,7 +73,14 @@ export function RuntimesList() {
   const { runtimes: all, loaded, revoke, isOwnedByMe, canRename } = useRuntimes({ poll: true });
   const runtimes = all.filter((runtime) => !runtime.isCloud);
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-28 rounded-xl" />
+        <Skeleton className="h-28 rounded-xl" />
+      </div>
+    );
+  }
 
   if (runtimes.length === 0) return <SettingsEmpty>No runtimes yet.</SettingsEmpty>;
 
@@ -108,12 +116,12 @@ function RuntimeCard({
   return (
     <li aria-label={runtime.name} className="rounded-xl border bg-card/30 p-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg border bg-muted/40">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-muted/60">
           <IconServer className="size-3.5 text-muted-foreground" />
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{runtime.name}</span>
-          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+          <span className="mt-0.5 block truncate text-xs text-muted-foreground tabular-nums">
             <span className="font-mono">{runtime.build ? `v${runtime.build}` : "–"}</span>
             {" · "}
             <span className="whitespace-nowrap">
@@ -128,13 +136,13 @@ function RuntimeCard({
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
           {runtime.host && (
             <Badge
-              variant="outline"
+              variant="secondary"
               title="Works on this computer itself, with no sandbox: the agent runs as the person who runs it"
             >
               This computer
             </Badge>
           )}
-          <Badge variant="outline" title={githubModeNote(runtime.githubMode, runtime.github)}>
+          <Badge variant="secondary" title={githubModeNote(runtime.githubMode, runtime.github)}>
             {runtime.githubMode === "person" ? "GitHub: each person" : "GitHub: this machine"}
           </Badge>
           {runtime.ownerId === null && (
@@ -149,7 +157,7 @@ function RuntimeCard({
             </span>
           )}
           {runtime.updateTo && (
-            <Badge variant="outline" title="Update it here, or run `aven update` on that machine">
+            <Badge variant="secondary" title="Update it here, or run `aven update` on that machine">
               Update available
             </Badge>
           )}

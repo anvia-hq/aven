@@ -14,13 +14,13 @@ type Props = {
 export function SidePanel({ title, icon: Icon, actions, onClose, children }: Props) {
   return (
     <section
-      className="flex size-full min-w-0 flex-col overflow-hidden border border-foreground/12 bg-background"
+      className="flex size-full min-w-0 flex-col overflow-hidden bg-background"
       aria-label={title}
     >
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <Icon className="size-4 text-muted-foreground" />
         <h2 className="text-sm font-medium">{title}</h2>
-        {actions}
+        {actions ?? <span className="flex-1" />}
         <Button
           variant="ghost"
           size="icon-sm"

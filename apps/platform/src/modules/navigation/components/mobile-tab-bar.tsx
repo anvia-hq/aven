@@ -27,7 +27,7 @@ function Tab({
       to={to}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "group/tab flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-1 pb-1.5 text-[0.6875rem] font-medium outline-none",
+        "group/tab flex min-h-12 flex-1 flex-col items-center justify-center gap-0.5 px-1 pb-1.5 text-[11px] font-medium outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
         "text-muted-foreground transition-colors hover:text-foreground focus-visible:text-foreground active:text-foreground",
         active && "text-foreground",
       )}
@@ -61,7 +61,7 @@ export function MobileTabBar() {
         <AvenMark className="w-5 text-brand" />
       </Tab>
       <Tab to="/cockpit/inbox" label="Cockpit" active={pathname.startsWith("/cockpit")}>
-        <IconLayoutGrid className="size-5" style={{ strokeWidth: 1.7 }} />
+        <IconLayoutGrid className="size-5" />
       </Tab>
       <Tab to="/bot" label="Bot" active={pathname.startsWith("/bot")}>
         {main ? (

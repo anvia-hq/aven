@@ -22,12 +22,11 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
   const { exporting, exportProfile } = useExportProfile();
 
   return (
-    <header className="relative isolate flex flex-wrap items-center justify-between gap-4">
-      <div className="pointer-events-none absolute -top-24 left-0 -z-10 h-48 w-96 rounded-full bg-primary/10 blur-3xl" />
+    <header className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex min-w-0 items-center gap-4">
-        <Avatar className="size-16 ring-1 ring-border ring-offset-2 ring-offset-background">
+        <Avatar className="size-16 border border-border">
           {image && <AvatarImage src={image} alt="" />}
-          <AvatarFallback className="bg-gradient-to-br from-primary/25 to-primary/5 text-lg font-medium text-foreground">
+          <AvatarFallback className="bg-muted text-lg font-medium text-foreground">
             {initials(name)}
           </AvatarFallback>
         </Avatar>

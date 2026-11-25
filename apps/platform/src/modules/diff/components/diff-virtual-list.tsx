@@ -75,10 +75,7 @@ export function DiffVirtualList({ items, onToggle, scrollTo, footer }: Props) {
     overscan: 20,
     paddingStart: PADDING,
     paddingEnd: PADDING,
-    getItemKey: (index) => {
-      const item = items[index]!;
-      return `${item.file.path}:${index}`;
-    },
+    getItemKey: (index) => items[index]!.key,
   });
   const itemsRef = useRef(items);
   itemsRef.current = items;

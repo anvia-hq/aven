@@ -20,7 +20,7 @@ export function ProjectPicker({ value, onChange }: Props) {
     >
       <SelectTrigger
         aria-label="Project"
-        className="max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-muted-foreground dark:bg-muted/50"
+        className="h-7 max-w-48 min-w-0 border-0 bg-muted/50 px-2 text-[0.8rem] font-medium text-muted-foreground dark:bg-muted/50"
       >
         <IconFolderFilled />
         <SelectValue placeholder="Choose a project" />

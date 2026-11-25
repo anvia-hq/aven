@@ -1,38 +1,45 @@
-import { IconChevronRight } from "@tabler/icons-react";
+import { IconBolt, IconCheck, IconCpu, IconSettings } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
-import { ModelChoiceList } from "@/modules/providers/components/model-choice-list";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "@aven/ui/dropdown-menu";
 import { ProviderLogo } from "@/modules/providers/components/provider-logo";
 import { isSubscription } from "@/modules/providers/types";
 
 import type { useModelSelection } from "../hooks/use-model-selection";
-import { EffortSlider, effortName } from "./effort-slider";
+import { effortName } from "./effort-slider";
 
 type Props = { model: ReturnType<typeof useModelSelection> };
 
 export function ModelMenu({ model }: Props) {
   const { providers, provider, modelId, modelLabel, choices, loadingModels, levels, effort } =
     model;
-  const [choosing, setChoosing] = useState(false);
 
-  const addProvider = (
-    <Link to="/settings/providers" className="text-xs text-muted-foreground underline">
-      Add a provider to choose a model
-    </Link>
-  );
+  if (!provider) {
+    return (
+      <Link to="/settings/providers" className="text-xs text-muted-foreground underline">
+        Add a provider to choose a model
+      </Link>
+    );
+  }
 
-  if (!provider) return addProvider;
-
-  const listing = choosing;
   const efforts = levels.length > 1;
   const subscription = isSubscription(provider);
 
   return (
-    <Popover onOpenChange={(open) => !open && setChoosing(false)}>
-      <PopoverTrigger
+    <DropdownMenu>
+      <DropdownMenuTrigger
         render={
           <Button
             variant="outline"
@@ -46,56 +53,76 @@ export function ModelMenu({ model }: Props) {
         <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />
         <span className="truncate font-medium text-foreground">{modelLabel ?? provider.name}</span>
         {efforts && <span className="shrink-0">{effortName(effort)}</span>}
-      </PopoverTrigger>
-      <PopoverContent
-        side="top"
-        align="end"
-        className="w-80 max-w-[calc(100vw-2rem)] gap-0 rounded-2xl p-0"
-      >
-        {listing ? (
-          <div className="flex flex-col gap-1 p-3 pb-0">
-            <div className="flex items-center gap-2 pb-1">
-              <span className="font-medium">Choose model</span>
-            </div>
-            <ModelChoiceList
-              providers={providers}
-              choices={choices}
-              loading={loadingModels}
-              selected={{ providerId: provider.id, modelId }}
-              onSelect={(choice) => {
-                model.selectModel(choice);
-                setChoosing(false);
-              }}
-            />
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 p-4">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs tracking-wide text-muted-foreground uppercase">
-                {efforts ? "Reasoning" : "Model"}
-              </span>
-              {efforts && <span className="text-xl font-semibold">{effortName(effort)}</span>}
-            </div>
-            <Button
-              variant="outline"
-              className="w-fit max-w-full rounded-full"
-              onClick={() => setChoosing(true)}
-            >
-              <ProviderLogo kind={provider.kind} baseUrl={provider.baseUrl} />
-              <span className="truncate">{modelLabel ?? "Provider default"}</span>
-              <IconChevronRight />
-            </Button>
-            {efforts && (
-              <EffortSlider levels={levels} value={effort} onChange={model.selectEffort} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="end" className="w-auto min-w-[260px]">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger className="[&>svg:last-child]:ml-0">
+            <IconCpu />
+            Model
+            <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
+              {modelLabel ?? provider.name}
+            </span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent className="max-h-72 w-72 max-w-[calc(100vw-2rem)] overflow-y-auto">
+            {choices.length === 0 ? (
+              <DropdownMenuItem disabled>
+                {loadingModels ? "Loading models…" : "No models"}
+              </DropdownMenuItem>
+            ) : (
+              providers.flatMap((each) => {
+                const group = choices.filter((choice) => choice.provider.id === each.id);
+
+                if (group.length === 0) return [];
+
+                return [
+                  <DropdownMenuGroup key={each.id}>
+                    <DropdownMenuLabel>{each.name}</DropdownMenuLabel>
+                    {group.map((choice) => {
+                      const chosen =
+                        choice.provider.id === provider.id && choice.modelId === modelId;
+
+                      return (
+                        <DropdownMenuItem
+                          key={`${choice.provider.id}:${choice.modelId}`}
+                          title={choice.label}
+                          onClick={() => model.selectModel(choice)}
+                        >
+                          <span className="min-w-0 flex-1 truncate">{choice.label}</span>
+                          {chosen && <IconCheck />}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuGroup>,
+                ];
+              })
             )}
-          </div>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
+        {efforts && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="[&>svg:last-child]:ml-0">
+              <IconBolt />
+              Reasoning
+              <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
+                {effortName(effort)}
+              </span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className="w-40">
+              {levels.map((level) => (
+                <DropdownMenuItem key={level} onClick={() => model.selectEffort(level)}>
+                  {effortName(level)}
+                  {level === effort && <IconCheck className="ml-auto" />}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         )}
-        <div className="border-t px-4 py-3 text-sm">
-          <Link to="/settings/providers" className="text-muted-foreground hover:text-foreground">
-            {subscription ? "Manage your subscription" : "Manage models"}
-          </Link>
-        </div>
-      </PopoverContent>
-    </Popover>
+        <DropdownMenuSeparator className="my-1 bg-border/70" />
+        <DropdownMenuItem render={<Link to="/settings/providers" />}>
+          <IconSettings />
+          {subscription ? "Manage your subscription" : "Manage models"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

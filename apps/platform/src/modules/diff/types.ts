@@ -75,10 +75,10 @@ export type ThreadDiff = {
 };
 
 export type DiffItem =
-  | { kind: "file"; file: DiffFile; open: boolean; first: boolean }
-  | { kind: "note"; file: DiffFile }
-  | { kind: "hunk"; file: DiffFile; header: string }
-  | { kind: "unified"; file: DiffFile; row: DiffRow; last: boolean }
-  | { kind: "split"; file: DiffFile; pair: SplitRow; last: boolean };
+  | { kind: "file"; key: string; file: DiffFile; open: boolean; first: boolean }
+  | { kind: "note"; key: string; file: DiffFile }
+  | { kind: "hunk"; key: string; file: DiffFile; header: string }
+  | { kind: "unified"; key: string; file: DiffFile; row: DiffRow; last: boolean }
+  | { kind: "split"; key: string; file: DiffFile; pair: SplitRow; last: boolean };
 
 export type FileColours = { old: HighlightedLine[] | null; new: HighlightedLine[] | null };

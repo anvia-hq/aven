@@ -32,7 +32,7 @@ function NoteRow({ note, onOpen }: { note: CockpitNote; onOpen: () => void }) {
             className="size-3.5 shrink-0 text-muted-foreground"
           />
         )}
-        <span className="w-10 shrink-0 text-right text-xs text-muted-foreground/80">
+        <span className="w-10 shrink-0 text-right text-xs text-muted-foreground/80 tabular-nums">
           {shortTimeAgo(note.updatedAt)}
         </span>
       </Button>
@@ -74,8 +74,8 @@ export function NotesIndex({
 
   return (
     <div className="cockpit-doc mx-auto w-full max-w-[46rem] px-(--doc-gutter) pt-12 pb-24 md:pt-20">
-      <h1 className="text-[2.5rem] leading-tight font-bold tracking-tight">Notes</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
+      <h1 className="text-2xl leading-tight font-semibold tracking-tight">Notes</h1>
+      <p className="mt-1 text-sm text-muted-foreground tabular-nums">
         {notes.length === 1 ? "1 note" : `${notes.length} notes`}
         {tag && ` tagged ${tag}`}
       </p>
@@ -88,7 +88,7 @@ export function NotesIndex({
           onChange={(event) => setQuery(event.target.value)}
           className="h-8 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0 dark:bg-transparent"
         />
-        <Button size="sm" onClick={() => void startNote()}>
+        <Button onClick={() => void startNote()}>
           <IconPlus /> New note
         </Button>
       </div>

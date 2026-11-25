@@ -6,6 +6,7 @@ import { Button } from "@aven/ui/button";
 import { Form } from "@aven/ui/form";
 import { Input } from "@aven/ui/input";
 import { SettingsSection } from "@aven/ui/settings-section";
+import { Skeleton } from "@aven/ui/skeleton";
 import { Switch } from "@aven/ui/switch";
 import { fileSize } from "@/lib/format";
 
@@ -58,7 +59,7 @@ function InstallSkill() {
       >
         <Input
           aria-label="A skill to install"
-          placeholder="vercel-labs/agent-skills@web-design-guidelines"
+          placeholder="owner/repo@skill-name"
           value={source}
           onChange={(event) => {
             setSource(event.target.value);
@@ -66,12 +67,7 @@ function InstallSkill() {
             setInstalled([]);
           }}
         />
-        <Button
-          type="submit"
-          size="sm"
-          variant="outline"
-          disabled={busy || source.trim().length === 0}
-        >
+        <Button type="submit" variant="outline" disabled={busy || source.trim().length === 0}>
           <IconDownload />
           Install
         </Button>
@@ -192,7 +188,7 @@ function PersonalSkill({ skill }: { skill: Skill }) {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="font-mono text-sm font-medium">{skill.name}</span>
         <p className="line-clamp-2 text-xs text-muted-foreground">{skill.description}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-muted-foreground tabular-nums">
           {skill.fileCount === 1 ? "1 file" : `${skill.fileCount} files`} · {fileSize(skill.size)}
         </p>
       </div>
@@ -217,7 +213,15 @@ function PersonalSkill({ skill }: { skill: Skill }) {
 export function SkillsList() {
   const { builtIn, personal, loaded } = useSkills();
 
-  if (!loaded) return null;
+  if (!loaded) {
+    return (
+      <div className="flex flex-col gap-4 border-t py-6 md:py-8">
+        <Skeleton className="h-32 rounded-xl" />
+        <Skeleton className="h-14 rounded-xl" />
+        <Skeleton className="h-14 rounded-xl" />
+      </div>
+    );
+  }
 
   const replaced = new Set(personal.flatMap((skill) => (skill.enabled ? [skill.name] : [])));
 

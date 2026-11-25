@@ -1,4 +1,4 @@
-import { IconArrowBackUp } from "@tabler/icons-react";
+import { IconArrowBackUp, IconCornerDownRight } from "@tabler/icons-react";
 
 import { Bubble, BubbleContent } from "@aven/ui/bubble";
 import { Button } from "@aven/ui/button";
@@ -73,58 +73,64 @@ export function BotChatBubble({
       ) : null}
       {(message.text || reply) &&
         (mine ? (
-          <div className="relative w-fit max-w-[80%] self-end">
-            <div
-              data-role="user"
-              style={bubbleStyle(tint)}
-              className={cn(
-                "rounded-2xl border border-foreground/10 bg-clip-padding px-3 py-2 text-[15px]/[22px] font-medium whitespace-pre-wrap",
-                tint === undefined &&
-                  "bg-linear-to-b from-accent to-[color-mix(in_oklch,var(--accent),var(--foreground)_6%)]",
-                bubbleInk(tint),
-              )}
-            >
-              {reply}
-              {message.text && <MentionedText text={message.text} bots={bots} />}
-            </div>
-            {actions}
+          <div className="flex w-fit max-w-[80%] min-w-0 flex-col items-end gap-1 self-end">
+            {reply}
+            {message.text && (
+              <div className="relative w-fit max-w-full">
+                <div
+                  data-role="user"
+                  style={bubbleStyle(tint)}
+                  className={cn(
+                    "rounded-3xl border border-foreground/10 bg-clip-padding px-4 py-2 text-[15px]/[22px] font-medium whitespace-pre-wrap",
+                    tint === undefined &&
+                      "bg-linear-to-b from-accent to-[color-mix(in_oklch,var(--accent),var(--foreground)_6%)]",
+                    bubbleInk(tint),
+                  )}
+                >
+                  <MentionedText text={message.text} bots={bots} />
+                </div>
+                {actions}
+              </div>
+            )}
           </div>
         ) : (
-          <Bubble
-            variant="muted"
-            align="start"
-            className="*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_3%)]! dark:*:data-[slot=bubble-content]:bg-[color-mix(in_oklch,var(--muted),black_7%)]!"
-          >
-            <BubbleContent
-              className={cn(
-                "rounded-2xl font-medium [&>.prose]:text-[15px] [&>.prose]:leading-[24px]",
-                joined?.above && "rounded-tl-md",
-                joined?.below && "rounded-bl-md",
-              )}
-            >
-              {reply}
-              {message.text && (
-                <Markdown
-                  components={{
-                    a: ({ node: _node, href, children, ...props }) => {
-                      const mentioned = bots.find((each) => each.id === botIdOfHref(href));
-
-                      return mentioned ? (
-                        <BotMentionChip bot={mentioned} />
-                      ) : (
-                        <ExternalLink href={href} {...props}>
-                          {children}
-                        </ExternalLink>
-                      );
-                    },
-                  }}
+          <div className="flex w-fit max-w-[80%] min-w-0 flex-col items-start gap-1">
+            {reply}
+            {message.text && (
+              <Bubble
+                variant="muted"
+                align="start"
+                className="max-w-full *:data-[slot=bubble-content]:bg-transparent"
+              >
+                <BubbleContent
+                  className={cn(
+                    "rounded-3xl border-(--bot-bubble-border) bg-linear-to-b from-(--bot-bubble-from) to-(--bot-bubble-to) bg-clip-padding px-4 py-2.5 font-medium [&>.prose]:text-[15px] [&>.prose]:leading-[24px]",
+                    joined?.above && "rounded-tl-lg",
+                    joined?.below && "rounded-bl-lg",
+                  )}
                 >
-                  {linkBotMentions(message.text, bots)}
-                </Markdown>
-              )}
-            </BubbleContent>
-            {actions}
-          </Bubble>
+                  <Markdown
+                    components={{
+                      a: ({ node: _node, href, children, ...props }) => {
+                        const mentioned = bots.find((each) => each.id === botIdOfHref(href));
+
+                        return mentioned ? (
+                          <BotMentionChip bot={mentioned} />
+                        ) : (
+                          <ExternalLink href={href} {...props}>
+                            {children}
+                          </ExternalLink>
+                        );
+                      },
+                    }}
+                  >
+                    {linkBotMentions(message.text, bots)}
+                  </Markdown>
+                </BubbleContent>
+                {actions}
+              </Bubble>
+            )}
+          </div>
         ))}
       {message.artifacts?.length ? (
         <div className="flex flex-col items-start gap-1.5">
@@ -166,22 +172,24 @@ function ReplyTo({
   bots: readonly Bot[];
   mine: boolean;
 }) {
+  const author = quoteAuthor(quote, bot, bots);
+  const preview = quote.text || "A file";
+
   return (
     <div
       data-slot="quote"
-      className={cn("mb-1.5 flex min-w-0 gap-2", mine ? "mr-7" : "mr-9")}
-      title={`${quoteAuthor(quote, bot, bots)}: ${quote.text || "A file"}`}
+      className={cn(
+        "flex max-w-md min-w-0 items-center gap-1.5 px-3 text-xs leading-5 text-muted-foreground",
+        mine && "justify-end",
+      )}
+      title={`${author}: ${preview}`}
     >
-      <span
-        aria-hidden
-        className="w-0.5 shrink-0 self-stretch rounded-full bg-current opacity-35"
-      />
-      <span className="flex min-w-0 flex-col">
-        <span className="text-xs leading-5 font-medium opacity-80">
-          {quoteAuthor(quote, bot, bots)}
-        </span>
-        <span className="truncate text-xs leading-5 opacity-60">{quote.text || "A file"}</span>
+      <IconCornerDownRight aria-hidden className="size-3 shrink-0 opacity-60" />
+      <span className="shrink-0 font-medium text-muted-foreground/90">{author}</span>
+      <span aria-hidden className="shrink-0 opacity-40">
+        ·
       </span>
+      <span className="truncate opacity-70">{preview}</span>
     </div>
   );
 }

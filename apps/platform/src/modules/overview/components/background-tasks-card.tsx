@@ -54,7 +54,9 @@ export function BackgroundTasksCard({
       title="Background tasks"
       aside={
         live.length > 0 ? (
-          <span className="text-[10px] font-medium text-success">{live.length} running</span>
+          <span className="text-[11px] font-medium text-success tabular-nums">
+            {live.length} running
+          </span>
         ) : undefined
       }
     >
@@ -66,7 +68,7 @@ export function BackgroundTasksCard({
             onOpenChange={setChosenOpen}
             className="flex flex-col gap-0.5"
           >
-            <CollapsibleTrigger className="-mx-1.5 flex items-center gap-2 self-start rounded-md px-1.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase outline-none hover:text-foreground focus-visible:underline">
+            <CollapsibleTrigger className="-mx-1.5 flex items-center gap-2 self-start rounded-md px-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase tabular-nums outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50">
               <span className="grid size-4 shrink-0 place-items-center">
                 {endedOpen ? (
                   <IconChevronDown className="size-3" aria-hidden />

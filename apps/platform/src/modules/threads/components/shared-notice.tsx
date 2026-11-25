@@ -5,7 +5,7 @@ import type { Thread } from "../types";
 export function SharedNotice({ thread, driven }: { thread: Thread; driven: boolean }) {
   const Icon = driven ? IconUsers : IconWorld;
   return (
-    <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-xl border bg-card px-3 py-2 text-xs text-muted-foreground shadow-md">
+    <div className="mb-2 flex w-fit max-w-full items-center gap-2 rounded-xl border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
       <Icon className="size-4 shrink-0" />
       <span className={driven ? "min-w-0 truncate" : undefined}>
         {driven ? (

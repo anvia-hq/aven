@@ -42,10 +42,10 @@ test.describe("themes", () => {
 
     await chooseMode(page, "Dark");
     await expect(html).toHaveClass(/dark/);
-    const border = await html.evaluate((el) =>
-      getComputedStyle(el).getPropertyValue("--border").trim(),
+    const catppuccinBg = await html.evaluate((el) =>
+      getComputedStyle(el).getPropertyValue("--background").trim(),
     );
-    expect(border).toBe("#313244");
+    expect(catppuccinBg).toBe("#1e1e2e");
 
     const brand = await html.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("--brand").trim(),
@@ -60,7 +60,7 @@ test.describe("themes", () => {
     expect(await background("github")).not.toBe(await background("aven"));
     expect(await background("github")).toBe("rgb(13, 17, 23)");
     await chooseMode(page, "Light");
-    expect(await background("github")).toBe("rgb(255, 255, 255)");
+    expect(await background("github")).toBe("rgb(250, 250, 250)");
   });
 
   test("a palette can lend the headings a face of its own", async ({ page }) => {

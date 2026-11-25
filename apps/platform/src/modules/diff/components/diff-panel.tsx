@@ -7,17 +7,16 @@ import {
   IconRefresh,
 } from "@tabler/icons-react";
 import { cn } from "cn";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@aven/ui/button";
 import { PanelNotice } from "@aven/ui/panel-notice";
 import { SidePanel } from "@aven/ui/side-panel";
-import { Skeleton } from "@aven/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@aven/ui/tabs";
 
 import { useDiffPreferences } from "../hooks/use-diff-preferences";
 import { useThreadDiff } from "../hooks/use-thread-diff";
-import { isDiffLayout, isDiffScope, type DiffScope } from "../types";
+import { isDiffLayout, isDiffScope, type DiffFile, type DiffScope } from "../types";
 import { flatten, startsOpen } from "../flatten";
 import { DiffFilePicker } from "./diff-file-picker";
 import { DiffVirtualList } from "./diff-virtual-list";
@@ -50,21 +49,33 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
   } = useThreadDiff(threadId, scope, running);
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [scrollTo, setScrollTo] = useState<{ path: string; seq: number } | null>(null);
+  const previousRef = useRef<{ threadId: string; files: DiffFile[] }>({ threadId, files: [] });
+
+  if (previousRef.current.threadId !== threadId) {
+    previousRef.current = { threadId, files: [] };
+  }
+
+  if (loaded) {
+    previousRef.current = { threadId, files };
+  }
+
+  const switchingScope = !loaded && previousRef.current.files.length > 0;
+  const shownFiles = switchingScope ? previousRef.current.files : files;
 
   useEffect(() => {
     setOpened({});
     setScrollTo(null);
   }, [threadId]);
 
-  const items = useMemo(() => flatten(files, layout, opened), [files, layout, opened]);
+  const items = useMemo(() => flatten(shownFiles, layout, opened), [shownFiles, layout, opened]);
   const anyOpen = useMemo(
-    () => files.some((file) => opened[file.path] ?? startsOpen(file)),
-    [files, opened],
+    () => shownFiles.some((file) => opened[file.path] ?? startsOpen(file)),
+    [shownFiles, opened],
   );
 
   const toggleAll = () => {
     const next: Record<string, boolean> = {};
-    for (const file of files) next[file.path] = !anyOpen;
+    for (const file of shownFiles) next[file.path] = !anyOpen;
     setOpened(next);
   };
 
@@ -141,20 +152,27 @@ export function DiffPanel({ threadId, running, onClose }: Props) {
           </span>
         )}
       </div>
-      {files.length > 0 ? (
-        <DiffVirtualList
-          items={items}
-          scrollTo={scrollTo}
-          onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
-          footer={
-            truncated
-              ? "The diff is too large to show in full; the end of it is left out."
-              : undefined
-          }
-        />
+      {shownFiles.length > 0 ? (
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col transition-opacity duration-150",
+            switchingScope && "opacity-60",
+          )}
+        >
+          <DiffVirtualList
+            items={items}
+            scrollTo={scrollTo}
+            onToggle={(file, open) => setOpened((now) => ({ ...now, [file.path]: open }))}
+            footer={
+              truncated
+                ? "The diff is too large to show in full; the end of it is left out."
+                : undefined
+            }
+          />
+        </div>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {!loaded && <Skeleton className="size-full rounded-none" />}
+          {!loaded && <PanelNotice>Loading changes…</PanelNotice>}
           {problem && <PanelNotice>{problem}</PanelNotice>}
           {loaded && !problem && available === false && (
             <PanelNotice>

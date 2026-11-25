@@ -1,6 +1,5 @@
 import { PANEL_EXIT_MS, PanelEnter } from "@aven/ui/panel-enter";
 import {
-  GAP_HANDLE,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
@@ -45,7 +44,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
     </PanelEnter>
   );
   const conversation = (
-    <div className="relative @container flex h-full min-h-0 min-w-0 flex-col overflow-clip bg-background md:border md:border-foreground/12">
+    <div className="relative @container flex h-full min-h-0 min-w-0 flex-col overflow-clip bg-background">
       <BotHeader bot={bot} />
       <BotChat bot={bot} chat={chat} openArtifact={artifact} onOpenArtifact={show} />
     </div>
@@ -62,7 +61,7 @@ export function BotWorkspace({ bot }: { bot: Bot }) {
           <ResizablePanel id="conversation" defaultSize="55" minSize="30">
             {conversation}
           </ResizablePanel>
-          <ResizableHandle className={GAP_HANDLE} />
+          <ResizableHandle />
           <ResizablePanel id="artifact" defaultSize="45" minSize="25">
             {panel}
           </ResizablePanel>

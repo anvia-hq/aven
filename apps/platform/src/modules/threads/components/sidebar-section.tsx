@@ -7,24 +7,44 @@ import { useLocalStorage } from "@aven/ui/use-local-storage";
 type Props = {
   id: string;
   label: string;
+  collapsible?: boolean;
   defaultOpen?: boolean;
   lazy?: boolean;
   children: ReactNode;
 };
 
-export function SidebarSection({ id, label, defaultOpen = true, lazy = false, children }: Props) {
+export function SidebarSection({
+  id,
+  label,
+  collapsible = false,
+  defaultOpen = true,
+  lazy = false,
+  children,
+}: Props) {
   const [open, setOpen] = useLocalStorage(`aven.sidebar-group.${id}`, defaultOpen);
+
+  if (!collapsible) {
+    return (
+      <section data-group={id} aria-label={label} className="pb-3">
+        <h3 className="flex h-6 items-center px-2 text-[11px] font-medium text-muted-foreground/75">
+          {label}
+        </h3>
+        {children}
+      </section>
+    );
+  }
+
   return (
     <Collapsible
-      render={<section data-group={id} aria-label={label} className="pb-4" />}
+      render={<section data-group={id} aria-label={label} className="pb-3" />}
       open={open}
       onOpenChange={setOpen}
     >
       <div className="flex h-6 items-center pl-2">
         <h3 className="flex min-w-0">
-          <CollapsibleTrigger className="group/heading flex min-w-0 items-center gap-2 rounded-sm text-xs text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+          <CollapsibleTrigger className="group/heading flex min-w-0 items-center gap-1.5 rounded-sm text-[11px] font-medium text-muted-foreground/75 outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
             <span className="shrink-0">{label}</span>
-            <IconChevronDown className="size-3.5 shrink-0 -rotate-90 transition-transform duration-200 group-data-panel-open/heading:rotate-0 motion-reduce:transition-none" />
+            <IconChevronDown className="size-3 shrink-0 -rotate-90 transition-transform duration-200 group-data-panel-open/heading:rotate-0 motion-reduce:transition-none" />
           </CollapsibleTrigger>
         </h3>
       </div>
