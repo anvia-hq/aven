@@ -10,12 +10,28 @@ import type { Computer } from "@/modules/computer/types";
 
 type TerminalPhase = "connecting" | "connected" | "ended";
 
-const FONT_FAMILY = 'ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+const FONT_FAMILY =
+  '"Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 const FALLBACK_SIZE = { cols: 80, rows: 24 };
 
 function streamUrl(path: string, size: { cols: number; rows: number }) {
   const { cols, rows } = size;
   return wsUrl(`${path}/terminal/stream?cols=${cols}&rows=${rows}`);
+}
+
+function toHex(color: string) {
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const context = canvas.getContext("2d");
+
+  if (!context) return color;
+
+  context.fillStyle = color;
+  context.fillRect(0, 0, 1, 1);
+  const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+  const part = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${part(r ?? 0)}${part(g ?? 0)}${part(b ?? 0)}`;
 }
 
 function cssColor(variable: string) {
@@ -24,16 +40,42 @@ function cssColor(variable: string) {
   document.body.append(probe);
   const color = getComputedStyle(probe).color;
   probe.remove();
-  return color;
+  return toHex(color);
 }
 
 function terminalTheme() {
+  const background = cssColor("--background");
   const foreground = cssColor("--foreground");
+  const muted = cssColor("--muted-foreground");
+  const accent = cssColor("--accent");
+  const red = cssColor("--destructive");
+  const green = cssColor("--success");
+  const yellow = cssColor("--meter");
+  const blue = cssColor("--info");
+  const magenta = cssColor("--graph-3");
+  const cyan = cssColor("--graph-5");
   return {
-    background: cssColor("--background"),
+    background,
     foreground,
     cursor: foreground,
-    selectionBackground: cssColor("--accent"),
+    cursorAccent: background,
+    selectionBackground: accent,
+    black: muted,
+    red,
+    green,
+    yellow,
+    blue,
+    magenta,
+    cyan,
+    white: foreground,
+    brightBlack: muted,
+    brightRed: red,
+    brightGreen: green,
+    brightYellow: yellow,
+    brightBlue: blue,
+    brightMagenta: magenta,
+    brightCyan: cyan,
+    brightWhite: foreground,
   };
 }
 
@@ -43,7 +85,7 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
   const [phase, setPhase] = useState<TerminalPhase>("connecting");
   const [reason, setReason] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, palette } = useTheme();
   const exited = useRef(onExit);
   exited.current = onExit;
 
@@ -56,7 +98,9 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
     setReason("");
     const term = new Terminal({
       fontFamily: FONT_FAMILY,
-      fontSize: 13,
+      fontSize: 12.5,
+      lineHeight: 1.45,
+      cursorStyle: "bar",
       cursorBlink: true,
       theme: terminalTheme(),
     });
@@ -106,8 +150,11 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
   }, [path, attempt]);
 
   useEffect(() => {
-    if (terminal.current) terminal.current.options.theme = terminalTheme();
-  }, [resolvedTheme]);
+    const frame = requestAnimationFrame(() => {
+      if (terminal.current) terminal.current.options.theme = terminalTheme();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [resolvedTheme, palette]);
 
   return { target, phase, reason, reconnect: () => setAttempt((count) => count + 1) };
 }

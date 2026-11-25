@@ -1,11 +1,11 @@
 import {
   IconAppWindow,
   IconCheck,
-  IconCode,
   IconFolder,
   IconGitCompare,
   IconLayoutSidebar,
   IconList,
+  IconTerminal2,
   IconX,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
@@ -51,7 +51,7 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
     { label: "Overview", icon: IconList, panel: panels.overview, show: true },
     { label: "Changes", icon: IconGitCompare, panel: panels.diff, show: true },
     { label: "Files", icon: IconFolder, panel: panels.files, show: true },
-    { label: "Terminal", icon: IconCode, panel: panels.terminal, show: owned },
+    { label: "Terminal", icon: IconTerminal2, panel: panels.terminal, show: owned },
     { label: "Browser", icon: IconAppWindow, panel: panels.preview, show: owned },
   ];
   const shown = toggles.filter((toggle) => toggle.show);

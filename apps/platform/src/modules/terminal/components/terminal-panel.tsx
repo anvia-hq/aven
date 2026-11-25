@@ -1,4 +1,4 @@
-import { IconCodeblock } from "@tabler/icons-react";
+import { IconTerminal2 } from "@tabler/icons-react";
 
 import { PanelNotice } from "@aven/ui/panel-notice";
 import { SidePanel } from "@aven/ui/side-panel";
@@ -22,7 +22,7 @@ export function TerminalPanel({ computer, onClose }: Props) {
   const view = computerView(status, problem);
 
   return (
-    <SidePanel title="Terminal" icon={IconCodeblock} onClose={onClose}>
+    <SidePanel title="Terminal" icon={IconTerminal2} onClose={onClose}>
       <div className="min-h-0 flex-1">
         {view === "problem" && <PanelNotice>{problem}</PanelNotice>}
         {view === "loading" && <Skeleton className="size-full rounded-none" />}

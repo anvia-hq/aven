@@ -20,7 +20,7 @@ export function SidePanel({ title, icon: Icon, actions, onClose, children }: Pro
       <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
         <Icon className="size-4 text-muted-foreground" />
         <h2 className="text-sm font-medium">{title}</h2>
-        {actions}
+        {actions ?? <span className="flex-1" />}
         <Button
           variant="ghost"
           size="icon-sm"
