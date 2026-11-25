@@ -94,6 +94,7 @@ function pageScript(): string {
     "swatch.height = 1;",
     "const swatchCtx = swatch.getContext(\"2d\", { colorSpace: \"srgb\" });",
     "function parseColor(text) {",
+    "  if (!text || !text.trim()) return null;",
     "  swatchCtx.fillStyle = \"#000\";",
     "  swatchCtx.fillRect(0, 0, 1, 1);",
     "  swatchCtx.fillStyle = text.trim();",
