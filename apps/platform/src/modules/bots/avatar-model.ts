@@ -37,11 +37,56 @@ const TOP_ACCESSORIES = new Set<AvatarAccessory>([
   "halo",
 ]);
 
+function createBodyMaterial(
+  environment: Texture,
+  clock: { value: number },
+  wobble: { value: number },
+) {
+  const material = new MeshPhysicalMaterial({
+    vertexColors: true,
+    roughness: 0.52,
+    metalness: 0,
+    clearcoat: 0.35,
+    clearcoatRoughness: 0.5,
+    sheen: 0.15,
+    sheenRoughness: 0.55,
+    sheenColor: new Color("#ffffff"),
+    envMap: environment,
+    envMapIntensity: 0.4,
+  });
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uWobble = wobble;
+    shader.uniforms.uTime = clock;
+    shader.vertexShader = shader.vertexShader
+      .replace(
+        "#include <common>",
+        "#include <common>\nuniform float uWobble;\nuniform float uTime;",
+      )
+      .replace(
+        "#include <begin_vertex>",
+        "#include <begin_vertex>\ntransformed += normal * uWobble * sin(position.y * 2.6 + position.x * 1.9 + uTime * 17.0) * 0.06;",
+      );
+  };
+  return material;
+}
+
 export function createAvatarMaterials(environment: Texture): AvatarMaterials {
+  const clock = { value: 0 };
+  const wobble = { value: 0 };
+  const smileCurve = new QuadraticBezierCurve3(
+    new Vector3(-0.22, 0.04, 0.01),
+    new Vector3(0, -0.1, 0.03),
+    new Vector3(0.22, 0.04, 0.01),
+  );
+
   return {
     environment,
-    clock: { value: 0 },
-    eye: new SphereGeometry(1, 28, 20),
+    clock,
+    wobble,
+    body: createBodyMaterial(environment, clock, wobble),
+    eye: new SphereGeometry(1, 18, 12),
+    glintGeo: new SphereGeometry(1, 10, 8),
+    smile: new TubeGeometry(smileCurve, 14, 0.036, 8, false),
     white: new MeshPhysicalMaterial({
       color: "#ffffff",
       roughness: 0.3,
@@ -58,37 +103,16 @@ export function createAvatarMaterials(environment: Texture): AvatarMaterials {
       envMap: environment,
       envMapIntensity: 0.25,
     }),
+    tongue: new MeshPhysicalMaterial({
+      color: "#ff6b9d",
+      roughness: 0.35,
+      clearcoat: 0.5,
+      envMap: environment,
+      envMapIntensity: 0.3,
+    }),
     glint: new MeshBasicMaterial({ color: "#ffffff" }),
+    accessories: new Map(),
   };
-}
-
-function bodyMaterial(shared: AvatarMaterials, wobble: { value: number }) {
-  const material = new MeshPhysicalMaterial({
-    vertexColors: true,
-    roughness: 0.52,
-    metalness: 0,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.5,
-    sheen: 0.15,
-    sheenRoughness: 0.55,
-    sheenColor: new Color("#ffffff"),
-    envMap: shared.environment,
-    envMapIntensity: 0.4,
-  });
-  material.onBeforeCompile = (shader) => {
-    shader.uniforms.uWobble = wobble;
-    shader.uniforms.uTime = shared.clock;
-    shader.vertexShader = shader.vertexShader
-      .replace(
-        "#include <common>",
-        "#include <common>\nuniform float uWobble;\nuniform float uTime;",
-      )
-      .replace(
-        "#include <begin_vertex>",
-        "#include <begin_vertex>\ntransformed += normal * uWobble * sin(position.y * 2.6 + position.x * 1.9 + uTime * 17.0) * 0.06;",
-      );
-  };
-  return material;
 }
 
 function addEyes(
@@ -114,10 +138,10 @@ function addEyes(
     const pupil = new Group();
     const dark = new Mesh(shared.eye, shared.pupil);
     dark.scale.set(0.17, 0.245, 0.075);
-    const glint = new Mesh(shared.eye, shared.glint);
+    const glint = new Mesh(shared.glintGeo, shared.glint);
     glint.scale.setScalar(0.042);
     glint.position.set(0.055, 0.095, 0.066);
-    const small = new Mesh(shared.eye, shared.glint);
+    const small = new Mesh(shared.glintGeo, shared.glint);
     small.scale.setScalar(0.02);
     small.position.set(-0.05, -0.1, 0.07);
     pupil.add(dark, glint, small);
@@ -130,11 +154,7 @@ function addEyes(
   });
 }
 
-function addMouth(
-  tilt: Group,
-  base: ReturnType<typeof bodyOf>,
-  shared: AvatarMaterials,
-): { rig: MouthRig; dispose(): void } {
+function addMouth(tilt: Group, base: ReturnType<typeof bodyOf>, shared: AvatarMaterials): MouthRig {
   const spot = base.mouth;
   const group = new Group();
   group.position.set(spot.position.x, spot.position.y, spot.position.z);
@@ -144,25 +164,12 @@ function addMouth(
   );
   group.scale.setScalar(spot.scale);
 
-  const smileCurve = new QuadraticBezierCurve3(
-    new Vector3(-0.22, 0.04, 0.01),
-    new Vector3(0, -0.1, 0.03),
-    new Vector3(0.22, 0.04, 0.01),
-  );
-  const smileGeo = new TubeGeometry(smileCurve, 18, 0.036, 10, false);
-  const smile = new Mesh(smileGeo, shared.pupil);
+  const smile = new Mesh(shared.smile, shared.pupil);
 
   const open = new Group();
   const cavity = new Mesh(shared.eye, shared.pupil);
   cavity.scale.set(0.18, 0.16, 0.075);
-  const tongueMat = new MeshPhysicalMaterial({
-    color: "#ff6b9d",
-    roughness: 0.35,
-    clearcoat: 0.5,
-    envMap: shared.environment,
-    envMapIntensity: 0.3,
-  });
-  const tongue = new Mesh(shared.eye, tongueMat);
+  const tongue = new Mesh(shared.eye, shared.tongue);
   tongue.scale.set(0.11, 0.075, 0.055);
   tongue.position.set(0, -0.07, 0.04);
   open.add(cavity, tongue);
@@ -171,13 +178,7 @@ function addMouth(
 
   group.add(smile, open);
   tilt.add(group);
-  return {
-    rig: { group, smile, open },
-    dispose() {
-      smileGeo.dispose();
-      tongueMat.dispose();
-    },
-  };
+  return { group, smile, open };
 }
 
 export function createAvatarModel(
@@ -187,9 +188,7 @@ export function createAvatarModel(
   accessoryKind: AvatarAccessory = "none",
 ): AvatarModel {
   const base = bodyOf(shape);
-  const wobble = { value: 0 };
   const geometry = paintedBody(base, color);
-  const material = bodyMaterial(shared, wobble);
   const width = base.maxX - base.minX;
   const height = base.maxY - base.minY;
   const hasTop = TOP_ACCESSORIES.has(accessoryKind);
@@ -199,7 +198,7 @@ export function createAvatarModel(
 
   const tilt = new Group();
   tilt.position.y = -base.minY;
-  tilt.add(new Mesh(geometry, material));
+  tilt.add(new Mesh(geometry, shared.body));
   const eyes = addEyes(tilt, shape, base, shared);
   const mouth = addMouth(tilt, base, shared);
   const accessory = createAccessory(accessoryKind, base, shared);
@@ -210,22 +209,19 @@ export function createAvatarModel(
   rig.add(tilt);
   const root = new Group();
   root.add(rig);
-  root.visible = false;
 
   return {
     root,
     rig,
     tilt,
     eyes,
-    mouth: mouth.rig,
+    mouth,
     accessory,
-    wobble,
+    wobble: 0,
     scale,
     restY: (-height * scale) / 2 - (hasTop ? 0.24 : 0),
     dispose() {
       geometry.dispose();
-      material.dispose();
-      mouth.dispose();
       accessory?.dispose();
     },
   };
@@ -236,7 +232,7 @@ export function applyPose(model: AvatarModel, pose: AvatarPose) {
   rig.position.y = model.restY + pose.lift * HOP_LIFT;
   rig.scale.set(scale * pose.scaleX, scale * pose.scaleY, scale * pose.scaleZ);
   tilt.rotation.set(pose.rotX, pose.rotY, pose.rotZ);
-  model.wobble.value = pose.wobble;
+  model.wobble = pose.wobble;
 
   for (const eye of model.eyes) {
     eye.lid.scale.set(1, Math.max(0.04, pose.eyeOpen), 1);

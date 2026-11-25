@@ -6,7 +6,9 @@ import type { AvatarHandle, AvatarLook } from "../types";
 export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: AvatarLook) {
   const handle = useRef<AvatarHandle | null>(null);
   const mood = useRef(look.mood);
-  const { family, color, accessory = "none", delayMs, follow, steady } = look;
+  const follow = useRef(look.follow === true);
+  const steady = useRef(look.steady === true);
+  const { family, color, accessory = "none", delayMs } = look;
 
   useEffect(() => {
     const element = canvas.current;
@@ -25,8 +27,8 @@ export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: 
         accessory,
         delayMs,
         mood: mood.current,
-        follow,
-        steady,
+        follow: follow.current,
+        steady: steady.current,
       });
     });
 
@@ -35,10 +37,18 @@ export function useBotAvatar(canvas: RefObject<HTMLCanvasElement | null>, look: 
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [canvas, family, color, accessory, delayMs, follow, steady]);
+  }, [canvas, family, color, accessory, delayMs]);
 
   useEffect(() => {
     mood.current = look.mood;
     handle.current?.setMood(look.mood);
   }, [look.mood]);
+
+  useEffect(() => {
+    const nextFollow = look.follow === true;
+    const nextSteady = look.steady === true;
+    follow.current = nextFollow;
+    steady.current = nextSteady;
+    handle.current?.setOptions({ follow: nextFollow, steady: nextSteady });
+  }, [look.follow, look.steady]);
 }

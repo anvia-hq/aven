@@ -48,7 +48,7 @@ function spotAt(
 }
 
 function build(shape: FamilyShape): BodyBase {
-  const sphere = new SphereGeometry(1, 96, 64);
+  const sphere = new SphereGeometry(1, 56, 36);
   const position = sphere.getAttribute("position");
   const normal = sphere.getAttribute("normal");
   let minX = Infinity;
