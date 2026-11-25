@@ -23,3 +23,6 @@ playwright-report
 .taste-skill/
 .antislop/
 docs/superpowers/
+
+# Theme gallery screenshots are regenerable build output (Task 1 capture script).
+e2e/theme-gallery/shots/
