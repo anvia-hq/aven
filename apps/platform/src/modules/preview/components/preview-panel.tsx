@@ -87,7 +87,7 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
             }
             value={port}
             onChange={(event) => setPort(event.target.value)}
-            className="h-7 flex-1 font-mono text-xs"
+            className="h-7 flex-1 text-xs"
           />
           <Button type="submit" size="sm" disabled={opening || port.trim() === ""}>
             Open

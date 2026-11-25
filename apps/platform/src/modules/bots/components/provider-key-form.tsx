@@ -122,7 +122,7 @@ function KeyField({
         placeholder="Paste it here"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 font-mono"
+        className="h-9"
       />
     </div>
   );

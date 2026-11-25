@@ -64,7 +64,6 @@ export function CreateBranchDialog({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="feat/my-branch"
-            className="font-mono text-xs"
           />
           <Label className="flex cursor-pointer items-center gap-2 text-xs font-normal">
             <Checkbox checked={checkout} onCheckedChange={(v) => setCheckout(v === true)} />
@@ -113,11 +112,7 @@ export function RenameBranchDialog({
           <DialogTitle>Rename branch</DialogTitle>
           <DialogDescription>Rename local branch {branchName}.</DialogDescription>
         </DialogHeader>
-        <Input
-          value={nextName}
-          onChange={(e) => setNextName(e.target.value)}
-          className="font-mono text-xs"
-        />
+        <Input value={nextName} onChange={(e) => setNextName(e.target.value)} />
         <DialogFooter>
           <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
@@ -248,13 +243,11 @@ export function CreatePrDialog({
               value={head}
               onChange={(e) => setHead(e.target.value)}
               placeholder="Head branch"
-              className="font-mono text-xs"
             />
             <Input
               value={base}
               onChange={(e) => setBase(e.target.value)}
               placeholder="Base branch"
-              className="font-mono text-xs"
             />
           </div>
           <Input

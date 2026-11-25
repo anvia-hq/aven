@@ -76,7 +76,7 @@ export function SecretForm({ tool, threadId, backend, onSubmit }: Props) {
             placeholder="Paste it here"
             value={values[prompt.id] ?? ""}
             onChange={(event) => setValues((all) => ({ ...all, [prompt.id]: event.target.value }))}
-            className="h-9 font-mono"
+            className="h-9"
           />
         </div>
       ))}

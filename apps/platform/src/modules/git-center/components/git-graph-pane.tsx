@@ -269,7 +269,7 @@ export function GitGraphPane({
           value={filters.path}
           onChange={(e) => onChangeFilters((prev) => ({ ...prev, path: e.target.value }))}
           placeholder="File path"
-          className="h-7 w-28 font-mono text-xs xl:w-32"
+          className="h-7 w-28 text-xs xl:w-32"
         />
         {filters.branch && (
           <Badge variant="secondary" className="h-7 max-w-44 gap-1 px-2 font-mono text-[11px]">
