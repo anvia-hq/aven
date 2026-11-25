@@ -1799,6 +1799,12 @@
 }
 
 :root {
+  --user-bubble-from: color-mix(in oklch, var(--accent), var(--background) 45%);
+  --user-bubble-to: color-mix(in oklch, var(--accent), var(--primary) 3%);
+}
+
+.dark,
+[data-mode="dark"] {
   --user-bubble-from: color-mix(in oklch, var(--accent), var(--background) 15%);
   --user-bubble-to: color-mix(in oklch, var(--accent), var(--primary) 10%);
 }

@@ -44,7 +44,7 @@ export function UserMessageBubble({ children }: Props) {
   return (
     <div
       className={cn(
-        "w-fit max-w-full rounded-2xl border border-foreground/10 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) bg-clip-padding px-4 py-2.5 [&_p]:whitespace-pre-line",
+        "w-fit max-w-full rounded-2xl border border-foreground/6 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) bg-clip-padding px-4 py-2.5 dark:border-foreground/10 [&_p]:whitespace-pre-line",
         collapsed && "cursor-pointer",
       )}
       onClick={(event) => {
