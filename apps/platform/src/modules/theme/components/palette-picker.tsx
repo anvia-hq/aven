@@ -11,21 +11,30 @@ import { useTheme } from "../hooks/use-theme";
 import type { Palette } from "../types";
 import { PaletteCard } from "./palette-card";
 
-function revealCard(rail: HTMLElement, palette: Palette) {
+function revealCard(rail: HTMLElement, palette: Palette, behavior: ScrollBehavior) {
   const card = rail.querySelector<HTMLElement>(`[data-palette="${palette}"]`);
 
   if (!card) return;
 
-  rail.scrollLeft += card.getBoundingClientRect().left - rail.getBoundingClientRect().left - 4;
+  const railRect = rail.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+
+  if (cardRect.left >= railRect.left && cardRect.right <= railRect.right) return;
+
+  card.scrollIntoView({ block: "nearest", inline: "nearest", behavior });
 }
 
 export function PalettePicker() {
   const { palette, resolvedTheme, setPalette } = useTheme();
   const rail = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
   const { atStart, atEnd, onScroll, page } = useRailScroll(rail);
 
   useEffect(() => {
-    if (rail.current) revealCard(rail.current, palette);
+    const behavior: ScrollBehavior = mounted.current ? "smooth" : "instant";
+    mounted.current = true;
+
+    if (rail.current) revealCard(rail.current, palette, behavior);
   }, [palette]);
 
   return (
