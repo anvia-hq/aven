@@ -7,6 +7,7 @@ import {
   IconDownload,
   IconPencil,
   IconShare,
+  IconSparkles,
 } from "@tabler/icons-react";
 import type { ReactElement } from "react";
 import { useRef } from "react";
@@ -29,6 +30,7 @@ import {
 import { EXPORT_FORMATS } from "../export-formats";
 import { useCopyThreadUrl } from "../hooks/use-copy-thread-url";
 import { useExportThread } from "../hooks/use-export-thread";
+import { useGenerateTitle } from "../hooks/use-generate-title";
 import { useModelSelection } from "../hooks/use-model-selection";
 import { useThreadColors } from "../hooks/use-thread-colors";
 import { THREAD_COLORS } from "../thread-colors";
@@ -40,6 +42,7 @@ type Props = {
   trigger: ReactElement;
   canRun: boolean;
   canColor: boolean;
+  canTitle?: boolean;
   align?: "start" | "end";
   onShare?: () => void;
   onRename?: () => void;
@@ -154,6 +157,7 @@ export function ThreadOptionsMenu({
   trigger,
   canRun,
   canColor,
+  canTitle = false,
   align = "start",
   onShare,
   onRename,
@@ -161,6 +165,7 @@ export function ThreadOptionsMenu({
   const handingOff = useRef(false);
   const { exportThread } = useExportThread();
   const { copyThreadUrl } = useCopyThreadUrl();
+  const generateTitle = useGenerateTitle();
 
   function handleOpenChange(open: boolean) {
     if (open) handingOff.current = false;
@@ -213,7 +218,7 @@ export function ThreadOptionsMenu({
             <ThreadRunChoices thread={thread} />
           </>
         )}
-        {(canColor || onRename) && (
+        {(canColor || onRename || canTitle) && (
           <>
             <DropdownMenuSeparator className="my-1.5 bg-border/70" />
             {canColor && <ThreadColor thread={thread} />}
@@ -226,6 +231,12 @@ export function ThreadOptionsMenu({
               >
                 <IconPencil />
                 Rename
+              </DropdownMenuItem>
+            )}
+            {canTitle && (
+              <DropdownMenuItem onClick={() => generateTitle(thread)}>
+                <IconSparkles />
+                Generate title
               </DropdownMenuItem>
             )}
           </>

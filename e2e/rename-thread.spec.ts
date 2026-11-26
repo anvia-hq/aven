@@ -54,4 +54,18 @@ test.describe("renaming a thread", () => {
     await expect(page.getByRole("link", { name: /Check the login flow/ })).toBeVisible();
     await expect(page.getByText("Not this")).toHaveCount(0);
   });
+
+  test("Generate title in the thread menu says why when it cannot", async ({ page }) => {
+    await registerUser(page, "gen", "Title User");
+    const { child, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+    await page.setViewportSize({ width: 1400, height: 760 });
+    await page.goto(`/threads/${threadId}`);
+
+    await page.getByRole("button", { name: "Thread options" }).click();
+    await page.getByRole("menuitem", { name: "Generate title" }).click();
+
+    await expect(page.getByText("Could not generate a title")).toBeVisible();
+    await expect(page.getByRole("link", { name: /shiny-app/ })).toBeVisible();
+  });
 });

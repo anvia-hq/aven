@@ -81,6 +81,7 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
             thread={thread}
             canRun={owned || driven}
             canColor={owned}
+            canTitle={owned}
             onShare={owned ? () => setSharing(true) : undefined}
             onRename={owned ? () => setRenaming(true) : undefined}
             trigger={

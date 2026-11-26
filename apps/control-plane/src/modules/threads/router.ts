@@ -1,6 +1,6 @@
 import { Elysia, sse, status } from "elysia";
 
-import { orNotFound } from "@aven/server-kit/errors";
+import { orNotFound, UnprocessableError } from "@aven/server-kit/errors";
 import { threadAccess } from "./access";
 import { exportContentType, exportFormat, renderExport } from "./export";
 import type { RunManager } from "../runs/service";
@@ -20,6 +20,7 @@ import { threadMentionsService } from "./mentions";
 import { threadPinsService } from "./pins";
 import { threadPullRequestChecks } from "./pull-request-checks";
 import { threadsService } from "./service";
+import { exchangeOf, threadTitler } from "./title";
 import type { PutAwayThread, ThreadContinuation, ThreadMessages } from "./types";
 
 export const threadsRouter = (
@@ -111,6 +112,21 @@ export const threadsRouter = (
         return thread;
       },
       { thread: "own", params: threadParams, body: updateThreadBody },
+    )
+    .post(
+      "/:id/title",
+      async ({ params, organizationId, user, thread }) => {
+        const exchange = exchangeOf(await runs.history(thread));
+
+        if (!exchange) throw new UnprocessableError("There is nothing to title yet");
+
+        const title = await threadTitler.suggest(exchange, user.id);
+        return orNotFound(
+          await threadsService.update({ organizationId, userId: user.id }, params.id, { title }),
+          "Thread not found",
+        );
+      },
+      { thread: "own", params: threadParams },
     )
     .put("/:id/pin", ({ params, user }) => threadPinsService.pin(user.id, params.id), {
       thread: "own",
