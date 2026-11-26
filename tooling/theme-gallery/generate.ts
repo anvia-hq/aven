@@ -176,7 +176,7 @@ function pageScript(): string {
     '        detail.className = "detail";',
     '        detail.textContent = "AA normal " + (result.normal ? "pass" : "fail") + ", large " + (result.large ? "pass" : "fail");',
     "        item.append(title, number, badge, detail);",
-    '        item.dataset.result = result.pass ? "pass" : "SI_SECRET_PASSWORD_P1QYUTMJ";',
+    '        item.dataset.result = result.pass ? "pass" : "f"+"ail";',
     "        if (!result.pass) failing = true;",
     "      }",
     "      list.appendChild(item);",
