@@ -38,7 +38,7 @@ export function createCreateBotTool(createBot: CreateBot) {
     inputSchema: createBotSchema,
     async handler(input) {
       const { id, name, handle } = await createBot(input);
-      return { created: true, id, name, handle };
+      return `Created bot ${name} (@${handle}, id ${id}).`;
     },
   });
 }

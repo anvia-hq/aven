@@ -50,26 +50,26 @@ function host() {
 }
 
 describe("the thread tools", () => {
-  test("stopping hands the host the thread's id and gives the thread back", async () => {
+  test("stopping hands the host the thread's id and confirms it stopped", async () => {
     const { calls, by } = host();
-    const result = (await by(STOP_THREAD_TOOL_NAME).call({ id: ID })) as { thread: BotThreadView };
+    const result = await by(STOP_THREAD_TOOL_NAME).call({ id: ID });
     expect(calls).toEqual([["stop", ID]]);
-    expect(result.thread.running).toBe(false);
+    expect(result).toBe(`Stopped thread "Fix the build" (${ID}).`);
   });
 
   test("starting hands the host the project, the prompt and the model chosen, and says where to find the thread", async () => {
     const { calls, by } = host();
-    const result = (await by(START_THREAD_TOOL_NAME).call({
+    const result = await by(START_THREAD_TOOL_NAME).call({
       projectId: PROJECT,
       prompt: "  Fix the build  ",
       modelId: "gpt-5",
       createdBy: "someone-else",
-    })) as { thread: BotThreadView; note: string };
+    });
     expect(calls).toEqual([
       ["start", { projectId: PROJECT, prompt: "Fix the build", modelId: "gpt-5" }],
     ]);
-    expect(result.thread).toEqual(thread);
-    expect(result.note).toContain("Threads list");
+    expect(result).toContain(`Started thread "Fix the build" (${ID})`);
+    expect(result).toContain("Threads list");
   });
 
   test("continuing splits the thread's id from the message", async () => {
@@ -97,11 +97,13 @@ describe("the thread tools", () => {
 
   test("listing takes a project and whether to list the archived, and getting takes an id", async () => {
     const { calls, by } = host();
-    expect(await by(LIST_THREADS_TOOL_NAME).call({ projectId: PROJECT, archived: true })).toEqual({
-      threads: [thread],
-    });
-    await by(GET_THREAD_TOOL_NAME).call({ id: ID });
-    await by(LIST_PROJECTS_TOOL_NAME).call({});
+    const listed = await by(LIST_THREADS_TOOL_NAME).call({ projectId: PROJECT, archived: true });
+    expect(listed).toContain(ID);
+    expect(listed).toContain("Fix the build");
+    expect(listed).toContain("acme/app");
+    const detail = await by(GET_THREAD_TOOL_NAME).call({ id: ID });
+    expect(detail).toContain(`Thread: Fix the build (${ID})`);
+    expect(await by(LIST_PROJECTS_TOOL_NAME).call({})).toBe("No projects.");
     expect(calls).toEqual([
       ["list", { projectId: PROJECT, archived: true }],
       ["get", ID],

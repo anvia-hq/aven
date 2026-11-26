@@ -13,7 +13,7 @@ describe("delete_bot", () => {
 
     expect(tool.name).toBe(DELETE_BOT_TOOL_NAME);
     expect(asked).toEqual(["scout"]);
-    expect(result).toEqual({ deleted: true, name: "Scout", handle: "scout" });
+    expect(result).toBe("Deleted bot Scout (@scout).");
   });
 
   test("a blank handle is not asked for, and a refusal reaches the model", async () => {

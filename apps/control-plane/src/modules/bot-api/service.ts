@@ -29,6 +29,12 @@ function within<T>(ms: number, work: Promise<T>) {
   return Promise.race([work, late]).finally(() => clearTimeout(timer));
 }
 
+function capText(text: string) {
+  return text.length > API_RESPONSE_CHARACTERS
+    ? `${text.slice(0, API_RESPONSE_CHARACTERS)}… [truncated to ${API_RESPONSE_CHARACTERS} characters]`
+    : text;
+}
+
 async function bodyOf(response: Response) {
   const type = response.headers.get("content-type") ?? "";
 
@@ -38,15 +44,15 @@ async function bodyOf(response: Response) {
 
   const text = await response.text();
 
-  if (!type.includes("json")) return text.slice(0, API_RESPONSE_CHARACTERS);
+  if (!type.includes("json")) return capText(text);
 
   try {
     const shown = JSON.stringify(redact(JSON.parse(text)));
     return shown.length > API_RESPONSE_CHARACTERS
-      ? `${shown.slice(0, API_RESPONSE_CHARACTERS)}… [cut]`
+      ? `${shown.slice(0, API_RESPONSE_CHARACTERS)}… [truncated to ${API_RESPONSE_CHARACTERS} characters]`
       : JSON.parse(shown);
   } catch {
-    return text.slice(0, API_RESPONSE_CHARACTERS);
+    return capText(text);
   }
 }
 

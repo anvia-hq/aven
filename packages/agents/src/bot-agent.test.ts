@@ -476,9 +476,9 @@ describe("createBotAgent", () => {
     ]);
 
     const list = main.tools.find((tool) => tool.name === LIST_BOTS_TOOL_NAME)!;
-    expect(await list.call({})).toEqual({ bots: peers });
+    expect(await list.call({})).toBe("- @scout (Scout): Looks things up.");
     peers.push({ handle: "pip", name: "Pip", description: "" });
-    expect(await list.call({})).toEqual({ bots: peers });
+    expect(await list.call({})).toBe("- @scout (Scout): Looks things up.\n- @pip (Pip)");
   });
 
   test("a bot that is not the main one is told to write to a bot when the person asks, as the main one is", () => {

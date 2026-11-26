@@ -11,7 +11,15 @@ export function createListBotsTool(list: () => readonly BotPeer[]) {
       "List the person's other bots you can write to with send_message, with each one's handle and what it does.",
     inputSchema: z.object({}),
     async handler() {
-      return { bots: list() };
+      const bots = list();
+
+      if (bots.length === 0) return "No other bots.";
+
+      return bots
+        .map(
+          (bot) => `- @${bot.handle} (${bot.name})${bot.description ? `: ${bot.description}` : ""}`,
+        )
+        .join("\n");
     },
   });
 }

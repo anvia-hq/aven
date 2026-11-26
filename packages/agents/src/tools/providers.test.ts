@@ -75,16 +75,16 @@ describe("the provider tools", () => {
       ],
     ]);
     expect(JSON.stringify(calls)).not.toContain("sk-should-not-pass");
-    expect(result).toEqual({ provider: view });
+    expect(result).toContain("Added provider:");
+    expect(result).toContain(ID);
+    expect(result).toContain("Claude (anthropic)");
   });
 
   test("update gives only what changes, remove and models take the id", async () => {
     const { calls, by } = host();
     await by(UPDATE_PROVIDER_TOOL_NAME).call({ id: ID, isDefault: true });
     await by(REMOVE_PROVIDER_TOOL_NAME).call({ id: ID });
-    expect(await by(LIST_PROVIDER_MODELS_TOOL_NAME).call({ id: ID })).toEqual({
-      models: ["a", "b"],
-    });
+    expect(await by(LIST_PROVIDER_MODELS_TOOL_NAME).call({ id: ID })).toBe("a\nb");
     expect(calls).toEqual([
       ["update", ID, { isDefault: true }],
       ["remove", ID],

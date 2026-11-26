@@ -196,6 +196,9 @@ describe("a bot's reply with the person's threads (decision 0088)", () => {
 
     await until(() => done(plane));
     expect(results).toHaveLength(2);
-    expect(results[0]).toMatchObject({ thread, note: expect.stringContaining("Threads list") });
+    expect(results[0]).toContain(
+      `Started thread "${thread.title}" (${thread.id}) in ${thread.repository}.`,
+    );
+    expect(results[0]).toContain("Threads list");
   });
 });

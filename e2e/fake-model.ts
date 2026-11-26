@@ -246,7 +246,7 @@ Bun.serve({
       const call = body.messages.findLast((message) => message.role === "assistant");
 
       if (calledTool(call, "add_provider")) {
-        const providerId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
+        const providerId = /- ([0-9a-f-]{36}) ·/.exec(textOf(last.content))?.[1];
 
         if (providerId) {
           return reply(
@@ -257,7 +257,7 @@ Bun.serve({
       }
 
       if (calledTool(call, "list_projects")) {
-        const projectId = /"id":"([0-9a-f-]{36})"/.exec(textOf(last.content))?.[1];
+        const projectId = /- ([0-9a-f-]{36}) ·/.exec(textOf(last.content))?.[1];
 
         if (projectId) {
           const start = toolCall("call_2", "start_thread", {
@@ -269,7 +269,7 @@ Bun.serve({
       }
 
       if (calledTool(call, "list_threads")) {
-        const threadId = new RegExp(`"id":"([0-9a-f-]{36})","title":"${THREAD_PROMPT}"`).exec(
+        const threadId = new RegExp(`- ([0-9a-f-]{36}) · ${THREAD_PROMPT} ·`).exec(
           textOf(last.content),
         )?.[1];
 

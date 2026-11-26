@@ -30,9 +30,12 @@ function host(options: { goal?: BotGoalView | null; failed?: string[]; check?: b
 }
 
 describe("the goal tools", () => {
-  test("get returns the goal, or null", async () => {
-    expect(await host().get.call({})).toEqual({ goal });
-    expect(await host({ goal: null }).get.call({})).toEqual({ goal: null });
+  test("get returns the goal, or says there is none", async () => {
+    const active = await host().get.call({});
+    expect(active).toContain("Phase: active (round 2/20)");
+    expect(active).toContain("Objective: Port the parser");
+    expect(active).toContain("- bun test");
+    expect(await host({ goal: null }).get.call({})).toBe("No active goal.");
   });
 
   test("start needs no checks, and complete hands the checks the signal of the reply", async () => {
@@ -54,17 +57,17 @@ describe("the goal tools", () => {
 
   test("start hands the host what the model chose and tells it to say so and stop", async () => {
     const { calls, start } = host();
-    const result = (await start.call({
+    const result = await start.call({
       objective: " Port the parser ",
       checks: [" bun test "],
       maxRounds: 5,
-    })) as { goal: BotGoalView; next: string };
+    });
 
     expect(calls).toEqual([
       ["start", { objective: "Port the parser", checks: ["bun test"], maxRounds: 5 }],
     ]);
-    expect(result.goal).toEqual(goal);
-    expect(result.next).toContain("then stop");
+    expect(result).toContain("Goal started");
+    expect(result).toContain("then stop");
   });
 
   test("an objective with nothing in it, too many checks, or a round count out of range are refused", async () => {
@@ -82,24 +85,24 @@ describe("the goal tools", () => {
   test("complete runs the checks first, and the goal is completed only when they pass", async () => {
     const { calls, update } = host();
 
-    const result = (await update.call({ action: "complete" })) as { next: string };
+    const result = await update.call({ action: "complete" });
 
     expect(calls).toEqual([
       ["get"],
       ["check", ["bun test", "bun run lint"]],
       ["update", "complete", undefined],
     ]);
-    expect(result.next).toContain("The goal is complete");
+    expect(result).toContain("The goal is complete");
   });
 
   test("complete with a check that fails is not completed, and the model is told what failed", async () => {
     const { calls, update } = host({ failed: ["$ bun test\n2 failed"] });
 
-    const result = (await update.call({ action: "complete" })) as { next: string };
+    const result = await update.call({ action: "complete" });
 
     expect(calls.map((call) => (call as string[])[0])).toEqual(["get", "check"]);
-    expect(result.next).toContain("not complete");
-    expect(result.next).toContain("$ bun test\n2 failed");
+    expect(result).toContain("not complete");
+    expect(result).toContain("$ bun test\n2 failed");
   });
 
   test("complete with no checks, or a goal already complete, runs none", async () => {
