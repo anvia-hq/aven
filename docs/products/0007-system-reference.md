@@ -159,6 +159,10 @@ The Changes panel (`apps/platform/src/modules/diff`) shares a Jotai diff cache (
 
 `refresh-base.ts` also fetches `aven/<id>` and `aven/<id>-*` from a folder `origin` (`thread-branches.ts`), and `thread-diff.ts` takes the unshipped changes as the smallest diff against the five newest pushed copies of those and the branch point. `remote-base.ts` ignores every `origin/aven/*` when it looks for the default branch. `refresh-base.ts` also fetches the default branch from the folder's own `origin` (GitHub) into `refs/aven/upstream`, at most once a minute (0277), and the diff takes the nearer of the two branch points, so commits a thread pulled from GitHub are not shown as its changes.
 
+### A phone signs in by scanning a pairing QR code (decision 0413)
+
+The iOS app has no email form and no server field. Settings > Profile on the web (`MobileLinkDialog`) asks `POST /mobile-pair` (`modules/mobile-pair/`) for a code: 32 random bytes, kept as a SHA-256 hash in `verifications` for 2 minutes with the user and active organization. The dialog draws `aven://pair?server=<origin>/api&code=<code>` as a QR code. The app scans it (or takes the link pasted) and calls `POST /mobile-pair/exchange`, which deletes the row in one statement, checks the membership and returns a new 30-day session token. A code works once, and the phone's session is its own: signing out on the web does not sign it out. `AvenKit` parses the link and makes the exchange (`Pairing.swift`).
+
 ### Sign-in with GitHub (decision 0235)
 
 `auth/social.ts` (`socialProvidersOf`) gives Better Auth a `github` provider when `GITHUB_LOGIN_CLIENT_ID` and `GITHUB_LOGIN_CLIENT_SECRET` are both set, with the callback `<BETTER_AUTH_URL>/api/auth/callback/github`; `/platform/config` says `githubLogin`, and the sign-in and register pages show "Continue with GitHub" (`github-sign-in.tsx`, `use-github-sign-in.ts`). The registration hook runs for these accounts too, and signing in does not connect GitHub for runs (0044, 0192).
