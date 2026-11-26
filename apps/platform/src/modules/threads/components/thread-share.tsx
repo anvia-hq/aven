@@ -40,13 +40,14 @@ export function ThreadShareButton({ thread, onClick }: { thread: Thread; onClick
 
   return (
     <Button
-      size="sm"
-      className="h-8 rounded-full px-3 md:h-7"
+      variant="ghost"
+      size="icon-sm"
+      className="size-9 shrink-0 rounded-full md:size-7"
       aria-label={shared ? "Shared to workspace" : "Share"}
+      title={shared ? "Shared to workspace" : "Share"}
       onClick={onClick}
     >
       {shared ? <IconWorld /> : <IconShare />}
-      <span className="hidden sm:inline">{shared ? "Shared to workspace" : "Share"}</span>
     </Button>
   );
 }

@@ -93,8 +93,8 @@ export function ThreadHeader({ thread, panels, owned, driven, onClose }: Props) 
               />
             }
           />
+          {owned && <ThreadShareButton thread={thread} onClick={() => setSharing(true)} />}
         </div>
-        {owned && <ThreadShareButton thread={thread} onClick={() => setSharing(true)} />}
         {owned && <ThreadShare thread={thread} open={sharing} onOpenChange={setSharing} />}
         {onClose && (
           <Button
