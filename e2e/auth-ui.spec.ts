@@ -28,10 +28,10 @@ test.describe("platform auth", () => {
     const password = "password123";
     const email = await registerUser(page, "ui", "UI User");
 
-    const userCard = page.locator('[data-slot="sidebar-header"]');
-    await expect(userCard.getByText("UI User")).toBeVisible();
+    const account = page.getByRole("navigation", { name: "Aven" });
+    await expect(account.getByRole("button", { name: /UI User/ })).toBeVisible();
 
-    await userCard.getByRole("button", { name: /UI User/ }).click();
+    await account.getByRole("button", { name: /UI User/ }).click();
     await page.getByRole("menuitem", { name: "Sign out" }).click();
     await expect(page).toHaveURL(/\/login$/);
     expect((await page.request.get("/api/providers")).status()).toBe(401);
@@ -42,7 +42,7 @@ test.describe("platform auth", () => {
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(page).toHaveURL(/\/threads$/);
-    await expect(userCard.getByText("UI User")).toBeVisible();
+    await expect(account.getByRole("button", { name: /UI User/ })).toBeVisible();
   });
 
   test("login and register link to each other", async ({ page }) => {

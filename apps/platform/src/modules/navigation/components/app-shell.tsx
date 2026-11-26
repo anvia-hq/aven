@@ -23,7 +23,7 @@ import {
   SidebarProvider,
 } from "@aven/ui/sidebar";
 import { TooltipProvider } from "@aven/ui/tooltip";
-import { UserCard } from "@/modules/auth/components/user-card";
+import { RailAccount, UserCard } from "@/modules/auth/components/user-card";
 import { useSignOut } from "@/modules/auth/hooks/use-sign-out";
 import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
@@ -100,6 +100,13 @@ export function AppShell({ user }: Props) {
             >
               <IconSettings className="size-[17px]" />
             </RailLink>
+            <RailAccount
+              name={user.name}
+              email={user.email}
+              image={user.image}
+              onSignOut={signOut}
+              onOpenCommand={() => setCommandOpen(true)}
+            />
           </div>
         </nav>
       </TooltipProvider>
@@ -107,7 +114,7 @@ export function AppShell({ user }: Props) {
         <Sidebar collapsible="icon" className="text-sidebar-foreground/80 data-[side=left]:left-12">
           <SidebarHeader className="pt-3.5">
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 md:hidden">
                 <UserCard
                   name={user.name}
                   email={user.email}
@@ -116,7 +123,7 @@ export function AppShell({ user }: Props) {
                   onOpenCommand={() => setCommandOpen(true)}
                 />
               </div>
-              <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
+              <div className="mr-1 flex shrink-0 items-center md:ml-auto group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <MentionsButton />
                 <Button
                   variant="ghost"
