@@ -9,6 +9,14 @@ const sizeOf = (value: unknown) => new TextEncoder().encode(JSON.stringify(value
 const refused = () => new Error("The tool's result was too long to keep");
 
 export function boundResult<T>(result: T): T {
+  if (typeof result === "string") {
+    if (sizeOf(result) > MAX_RESULT_BYTES) throw refused();
+
+    if (result.length <= MAX_TEXT_CHARS) return result;
+
+    return `${CUT_NOTE}${result.slice(result.length - MAX_TEXT_CHARS)}` as T;
+  }
+
   if (typeof result !== "object" || result === null || Array.isArray(result)) {
     if (sizeOf(result) > MAX_RESULT_BYTES) throw refused();
 
