@@ -7,9 +7,10 @@ Status: built. What a non-TypeScript client (the macOS app in `clients/macos`) n
 The user enters the control plane's address (`BASE`, for example `https://aven.example.com`). Paths below are relative to it, with no `/api` prefix (that exists only in the web app's dev proxy).
 
 1. `POST /auth/sign-up/email` `{ name, email, password }` or `POST /auth/sign-in/email` `{ email, password }`. A successful response carries the session token in the **`set-auth-token`** response header.
-2. Send `Authorization: Bearer <token>` on every request after that. Keep the token in the Keychain.
-3. A new session starts in the user's personal organization. `GET /auth/get-session` returns `{ session: { activeOrganizationId }, user }`; `POST /auth/organization/set-active` `{ organizationId }` switches it. All thread, project and runtime data is scoped to the active organization.
-4. `401` means the token is gone: sign in again. Registration can be closed (`403`).
+2. **QR pairing (used by the iOS app, decision 0413)**: an already signed-in web session calls `POST /mobile-pair` to mint a short-lived (2 minute), single-use pairing code `{ code, expiresAt }` encoded as `aven://pair?server=<base>&code=<code>`. The mobile app calls `POST /mobile-pair/exchange` `{ code }`, which atomically consumes the code, creates an independent 30-day session for that user and active organization, and returns `{ token, expiresAt }` plus the **`set-auth-token`** header (`401` when invalid, expired, or already used).
+3. Send `Authorization: Bearer <token>` on every request after that. Keep the token in the Keychain.
+4. A new session starts in the user's personal organization (or the active organization carried by a pairing code). `GET /auth/get-session` returns `{ session: { activeOrganizationId }, user }`; `POST /auth/organization/set-active` `{ organizationId }` switches it. All thread, project and runtime data is scoped to the active organization.
+5. `401` means the token is gone: sign in again. Registration can be closed (`403`).
 
 ## Data
 
