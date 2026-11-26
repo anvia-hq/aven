@@ -45,6 +45,18 @@ describe("Aven tools on the hosted backend MCP server", () => {
     expect(parked).toEqual(["ask_user", "request_secret"]);
   });
 
+  test("offers open_browser on attended hosted runs and omits it when questions are off", async () => {
+    const attended = (await backendMcpTools({})).map((tool) => tool.name);
+    expect(attended).toContain("open_browser");
+
+    const unattended = (await backendMcpTools({ questions: false })).map((tool) => tool.name);
+    expect(unattended).not.toContain("open_browser");
+
+    expect(await callAvenTool("open_browser", { port: 5173 }, {})).toContain(
+      "http://localhost:5173",
+    );
+  });
+
   test("offers the fork tools, stop_fork among them, and runs it against the fork host", async () => {
     const stopped: string[] = [];
     const id = crypto.randomUUID();

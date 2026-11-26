@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { CLAUDE_DISALLOWED_TOOLS, claudeProcessEnv } from "./sdk";
+import { CLAUDE_DISALLOWED_TOOLS, claudeProcessEnv, claudeToolAliases } from "./sdk";
 
 const TOKEN = "setup-token-process-env-0001";
 
@@ -61,5 +61,12 @@ describe("the Claude process environment", () => {
         "Skill",
       ]),
     );
+  });
+
+  test("aliases bare Aven tool names to their mcp__aven__ names", () => {
+    expect(claudeToolAliases([{ name: "exec_command" }, { name: "open_browser" }])).toEqual({
+      exec_command: "mcp__aven__exec_command",
+      open_browser: "mcp__aven__open_browser",
+    });
   });
 });
