@@ -30,7 +30,7 @@ function stopTool(stopped: ForkView) {
   const tool = createForkTools(host).find(
     (item) => item.name === STOP_FORK_TOOL_NAME,
   ) as unknown as {
-    call(input: unknown): Promise<{ note: string }>;
+    call(input: unknown): Promise<string>;
   };
   return { tool, stopCalls };
 }
@@ -38,13 +38,13 @@ function stopTool(stopped: ForkView) {
 describe("stop_fork", () => {
   test("stops the fork it is given and says its run was cancelled", async () => {
     const { tool, stopCalls } = stopTool(view({ stopped: true }));
-    expect((await tool.call({ id: ID })).note).toBe("The fork's run was cancelled.");
+    expect(await tool.call({ id: ID })).toContain("The fork's run was cancelled.");
     expect(stopCalls).toEqual([ID]);
   });
 
   test("says when the fork was not working, and when it could not be stopped", async () => {
-    expect((await stopTool(view({})).tool.call({ id: ID })).note).toContain("was not working");
-    expect((await stopTool(view({ running: true })).tool.call({ id: ID })).note).toContain(
+    expect(await stopTool(view({})).tool.call({ id: ID })).toContain("was not working");
+    expect(await stopTool(view({ running: true })).tool.call({ id: ID })).toContain(
       "could not be stopped",
     );
   });

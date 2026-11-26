@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { createWaitForForksTool } from "./wait-for-forks";
 import type { ForkHost } from "./types";
+import type { ForkView } from "@aven/protocol/types";
 
 export const FORK_THREAD_TOOL_NAME = "fork_thread";
 export const FORK_STATUS_TOOL_NAME = "fork_status";
@@ -11,6 +12,28 @@ export const TAKE_FORK_CHANGES_TOOL_NAME = "take_fork_changes";
 export const STOP_FORK_TOOL_NAME = "stop_fork";
 
 const forkId = z.uuid().describe("The id fork_thread gave you.");
+const FORK_MESSAGE_MAX = 2_000;
+const MAX_TAKEN_FILES = 100;
+
+function forkState(view: Pick<ForkView, "running" | "error">) {
+  if (view.running) return "running";
+
+  return view.error ? `failed (${view.error})` : "stopped";
+}
+
+function formatForkView(view: ForkView) {
+  const state = forkState(view);
+  const lines = [`Fork ${view.id} (${view.title}): ${state}${view.archived ? ", archived" : ""}`];
+  const trimmed = view.lastMessage.trim();
+
+  if (trimmed) {
+    lines.push(
+      trimmed.length > FORK_MESSAGE_MAX ? `…${trimmed.slice(-FORK_MESSAGE_MAX)}` : trimmed,
+    );
+  }
+
+  return lines.join("\n");
+}
 
 export function createForkTools(host: ForkHost) {
   const forkThread = createTool({
@@ -42,10 +65,10 @@ Use it only when the user asks you to fork or to work on something in parallel. 
         .optional()
         .describe("A short name shown in the sidebar."),
     }),
-    handler: async (input) => ({
-      ...(await host.start(input)),
-      note: "The fork is working. It is a thread of its own, shown under this one. Carry on; look at it with fork_status when you need it.",
-    }),
+    handler: async (input) => {
+      const started = await host.start(input);
+      return `Forked "${started.title}" (${started.id}). It is working in its own thread; check it with fork_status.`;
+    },
   });
 
   const forkStatus = createTool({
@@ -53,7 +76,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     description:
       "Look at a fork of this thread: whether it is working, why it failed if it did, and the last thing its agent said, which is its report once it is done.",
     inputSchema: z.object({ id: forkId }),
-    handler: async ({ id }) => host.status(id),
+    handler: async ({ id }) => formatForkView(await host.status(id)),
   });
 
   const stopFork = createTool({
@@ -71,7 +94,7 @@ Use it only when the user asks you to fork or to work on something in parallel. 
           "The fork is still working: it could not be stopped. Tell the user to stop it from the sidebar.";
       }
 
-      return { ...view, note };
+      return `${note} (Fork ${view.id}: ${view.title})`;
     },
   });
 
@@ -79,7 +102,18 @@ Use it only when the user asks you to fork or to work on something in parallel. 
     name: TAKE_FORK_CHANGES_TOOL_NAME,
     description: `Take what a fork changed: everything it changed since it was forked, committed or not, as a patch file in your workspace. Read it, and apply it with \`git apply --3way <patchPath>\` (or \`git apply --check\` first) in /workspace; nothing is applied for you. It can be called while the fork still works, and again for what it has done since.`,
     inputSchema: z.object({ id: forkId }),
-    handler: async ({ id }) => host.take(id),
+    handler: async ({ id }) => {
+      const taken = await host.take(id);
+
+      if (taken.empty) return "The fork has no changes.";
+
+      const shown = taken.files.slice(0, MAX_TAKEN_FILES);
+      const more =
+        taken.files.length > MAX_TAKEN_FILES
+          ? `\n[${taken.files.length - MAX_TAKEN_FILES} more files not shown]`
+          : "";
+      return `Patch written to ${taken.patchPath} (${taken.files.length} files):\n${shown.join("\n")}${more}`;
+    },
   });
 
   return [

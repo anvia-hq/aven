@@ -28,13 +28,13 @@ describe("web_search", () => {
 
     const output = await tool.call({ query: "what is bun", maxResults: 3, topic: "news" });
 
-    expect(output).toEqual({
-      answer: "Bun is a JS runtime.",
-      results: [
-        { title: "Bun", url: "https://bun.sh", content: "Fast JS runtime" },
-        { title: "", url: "https://example.com", content: "" },
-      ],
-    });
+    expect(output).toBe(
+      [
+        "Answer: Bun is a JS runtime.",
+        "[1] Bun\nhttps://bun.sh\nFast JS runtime",
+        "[2] (untitled)\nhttps://example.com",
+      ].join("\n\n"),
+    );
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("https://api.tavily.com/search");
     expect(calls[0]!.headers.get("authorization")).toBe("Bearer tvly-test");

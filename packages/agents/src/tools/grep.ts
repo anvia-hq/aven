@@ -14,21 +14,80 @@ import type { SearchableFiles } from "./types";
 export const GREP_TOOL_NAME = "grep";
 
 const MAX_LINE_CHARS = 300;
+const MAX_OUTPUT_CHARS = 30_000;
 
 const decoder = new TextDecoder();
 
 const flag = (on: unknown, args: string[]) => (on ? args : []);
 
-const clipped = (raw: string) => {
-  const line = raw.replace(/^\.\//, "");
-  return line.length > MAX_LINE_CHARS ? `${line.slice(0, MAX_LINE_CHARS)}… [line cut]` : line;
-};
+const clipText = (text: string) =>
+  text.length > MAX_LINE_CHARS ? `${text.slice(0, MAX_LINE_CHARS)}… [line cut]` : text;
+
+function parseGrepLine(line: string, currentFile: string) {
+  const matched = /^([^:]+):(\d+):(.*)$/.exec(line);
+
+  if (matched) {
+    return { file: matched[1]!, lineNum: matched[2]!, text: matched[3]! };
+  }
+
+  if (currentFile && line.startsWith(`${currentFile}-`)) {
+    const rest = line.slice(currentFile.length + 1);
+    const context = /^(\d+)-(.*)$/.exec(rest);
+
+    if (context) return { file: currentFile, lineNum: context[1]!, text: context[2]! };
+  }
+
+  const context = /^(.+?)-(\d+)-(.*)$/.exec(line);
+
+  if (context) {
+    return { file: context[1]!, lineNum: context[2]!, text: context[3]! };
+  }
+
+  return undefined;
+}
+
+function formatGrouped(rawLines: readonly string[], maxResults: number) {
+  const out: string[] = [];
+  let currentFile = "";
+  let shown = 0;
+  let chars = 0;
+  let cutByChars = false;
+
+  for (const raw of rawLines) {
+    if (shown >= maxResults) break;
+
+    const line = raw.replace(/^\.\//, "");
+    const parsed = parseGrepLine(line, currentFile);
+    let formatted: string;
+
+    if (parsed) {
+      const header = parsed.file !== currentFile ? `${parsed.file}:\n` : "";
+      currentFile = parsed.file;
+      formatted = `${header}  Line ${parsed.lineNum}: ${clipText(parsed.text)}`;
+    } else if (line === "--") {
+      formatted = "  --";
+    } else {
+      formatted = clipText(line);
+    }
+
+    if (out.length > 0 && chars + formatted.length > MAX_OUTPUT_CHARS) {
+      cutByChars = true;
+      break;
+    }
+
+    out.push(formatted);
+    chars += formatted.length + 1;
+    shown += 1;
+  }
+
+  return { out, remaining: rawLines.length - shown, cutByChars };
+}
 
 export function createGrepTool(files: SearchableFiles) {
   return createTool({
     name: GREP_TOOL_NAME,
     description:
-      "Search the text inside files for a pattern (an extended regular expression, or plain text with `fixed`). Returns `path:line:text` lines, skips binary files, .git and node_modules. Use it to find where something is defined or used before you read a file; use `find` to search by file name.",
+      "Search the text inside files for a pattern (an extended regular expression, or plain text with `fixed`). Returns matches grouped by file path with 1-based line numbers, skips binary files, .git and node_modules. Use it to find where something is defined or used before you read a file; use `find` to search by file name.",
     inputSchema: z.object({
       pattern: z.string().min(1).describe("What to look for."),
       path: z
@@ -89,9 +148,10 @@ export function createGrepTool(files: SearchableFiles) {
 
       if (lines.length === 0 && !cut) return "No matches.";
 
-      const shown = lines.slice(0, maxResults).map(clipped);
-      return withNotes(shown, [
-        lines.length > maxResults ? `${lines.length - maxResults} more lines not shown` : "",
+      const { out, remaining, cutByChars } = formatGrouped(lines, maxResults);
+      return withNotes(out, [
+        remaining > 0 ? `${remaining} more lines not shown` : "",
+        cutByChars ? "output size limit reached" : "",
         cut ? "the search was cut short" : "",
       ]);
     },
