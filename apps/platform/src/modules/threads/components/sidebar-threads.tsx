@@ -32,6 +32,9 @@ import { SidebarSection } from "./sidebar-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadTitleField } from "./thread-title-field";
 
+const ROW =
+  "hover:bg-sidebar-accent/50 data-active:bg-sidebar-accent data-active:font-medium data-active:hover:bg-sidebar-accent";
+
 function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runtime }) {
   const Tile = !runtime || isSandbox(runtime) ? ProjectTile : ComputerTile;
 
@@ -204,7 +207,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
-          className={cn(nested && "pl-8")}
+          className={cn(ROW, nested && "pl-8")}
         >
           <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
           <SharedMark thread={thread} />
@@ -252,6 +255,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${left.id}` || pathname === `/threads/${right.id}`}
+          className={ROW}
         >
           <span className="flex shrink-0 items-center gap-0.5">
             {[left, right].map((thread) => (
@@ -327,6 +331,7 @@ export function SidebarThreads() {
                     />
                   }
                   isActive={pathname === `/threads/${thread.id}`}
+                  className={ROW}
                 >
                   <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
                   <SharedMark thread={thread} />
