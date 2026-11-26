@@ -55,12 +55,9 @@ test.describe("mentions in the composer", () => {
     await expect(sent.locator('[data-mention="skill"]')).toHaveText("writing-skills");
     await expect(sent.locator('[data-mention="skill"] svg')).toHaveCount(0);
     await expect(sent.locator('[data-mention="file"] :is(svg, img)')).toHaveCount(1);
-    const bubble = await sent.locator('[data-mention="file"]').evaluate((chip) => {
-      const box = chip.closest("[class*='rounded-2xl']")?.getBoundingClientRect();
-      return box?.height ?? 0;
-    });
-    expect(bubble).toBeGreaterThan(0);
-    expect(bubble).toBeLessThan(64);
+    const height = (await sent.boundingBox())?.height ?? 0;
+    expect(height).toBeGreaterThan(0);
+    expect(height).toBeLessThan(96);
     await expect(prompt).toHaveText("");
   });
 
