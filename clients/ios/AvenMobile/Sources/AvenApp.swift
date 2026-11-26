@@ -8,14 +8,17 @@ struct AvenApp: App {
         WindowGroup {
             Group {
                 if model.isSignedIn {
-                    ThreadListView()
+                    RootView()
                 } else {
                     LoginView()
                 }
             }
             .environment(model)
             .preferredColorScheme(.dark)
-            .tint(Theme.accent)
+            .tint(Theme.primary)
+            .onOpenURL { url in
+                Task { await model.handleIncomingURL(url) }
+            }
         }
     }
 }

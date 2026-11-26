@@ -14,6 +14,18 @@ targets:
     sources: [Sources]
     dependencies:
       - package: AvenKit
+    info:
+      path: Info.plist
+      properties:
+        CFBundleURLTypes:
+          - CFBundleURLName: dev.anvia.aven.mobile
+            CFBundleURLSchemes:
+              - aven
+    entitlements:
+      path: AvenMobile.entitlements
+      properties:
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)dev.anvia.aven.mobile
     settings:
       base:
         PRODUCT_NAME: Aven
@@ -24,6 +36,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UILaunchScreen_BackgroundColor: LaunchBackground
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
+        INFOPLIST_KEY_NSCameraUsageDescription: "Aven uses the camera to scan your sign-in QR code."
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         INFOPLIST_KEY_CFBundleDisplayName: Aven
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
