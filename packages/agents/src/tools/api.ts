@@ -1,10 +1,38 @@
 import { createTool } from "@anvia/core";
 import { z } from "zod";
 
+import { asRecord } from "../values";
 import type { ApiHost } from "./types";
 
 export const API_SEARCH_TOOL_NAME = "aven_api_search";
 export const API_TOOL_NAME = "aven_api";
+
+function formatSearch(raw: unknown) {
+  const record = asRecord(raw);
+  const organizations = Array.isArray(record.organizations) ? record.organizations : [];
+  const routes = Array.isArray(record.routes) ? record.routes : [];
+  const orgLines = organizations.map((item) => {
+    const org = asRecord(item);
+    return `- ${String(org.id ?? "")} (${String(org.name ?? "")})`;
+  });
+  const routeLines = routes.map((item) => {
+    const route = asRecord(item);
+    const body = route.body !== undefined ? ` body=${JSON.stringify(route.body)}` : "";
+    return `- ${String(route.method ?? "")} ${String(route.path ?? "")} [${String(route.tier ?? "")}]${body}`;
+  });
+  return `Workspaces:\n${orgLines.join("\n") || "(none)"}\n\nRoutes (${routes.length}):\n${routeLines.join("\n") || "(none)"}`;
+}
+
+function formatCall(raw: unknown) {
+  if (typeof raw === "string") return raw;
+
+  const record = asRecord(raw);
+
+  if (typeof record.status !== "number") return JSON.stringify(raw);
+
+  const body = typeof record.body === "string" ? record.body : JSON.stringify(record.body, null, 2);
+  return `HTTP ${record.status}\n${body ?? ""}`;
+}
 
 export function createApiTools(host: ApiHost) {
   const search = createTool({
@@ -18,7 +46,7 @@ export function createApiTools(host: ApiHost) {
         .optional()
         .describe("Words the route's method and path should contain, e.g. 'POST threads'."),
     }),
-    handler: async ({ query }) => host({ op: "search", query }),
+    handler: async ({ query }) => formatSearch(await host({ op: "search", query })),
   });
 
   const call = createTool({
@@ -42,7 +70,7 @@ export function createApiTools(host: ApiHost) {
         .optional()
         .describe("Only after the person said yes to a route marked 'confirm'."),
     }),
-    handler: async (input) => host({ op: "call", ...input }),
+    handler: async (input) => formatCall(await host({ op: "call", ...input })),
   });
 
   return [search, call];

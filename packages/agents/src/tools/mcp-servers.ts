@@ -3,6 +3,7 @@ import { MCP_MAX_HEADERS, MCP_TARGETS } from "@aven/protocol/mcp";
 import { mcpHeaderName, mcpHeaderValue, mcpName, mcpUrl } from "@aven/protocol/mcp-schema";
 import { z } from "zod";
 import type { McpServersHost } from "./types";
+import type { BotMcpView } from "@aven/protocol/types";
 
 export const LIST_MCP_SERVERS_TOOL_NAME = "list_mcp_servers";
 export const ADD_MCP_SERVER_TOOL_NAME = "add_mcp_server";
@@ -57,27 +58,54 @@ const updateSchema = z.object({
 export type McpServerInput = z.infer<typeof addSchema>;
 export type McpServerPatch = Omit<z.infer<typeof updateSchema>, "id">;
 
+function formatServer(server: BotMcpView) {
+  const parts = [
+    server.id,
+    server.name,
+    server.url,
+    `target ${server.target}`,
+    server.enabled ? "enabled" : "disabled",
+  ];
+
+  if (server.headerNames.length > 0) parts.push(`headers ${server.headerNames.join(", ")}`);
+
+  if (server.lastError) parts.push(`error: ${server.lastError}`);
+
+  return `- ${parts.join(" · ")}`;
+}
+
 export function createMcpServerTools(host: McpServersHost) {
   const list = createTool({
     name: LIST_MCP_SERVERS_TOOL_NAME,
     description:
       "List the person's MCP servers: their names, addresses, who uses them, whether they are enabled, the names of their headers (never the values) and why the last attempt to connect failed, if it did.",
     inputSchema: z.object({}),
-    handler: async () => ({ servers: await host.list() }),
+    handler: async () => {
+      const servers = await host.list();
+      return servers.length > 0
+        ? servers.map(formatServer).join("\n")
+        : "No MCP servers configured.";
+    },
   });
   const add = createTool({
     name: ADD_MCP_SERVER_TOOL_NAME,
     description:
       "Add a remote MCP server for the person, when they ask you to connect one and give you its address. It is used from the next message on. Tell the person what you added.",
     inputSchema: addSchema,
-    handler: async (input) => ({ server: await host.add(input) }),
+    handler: async (input) => {
+      const server = await host.add(input);
+      return `Added MCP server ${server.name} (${server.id}) at ${server.url} (target: ${server.target}).`;
+    },
   });
   const update = createTool({
     name: UPDATE_MCP_SERVER_TOOL_NAME,
     description:
       "Change an MCP server. Give only what changes. Use enabled: false to switch it off and enabled: true to switch it on.",
     inputSchema: updateSchema,
-    handler: async ({ id, ...patch }) => ({ server: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => {
+      const server = await host.update(id, patch);
+      return `Updated MCP server:\n${formatServer(server)}`;
+    },
   });
   const remove = createTool({
     name: REMOVE_MCP_SERVER_TOOL_NAME,
@@ -85,7 +113,7 @@ export function createMcpServerTools(host: McpServersHost) {
     inputSchema: z.object({ id: z.uuid().describe("The server id from list_mcp_servers.") }),
     handler: async ({ id }) => {
       await host.remove(id);
-      return { removed: true };
+      return `Removed MCP server ${id}.`;
     },
   });
   return [list, add, update, remove] as const;

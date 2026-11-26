@@ -8,8 +8,8 @@ describe("open_browser", () => {
     const result = await tool.call({ port: 3000 });
 
     expect(tool.name).toBe("open_browser");
-    expect(result).toMatchObject({ offered: true, address: "http://localhost:3000" });
-    expect(JSON.stringify(result)).toContain("Do not assume it is open");
+    expect(result).toContain("http://localhost:3000");
+    expect(result).toContain("do not assume it is open");
   });
 
   test("takes a port and nothing else", () => {

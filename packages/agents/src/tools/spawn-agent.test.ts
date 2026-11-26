@@ -16,13 +16,11 @@ describe("spawn_agent", () => {
       return `  ${description} done\n`;
     });
     const result = await tool.call({ tasks: [task("a"), task("b", "general"), task("c")] });
-    expect(result).toEqual({
-      results: [
-        { description: "a", type: "explore", status: "done", output: "a done" },
-        { description: "b", type: "general", status: "done", output: "b done" },
-        { description: "c", type: "explore", status: "done", output: "c done" },
-      ],
-    });
+    expect(result).toBe(
+      ["[1/3] a (explore)\na done", "[2/3] b (general)\nb done", "[3/3] c (explore)\nc done"].join(
+        "\n\n",
+      ),
+    );
   });
 
   test("runs all six tasks at the same time", async () => {
@@ -57,20 +55,15 @@ describe("spawn_agent", () => {
       return "fine";
     });
     const result = await tool.call({ tasks: [task("good"), task("bad")] });
-    expect(result).toEqual({
-      results: [
-        { description: "good", type: "explore", status: "done", output: "fine" },
-        { description: "bad", type: "explore", status: "error", error: "the model refused" },
-      ],
-    });
+    expect(result).toBe(
+      ["[1/2] good (explore)\nfine", "[2/2] bad (explore) — ERROR\nthe model refused"].join("\n\n"),
+    );
   });
 
   test("a subagent that says nothing is told so", async () => {
     const tool = createSpawnAgentTool(async () => "  ");
-    const result = (await tool.call({ tasks: [task("quiet")] })) as {
-      results: { output: string }[];
-    };
-    expect(result.results[0]?.output).toContain("without saying anything");
+    const result = await tool.call({ tasks: [task("quiet")] });
+    expect(result).toContain("without saying anything");
   });
 
   test("passes each task's place in the call and the abort signal on", async () => {

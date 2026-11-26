@@ -23,7 +23,7 @@ export function createDeleteBotTool(deleteBot: DeleteBot) {
     inputSchema: deleteBotSchema,
     async handler(input) {
       const { name, handle } = await deleteBot(input);
-      return { deleted: true, name, handle };
+      return `Deleted bot ${name} (@${handle}).`;
     },
   });
 }

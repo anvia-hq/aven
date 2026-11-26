@@ -19,12 +19,7 @@ describe("git_fetch", () => {
   test("asks for the default branch when none is named, and says what moved", async () => {
     const { tool, asked } = setup({ branch: "main", commit: SHA_B, previous: SHA_A });
 
-    expect(await tool.call({})).toEqual({
-      ref: "origin/main",
-      commit: SHA_B,
-      updated: true,
-      summary: "origin/main is now at bbbbbbb (was aaaaaaa).",
-    });
+    expect(await tool.call({})).toBe("origin/main is now at bbbbbbb (was aaaaaaa).");
     expect(asked).toEqual([undefined]);
   });
 
@@ -34,17 +29,13 @@ describe("git_fetch", () => {
     const result = await tool.call({ branch: "feature/x" });
 
     expect(asked).toEqual(["feature/x"]);
-    expect(result).toMatchObject({ ref: "origin/feature/x", updated: true });
-    expect(result.summary).toBe("origin/feature/x is now at aaaaaaa.");
+    expect(result).toBe("origin/feature/x is now at aaaaaaa.");
   });
 
   test("says when there was nothing new", async () => {
     const { tool } = setup({ branch: "main", commit: SHA_A, previous: SHA_A });
 
-    const result = await tool.call({});
-
-    expect(result).toMatchObject({ updated: false });
-    expect(result.summary).toBe("origin/main was already up to date at aaaaaaa.");
+    expect(await tool.call({})).toBe("origin/main was already up to date at aaaaaaa.");
   });
 
   test("a fetch that fails is the tool's error, in the runner's words", async () => {

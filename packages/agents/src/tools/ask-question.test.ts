@@ -22,18 +22,22 @@ describe("ask_question", () => {
 
     expect(tool.name).toBe(ASK_QUESTION_TOOL_NAME);
     expect(asked).toEqual([[question]]);
-    expect(result).toMatchObject({ shown: true });
-    expect(JSON.stringify(result)).toContain("Stop now");
+    expect(typeof result).toBe("string");
+    expect(result).toContain("Stop now");
   });
 
   test("says who will ask when the main bot does, so the bot stops all the same", async () => {
     const via = { handle: "main", name: "Aven", text: "Scout needs a decision" };
-    const tool = createAskQuestionTool(async () => ({ relayed: via }));
+    const relayed: unknown[] = [];
+    const tool = createAskQuestionTool(
+      async () => ({ relayed: via }),
+      (item) => relayed.push(item),
+    );
 
     const result = await tool.call({ questions: [question] });
 
-    expect(result).toMatchObject({ relayed: via });
-    expect(JSON.stringify(result)).toContain("Aven will ask the person for you");
+    expect(relayed).toEqual([via]);
+    expect(result).toContain("Aven will ask the person for you");
   });
 
   test("a question with no text, one choice, too many choices or no question at all is refused before the host is asked", async () => {

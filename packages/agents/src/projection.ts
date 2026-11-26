@@ -10,6 +10,7 @@ import {
   projectToolOutput,
   withSubagentResults,
 } from "./tool-projection";
+import { readToolUi } from "./tool-ui";
 import { contextOf, tokenUsageOf } from "./usage";
 import type { ChatMessage, MessagePart, RunEvent } from "@aven/protocol/types";
 
@@ -113,7 +114,12 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
         );
 
         if (target?.type === "tool") {
-          const { status, output, artifacts } = projectToolOutput(part.output, target.tool.name);
+          const ui = readToolUi(message, part.toolCallId);
+          const { status, output, artifacts } = projectToolOutput(
+            part.output,
+            target.tool.name,
+            ui,
+          );
           target.tool.status = status;
           target.tool.output = output;
 

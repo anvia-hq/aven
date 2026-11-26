@@ -154,15 +154,24 @@ export function createWebFetchTool(options: WebFetchOptions = {}) {
         /html/i.test(contentType) || /^\s*<(!doctype|html)/i.test(raw) ? htmlToText(raw) : raw;
       const page = text.slice(offset, offset + maxChars);
       const next = offset + maxChars < text.length ? offset + maxChars : null;
+      const notes: string[] = [];
 
-      return {
-        url: target.url.href,
-        status: response.status,
-        contentType,
-        content: page,
-        next,
-        sourceCut: cut,
-      };
+      if (next !== null) {
+        notes.push(
+          `Showing chars ${offset}-${next} of ${text.length}. Pass offset: ${next} to read more.`,
+        );
+      }
+
+      if (cut) {
+        notes.push(
+          `Source response exceeded ${MAX_FETCH_BYTES / 1024 / 1024} MiB and was truncated.`,
+        );
+      }
+
+      const mime = contentType.split(";")[0]?.trim();
+      const header = `URL: ${target.url.href}${mime ? ` (${mime})` : ""}`;
+      const footer = notes.length > 0 ? `\n\n[${notes.join(" ")}]` : "";
+      return `${header}\n\n${page}${footer}`;
     },
   });
 }

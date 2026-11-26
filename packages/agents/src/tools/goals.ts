@@ -9,7 +9,7 @@ import {
 } from "@aven/protocol/goals";
 import { z } from "zod";
 import type { GoalHost } from "./types";
-import type { GoalAction } from "@aven/protocol/types";
+import type { BotGoalView, GoalAction } from "@aven/protocol/types";
 
 export const GET_GOAL_TOOL_NAME = "get_goal";
 export const START_GOAL_TOOL_NAME = "start_goal";
@@ -44,22 +44,38 @@ const updateSchema = z.object({
   reason: z.string().trim().max(GOAL_REASON_MAX).optional().describe("For blocked."),
 });
 
+function formatGoal(goal: BotGoalView) {
+  const lines = [
+    `Phase: ${goal.phase} (round ${goal.round}/${goal.maxRounds})`,
+    `Objective: ${goal.objective}`,
+  ];
+
+  if (goal.blockedReason) lines.push(`Blocked: ${goal.blockedReason}`);
+
+  if (goal.checks.length > 0) lines.push(`Checks:\n${goal.checks.map((c) => `- ${c}`).join("\n")}`);
+
+  return lines.join("\n");
+}
+
 export function createGoalTools(host: GoalHost) {
   const get = createTool({
     name: GET_GOAL_TOOL_NAME,
-    description: "Read your current goal, or null when you have none.",
+    description: "Read your current goal, or learn that you have none.",
     inputSchema: z.object({}),
-    handler: async () => ({ goal: await host.get() }),
+    handler: async () => {
+      const goal = await host.get();
+      return goal ? formatGoal(goal) : "No active goal.";
+    },
   });
   const start = createTool({
     name: START_GOAL_TOOL_NAME,
     description:
       "Start a long-running goal for big or multi-step work you do on your own computer. After this reply ends, the app keeps waking you for round after round in the background, without the person, until your checks pass and you call update_goal complete, you are blocked, or the round cap is reached. Use it for work that will not fit one reply; not for questions or small tasks. You can have one goal at a time.",
     inputSchema: startSchema,
-    handler: async (input) => ({
-      goal: await host.start({ ...input, checks: input.checks ?? [] }),
-      next: "Goal started. Tell the person in one short message what you will work on in the background, then stop; the first round starts after this reply.",
-    }),
+    handler: async (input) => {
+      const goal = await host.start({ ...input, checks: input.checks ?? [] });
+      return `Goal started (max ${goal.maxRounds} rounds). Tell the person in one short message what you will work on in the background, then stop; the first round starts after this reply.`;
+    },
   });
   const update = createTool({
     name: UPDATE_GOAL_TOOL_NAME,
@@ -76,16 +92,13 @@ export function createGoalTools(host: GoalHost) {
           const failed = await host.check(goal.checks, context?.abortSignal);
 
           if (failed.length > 0) {
-            return {
-              goal,
-              next: `The goal is not complete: these checks failed. Fix them and call complete again.\n\n${failed.join("\n\n")}`,
-            };
+            return `The goal is not complete: these checks failed. Fix them and call complete again.\n\n${failed.join("\n\n")}`;
           }
         }
       }
 
-      const goal = await host.update(action, reason);
-      return { goal, next: NEXT[action] };
+      await host.update(action, reason);
+      return NEXT[action];
     },
   });
   return [get, start, update] as const;

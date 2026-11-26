@@ -7,6 +7,7 @@ import {
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 import type { ProvidersHost } from "./types";
+import type { BotProviderView, ProviderKeyAsk } from "@aven/protocol/types";
 
 export const LIST_PROVIDERS_TOOL_NAME = "list_providers";
 export const ADD_PROVIDER_TOOL_NAME = "add_provider";
@@ -51,28 +52,57 @@ export type ProviderPatch = Omit<z.infer<typeof updateSchema>, "id">;
 
 const KEY_SHOWN =
   "The key form is on the person's screen. Stop now and send nothing else: they type the key there, it is saved to the provider without passing through you, and they will tell you in their next message.";
+const MAX_MODELS_SHOWN = 100;
 
-export function createProviderTools(host: ProvidersHost) {
+function formatProvider(provider: BotProviderView) {
+  const parts = [provider.id, `${provider.name} (${provider.kind})`];
+
+  if (provider.modelId) parts.push(`model ${provider.modelId}`);
+
+  if (provider.baseUrl) parts.push(provider.baseUrl);
+
+  parts.push(provider.hasKey ? "key saved" : "no key");
+
+  if (provider.isDefault) parts.push("default");
+
+  return `- ${parts.join(" · ")}`;
+}
+
+export function createProviderTools(
+  host: ProvidersHost,
+  onKeyAsked?: (provider: ProviderKeyAsk, text: string) => void,
+) {
   const list = createTool({
     name: LIST_PROVIDERS_TOOL_NAME,
     description:
       "List the person's model providers: their kinds, names, addresses, default models, which is the default, and whether each has its API key (never the key).",
     inputSchema: z.object({}),
-    handler: async () => ({ providers: await host.list() }),
+    handler: async () => {
+      const providers = await host.list();
+      return providers.length > 0
+        ? providers.map(formatProvider).join("\n")
+        : "No providers configured.";
+    },
   });
   const add = createTool({
     name: ADD_PROVIDER_TOOL_NAME,
     description:
       "Add a model provider for the person, when they ask. It starts with no API key: right after, call ask_provider_key so the person can type it. Never ask for the key in a message, and never make up an address, a model or a name.",
     inputSchema: addSchema,
-    handler: async (input) => ({ provider: await host.add(input) }),
+    handler: async (input) => {
+      const provider = await host.add(input);
+      return `Added provider:\n${formatProvider(provider)}`;
+    },
   });
   const update = createTool({
     name: UPDATE_PROVIDER_TOOL_NAME,
     description:
       "Change a provider's name, address or default model, or make it the default. Give only what changes. Moving a provider to another address removes its key: call ask_provider_key afterwards.",
     inputSchema: updateSchema,
-    handler: async ({ id, ...patch }) => ({ provider: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => {
+      const provider = await host.update(id, patch);
+      return `Updated provider:\n${formatProvider(provider)}`;
+    },
   });
   const remove = createTool({
     name: REMOVE_PROVIDER_TOOL_NAME,
@@ -81,7 +111,7 @@ export function createProviderTools(host: ProvidersHost) {
     inputSchema: z.object({ id }),
     handler: async ({ id }) => {
       await host.remove(id);
-      return { removed: true };
+      return `Removed provider ${id}.`;
     },
   });
   const models = createTool({
@@ -89,7 +119,19 @@ export function createProviderTools(host: ProvidersHost) {
     description:
       "List the models a provider offers, asked with its saved key. For Azure these are the deployments of the resource. It needs the key to be saved.",
     inputSchema: z.object({ id }),
-    handler: async ({ id }) => ({ models: await host.models(id) }),
+    handler: async ({ id }) => {
+      const all = await host.models(id);
+
+      if (all.length === 0) return "No models returned by this provider.";
+
+      const shown = all.slice(0, MAX_MODELS_SHOWN);
+
+      if (all.length > MAX_MODELS_SHOWN) {
+        shown.push(`[${all.length - MAX_MODELS_SHOWN} more models not shown]`);
+      }
+
+      return shown.join("\n");
+    },
   });
   const askKey = host.askKey?.bind(host);
   const ask = askKey
@@ -99,7 +141,12 @@ export function createProviderTools(host: ProvidersHost) {
           description:
             "Show the person a masked form for a provider's API key, which is saved to the provider without passing through you. Use it after add_provider, or when a provider has no key. Your turn ends there; they tell you when it is saved.",
           inputSchema: z.object({ id }),
-          handler: async ({ id }) => ({ provider: await askKey(id), note: KEY_SHOWN }),
+          handler: async ({ id }) => {
+            const provider = await askKey(id);
+            const text = `Requested API key for ${provider.name}. ${KEY_SHOWN}`;
+            onKeyAsked?.(provider, text);
+            return text;
+          },
         }),
       ]
     : [];

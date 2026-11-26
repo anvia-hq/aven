@@ -41,6 +41,23 @@ export const spawnAgentSchema = z.object({
 });
 
 const NOTHING = "The subagent finished without saying anything.";
+const MAX_SUBAGENT_OUTPUT_CHARS = 20_000;
+
+function formatSubagentResults(results: readonly SubagentResult[]) {
+  return results
+    .map((entry, index) => {
+      const header = `[${index + 1}/${results.length}] ${entry.description} (${entry.type})`;
+
+      if (entry.status === "error") return `${header} — ERROR\n${entry.error}`;
+
+      const body =
+        entry.output.length > MAX_SUBAGENT_OUTPUT_CHARS
+          ? `${entry.output.slice(0, MAX_SUBAGENT_OUTPUT_CHARS)}\n[truncated to ${MAX_SUBAGENT_OUTPUT_CHARS} chars]`
+          : entry.output;
+      return `${header}\n${body}`;
+    })
+    .join("\n\n");
+}
 
 export function createSpawnAgentTool(run: RunSubagent) {
   return createTool({
@@ -66,7 +83,7 @@ Use it to search or understand a large codebase, to look into several independen
         }),
       );
       context?.abortSignal?.throwIfAborted();
-      return { results };
+      return formatSubagentResults(results);
     },
   });
 }

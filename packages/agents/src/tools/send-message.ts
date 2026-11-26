@@ -3,6 +3,7 @@ import { BOT_MESSAGE_ID, USER_HANDLE } from "@aven/protocol/bots";
 import { MAX_ARTIFACTS_PER_CALL } from "@aven/protocol/events";
 import { z } from "zod";
 import type { SendMessage } from "./types";
+import type { ToolArtifact } from "@aven/protocol/types";
 
 export const SEND_MESSAGE_TOOL_NAME = "send_message";
 
@@ -55,14 +56,32 @@ export const sendMessageSchema = z.object({
 
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
 
-export function createSendMessageTool(send: SendMessage) {
+export function createSendMessageTool(
+  send: SendMessage,
+  onArtifacts?: (artifacts: ToolArtifact[], text: string) => void,
+) {
   return createTool({
     name: SEND_MESSAGE_TOOL_NAME,
     description:
       "Send one chat bubble to the person, or a message to one of their other bots. It is the only way anyone hears from you: nothing you write outside this tool is seen, so use it for every reply, even a greeting or one word. For the person, never send a long or multi-paragraph reply in one call: split it into separate short send_message calls (one thought per bubble, 1 to 3 sentences) in the order you want them read; they arrive in order, each after a short pause as if typed. A bot you write to answers in a message of its own, later, not as the result of this call. Quote the message you are answering by its id, and do not repeat what it said.",
     inputSchema: sendMessageSchema,
     async handler(input, context) {
-      return send(input, { abortSignal: context?.abortSignal });
+      const result = await send(input, { abortSignal: context?.abortSignal });
+
+      if (typeof result === "string") return result;
+
+      const names = result.artifacts.map((item) => item.title ?? item.name).join(", ");
+      const lines = [
+        result.artifacts.length > 0
+          ? `Sent to the person with ${result.artifacts.length} file(s): ${names}.`
+          : result.sent,
+      ];
+      for (const failure of result.failed) lines.push(`Failed (${failure.path}): ${failure.error}`);
+      const text = lines.join("\n");
+
+      if (result.artifacts.length > 0) onArtifacts?.(result.artifacts, text);
+
+      return text;
     },
   });
 }

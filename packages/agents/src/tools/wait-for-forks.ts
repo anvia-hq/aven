@@ -13,6 +13,12 @@ const REPORT_MAX = 2000;
 
 const seconds = (ms: number) => Math.round(ms / 1000);
 
+export const forkState = (fork: Pick<ForkView, "running" | "error">) => {
+  if (fork.running) return "running";
+
+  return fork.error ? `failed (${fork.error})` : "stopped";
+};
+
 export function createWaitForForksTool(
   look: (id: string) => Promise<ForkView>,
   clock: Clock = realClock,
@@ -43,18 +49,15 @@ export function createWaitForForksTool(
             working === 0
               ? `All ${forks.length} forks have stopped working after ${waited}s.`
               : `${working} of ${forks.length} forks are still working after ${waited}s.`;
-          return {
-            allStopped: working === 0,
-            waitedSeconds: waited,
-            summary,
-            forks: forks.map((fork) => ({
-              id: fork.id,
-              title: fork.title,
-              running: fork.running,
-              error: fork.error,
-              lastMessage: fork.lastMessage.slice(-REPORT_MAX),
-            })),
-          };
+          const entries = forks.map((fork) => {
+            const state = forkState(fork);
+            const report = fork.lastMessage.trim();
+            const clipped = report.length > REPORT_MAX ? `…${report.slice(-REPORT_MAX)}` : report;
+            return clipped
+              ? `- ${fork.id} (${fork.title}) [${state}]\n  ${clipped.replaceAll("\n", "\n  ")}`
+              : `- ${fork.id} (${fork.title}) [${state}]`;
+          });
+          return `${summary}\n${entries.join("\n")}`;
         }
 
         await clock.sleep(Math.min(POLL_MS, deadline - clock.now()), context?.abortSignal);

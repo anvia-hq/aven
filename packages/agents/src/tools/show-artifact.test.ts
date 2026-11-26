@@ -13,31 +13,36 @@ const MP4 = new Uint8Array([0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0
 
 function setup(files: Record<string, Uint8Array>) {
   const kept: { bytes: Uint8Array; mediaType: string }[] = [];
-  const tool = createShowArtifactTool({
-    readFile: async ({ path }) => {
-      const bytes = files[path];
+  const emitted: unknown[] = [];
+  const tool = createShowArtifactTool(
+    {
+      readFile: async ({ path }) => {
+        const bytes = files[path];
 
-      if (!bytes) throw new Error(`File not found: ${path}`);
+        if (!bytes) throw new Error(`File not found: ${path}`);
 
-      return bytes;
+        return bytes;
+      },
+      save: async (bytes, mediaType) => {
+        kept.push({ bytes, mediaType });
+        const extension = { "video/mp4": "mp4", "text/html": "html" }[mediaType] ?? "png";
+        return `00000000-0000-4000-8000-00000000000${kept.length}.${extension}`;
+      },
     },
-    save: async (bytes, mediaType) => {
-      kept.push({ bytes, mediaType });
-      const extension = { "video/mp4": "mp4", "text/html": "html" }[mediaType] ?? "png";
-      return `00000000-0000-4000-8000-00000000000${kept.length}.${extension}`;
-    },
-  });
-  return { tool, kept };
+    (artifacts) => emitted.push(artifacts),
+  );
+  return { tool, kept, emitted };
 }
 
 describe("show_artifact", () => {
-  test("keeps images and videos together and names each, in order", async () => {
-    const { tool, kept } = setup({ "plot.png": PNG, "run.mp4": MP4 });
+  test("keeps images and videos together, returns plain text, and emits artifacts out of band", async () => {
+    const { tool, kept, emitted } = setup({ "plot.png": PNG, "run.mp4": MP4 });
     const result = await tool.call({
       items: [{ path: "plot.png", caption: "Sales" }, { path: "run.mp4" }],
     });
-    expect(result).toEqual({
-      artifacts: [
+    expect(result).toBe("Showed plot.png, run.mp4.");
+    expect(emitted).toEqual([
+      [
         {
           name: "00000000-0000-4000-8000-000000000001.png",
           mediaType: "image/png",
@@ -45,21 +50,21 @@ describe("show_artifact", () => {
         },
         { name: "00000000-0000-4000-8000-000000000002.mp4", mediaType: "video/mp4" },
       ],
-      paths: ["plot.png", "run.mp4"],
-      failed: [],
-    });
+    ]);
     expect(kept.map((file) => file.mediaType)).toEqual(["image/png", "video/mp4"]);
   });
 
   test("shows what it can and says what it could not, so one bad file does not stop the rest", async () => {
     const svg = new TextEncoder().encode("<svg onload='alert(1)'/>");
-    const { tool, kept } = setup({ "plot.png": PNG, "logo.png": svg });
-    const result = (await tool.call({
+    const { tool, kept, emitted } = setup({ "plot.png": PNG, "logo.png": svg });
+    const result = await tool.call({
       items: [{ path: "logo.png" }, { path: "missing.png" }, { path: "plot.png" }],
-    })) as { artifacts: unknown[]; failed: { path: string; error: string }[] };
-    expect(result.artifacts).toHaveLength(1);
-    expect(result.failed.map((failure) => failure.path)).toEqual(["logo.png", "missing.png"]);
-    expect(result.failed[0]?.error).toContain("is not a PNG, JPEG, GIF, WebP, MP4, WebM or HTML");
+    });
+    expect(result).toContain("Showed plot.png.");
+    expect(result).toContain("Failed (logo.png):");
+    expect(result).toContain("is not a PNG, JPEG, GIF, WebP, MP4, WebM or HTML");
+    expect(result).toContain("Failed (missing.png):");
+    expect(emitted).toHaveLength(1);
     expect(kept).toHaveLength(1);
   });
 
@@ -117,19 +122,21 @@ describe("show_artifact", () => {
     const page = new TextEncoder().encode("<!DOCTYPE html><html><body>x</body></html>");
     const huge = new Uint8Array(MAX_HTML_BYTES + 1);
     huge.set(page);
-    const { tool, kept } = setup({
+    const { tool, kept, emitted } = setup({
       "chart.html": page,
       "huge.html": huge,
       "notes.txt": new TextEncoder().encode("hello"),
     });
-    const result = (await tool.call({
+    const result = await tool.call({
       items: [{ path: "chart.html" }, { path: "huge.html" }, { path: "notes.txt" }],
-    })) as { artifacts: unknown[]; failed: { path: string; error: string }[] };
-    expect(result.artifacts).toEqual([
-      { name: "00000000-0000-4000-8000-000000000001.html", mediaType: "text/html" },
+    });
+    expect(emitted).toEqual([
+      [{ name: "00000000-0000-4000-8000-000000000001.html", mediaType: "text/html" }],
     ]);
     expect(kept[0]!.mediaType).toBe("text/html");
-    expect(result.failed.map((failure) => failure.path)).toEqual(["huge.html", "notes.txt"]);
-    expect(result.failed[0]!.error).toContain("pages up to 2 MiB");
+    expect(result).toContain("Showed chart.html.");
+    expect(result).toContain("Failed (huge.html):");
+    expect(result).toContain("pages up to 2 MiB");
+    expect(result).toContain("Failed (notes.txt):");
   });
 });

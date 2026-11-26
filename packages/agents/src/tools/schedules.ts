@@ -2,6 +2,7 @@ import { createTool } from "@anvia/core";
 import { SCHEDULE_NAME_MAX, SCHEDULE_PROMPT_MAX } from "@aven/protocol/schedules";
 import { z } from "zod";
 import type { ScheduleHost } from "./types";
+import type { BotScheduleView } from "@aven/protocol/types";
 
 export const CREATE_SCHEDULE_TOOL_NAME = "create_schedule";
 export const LIST_SCHEDULES_TOOL_NAME = "list_schedules";
@@ -60,27 +61,54 @@ const updateSchema = z.object({
 export type ScheduleInput = z.infer<typeof createSchema>;
 export type SchedulePatch = Omit<z.infer<typeof updateSchema>, "id">;
 
+const MAX_SCHEDULES_SHOWN = 50;
+
+function formatScheduleLine(item: BotScheduleView) {
+  const state = item.enabled ? "enabled" : "paused";
+  const next = item.nextRun ? `, next ${item.nextRun}` : "";
+  const last = item.lastRun ? `, last ${item.lastRun} (${item.lastStatus ?? "ok"})` : "";
+  return `- ${item.id} · ${item.name} · @${item.bot} · \`${item.cron}\` (${item.timezone}) · ${state}${next}${last}`;
+}
+
 export function createScheduleTools(host: ScheduleHost) {
   const create = createTool({
     name: CREATE_SCHEDULE_TOOL_NAME,
     description:
       "Schedule a task to run again and again, like cron, when the person asks for something on a schedule (for example every morning). At each time the app wakes the bot with the task. Tell the person what you scheduled and when it runs next.",
     inputSchema: createSchema,
-    handler: async (input) => ({ schedule: await host.create(input) }),
+    handler: async (input) => {
+      const schedule = await host.create(input);
+      return `Created schedule ${schedule.name} (${schedule.id}): \`${schedule.cron}\` (${schedule.timezone})${schedule.nextRun ? `, next run ${schedule.nextRun}` : ""}.`;
+    },
   });
   const list = createTool({
     name: LIST_SCHEDULES_TOOL_NAME,
     description:
       "List every schedule: which bot runs it, when, whether it is enabled, and how the last run went.",
     inputSchema: z.object({}),
-    handler: async () => ({ schedules: await host.list() }),
+    handler: async () => {
+      const schedules = await host.list();
+
+      if (schedules.length === 0) return "No schedules.";
+
+      const lines = schedules.slice(0, MAX_SCHEDULES_SHOWN).map(formatScheduleLine);
+
+      if (schedules.length > MAX_SCHEDULES_SHOWN) {
+        lines.push(`[${schedules.length - MAX_SCHEDULES_SHOWN} more schedules not shown]`);
+      }
+
+      return lines.join("\n");
+    },
   });
   const update = createTool({
     name: UPDATE_SCHEDULE_TOOL_NAME,
     description:
       "Change a schedule. Give only what changes. Use enabled: false to pause it and enabled: true to resume it.",
     inputSchema: updateSchema,
-    handler: async ({ id, ...patch }) => ({ schedule: await host.update(id, patch) }),
+    handler: async ({ id, ...patch }) => {
+      const schedule = await host.update(id, patch);
+      return `Updated schedule:\n${formatScheduleLine(schedule)}`;
+    },
   });
   const remove = createTool({
     name: DELETE_SCHEDULE_TOOL_NAME,
@@ -88,7 +116,7 @@ export function createScheduleTools(host: ScheduleHost) {
     inputSchema: z.object({ id: z.uuid().describe("The schedule id from list_schedules.") }),
     handler: async ({ id }) => {
       await host.remove(id);
-      return { deleted: true };
+      return `Deleted schedule ${id}.`;
     },
   });
   return [create, list, update, remove] as const;

@@ -15,7 +15,9 @@ import { ASK_QUESTION_TOOL_NAME, askQuestionSchema } from "./tools/ask-question"
 import { ASK_PROVIDER_KEY_TOOL_NAME } from "./tools/providers";
 import { REACT_TO_MESSAGE_TOOL_NAME, reactToMessageSchema } from "./tools/react-to-message";
 import { SEND_MESSAGE_TOOL_NAME, sendMessageSchema } from "./tools/send-message";
+import { readToolUi } from "./tool-ui";
 import { asRecord } from "./values";
+import type { ToolUiEntry } from "./types";
 import type {
   BotChatMessage,
   BotChatQuote,
@@ -25,24 +27,35 @@ import type {
   ToolArtifact,
 } from "@aven/protocol/types";
 
+type ToolResultRecord = { output: ToolResultOutput; ui?: ToolUiEntry };
+
 function resultsAfter(messages: readonly Message[], at: number) {
-  const results = new Map<string, ToolResultOutput>();
+  const results = new Map<string, ToolResultRecord>();
   const answers = messages[at + 1];
 
   if (answers?.role !== "tool") return results;
 
   for (const part of answers.content) {
-    if (part.type === "tool-result") results.set(part.toolCallId, part.output);
+    if (part.type === "tool-result") {
+      results.set(part.toolCallId, {
+        output: part.output,
+        ui: readToolUi(answers, part.toolCallId),
+      });
+    }
   }
   return results;
 }
 
-const failed = (output: ToolResultOutput | undefined) =>
-  output?.type === "error-text" ||
-  output?.type === "error-json" ||
-  output?.type === "execution-denied";
+const failed = (record: ToolResultRecord | undefined) =>
+  record?.output.type === "error-text" ||
+  record?.output.type === "error-json" ||
+  record?.output.type === "execution-denied";
 
-function relayedBy(output: ToolResultOutput | undefined) {
+function relayedBy(record: ToolResultRecord | undefined) {
+  if (record?.ui?.relayed) return record.ui.relayed;
+
+  const output = record?.output;
+
   if (output?.type !== "json") return undefined;
 
   const relayed = asRecord(asRecord(output.value).relayed);
@@ -52,7 +65,11 @@ function relayedBy(output: ToolResultOutput | undefined) {
   return { handle: relayed.handle, text: relayed.text };
 }
 
-function artifactsSentIn(output: ToolResultOutput | undefined): ToolArtifact[] | undefined {
+function artifactsSentIn(record: ToolResultRecord | undefined): ToolArtifact[] | undefined {
+  if (record?.ui?.artifacts?.length) return record.ui.artifacts;
+
+  const output = record?.output;
+
   if (output?.type !== "json") return undefined;
 
   const { artifacts } = asRecord(output.value);
@@ -75,7 +92,11 @@ function artifactsSentIn(output: ToolResultOutput | undefined): ToolArtifact[] |
   return kept.length ? kept : undefined;
 }
 
-function keyAskedFor(output: ToolResultOutput | undefined): ProviderKeyAsk | undefined {
+function keyAskedFor(record: ToolResultRecord | undefined): ProviderKeyAsk | undefined {
+  if (record?.ui?.provider) return record.ui.provider;
+
+  const output = record?.output;
+
   if (output?.type !== "json") return undefined;
 
   const provider = asRecord(asRecord(output.value).provider);

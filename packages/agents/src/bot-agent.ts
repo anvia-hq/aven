@@ -1,4 +1,4 @@
-import { Agent, type AgentMemoryOptions, type AnyTool } from "@anvia/core";
+import { Agent, type AgentMemoryOptions, type AnyTool, type MemoryStore } from "@anvia/core";
 
 import { compactionFor, resolveAgentModel } from "./agent-model";
 import { activityLabelOf, THINKING_LABEL } from "./bot-activity";
@@ -6,25 +6,26 @@ import { botInstructions } from "./bot-instruction";
 import { lensObservability } from "./lens";
 import { forPaths, SANDBOX_PATHS } from "./sandbox-paths";
 import { withStrictToolOutput } from "./strict-tool-output";
+import { createToolUiRecorder } from "./tool-ui";
 import { createApiTools } from "./tools/api";
-import { createAskQuestionTool } from "./tools/ask-question";
+import { ASK_QUESTION_TOOL_NAME, createAskQuestionTool } from "./tools/ask-question";
 import { createCreateBotTool } from "./tools/create-bot";
 import { createDeleteBotTool } from "./tools/delete-bot";
 import { createGoalTools } from "./tools/goals";
 import { createListBotsTool } from "./tools/list-bots";
 import { createMcpServerTools } from "./tools/mcp-servers";
-import { createProviderTools } from "./tools/providers";
+import { ASK_PROVIDER_KEY_TOOL_NAME, createProviderTools } from "./tools/providers";
 import { createReadProjectFileTool } from "./tools/read-project-file";
 import { createReactToMessageTool } from "./tools/react-to-message";
 import { createThreadTools } from "./tools/threads";
 import { createCockpitTool } from "./tools/cockpit";
 import { createMemoryTool } from "./tools/memory";
 import { createScheduleTools } from "./tools/schedules";
-import { createSendMessageTool } from "./tools/send-message";
+import { createSendMessageTool, SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
 import { createUpdateSelfTool } from "./tools/update-self";
 import { createWebFetchTool } from "./tools/web-fetch";
 import { createWebSearchTool } from "./tools/web-search";
-import type { McpNote, ModelSource, SandboxPaths, SkillListing } from "./types";
+import type { McpNote, ModelSource, SandboxPaths, SkillListing, ToolUiRecorder } from "./types";
 import type {
   AskQuestion,
   CockpitHost,
@@ -125,7 +126,10 @@ export function botAgentParts(options: BotPartsOptions) {
     webSearch,
   } = options;
 
+  const toolUi = createToolUiRecorder();
+
   return {
+    toolUi,
     instructions: forPaths(
       botInstructions({
         name,
@@ -155,11 +159,13 @@ export function botAgentParts(options: BotPartsOptions) {
     ),
     maxTurns: BOT_MAX_TURNS,
     tools: [
-      createSendMessageTool(send),
+      createSendMessageTool(send, (artifacts, text) =>
+        toolUi.record(SEND_MESSAGE_TOOL_NAME, text, { artifacts }),
+      ),
       createListBotsTool(() => peers),
       ...reacting(react),
       ...computer,
-      ...asking(askQuestion),
+      ...asking(askQuestion, toolUi),
       ...working(goals),
       ...scheduling(schedules && timezone ? schedules : undefined),
       ...makingBots(createBot),
@@ -167,7 +173,7 @@ export function botAgentParts(options: BotPartsOptions) {
       ...changingSelf(updateSelf),
       ...usingMcp(mcp),
       ...keepingMcpServers(mcpServers),
-      ...keepingProviders(providers),
+      ...keepingProviders(providers, toolUi),
       ...workingThreads(threads),
       ...usingApi(api),
       ...keepingNotes(notes?.host),
@@ -187,6 +193,7 @@ export function createBotAgent(options: BotAgentOptions) {
     instructions: parts.instructions,
     tools: parts.tools,
   });
+  const store = wrapMemoryStore(memory.store, parts.toolUi);
 
   return new Agent({
     ...agentModel,
@@ -201,7 +208,7 @@ export function createBotAgent(options: BotAgentOptions) {
     },
     maxTurns: parts.maxTurns,
     observability: lensObservability(options.lens),
-    memory: compaction ? { ...memory, compaction } : memory,
+    memory: compaction ? { ...memory, store, compaction } : { ...memory, store },
     tools: parts.tools,
   });
 }
@@ -219,13 +226,46 @@ const workingCockpit = (cockpit?: { access: CockpitAccess; host: CockpitHost }) 
   cockpit ? [createCockpitTool(cockpit.host, cockpit.access)] : [];
 const working = (goals?: GoalHost) => (goals ? createGoalTools(goals) : []);
 const scheduling = (schedules?: ScheduleHost) => (schedules ? createScheduleTools(schedules) : []);
-const asking = (askQuestion?: AskQuestion) =>
-  askQuestion ? [createAskQuestionTool(askQuestion)] : [];
+const asking = (askQuestion: AskQuestion | undefined, toolUi: ToolUiRecorder) =>
+  askQuestion
+    ? [
+        createAskQuestionTool(askQuestion, (via, text) =>
+          toolUi.record(ASK_QUESTION_TOOL_NAME, text, {
+            relayed: { handle: via.handle, text: via.text },
+          }),
+        ),
+      ]
+    : [];
 const makingBots = (createBot?: CreateBot) => (createBot ? [createCreateBotTool(createBot)] : []);
 const deletingBots = (deleteBot?: DeleteBot) => (deleteBot ? [createDeleteBotTool(deleteBot)] : []);
 const changingSelf = (updateSelf?: UpdateSelf) =>
   updateSelf ? [createUpdateSelfTool(updateSelf)] : [];
 const usingMcp = (mcp?: { tools: readonly AnyTool[] }) => (mcp ? mcp.tools : []);
 const keepingMcpServers = (host?: McpServersHost) => (host ? createMcpServerTools(host) : []);
-const keepingProviders = (host?: ProvidersHost) => (host ? createProviderTools(host) : []);
+const keepingProviders = (host: ProvidersHost | undefined, toolUi: ToolUiRecorder) =>
+  host
+    ? createProviderTools(host, (provider, text) =>
+        toolUi.record(ASK_PROVIDER_KEY_TOOL_NAME, text, { provider }),
+      )
+    : [];
 const workingThreads = (host?: ThreadsHost) => (host ? createThreadTools(host) : []);
+
+function wrapMemoryStore(store: MemoryStore, toolUi: ToolUiRecorder): MemoryStore {
+  const wrapped: MemoryStore = {
+    get inspector() {
+      return store.inspector;
+    },
+    get compaction() {
+      return store.compaction;
+    },
+    load: (options) => store.load(options),
+    append: (options) => store.append({ ...options, messages: toolUi.attach(options.messages) }),
+    clear: (options) => store.clear(options),
+  };
+
+  if (store.loadVersioned) wrapped.loadVersioned = (options) => store.loadVersioned!(options);
+
+  if (store.recordError) wrapped.recordError = (options) => store.recordError!(options);
+
+  return wrapped;
+}

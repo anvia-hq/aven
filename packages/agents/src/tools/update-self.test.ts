@@ -13,7 +13,7 @@ describe("update_self", () => {
 
     expect(tool.name).toBe(UPDATE_SELF_TOOL_NAME);
     expect(asked).toEqual([{ name: "Scout", description: "Looks things up." }]);
-    expect(result).toEqual({ updated: true, name: "Scout", description: "Looks things up." });
+    expect(result).toBe("Updated profile: Scout — Looks things up..");
   });
 
   test("an empty description or instruction is a change: it clears", async () => {

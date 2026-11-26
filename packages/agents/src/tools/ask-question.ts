@@ -13,7 +13,10 @@ const SHOWN =
 const relayed = (name: string) =>
   `${name} will ask the person for you and send you the answer as a message. Stop now and send nothing else.`;
 
-export function createAskQuestionTool(ask: AskQuestion) {
+export function createAskQuestionTool(
+  ask: AskQuestion,
+  onRelayed?: (via: { handle: string; name: string; text: string }, text: string) => void,
+) {
   return createTool({
     name: ASK_QUESTION_TOOL_NAME,
     description:
@@ -22,9 +25,11 @@ export function createAskQuestionTool(ask: AskQuestion) {
     async handler({ questions }) {
       const { relayed: via } = await ask(toQuestions(questions));
 
-      if (!via) return { shown: true, note: SHOWN };
+      if (!via) return SHOWN;
 
-      return { relayed: via, note: relayed(via.name) };
+      const text = relayed(via.name);
+      onRelayed?.(via, text);
+      return text;
     },
   });
 }

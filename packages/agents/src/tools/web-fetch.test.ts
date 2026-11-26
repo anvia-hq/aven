@@ -32,11 +32,9 @@ describe("web_fetch", () => {
     const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/docs",
     });
-    expect(output.content).toBe(
-      "Docs\n\nIntro\nRead this (https://x.dev/a) & that.\n\n- one\n- two",
+    expect(output).toBe(
+      "URL: https://example.com/docs (text/html)\n\nDocs\n\nIntro\nRead this (https://x.dev/a) & that.\n\n- one\n- two",
     );
-    expect(output.status).toBe(200);
-    expect(output.next).toBeNull();
   });
 
   test("returns JSON and plain text as they are", async () => {
@@ -44,7 +42,8 @@ describe("web_fetch", () => {
     const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/api",
     });
-    expect(output.content).toBe('{"a":1}');
+    expect(output).toContain("URL: https://example.com/api (application/json)");
+    expect(output).toContain('\n\n{"a":1}');
   });
 
   test("pages a long document with offset and next", async () => {
@@ -56,11 +55,11 @@ describe("web_fetch", () => {
     );
     const tool = createWebFetchTool({ request: impl, resolve: publicHost });
     const first = await tool.call({ url: "https://example.com/t", maxChars: 1000 });
-    expect(first.content).toBe("a".repeat(1000));
-    expect(first.next).toBe(1000);
+    expect(first).toContain("a".repeat(1000));
+    expect(first).toContain("Pass offset: 1000 to read more.");
     const last = await tool.call({ url: "https://example.com/t", offset: 2000, maxChars: 1000 });
-    expect(last.content).toBe("b".repeat(1000));
-    expect(last.next).toBeNull();
+    expect(last).toContain("b".repeat(1000));
+    expect(last).not.toContain("Pass offset:");
   });
 
   test("refuses addresses on the private network, in a name, a literal, or after a redirect", async () => {
@@ -98,8 +97,7 @@ describe("web_fetch", () => {
     const output = await createWebFetchTool({ request: impl, resolve: publicHost }).call({
       url: "https://example.com/old",
     });
-    expect(output.url).toBe("https://example.com/new");
-    expect(output.content).toBe("moved");
+    expect(output).toBe("URL: https://example.com/new (text/html)\n\nmoved");
   });
 
   test("gives up on a redirect loop", async () => {
@@ -131,7 +129,7 @@ describe("web_fetch", () => {
     ).rejects.toThrow("failed with 404");
   });
 
-  test("marks sourceCut false at exact MAX_FETCH_BYTES and true when one byte larger", async () => {
+  test("reports source truncation only when the response exceeds MAX_FETCH_BYTES", async () => {
     const exact = new Uint8Array(MAX_FETCH_BYTES).fill(97);
     const over = new Uint8Array(MAX_FETCH_BYTES + 1).fill(98);
     const { impl } = serve(
@@ -143,17 +141,17 @@ describe("web_fetch", () => {
     const tool = createWebFetchTool({ request: impl, resolve: publicHost });
 
     const exactResult = await tool.call({ url: "https://example.com/exact", maxChars: 1000 });
-    expect(exactResult.sourceCut).toBe(false);
-    expect(exactResult.content).toBe("a".repeat(1000));
+    expect(exactResult).not.toContain("Source response exceeded");
+    expect(exactResult).toContain("a".repeat(1000));
 
     const overResult = await tool.call({
       url: "https://example.com/over",
       offset: MAX_FETCH_BYTES - 10,
       maxChars: 1000,
     });
-    expect(overResult.sourceCut).toBe(true);
-    expect(overResult.content).toBe("b".repeat(10));
-    expect(overResult.next).toBeNull();
+    expect(overResult).toContain("Source response exceeded 2 MiB and was truncated.");
+    expect(overResult).toContain("b".repeat(10));
+    expect(overResult).not.toContain("Pass offset:");
   });
 });
 

@@ -22,14 +22,9 @@ export function createGitFetchTool(fetchRemote: FetchRemote) {
       const fetched = await fetchRemote(branch, context?.abortSignal);
       const ref = `origin/${fetched.branch}`;
       const updated = fetched.commit !== fetched.previous;
-      return {
-        ref,
-        commit: fetched.commit,
-        updated,
-        summary: updated
-          ? `${ref} is now at ${fetched.commit.slice(0, 7)}${fetched.previous ? ` (was ${fetched.previous.slice(0, 7)})` : ""}.`
-          : `${ref} was already up to date at ${fetched.commit.slice(0, 7)}.`,
-      };
+      return updated
+        ? `${ref} is now at ${fetched.commit.slice(0, 7)}${fetched.previous ? ` (was ${fetched.previous.slice(0, 7)})` : ""}.`
+        : `${ref} was already up to date at ${fetched.commit.slice(0, 7)}.`;
     },
   });
 }

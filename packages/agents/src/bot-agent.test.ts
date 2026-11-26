@@ -1,10 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createTool, type Message, type MemoryStore } from "@anvia/core";
+import { createTool, InMemoryMemoryStore, type Message, type MemoryStore } from "@anvia/core";
 import { z } from "zod";
 
 import { BOT_MAX_TURNS, botAgentParts, createBotAgent } from "./bot-agent";
 import { TYPING_MAX_MS, TYPING_MIN_MS, typingDelay } from "./bot-delay";
 import { botInstructions } from "./bot-instruction";
+import { readToolUi } from "./tool-ui";
 import { scriptedModel, text, toolCall } from "./testing/scripted-model";
 import { CREATE_BOT_TOOL_NAME } from "./tools/create-bot";
 import { SEND_MESSAGE_TOOL_NAME } from "./tools/send-message";
@@ -475,9 +476,9 @@ describe("createBotAgent", () => {
     ]);
 
     const list = main.tools.find((tool) => tool.name === LIST_BOTS_TOOL_NAME)!;
-    expect(await list.call({})).toEqual({ bots: peers });
+    expect(await list.call({})).toBe("- @scout (Scout): Looks things up.");
     peers.push({ handle: "pip", name: "Pip", description: "" });
-    expect(await list.call({})).toEqual({ bots: peers });
+    expect(await list.call({})).toBe("- @scout (Scout): Looks things up.\n- @pip (Pip)");
   });
 
   test("a bot that is not the main one is told to write to a bot when the person asks, as the main one is", () => {
@@ -779,5 +780,31 @@ describe("createBotAgent", () => {
       }),
     ).rejects.toThrow(/abort/i);
     expect(sent).toEqual(["one"]);
+  });
+
+  test("preserves class-based memory stores and attaches tool UI metadata on append", async () => {
+    const store = new InMemoryMemoryStore();
+    const agent = createBotAgent({
+      ...base,
+      model: scriptedModel([[send("See chart")], [text("")]]),
+      send: async () => ({
+        sent: "Sent",
+        artifacts: [{ name: "chart.png", mediaType: "image/png", title: "Chart" }],
+        failed: [],
+      }),
+      memory: { store, savePolicy: "turn" },
+    });
+
+    await agent.generate({ prompt: "show chart", session: { sessionId: "b-class" } });
+
+    const history = await store.load({ scope: { sessionId: "b-class" } });
+    const toolMessage = history.find((message) => message.role === "tool");
+    const part = toolMessage?.role === "tool" ? toolMessage.content[0] : undefined;
+    expect(part?.type).toBe("tool-result");
+    expect(
+      part?.type === "tool-result" ? readToolUi(toolMessage, part.toolCallId) : undefined,
+    ).toEqual({
+      artifacts: [{ name: "chart.png", mediaType: "image/png", title: "Chart" }],
+    });
   });
 });

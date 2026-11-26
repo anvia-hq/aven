@@ -119,22 +119,31 @@ describe("withStrictToolOutput", () => {
     expect(getThread).toBeDefined();
 
     const output = await getThread!.call({ id: "22222222-2222-4222-8222-222222222222" });
-    expect(() => normalizeToolResultOutput(output)).not.toThrow();
-    expect(output).toEqual({
-      thread: {
-        id: "22222222-2222-4222-8222-222222222222",
-        title: "Upgrade codex",
-        projectId: "11111111-1111-4111-8111-111111111111",
-        repository: "anvia-hq/aven",
-        state: "open",
-        mine: true,
-        running: true,
-        awaitingAnswer: false,
-        pullRequests: [],
-        updatedAt: "2026-11-21T07:00:00.000Z",
-        turns: [],
-        earlier: 0,
-      },
+    expect(normalizeToolResultOutput(output)).toEqual({
+      type: "text",
+      value: output as string,
+    });
+    expect(output).toContain("Thread: Upgrade codex (22222222-2222-4222-8222-222222222222)");
+
+    const rawTool = createTool({
+      name: "mcp_probe",
+      description: "Returns optional undefined fields.",
+      inputSchema: z.object({}),
+      handler: async () => ({ id: "t1", createdBy: undefined, running: true }),
+    });
+    const withMcp = botAgentParts({
+      name: "Ada",
+      handle: "ada",
+      instruction: "Help",
+      peers: [],
+      send: async () => "ok",
+      mcp: { tools: [rawTool], note: { servers: [], failed: [] } },
+    });
+    const wrappedMcp = withMcp.tools.find((tool) => tool.name === "mcp_probe")!;
+    const mcpOutput = await wrappedMcp.call({});
+    expect(normalizeToolResultOutput(mcpOutput)).toEqual({
+      type: "json",
+      value: { id: "t1", running: true },
     });
   });
 

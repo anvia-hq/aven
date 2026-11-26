@@ -46,7 +46,8 @@ export function createUpdateSelfTool(updateSelf: UpdateSelf) {
         throw new Error("Give a name, a description or an instruction to change");
       }
 
-      return { updated: true, ...(await updateSelf(changes)) };
+      const updated = await updateSelf(changes);
+      return `Updated profile: ${updated.name}${updated.description ? ` — ${updated.description}` : ""}.`;
     },
   });
 }

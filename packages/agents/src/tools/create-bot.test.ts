@@ -13,7 +13,7 @@ describe("create_bot", () => {
 
     expect(tool.name).toBe(CREATE_BOT_TOOL_NAME);
     expect(asked).toEqual([{ name: "Scout", instruction: "You research." }]);
-    expect(result).toEqual({ created: true, id: "b2", name: "Scout", handle: "scout" });
+    expect(result).toBe("Created bot Scout (@scout, id b2).");
   });
 
   test("says what the bot is for when the model does, and a blank line means nothing", async () => {

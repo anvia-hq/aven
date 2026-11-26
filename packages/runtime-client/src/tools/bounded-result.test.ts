@@ -62,6 +62,17 @@ describe("a tool result kept in the run's history", () => {
     expect(boundResult(screenshot)).toBe(screenshot);
   });
 
+  test("a plain text tool result that is too long keeps the end of it and says it was cut", () => {
+    const short = "x".repeat(100_000);
+    expect(boundResult(short)).toBe(short);
+
+    const long = `${"line\n".repeat(40_000)}TAIL-END\n`;
+    const bounded = boundResult(long);
+    expect(bounded.length).toBeLessThan(100_100);
+    expect(bounded.startsWith("[… output cut")).toBe(true);
+    expect(bounded.endsWith("TAIL-END\n")).toBe(true);
+  });
+
   test("a result that is huge even so is refused, not kept", () => {
     expect(() => boundResult({ value: [{ data: "A".repeat(9 * 1024 * 1024) }] })).toThrow(
       "too long to keep",

@@ -26,7 +26,7 @@ function setup(endsAt: Record<string, number>) {
     lastMessage: now >= (endsAt[id] ?? 0) ? `report of ${id.slice(0, 4)}` : "",
   });
   const tool = createWaitForForksTool(look, clock) as unknown as {
-    call(input: unknown): Promise<Record<string, any>>;
+    call(input: unknown): Promise<string>;
   };
   return { tool, slept };
 }
@@ -35,24 +35,20 @@ describe("wait_for_forks (decision 0143)", () => {
   test("returns when the last fork has stopped, with each one's report", async () => {
     const { tool } = setup({ [A]: 12_000, [B]: 30_000 });
     const result = await tool.call({ ids: [A, B] });
-    expect(result.allStopped).toBe(true);
-    expect(result.waitedSeconds).toBe(30);
-    expect(result.forks.map((f: { lastMessage: string }) => f.lastMessage)).toEqual([
-      `report of ${A.slice(0, 4)}`,
-      `report of ${B.slice(0, 4)}`,
-    ]);
-    expect(result.summary).toContain("All 2 forks have stopped");
+    expect(result).toContain("All 2 forks have stopped working after 30s.");
+    expect(result).toContain(`report of ${A.slice(0, 4)}`);
+    expect(result).toContain(`report of ${B.slice(0, 4)}`);
   });
 
   test("returns at the time limit with the forks that still work", async () => {
     const { tool } = setup({ [A]: 1_000_000, [B]: 5_000 });
     const result = await tool.call({ ids: [A, B], timeoutSeconds: 20 });
-    expect(result.allStopped).toBe(false);
-    expect(result.waitedSeconds).toBe(20);
-    expect(result.summary).toBe("1 of 2 forks are still working after 20s.");
+    expect(result).toContain("1 of 2 forks are still working after 20s.");
+    expect(result).toContain("[running]");
+    expect(result).toContain("[stopped]");
   });
 
-  test("is projected with its own summary", () => {
+  test("is projected with its own summary for legacy JSON results", () => {
     const value = { summary: "All 1 forks have stopped working after 5s." };
     expect(projectToolOutput({ type: "json", value }, WAIT_FOR_FORKS_TOOL_NAME).output).toBe(
       value.summary,

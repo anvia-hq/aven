@@ -1,6 +1,8 @@
 import type { Message, ToolCallPart, ToolResultOutput } from "@anvia/core";
 import { projectToolCall, projectToolOutput, toolTarget } from "@aven/agents/tool-projection";
+import { withToolUiMetadata } from "@aven/agents/tool-ui";
 import { isPlainObject } from "@aven/agents/values";
+import type { ToolUiEntry } from "@aven/agents/types";
 import {
   addUsage,
   QUESTION_TOOL_NAME,
@@ -130,6 +132,7 @@ export class TurnRecorder {
   #generation: Generation | undefined;
   #assistant: Part[] = [];
   #tools: Part[] = [];
+  #toolUi: Record<string, ToolUiEntry> = {};
   #filed: Message[] = [];
   #open = new Map<string, string>();
   #alias = new Map<string, string>();
@@ -245,18 +248,30 @@ export class TurnRecorder {
     else toolOutput = { type: "text", value: redacted };
 
     this.#pushTool(aliased, toolOutput);
-    const projected = projectToolOutput(toolOutput, name);
+    let ui: ToolUiEntry | undefined;
+
+    if (name === SHOW_ARTIFACT_TOOL_NAME && !failed) {
+      const queued = this.#shown.shift();
+
+      if (queued?.length) {
+        const artifacts = queued.map((artifact) =>
+          artifact.caption !== undefined
+            ? { ...artifact, caption: this.#redact(artifact.caption) }
+            : artifact,
+        );
+        ui = { artifacts };
+        this.#toolUi[aliased] = ui;
+      }
+    }
+
+    const projected = projectToolOutput(toolOutput, name, ui);
     const event: Extract<RunEvent, { type: "tool_end" }> = {
       type: "tool_end",
       id: aliased,
       ...projected,
     };
 
-    if (name === SHOW_ARTIFACT_TOOL_NAME) {
-      const queued = this.#shown.shift();
-
-      if (queued?.length) event.artifacts = queued;
-    }
+    if (ui?.artifacts?.length && !event.artifacts) event.artifacts = ui.artifacts;
 
     return [event];
   }
@@ -310,6 +325,7 @@ export class TurnRecorder {
     this.#filed = [];
     this.#assistant = [];
     this.#tools = [];
+    this.#toolUi = {};
     this.#generation = undefined;
     return messages;
   }
@@ -320,7 +336,11 @@ export class TurnRecorder {
     if (this.#assistant.length > 0)
       filed.push(messageOf({ role: "assistant", content: this.#assistant }));
 
-    if (this.#tools.length > 0) filed.push(messageOf({ role: "tool", content: this.#tools }));
+    if (this.#tools.length > 0) {
+      filed.push(
+        withToolUiMetadata(messageOf({ role: "tool", content: this.#tools }), this.#toolUi),
+      );
+    }
 
     const stamped = this.#stamped(filed);
     const text = this.#redact(prompt).trim();
@@ -395,7 +415,10 @@ export class TurnRecorder {
   #flushTools() {
     if (this.#tools.length === 0) return;
 
-    this.#filed.push(messageOf({ role: "tool", content: this.#tools }));
+    this.#filed.push(
+      withToolUiMetadata(messageOf({ role: "tool", content: this.#tools }), this.#toolUi),
+    );
     this.#tools = [];
+    this.#toolUi = {};
   }
 }

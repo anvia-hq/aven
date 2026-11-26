@@ -98,10 +98,7 @@ const hasToolResult = (body: string) => {
 
 const forkIdFrom = (body: string) => {
   const text = JSON.stringify(JSON.parse(body).messages);
-  return (
-    /"id":"([0-9a-f-]{36})","title":"Write the file"/.exec(text)?.[1] ??
-    /\\"id\\":\\"([0-9a-f-]{36})\\",\\"title\\":\\"Write the file\\"/.exec(text)?.[1]
-  );
+  return /Forked \\?"Write the file\\?" \(([0-9a-f-]{36})\)/.exec(text)?.[1];
 };
 
 const parentForkReply = (body: string) => {
@@ -111,7 +108,7 @@ const parentForkReply = (body: string) => {
 
   if (body.includes("forks have stopped") && id) return tool("take_fork_changes", { id });
 
-  if (body.includes("The fork is working") && id) {
+  if (body.includes("It is working in its own thread") && id) {
     return tool("wait_for_forks", { ids: [id], timeoutSeconds: 30 });
   }
 

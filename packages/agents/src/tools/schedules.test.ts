@@ -45,7 +45,9 @@ describe("the schedule tools", () => {
         { name: "Morning news", cron: "0 7 * * *", prompt: "Read the news.", bot: "scout" },
       ],
     ]);
-    expect(result).toEqual({ schedule: view });
+    expect(result).toContain("Created schedule Morning news");
+    expect(result).toContain(ID);
+    expect(result).toContain("0 7 * * *");
   });
 
   test("update gives only what changes, by id, and delete takes the id", async () => {
@@ -58,8 +60,11 @@ describe("the schedule tools", () => {
     ]);
   });
 
-  test("list returns every schedule", async () => {
-    expect(await host().list.call({})).toEqual({ schedules: [view] });
+  test("list returns every schedule as plain text", async () => {
+    const listed = await host().list.call({});
+    expect(listed).toContain(ID);
+    expect(listed).toContain("Morning news");
+    expect(listed).toContain("0 7 * * *");
   });
 
   test("an id that is not an id, or a task with nothing in it, is refused before the host is asked", async () => {

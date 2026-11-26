@@ -14,21 +14,70 @@ import type { SearchableFiles } from "./types";
 export const GREP_TOOL_NAME = "grep";
 
 const MAX_LINE_CHARS = 300;
+const MAX_OUTPUT_CHARS = 30_000;
 
 const decoder = new TextDecoder();
 
 const flag = (on: unknown, args: string[]) => (on ? args : []);
 
-const clipped = (raw: string) => {
-  const line = raw.replace(/^\.\//, "");
-  return line.length > MAX_LINE_CHARS ? `${line.slice(0, MAX_LINE_CHARS)}… [line cut]` : line;
-};
+const clipText = (text: string) =>
+  text.length > MAX_LINE_CHARS ? `${text.slice(0, MAX_LINE_CHARS)}… [line cut]` : text;
+
+function parseGrepLine(line: string) {
+  const nul = line.indexOf("\0");
+
+  if (nul === -1) return undefined;
+
+  const file = line.slice(0, nul);
+  const match = /^(\d+)[:-](.*)$/.exec(line.slice(nul + 1));
+
+  if (!match) return undefined;
+
+  return { file, lineNum: match[1]!, text: match[2]! };
+}
+
+function formatGrouped(rawLines: readonly string[], maxResults: number) {
+  const out: string[] = [];
+  let currentFile = "";
+  let shown = 0;
+  let chars = 0;
+  let cutByChars = false;
+
+  for (const raw of rawLines) {
+    if (shown >= maxResults) break;
+
+    const line = raw.replace(/^\.\//, "");
+    const parsed = parseGrepLine(line);
+    let formatted: string;
+
+    if (parsed) {
+      const header = parsed.file !== currentFile ? `${parsed.file}:\n` : "";
+      currentFile = parsed.file;
+      formatted = `${header}  Line ${parsed.lineNum}: ${clipText(parsed.text)}`;
+    } else if (line === "--") {
+      formatted = "  --";
+    } else {
+      formatted = clipText(line);
+    }
+
+    if (out.length > 0 && chars + formatted.length > MAX_OUTPUT_CHARS) {
+      cutByChars = true;
+      break;
+    }
+
+    out.push(formatted);
+    chars += formatted.length + 1;
+    shown += 1;
+  }
+
+  return { out, remaining: rawLines.length - shown, cutByChars };
+}
 
 export function createGrepTool(files: SearchableFiles) {
   return createTool({
     name: GREP_TOOL_NAME,
     description:
-      "Search the text inside files for a pattern (an extended regular expression, or plain text with `fixed`). Returns `path:line:text` lines, skips binary files, .git and node_modules. Use it to find where something is defined or used before you read a file; use `find` to search by file name.",
+      "Search the text inside files for a pattern (an extended regular expression, or plain text with `fixed`). Returns matches grouped by file path with 1-based line numbers, skips binary files, .git and node_modules. Use it to find where something is defined or used before you read a file; use `find` to search by file name.",
     inputSchema: z.object({
       pattern: z.string().min(1).describe("What to look for."),
       path: z
@@ -62,6 +111,7 @@ export function createGrepTool(files: SearchableFiles) {
         command: "grep",
         args: [
           "-rnIH",
+          "--null",
           fixed ? "-F" : "-E",
           ...flag(ignoreCase, ["-i"]),
           ...flag(around, ["-C", String(around)]),
@@ -89,9 +139,10 @@ export function createGrepTool(files: SearchableFiles) {
 
       if (lines.length === 0 && !cut) return "No matches.";
 
-      const shown = lines.slice(0, maxResults).map(clipped);
-      return withNotes(shown, [
-        lines.length > maxResults ? `${lines.length - maxResults} more lines not shown` : "",
+      const { out, remaining, cutByChars } = formatGrouped(lines, maxResults);
+      return withNotes(out, [
+        remaining > 0 ? `${remaining} more lines not shown` : "",
+        cutByChars ? "output size limit reached" : "",
         cut ? "the search was cut short" : "",
       ]);
     },

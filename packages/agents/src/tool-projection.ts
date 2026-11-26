@@ -24,7 +24,7 @@ import { WEB_FETCH_TOOL_NAME } from "./tools/web-fetch";
 import { WAIT_FOR_FORKS_TOOL_NAME } from "./tools/wait-for-forks";
 import { WEB_SEARCH_TOOL_NAME } from "./tools/web-search";
 import { asRecord } from "./values";
-import type { SandboxToolName } from "./types";
+import type { SandboxToolName, ToolUiEntry } from "./types";
 import type {
   DiffLine,
   QuestionPrompt,
@@ -233,6 +233,48 @@ function jsonText(value: unknown) {
   return JSON.stringify(value);
 }
 
+function parseSubagentText(text: string): { status: "done" | "error"; output: string }[] {
+  const first = /^\[1\/(\d+)\] [^\n]+/.exec(text);
+
+  if (!first) return [];
+
+  const total = Number(first[1]);
+
+  if (!Number.isInteger(total) || total < 1) return [];
+
+  const starts: { index: number; headerEnd: number; failed: boolean }[] = [];
+  let cursor = 0;
+
+  for (let i = 1; i <= total; i += 1) {
+    const marker = i === 1 ? `[1/${total}] ` : `\n\n[${i}/${total}] `;
+    let found: number;
+
+    if (i === 1) found = text.startsWith(marker) ? 0 : -1;
+    else found = text.indexOf(marker, cursor);
+
+    if (found === -1) return [];
+
+    const lineStart = i === 1 ? 0 : found + 2;
+    const lineEnd = text.indexOf("\n", lineStart);
+    const header = lineEnd === -1 ? text.slice(lineStart) : text.slice(lineStart, lineEnd);
+    starts.push({
+      index: found,
+      headerEnd: lineEnd === -1 ? text.length : lineEnd + 1,
+      failed: header.endsWith(" — ERROR"),
+    });
+    cursor = lineEnd === -1 ? text.length : lineEnd + 1;
+  }
+
+  return starts.map((section, at) => {
+    const nextStart = starts[at + 1]?.index ?? text.length;
+    const body = text.slice(section.headerEnd, nextStart);
+    return {
+      status: section.failed ? ("error" as const) : ("done" as const),
+      output: clip(body),
+    };
+  });
+}
+
 function subagentResults(value: unknown) {
   const { results } = asRecord(value);
 
@@ -246,10 +288,25 @@ function subagentResults(value: unknown) {
   });
 }
 
+function subagentResultsFromOutput(output: ToolResultOutput) {
+  if (output.type === "text") return parseSubagentText(output.value);
+
+  if (output.type === "json") return subagentResults(output.value);
+
+  return [];
+}
+
+function subagentSummary(results: readonly { status: "done" | "error" }[]) {
+  const failed = results.filter(({ status }) => status === "error").length;
+  return failed
+    ? `${results.length - failed} finished, ${failed} failed`
+    : `${results.length} finished`;
+}
+
 export function withSubagentResults(tool: ToolPart, output: ToolResultOutput): ToolPart {
   if (!tool.subagents) return tool;
 
-  const results = output.type === "json" ? subagentResults(output.value) : [];
+  const results = subagentResultsFromOutput(output);
   return {
     ...tool,
     subagents: tool.subagents.map((subagent) => {
@@ -302,14 +359,26 @@ function commandText(result: Record<string, unknown>) {
 export function projectToolOutput(
   output: ToolResultOutput,
   toolName?: string,
+  ui?: ToolUiEntry,
 ): {
   status: "done" | "error";
   output: string;
   artifacts?: ToolArtifact[];
 } {
   switch (output.type) {
-    case "text":
+    case "text": {
+      if (toolName === SHOW_ARTIFACT_TOOL_NAME && ui?.artifacts?.length) {
+        return { status: "done", output: clip(output.value), artifacts: ui.artifacts };
+      }
+
+      if (toolName === SPAWN_AGENT_TOOL_NAME) {
+        const results = parseSubagentText(output.value);
+
+        if (results.length > 0) return { status: "done", output: subagentSummary(results) };
+      }
+
       return { status: "done", output: clip(output.value) };
+    }
     case "error-text":
       return { status: "error", output: clip(output.value) };
     case "json": {
@@ -318,14 +387,7 @@ export function projectToolOutput(
       if (shown) return { status: "done", output: shown.said, artifacts: shown.artifacts };
 
       if (toolName === SPAWN_AGENT_TOOL_NAME) {
-        const results = subagentResults(output.value);
-        const failed = results.filter(({ status }) => status === "error").length;
-        return {
-          status: "done",
-          output: failed
-            ? `${results.length - failed} finished, ${failed} failed`
-            : `${results.length} finished`,
-        };
+        return { status: "done", output: subagentSummary(subagentResults(output.value)) };
       }
 
       const said =

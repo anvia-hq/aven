@@ -7,16 +7,34 @@ const by = (list: ReturnType<typeof tools>, name: string) =>
   list.find((tool) => tool.name === name)!;
 
 describe("aven api tools", () => {
-  test("are a search and a call, and each passes its input to the host", async () => {
+  test("are a search and a call, and each passes its input to the host and formats plain text", async () => {
     const seen: unknown[] = [];
-    const list = tools(async (params) => (seen.push(params), { ok: true }));
+    const list = tools(async (params) => {
+      seen.push(params);
+
+      if (params.op === "search") {
+        return {
+          organizations: [{ id: "org1", name: "One" }],
+          routes: [{ method: "GET", path: "/threads", tier: "read" }],
+        };
+      }
+
+      return { status: 200, body: { ok: true } };
+    });
     expect(list.map((tool) => tool.name)).toEqual([API_SEARCH_TOOL_NAME, API_TOOL_NAME]);
 
-    await by(list, API_SEARCH_TOOL_NAME).call({ query: "threads" } as never, undefined as never);
-    await by(list, API_TOOL_NAME).call(
+    const searched = await by(list, API_SEARCH_TOOL_NAME).call(
+      { query: "threads" } as never,
+      undefined as never,
+    );
+    const called = await by(list, API_TOOL_NAME).call(
       { method: "GET", path: "/threads" } as never,
       undefined as never,
     );
+    expect(searched).toContain("- org1 (One)");
+    expect(searched).toContain("- GET /threads [read]");
+    expect(called).toContain("HTTP 200");
+    expect(called).toContain('"ok": true');
     expect(seen).toEqual([
       { op: "search", query: "threads" },
       { op: "call", method: "GET", path: "/threads" },

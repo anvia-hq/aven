@@ -29,13 +29,14 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 const files = () => localFiles(dir);
 
 describe("grep", () => {
-  test("finds matching lines with path and line number, skipping dependencies, git and binaries", async () => {
+  test("groups matching lines by file with line numbers, skipping dependencies, git and binaries", async () => {
     const output = await createGrepTool(files()).call({ pattern: "Alpha" });
-    expect(output.split("\n").sort()).toEqual([
-      "README.md:1:Alpha is documented here.",
-      "src/app.test.ts:1:import { Alpha } from './app';",
-      "src/app.ts:1:export const Alpha = 1;",
-    ]);
+    expect(output).toContain("README.md:\n  Line 1: Alpha is documented here.");
+    expect(output).toContain("src/app.test.ts:\n  Line 1: import { Alpha } from './app';");
+    expect(output).toContain("src/app.ts:\n  Line 1: export const Alpha = 1;");
+    expect(output).not.toContain("node_modules");
+    expect(output).not.toContain(".git");
+    expect(output).not.toContain("blob.bin");
   });
 
   test("ignoreCase, include and path narrow the search", async () => {
@@ -45,20 +46,20 @@ describe("grep", () => {
       include: "*.ts",
       path: "src/deep",
     });
-    expect(output).toBe("src/deep/util.ts:1:export function alpha() {}");
+    expect(output).toBe("src/deep/util.ts:\n  Line 1: export function alpha() {}");
   });
 
   test("a fixed pattern is plain text, so regex characters do not need escaping", async () => {
     writeFileSync(join(dir, "regex.txt"), "a(b)*c\n");
     expect(
       await createGrepTool(files()).call({ pattern: "(b)*", fixed: true, path: "regex.txt" }),
-    ).toBe("regex.txt:1:a(b)*c");
+    ).toBe("regex.txt:\n  Line 1: a(b)*c");
   });
 
   test("a pattern that starts with a dash is a pattern, not an option", async () => {
     writeFileSync(join(dir, "dash.txt"), "run --force now\n");
     expect(await createGrepTool(files()).call({ pattern: "--force", path: "dash.txt" })).toBe(
-      "dash.txt:1:run --force now",
+      "dash.txt:\n  Line 1: run --force now",
     );
   });
 
@@ -77,9 +78,15 @@ describe("grep", () => {
       path: "many.txt",
       maxResults: 3,
     });
-    const lines = output.split("\n");
-    expect(lines).toHaveLength(4);
-    expect(lines[3]).toContain("7 more lines not shown");
+    expect(output).toBe(
+      [
+        "many.txt:",
+        "  Line 1: needle",
+        "  Line 2: needle",
+        "  Line 3: needle",
+        "[7 more lines not shown; narrow the search]",
+      ].join("\n"),
+    );
   });
 
   test("cuts a very long line", async () => {
@@ -94,7 +101,27 @@ describe("grep", () => {
       pattern: "alpha",
       path: join(dir, "src/deep"),
     });
-    expect(output).toBe("src/deep/util.ts:1:export function alpha() {}");
+    expect(output).toBe("src/deep/util.ts:\n  Line 1: export function alpha() {}");
+  });
+
+  test("context lines containing colons and digits stay grouped under the real file", async () => {
+    writeFileSync(
+      join(dir, "my-log-1.txt"),
+      "time 12:30:45\nneedle here\nport 127.0.0.1:8080:ok\n",
+    );
+    const output = await createGrepTool(files()).call({
+      pattern: "needle here",
+      path: "my-log-1.txt",
+      context: 1,
+    });
+    expect(output).toBe(
+      [
+        "my-log-1.txt:",
+        "  Line 1: time 12:30:45",
+        "  Line 2: needle here",
+        "  Line 3: port 127.0.0.1:8080:ok",
+      ].join("\n"),
+    );
   });
 });
 
@@ -132,7 +159,7 @@ describe("find", () => {
     writeFileSync(join(dir, "-odd/inside.txt"), "x");
     expect(await createFindTool(files()).call({ name: "inside", path: "-odd" })).toBe("inside.txt");
     expect(await createGrepTool(files()).call({ pattern: "x", path: "-odd" })).toBe(
-      "-odd/inside.txt:1:x",
+      "-odd/inside.txt:\n  Line 1: x",
     );
   });
 
