@@ -114,6 +114,18 @@ export function AppShell({ user }: Props) {
         <Sidebar collapsible="icon" className="text-sidebar-foreground/80 data-[side=left]:left-12">
           <SidebarHeader className="pt-3.5">
             <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col">
+              <Button
+                variant="ghost"
+                aria-label="Search"
+                className="hidden h-7 min-w-0 flex-1 justify-start gap-2 rounded-full bg-muted/40 px-3 text-xs font-normal text-muted-foreground hover:bg-muted/70 md:flex group-data-[collapsible=icon]:hidden"
+                onClick={() => setCommandOpen(true)}
+              >
+                <IconSearch className="size-3.5" />
+                <span className="flex-1 text-left">Search</span>
+                <kbd className="font-sans text-[10px] tracking-wide text-muted-foreground/70">
+                  ⌘K
+                </kbd>
+              </Button>
               <div className="min-w-0 flex-1 md:hidden">
                 <UserCard
                   name={user.name}
@@ -123,13 +135,13 @@ export function AppShell({ user }: Props) {
                   onOpenCommand={() => setCommandOpen(true)}
                 />
               </div>
-              <div className="mr-1 flex shrink-0 items-center md:ml-auto group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
+              <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <MentionsButton />
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Search"
-                  className="size-9 md:size-7"
+                  className="size-9 md:hidden md:size-7 group-data-[collapsible=icon]:flex"
                   onClick={() => setCommandOpen(true)}
                 >
                   <IconSearch />
