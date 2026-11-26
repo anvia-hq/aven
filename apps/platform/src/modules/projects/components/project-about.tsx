@@ -11,12 +11,7 @@ export function ProjectAbout({ project }: { project: Project }) {
   return (
     <SectionCard title="About">
       <dl className="divide-y">
-        <div className={row}>
-          <dt className="text-muted-foreground">Runner</dt>
-          <dd>
-            <ProjectRunner project={project} />
-          </dd>
-        </div>
+        <ProjectRunner project={project} className={row} />
         {project.defaultBranch && (
           <div className={row}>
             <dt className="text-muted-foreground">Default branch</dt>
