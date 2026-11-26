@@ -27,3 +27,8 @@ export type Point = {
   x: number;
   y: number;
 };
+
+export type MobilePairingCode = {
+  code: string;
+  expiresAt: string;
+};
