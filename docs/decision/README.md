@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-402 decisions: 307 are the answer, 39 are superseded and 56 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+405 decisions: 308 are the answer, 39 are superseded and 58 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -62,7 +62,7 @@ These describe something that is gone. Read what replaced them.
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 | 0391     | The e2e suite runs before the push that makes a branch                                       | 0394                         |
 
-## Superseded in part (56)
+## Superseded in part (58)
 
 These hold, except for the part named.
 
@@ -121,8 +121,8 @@ These hold, except for the part named.
 | 0304     | The rail and the sidebar are the frame in a light theme                 | 0405                             |
 | 0308     | An Aven Cloud sandbox is stopped when it is idle                        | 0392                             |
 | 0326     | A project's environment is a saved snapshot, for 72 hours               | 0392                             |
-| 0335     | A computer is a turning box beside the sandbox orb                      | 0405                             |
-| 0342     | A thread's mark is the computer it runs on                              | 0405                             |
+| 0335     | A computer is a turning box beside the sandbox orb                      | 0406                             |
+| 0342     | A thread's mark is the computer it runs on                              | 0406                             |
 | 0358     | A bot without a computer keeps every tool that needs no machine         | 0401                             |
 | 0379     | The Codex agent runs on an API key                                      | 0309, and its credential is 0321 |
 | 0381     | The installation's one sandbox platform is chosen in Settings > Sandbox | 0328 and 0392                    |
