@@ -13,7 +13,7 @@ const REPORT_MAX = 2000;
 
 const seconds = (ms: number) => Math.round(ms / 1000);
 
-const forkState = (fork: Pick<ForkView, "running" | "error">) => {
+export const forkState = (fork: Pick<ForkView, "running" | "error">) => {
   if (fork.running) return "running";
 
   return fork.error ? `failed (${fork.error})` : "stopped";

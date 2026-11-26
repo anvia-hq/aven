@@ -2,7 +2,7 @@ import { createTool } from "@anvia/core";
 import { FORKS_PER_THREAD, FORK_TEXT_MAX } from "@aven/protocol/forks";
 import { z } from "zod";
 
-import { createWaitForForksTool } from "./wait-for-forks";
+import { createWaitForForksTool, forkState } from "./wait-for-forks";
 import type { ForkHost } from "./types";
 import type { ForkView } from "@aven/protocol/types";
 
@@ -14,12 +14,6 @@ export const STOP_FORK_TOOL_NAME = "stop_fork";
 const forkId = z.uuid().describe("The id fork_thread gave you.");
 const FORK_MESSAGE_MAX = 2_000;
 const MAX_TAKEN_FILES = 100;
-
-function forkState(view: Pick<ForkView, "running" | "error">) {
-  if (view.running) return "running";
-
-  return view.error ? `failed (${view.error})` : "stopped";
-}
 
 function formatForkView(view: ForkView) {
   const state = forkState(view);

@@ -23,27 +23,17 @@ const flag = (on: unknown, args: string[]) => (on ? args : []);
 const clipText = (text: string) =>
   text.length > MAX_LINE_CHARS ? `${text.slice(0, MAX_LINE_CHARS)}… [line cut]` : text;
 
-function parseGrepLine(line: string, currentFile: string) {
-  const matched = /^([^:]+):(\d+):(.*)$/.exec(line);
+function parseGrepLine(line: string) {
+  const nul = line.indexOf("\0");
 
-  if (matched) {
-    return { file: matched[1]!, lineNum: matched[2]!, text: matched[3]! };
-  }
+  if (nul === -1) return undefined;
 
-  if (currentFile && line.startsWith(`${currentFile}-`)) {
-    const rest = line.slice(currentFile.length + 1);
-    const context = /^(\d+)-(.*)$/.exec(rest);
+  const file = line.slice(0, nul);
+  const match = /^(\d+)[:-](.*)$/.exec(line.slice(nul + 1));
 
-    if (context) return { file: currentFile, lineNum: context[1]!, text: context[2]! };
-  }
+  if (!match) return undefined;
 
-  const context = /^(.+?)-(\d+)-(.*)$/.exec(line);
-
-  if (context) {
-    return { file: context[1]!, lineNum: context[2]!, text: context[3]! };
-  }
-
-  return undefined;
+  return { file, lineNum: match[1]!, text: match[2]! };
 }
 
 function formatGrouped(rawLines: readonly string[], maxResults: number) {
@@ -57,7 +47,7 @@ function formatGrouped(rawLines: readonly string[], maxResults: number) {
     if (shown >= maxResults) break;
 
     const line = raw.replace(/^\.\//, "");
-    const parsed = parseGrepLine(line, currentFile);
+    const parsed = parseGrepLine(line);
     let formatted: string;
 
     if (parsed) {
@@ -121,6 +111,7 @@ export function createGrepTool(files: SearchableFiles) {
         command: "grep",
         args: [
           "-rnIH",
+          "--null",
           fixed ? "-F" : "-E",
           ...flag(ignoreCase, ["-i"]),
           ...flag(around, ["-C", String(around)]),

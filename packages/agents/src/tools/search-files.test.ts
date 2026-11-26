@@ -103,6 +103,26 @@ describe("grep", () => {
     });
     expect(output).toBe("src/deep/util.ts:\n  Line 1: export function alpha() {}");
   });
+
+  test("context lines containing colons and digits stay grouped under the real file", async () => {
+    writeFileSync(
+      join(dir, "my-log-1.txt"),
+      "time 12:30:45\nneedle here\nport 127.0.0.1:8080:ok\n",
+    );
+    const output = await createGrepTool(files()).call({
+      pattern: "needle here",
+      path: "my-log-1.txt",
+      context: 1,
+    });
+    expect(output).toBe(
+      [
+        "my-log-1.txt:",
+        "  Line 1: time 12:30:45",
+        "  Line 2: needle here",
+        "  Line 3: port 127.0.0.1:8080:ok",
+      ].join("\n"),
+    );
+  });
 });
 
 describe("find", () => {
