@@ -1,5 +1,12 @@
 import { DRIVING_DAYS_DEFAULT, isDriving } from "@aven/protocol/drivers";
-import { IconCheck, IconLink, IconShare, IconWorld } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconCopy,
+  IconLock,
+  IconShare,
+  IconUsers,
+  IconWorld,
+} from "@tabler/icons-react";
 import { Link as RouterLink } from "@tanstack/react-router";
 
 import { Button } from "@aven/ui/button";
@@ -27,11 +34,13 @@ const CHOICES = [
     value: "private",
     title: "Only me",
     detail: "Nobody else can see it.",
+    icon: IconLock,
   },
   {
     value: "workspace",
     title: "Everyone in the workspace",
     detail: "They can read it, with its files and changes. Only you send messages.",
+    icon: IconUsers,
   },
 ] as const;
 
@@ -69,37 +78,42 @@ export function ThreadShare({
   const decisionModelSet = useDecisionModelReady(shared);
   const needsDecisionModel = !driving && decisionModelSet === false;
 
-  const copyLink = () => copy(`${window.location.origin}/threads/${thread.id}`);
+  const link = `${window.location.origin}/threads/${thread.id}`;
+  const choice = CHOICES.find(({ value }) => value === thread.visibility) ?? CHOICES[0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-3xl p-6 sm:max-w-md">
-        <div className="flex flex-col gap-5">
-          <DialogHeader>
+      <DialogContent className="grid-cols-[minmax(0,1fr)] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-md">
+        <div className="flex min-w-0 flex-col gap-4 p-5">
+          <DialogHeader className="min-w-0 pr-8">
             <DialogTitle className="text-base">Share this thread</DialogTitle>
-            <DialogDescription className="sr-only">
-              Choose who can read it, and whether teammates can message the agent.
-            </DialogDescription>
+            <DialogDescription className="block min-w-0 truncate">{thread.title}</DialogDescription>
           </DialogHeader>
-          <RadioGroup
-            aria-label="Who can see this thread"
-            value={thread.visibility}
-            onValueChange={(value) => void share(thread, value as ThreadVisibility)}
-            className="gap-2"
-          >
-            {CHOICES.map(({ value, title, detail }) => (
-              <Label
-                key={value}
-                className="cursor-pointer flex-col items-start gap-0.5 rounded-2xl border border-transparent bg-muted/40 px-4 py-3 font-normal transition-colors hover:bg-muted has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:border-primary/60 has-data-checked:bg-primary/10"
-              >
-                <RadioGroupItem value={value} className="absolute size-px opacity-0" />
-                <span className="text-sm font-medium">{title}</span>
-                <span className="text-xs text-muted-foreground">{detail}</span>
-              </Label>
-            ))}
-          </RadioGroup>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <RadioGroup
+              aria-label="Who can see this thread"
+              value={thread.visibility}
+              onValueChange={(value) => void share(thread, value as ThreadVisibility)}
+              className="gap-0.5"
+            >
+              {CHOICES.map(({ value, title, icon: Icon }) => (
+                <Label
+                  key={value}
+                  className="group/choice cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 font-normal transition-colors hover:bg-muted/60 has-focus-visible:ring-3 has-focus-visible:ring-ring/50 has-data-checked:bg-muted"
+                >
+                  <RadioGroupItem value={value} className="absolute size-px opacity-0" />
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground group-has-data-checked/choice:bg-foreground group-has-data-checked/choice:text-background">
+                    <Icon className="size-4" />
+                  </span>
+                  <span className="flex-1 text-sm font-medium">{title}</span>
+                  <IconCheck className="size-4 text-foreground opacity-0 group-has-data-checked/choice:opacity-100" />
+                </Label>
+              ))}
+            </RadioGroup>
+            <p className="px-3 text-xs text-muted-foreground">{choice.detail}</p>
+          </div>
           {shared && (
-            <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3">
+            <div className="flex items-center gap-3 rounded-xl border border-border px-3 py-2.5">
               <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                 <span className="text-sm font-medium">Multiplayer</span>
                 <span className="text-xs text-muted-foreground">
@@ -136,25 +150,25 @@ export function ThreadShare({
               />
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <Button
-              type="button"
-              variant="ghost"
-              className="rounded-full px-4 text-muted-foreground"
-              onClick={() => void copyLink()}
-            >
-              {copied ? <IconCheck /> : <IconLink />}
-              {copied ? "Link copied" : "Copy link"}
-            </Button>
-            <DialogClose render={<Button type="button" className="rounded-full px-5" />}>
-              Done
-            </DialogClose>
-          </div>
-          {!shared && (
-            <p className="-mt-2 text-xs text-muted-foreground">
-              The link opens only for you until you share the thread.
-            </p>
-          )}
+        </div>
+        <div className="flex min-w-0 items-center gap-2 border-t border-border px-5 py-3">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void copy(link)}
+            aria-label={copied ? "Link copied" : "Copy link"}
+            className="group/link h-auto min-w-0 max-w-full flex-1 shrink justify-start gap-2 rounded-full bg-muted/60 py-1.5 pr-3 pl-3.5 text-left text-xs font-normal text-muted-foreground hover:bg-muted"
+          >
+            <span className="min-w-0 flex-1 truncate">{link.replace(/^https?:\/\//, "")}</span>
+            {copied ? (
+              <IconCheck className="size-3.5 shrink-0 text-foreground" />
+            ) : (
+              <IconCopy className="size-3.5 shrink-0 group-hover/link:text-foreground" />
+            )}
+          </Button>
+          <DialogClose render={<Button type="button" size="sm" className="rounded-full px-4" />}>
+            Done
+          </DialogClose>
         </div>
       </DialogContent>
     </Dialog>
