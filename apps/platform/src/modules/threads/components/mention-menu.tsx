@@ -3,8 +3,9 @@ import {
   type ComposerTriggerItem,
   type ComposerTriggerState,
 } from "@anvia/react-ui/chat";
-import { IconCodeblock, IconFile, IconWand } from "@tabler/icons-react";
+import { IconCodeblock, IconFolder, IconWand } from "@tabler/icons-react";
 import { cn } from "cn";
+import { FileIcon } from "@/modules/files/components/file-icon";
 import { COMPACT_COMMAND } from "../mentions";
 import { useEffect, useRef, type ReactNode } from "react";
 
@@ -21,7 +22,6 @@ const HEADINGS: Record<string, string> = {
 };
 
 const FALLBACK_ICONS: Record<string, ReactNode> = {
-  file: <IconFile />,
   skill: <IconWand />,
 };
 
@@ -36,6 +36,14 @@ function emptyMenu({ loading, trigger }: ComposerTriggerState) {
   if (loading) return "Searching…";
 
   return NOTHING_MATCHES[trigger.id] ?? "Nothing matches";
+}
+
+function fallbackIcon(item: ComposerTriggerItem, kind: string, folder: boolean) {
+  if (item.id === COMPACT_COMMAND) return <IconCodeblock />;
+
+  if (kind !== "file") return FALLBACK_ICONS[kind] ?? null;
+
+  return folder ? <IconFolder /> : <FileIcon path={item.label} className="size-4" />;
 }
 
 function MentionOption({
@@ -56,8 +64,9 @@ function MentionOption({
     if (selected) label.current?.scrollIntoView({ block: "nearest" });
   }, [selected]);
   const given = icon?.(item);
-  const file = kind === "file" ? splitPath(item.label) : null;
-  const fallback = item.id === COMPACT_COMMAND ? <IconCodeblock /> : (FALLBACK_ICONS[kind] ?? null);
+  const folder = kind === "file" && item.label.endsWith("/");
+  const file = kind === "file" ? splitPath(folder ? item.label.slice(0, -1) : item.label) : null;
+  const fallback = fallbackIcon(item, kind, folder);
   return (
     <ComposerPrimitive.TriggerItem
       index={index}
@@ -70,7 +79,7 @@ function MentionOption({
         </span>
       ) : null}
       <span ref={label} className={cn("shrink-0 text-sm", file && "font-mono text-[13px]")}>
-        {file ? file.name : item.label}
+        {file ? `${file.name}${folder ? "/" : ""}` : item.label}
       </span>
       {file?.folder ? (
         <span className="min-w-0 truncate text-xs text-muted-foreground">{file.folder}</span>

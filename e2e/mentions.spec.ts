@@ -54,8 +54,44 @@ test.describe("mentions in the composer", () => {
     await expect(sent.locator('[data-mention="file"]')).toHaveText("src/greeting.ts");
     await expect(sent.locator('[data-mention="skill"]')).toHaveText("writing-skills");
     await expect(sent.locator('[data-mention="skill"] svg')).toHaveCount(0);
-    await expect(sent.locator('[data-mention="file"] svg')).toHaveCount(1);
+    await expect(sent.locator('[data-mention="file"] :is(svg, img)')).toHaveCount(1);
+    const bubble = await sent.locator('[data-mention="file"]').evaluate((chip) => {
+      const box = chip.closest("[class*='rounded-2xl']")?.getBoundingClientRect();
+      return box?.height ?? 0;
+    });
+    expect(bubble).toBeGreaterThan(0);
+    expect(bubble).toBeLessThan(64);
     await expect(prompt).toHaveText("");
+  });
+
+  test("@ picks a folder, and the runner is told it is one", async ({ page }) => {
+    await registerUser(page, "men", "Mention User");
+    const provider = await page.request.post("/api/providers", {
+      data: { kind: "anthropic", name: "Anthropic", apiKey: "sk-ant-test" },
+    });
+    expect(provider.ok()).toBe(true);
+    const { child, events, threadId } = await threadOnFakeRunner(page);
+    runner = child;
+
+    await page.goto(`/threads/${threadId}`);
+    const prompt = page.getByRole("textbox", { name: "Prompt" });
+    const menu = page.getByRole("listbox", { name: "Mention" });
+
+    await prompt.click();
+    await page.keyboard.type("look in @sr");
+    await expect(menu.getByRole("option", { name: "src/", exact: true })).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(prompt.locator('[data-mention="file"]')).toHaveText("src/");
+    await page.keyboard.press("Enter");
+
+    await expect.poll(() => events.find((event) => event.type === "started")).toBeTruthy();
+    expect(events.find((event) => event.type === "started")).toMatchObject({
+      mentions: [{ type: "file", name: "src/", from: 8, to: 13 }],
+    });
+    await expect(page.locator('[data-role="user"] [data-mention="file"]')).toHaveAttribute(
+      "title",
+      "Folder src/",
+    );
   });
 
   test("/ offers the built-in setup skills", async ({ page }) => {
