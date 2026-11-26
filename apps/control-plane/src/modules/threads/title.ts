@@ -13,7 +13,6 @@ import type { ThreadExchange } from "./types";
 const TITLE_TIMEOUT_MS = 15_000;
 const USER_CHARS = 1500;
 const ASSISTANT_CHARS = 2500;
-const TITLE_WORDS_MAX = 80;
 
 const INSTRUCTIONS = `You name a conversation between a person and an AI software engineer.
 Given the person's latest message and the engineer's reply, write a title that says what the conversation is about.
@@ -22,7 +21,7 @@ Given the person's latest message and the engineer's reply, write a title that s
 - No quotes, no trailing punctuation, no prefix like "Title:".
 - Use only what the messages say.`;
 
-const schema = z.object({ title: z.string().trim().min(1).max(TITLE_WORDS_MAX) });
+const schema = z.object({ title: z.string().trim().min(1).max(THREAD_TITLE_MAX) });
 
 const textOf = (message: ChatMessage) =>
   message.parts
@@ -83,20 +82,24 @@ export function createThreadTitler(
       }
 
       const timeout = AbortSignal.timeout(TITLE_TIMEOUT_MS);
-      const title = await extract({
-        model: resolveAgentModel(config).model,
-        text: [
-          `Person: ${exchange.user}`,
-          exchange.assistant ? `Engineer: ${exchange.assistant}` : "Engineer: (no reply yet)",
-        ].join("\n\n"),
-        instructions: INSTRUCTIONS,
-        outputSchema: schema,
-        retries: false,
-        abortSignal: signal ? AbortSignal.any([signal, timeout]) : timeout,
-      }).then(
-        ({ output }) => cleanTitle(output.title),
-        () => "",
-      );
+      const title = await Promise.resolve()
+        .then(() =>
+          extract({
+            model: resolveAgentModel(config).model,
+            text: [
+              `Person: ${exchange.user}`,
+              exchange.assistant ? `Engineer: ${exchange.assistant}` : "Engineer: (no reply yet)",
+            ].join("\n\n"),
+            instructions: INSTRUCTIONS,
+            outputSchema: schema,
+            retries: false,
+            abortSignal: signal ? AbortSignal.any([signal, timeout]) : timeout,
+          }),
+        )
+        .then(
+          ({ output }) => cleanTitle(output.title),
+          () => "",
+        );
 
       if (!title) {
         throw new UnprocessableError("The title could not be generated. Try again in a moment");
