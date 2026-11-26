@@ -135,13 +135,13 @@ export function AppShell({ user }: Props) {
                   onOpenCommand={() => setCommandOpen(true)}
                 />
               </div>
-              <div className="mr-1 flex shrink-0 items-center group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
+              <div className="mr-1 flex shrink-0 items-center gap-1.5 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <MentionsButton />
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Search"
-                  className="size-9 md:hidden md:size-7 group-data-[collapsible=icon]:flex"
+                  className="size-9 rounded-full bg-muted/40 hover:bg-muted/70 md:hidden md:size-7 group-data-[collapsible=icon]:flex"
                   onClick={() => setCommandOpen(true)}
                 >
                   <IconSearch />
