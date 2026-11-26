@@ -1,11 +1,13 @@
-import { IconCloud, IconDeviceDesktop, IconGitBranch, IconShare } from "@tabler/icons-react";
+import { IconGitBranch, IconShare } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useMemo, useState } from "react";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
-import { Spinner } from "@aven/ui/spinner";
 import { dragThread } from "@/lib/thread-drag";
+import { ComputerTile } from "@/modules/computer/components/computer-tile";
+import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { markColors } from "@/modules/projects/orb-art";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { isSandbox } from "@/modules/runtimes/sandbox";
 import type { Runtime } from "@/modules/runtimes/types";
@@ -31,24 +33,14 @@ import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadTitleField } from "./thread-title-field";
 
 function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runtime }) {
-  if (thread.running) {
-    return (
-      <Spinner
-        role="img"
-        aria-label="Working"
-        style={thread.markColor ? { color: thread.markColor } : undefined}
-        className="size-4 shrink-0 text-muted-foreground"
-      />
-    );
-  }
-
-  const Icon = !runtime || isSandbox(runtime) ? IconCloud : IconDeviceDesktop;
+  const Tile = !runtime || isSandbox(runtime) ? ProjectTile : ComputerTile;
 
   return (
-    <Icon
-      aria-hidden
-      style={thread.markColor ? { color: thread.markColor } : undefined}
-      className="size-4 shrink-0 text-muted-foreground"
+    <Tile
+      projectId={thread.projectId}
+      colors={thread.markColor ? markColors(thread.markColor) : undefined}
+      working={thread.running}
+      className="-mx-0.5 size-5"
     />
   );
 }
