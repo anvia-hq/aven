@@ -32,7 +32,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
 
   return (
     <OverviewCard title="Environment">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-col">
         <Row
           icon={
             sandbox ? (
@@ -55,7 +55,7 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
         )}
         <Row icon={<IconGitBranch />}>{threadBranch(thread.id)}</Row>
         {github && (
-          <Row icon={<GithubMark />}>
+          <Row icon={<GithubMark className="size-3!" />}>
             <span title={github.detail}>{github.label}</span>
           </Row>
         )}
@@ -74,9 +74,11 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <p className="flex h-7 max-w-full min-w-0 items-center gap-1.5 rounded-full bg-muted/70 pr-3 pl-2.5 text-xs [&_svg]:size-3.5 [&_svg]:shrink-0 [&_svg]:text-muted-foreground">
-      {icon}
-      <span className="min-w-0 truncate">{children}</span>
+    <p className="flex h-7 min-w-0 items-center gap-2 text-xs">
+      <span className="flex size-4 shrink-0 items-center justify-center [&_svg]:size-3.5 [&_svg]:text-muted-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{children}</span>
       {action}
     </p>
   );
