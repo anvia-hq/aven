@@ -1,4 +1,4 @@
-import { FILE_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
+import { FILE_SEARCH_LIMIT, FOLDER_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 import type { FileContent, FileEntry } from "@aven/protocol/types";
 
@@ -24,8 +24,11 @@ export const folderAnswer: z.ZodType<{ entries: FileEntry[] } | null> = z
   })
   .nullable();
 
-export const searchAnswer: z.ZodType<{ paths: string[] } | null> = z
-  .object({ paths: z.array(z.string().max(1024)).max(FILE_SEARCH_LIMIT) })
+export const searchAnswer: z.ZodType<{ paths: string[]; folders?: string[] } | null> = z
+  .object({
+    paths: z.array(z.string().max(1024)).max(FILE_SEARCH_LIMIT),
+    folders: z.array(z.string().max(1024)).max(FOLDER_SEARCH_LIMIT).optional(),
+  })
   .nullable();
 
 export const fileAnswer: z.ZodType<FileContent | null> = z

@@ -696,7 +696,12 @@ function answer(call: Extract<ControlPlaneToRuntime, { type: "call" }>) {
 
   if (call.method === "files.search") {
     const { query } = call.params as { query: string };
-    return reply({ paths: Object.keys(WORKSPACE_FILES).filter((path) => path.includes(query)) });
+    return reply({
+      paths: Object.keys(WORKSPACE_FILES).filter((path) => path.includes(query)),
+      folders: Object.entries(WORKSPACE).flatMap(([folder, entries]) =>
+        folder !== "" && entries.length > 0 && folder.includes(query) ? [folder] : [],
+      ),
+    });
   }
 
   if (call.method === "files.read") {

@@ -96,7 +96,7 @@ export function createRunnerCalls({
   async function searchOf(params: unknown) {
     const { threadId, query } = filesSearchParams(params);
     const root = await sandbox.workspace(threadId);
-    return root ? { paths: await searchWorkspace(root, query) } : null;
+    return root ? await searchWorkspace(root, query) : null;
   }
 
   async function artifactOf(params: unknown) {

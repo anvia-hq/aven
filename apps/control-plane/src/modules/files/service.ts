@@ -37,7 +37,9 @@ export function createFilesService(hub: RuntimeHub) {
     async search(organizationId: string, threadId: string, query: string): Promise<SearchResult> {
       void runtimeActivity.touchThread(threadId);
       const found = await ask(organizationId, "files.search", { threadId, query }, searchAnswer);
-      return found ? { available: true, paths: found.paths } : { available: false };
+      return found
+        ? { available: true, paths: found.paths, folders: found.folders ?? [] }
+        : { available: false };
     },
   };
 }

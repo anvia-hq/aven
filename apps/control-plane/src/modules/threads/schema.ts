@@ -63,7 +63,11 @@ const workspacePath = z
   .min(1)
   .max(1024)
   .refine(
-    (path) => !path.includes("\0") && path.split("/").every((part) => part && part !== ".."),
+    (path) =>
+      !path.includes("\0") &&
+      (path.endsWith("/") ? path.slice(0, -1) : path)
+        .split("/")
+        .every((part) => part && part !== ".."),
     {
       message: "Not a path inside the workspace",
     },

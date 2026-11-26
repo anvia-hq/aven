@@ -168,6 +168,8 @@ export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
 export const FILE_SEARCH_LIMIT = 50;
 
+export const FOLDER_SEARCH_LIMIT = 10;
+
 export const SKILL_DIGEST = /^[0-9a-f]{64}$/;
 
 export const CloseCode = {

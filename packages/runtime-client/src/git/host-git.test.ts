@@ -84,7 +84,7 @@ describe("git the runner runs on a workspace", () => {
     await sh("config", "core.fsmonitor", script);
 
     expect(await markTurn(root)).toBe(true);
-    expect(await searchWorkspace(root, "a")).toEqual(["a.txt"]);
+    expect((await searchWorkspace(root, "a")).paths).toEqual(["a.txt"]);
     expect(await ran()).toBe(false);
   });
 

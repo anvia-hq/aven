@@ -14,7 +14,9 @@ export function mentionNote(
 ): string | undefined {
   const of = (type: MessageMention["type"]) =>
     unique(mentions.flatMap((mention) => (mention.type === type ? [mention.name] : [])));
-  const files = of("file");
+  const pointed = of("file");
+  const folders = pointed.flatMap((name) => (name.endsWith("/") ? [name] : []));
+  const files = pointed.flatMap((name) => (name.endsWith("/") ? [] : [name]));
   const asked = of("skill");
   const sections: string[] = [];
 
@@ -23,6 +25,15 @@ export function mentionNote(
       [
         `The user pointed at ${files.length === 1 ? "this file" : "these files"} of the workspace with @:`,
         ...files.map((path) => `- ${paths.workspace}/${path}`),
+      ].join("\n"),
+    );
+  }
+
+  if (folders.length > 0) {
+    sections.push(
+      [
+        `The user pointed at ${folders.length === 1 ? "this folder" : "these folders"} of the workspace with @:`,
+        ...folders.map((path) => `- ${paths.workspace}/${path}`),
       ].join("\n"),
     );
   }
