@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-400 decisions: 306 are the answer, 39 are superseded and 55 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+402 decisions: 307 are the answer, 39 are superseded and 56 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -62,7 +62,7 @@ These describe something that is gone. Read what replaced them.
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 | 0391     | The e2e suite runs before the push that makes a branch                                       | 0394                         |
 
-## Superseded in part (55)
+## Superseded in part (56)
 
 These hold, except for the part named.
 
@@ -100,7 +100,7 @@ These hold, except for the part named.
 | 0118     | Archiving a thread stops its work and frees its sandbox                 | 0219                             |
 | 0148     | The control plane can update to the newest release                      | 0388                             |
 | 0153     | Nothing is unshipped when the branch adds nothing to the default branch | 0232                             |
-| 0155     | Color themes, each with light and dark                                  | 0224                             |
+| 0155     | Color themes, each with light and dark                                  | 0224 and 0404                    |
 | 0159     | A thread that finished while it was not open shows a dot                | 0331                             |
 | 0172     | The projects route is two columns, with the threads beside the projects | 0196 and 0275                    |
 | 0205     | A mention of a person marks the thread until it is opened               | 0331                             |
@@ -118,6 +118,7 @@ These hold, except for the part named.
 | 0299     | Aven Cloud is a sandbox per thread, and a repository is a project       | 0308, 0328, 0348 and 0392        |
 | 0300     | The Claude agent is behind a flag                                       | 0309                             |
 | 0301     | The Codex agent is behind a flag                                        | 0309                             |
+| 0304     | The rail and the sidebar are the frame in a light theme                 | 0405                             |
 | 0308     | An Aven Cloud sandbox is stopped when it is idle                        | 0392                             |
 | 0326     | A project's environment is a saved snapshot, for 72 hours               | 0392                             |
 | 0358     | A bot without a computer keeps every tool that needs no machine         | 0401                             |

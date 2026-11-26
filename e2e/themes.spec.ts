@@ -28,24 +28,24 @@ test.describe("themes", () => {
       else await expect(html).toHaveAttribute("data-theme", id);
     }
 
-    await page.getByRole("button", { name: "Catppuccin", exact: true }).click();
+    await page.getByRole("button", { name: "GitHub", exact: true }).click();
     await page.reload();
-    await expect(html).toHaveAttribute("data-theme", "catppuccin");
-    await expect(page.getByRole("button", { name: "Catppuccin", exact: true })).toHaveAttribute(
+    await expect(html).toHaveAttribute("data-theme", "github");
+    await expect(page.getByRole("button", { name: "GitHub", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
 
     await chooseMode(page, "Light");
     await expect(html).not.toHaveClass(/dark/);
-    await expect(html).toHaveAttribute("data-theme", "catppuccin");
+    await expect(html).toHaveAttribute("data-theme", "github");
 
     await chooseMode(page, "Dark");
     await expect(html).toHaveClass(/dark/);
-    const catppuccinBg = await html.evaluate((el) =>
+    const githubBg = await html.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("--background").trim(),
     );
-    expect(catppuccinBg).toBe("#1e1e2e");
+    expect(githubBg).toBe("#0d1117");
 
     const brand = await html.evaluate((el) =>
       getComputedStyle(el).getPropertyValue("--brand").trim(),
