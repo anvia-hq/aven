@@ -43,6 +43,45 @@ private func fixtures() throws -> [Fixture] {
             RunEvent.self, from: Data(#"{"type":"something_new","x":1}"#.utf8))
         #expect(event == .unknown)
     }
+
+    @Test func detectsPendingAskUserQuestionAndResumes() {
+        var transcript = Transcript()
+        let question = Question(
+            id: "q-1",
+            text: "Pick a target",
+            choices: [QuestionChoice(label: "iOS", value: "ios")],
+            allowCustom: true)
+        let askTool = Tool(
+            id: "t-1",
+            name: "ask_user",
+            target: "",
+            status: .running,
+            diff: nil,
+            output: nil,
+            questions: [question],
+            artifacts: nil)
+        transcript.apply(.runStart(prompt: "Build"))
+        transcript.apply(.toolStart(askTool))
+        #expect(transcript.pendingQuestionTool == nil)
+
+        transcript.apply(.done)
+        #expect(transcript.pendingQuestionTool?.id == "t-1")
+
+        transcript.apply(.runResume)
+        #expect(transcript.running == true)
+        #expect(transcript.pendingQuestionTool == nil)
+    }
+
+    @Test func prependsEarlierMessagesWithoutDuplicates() {
+        var transcript = Transcript(
+            messages: [Message(id: "m-2", role: .user, parts: [.text("later")])],
+            running: false)
+        transcript.prepend([
+            Message(id: "e-0", role: .user, parts: [.text("earlier")]),
+            Message(id: "m-2", role: .user, parts: [.text("dup")]),
+        ])
+        #expect(transcript.messages.map(\.id) == ["e-0", "m-2"])
+    }
 }
 
 @Suite struct ServerSentEventTests {
@@ -92,5 +131,39 @@ private func fixtures() throws -> [Fixture] {
             try APIClient.normalize(server: "https://aven.example.com/x/").absoluteString
                 == "https://aven.example.com/x")
         #expect(throws: APIError.self) { try APIClient.normalize(server: "  ") }
+    }
+}
+
+@Suite struct PairingPayloadTests {
+    @Test func parsesAValidPairingURL() throws {
+        let payload = try PairingPayload.parse(
+            " aven://pair?server=https%3A%2F%2Faven.example.com%2Fapi&code=abc_123-XYZ \n")
+        #expect(payload.server.absoluteString == "https://aven.example.com/api")
+        #expect(payload.code == "abc_123-XYZ")
+    }
+
+    @Test func parsesLocalDevServerURL() throws {
+        let payload = try PairingPayload.parse(
+            "aven://pair?server=http%3A%2F%2Flocalhost%3A5173%2Fapi&code=token123456789012")
+        #expect(payload.server.absoluteString == "http://localhost:5173/api")
+        #expect(payload.code == "token123456789012")
+    }
+
+    @Test func rejectsNonAvenOrMalformedCodes() {
+        #expect(throws: PairingError.invalidQRCode) {
+            try PairingPayload.parse("https://aven.example.com/?code=abc")
+        }
+        #expect(throws: PairingError.invalidQRCode) {
+            try PairingPayload.parse("aven://other?server=https://aven.example.com&code=abc")
+        }
+        #expect(throws: PairingError.invalidQRCode) {
+            try PairingPayload.parse("aven://pair?server=https://aven.example.com")
+        }
+        #expect(throws: PairingError.invalidQRCode) {
+            try PairingPayload.parse("aven://pair?server=file:///etc/passwd&code=abc")
+        }
+        #expect(throws: PairingError.invalidQRCode) {
+            try PairingPayload.parse("not a url")
+        }
     }
 }
