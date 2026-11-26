@@ -1,12 +1,12 @@
 import { IconPlus } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
+import { cn } from "cn";
 
 import { Badge } from "@aven/ui/badge";
 import { buttonVariants } from "@aven/ui/button";
 import { shortTimeAgo } from "@/lib/format";
-import { ThreadMark } from "@/modules/threads/components/thread-mark";
 
-import { projectPlace } from "../place";
+import { projectPlace, projectPlaceShort } from "../place";
 import type { ProjectActivity } from "../types";
 import { ProjectTile } from "./project-tile";
 import { RunnerStatus } from "./runner-status";
@@ -27,7 +27,10 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
         className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2 2xl:grid-cols-3 min-[120rem]:grid-cols-4"
       >
         {entries.map(({ project, threads, working }) => (
-          <li key={project.id} className="flex flex-col overflow-hidden rounded-xl border bg-card">
+          <li
+            key={project.id}
+            className="group/card flex flex-col overflow-hidden rounded-xl border bg-card"
+          >
             <div className="flex items-center gap-1 pr-2">
               <Link
                 to="/projects/$projectId"
@@ -43,58 +46,53 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-medium">{project.name}</span>
                   <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="truncate">{projectPlace(project)}</span>
+                    <RunnerStatus
+                      runtimeId={project.runtimeId}
+                      className="max-w-28 shrink-0 text-xs text-muted-foreground"
+                    />
                     <span aria-hidden>·</span>
-                    <span className="shrink-0 font-mono">{project.defaultBranch ?? "folder"}</span>
+                    <span className="truncate" title={projectPlace(project)}>
+                      {projectPlaceShort(project)}
+                    </span>
+                    {project.defaultBranch && (
+                      <span className="shrink-0 font-mono">{project.defaultBranch}</span>
+                    )}
                   </span>
                 </span>
-                <RunnerStatus
-                  runtimeId={project.runtimeId}
-                  className="max-w-28 shrink-0 text-xs text-muted-foreground"
-                />
               </Link>
               <Link
                 to="/threads"
                 search={{ project: project.id }}
                 aria-label={`New thread in ${project.name}`}
-                className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+                className={cn(
+                  buttonVariants({ variant: "ghost", size: "icon-sm" }),
+                  "text-muted-foreground opacity-60 transition-opacity group-focus-within/card:opacity-100 group-hover/card:opacity-100",
+                )}
               >
                 <IconPlus />
               </Link>
             </div>
-            <ul aria-label={`Threads in ${project.name}`} className="flex flex-col border-t py-1">
+            <ul
+              aria-label={`Threads in ${project.name}`}
+              className="mt-0.5 mb-3 ml-[29px] flex flex-col border-l pr-2 pl-5"
+            >
               {threads.slice(0, limit).map((thread) => (
                 <li key={thread.id}>
                   <Link
                     to="/threads/$threadId"
                     params={{ threadId: thread.id }}
-                    className="flex items-center gap-2.5 px-3 py-1.5 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                    className="relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-2 focus-visible:ring-ring/50"
                   >
-                    <span className="flex size-4 shrink-0 items-center justify-center">
-                      {thread.running ? (
-                        <ThreadMark
-                          projectId={project.id}
-                          runtimeId={thread.runtimeId}
-                          palette={palettes.get(project.id)}
-                          working
-                          className="size-4"
-                        />
-                      ) : (
-                        <span
-                          aria-hidden
-                          className="size-1.5 rounded-full bg-muted-foreground/40"
-                        />
-                      )}
-                    </span>
                     <span
-                      className={
+                      aria-hidden
+                      className={cn(
+                        "absolute top-1/2 -left-[24.5px] size-2 -translate-y-1/2 rounded-full border-[1.5px]",
                         thread.running
-                          ? "min-w-0 flex-1 truncate"
-                          : "min-w-0 flex-1 truncate text-muted-foreground"
-                      }
-                    >
-                      {thread.title}
-                    </span>
+                          ? "border-success bg-success"
+                          : "border-muted-foreground/50 bg-card",
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{thread.title}</span>
                     {thread.state !== "open" && (
                       <Badge variant="secondary" className="h-4 px-1.5 text-[11px] capitalize">
                         {thread.state}
@@ -107,14 +105,14 @@ export function ProjectsBoard({ entries, palettes, limit = SHOWN }: Props) {
                 </li>
               ))}
               {threads.length === 0 && (
-                <li className="px-3 py-1.5 text-sm text-muted-foreground">No threads yet</li>
+                <li className="px-2 py-1.5 text-sm text-muted-foreground">No threads yet</li>
               )}
               {threads.length > limit && (
                 <li>
                   <Link
                     to="/projects/$projectId"
                     params={{ projectId: project.id }}
-                    className="flex py-1.5 pr-3 pl-9.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                    className="flex px-2 py-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
                     {threads.length - limit} more
                   </Link>
