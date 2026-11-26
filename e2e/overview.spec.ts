@@ -69,15 +69,14 @@ test.describe("a thread's overview", () => {
     await expect(tokens.getByText("Uncached", { exact: true }).locator("..")).toContainText("4.4K");
   });
 
-  test("says when the context size is not known", async ({ page }) => {
+  test("shows no context card until the context size is known", async ({ page }) => {
     await registerUser(page, "ins", "Overview User");
     await streamSnapshot(page, {});
     const threadId = await newThread(page);
     await page.goto(`/threads/${threadId}`);
 
-    await expect(page.getByRole("region", { name: "Context" })).toContainText(
-      "Shown after the agent's first reply",
-    );
+    await expect(page.getByRole("region", { name: "Environment" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Context" })).toHaveCount(0);
   });
 });
 

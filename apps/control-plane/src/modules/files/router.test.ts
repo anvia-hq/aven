@@ -61,10 +61,14 @@ run("a thread's files (real postgres, real WebSocket)", async () => {
   test("searches the workspace for the composer's @", async () => {
     const { thread, calls } = await setup(() => ({
       ok: true,
-      result: { paths: ["src/app.ts", "app.config.ts"] },
+      result: { paths: ["src/app.ts", "app.config.ts"], folders: ["src/app"] },
     }));
     const found = await get(`/threads/${thread.id}/files/search?q=app`, owner.token);
-    expect(await found.json()).toEqual({ available: true, paths: ["src/app.ts", "app.config.ts"] });
+    expect(await found.json()).toEqual({
+      available: true,
+      paths: ["src/app.ts", "app.config.ts"],
+      folders: ["src/app"],
+    });
     await get(`/threads/${thread.id}/files/search`, owner.token);
     expect(calls).toEqual([
       ["files.search", { threadId: thread.id, query: "app" }],

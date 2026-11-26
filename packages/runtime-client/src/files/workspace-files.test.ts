@@ -116,17 +116,24 @@ describe("searching a workspace", () => {
 
   test("finds files by name first, then by path, without ignored or deleted ones", async () => {
     const root = await repository();
-    expect(await searchWorkspace(root, "app")).toEqual([
+    expect((await searchWorkspace(root, "app")).paths).toEqual([
       "src/app.ts",
       "app.config.ts",
       "src/app/main.ts",
     ]);
-    expect(await searchWorkspace(root, "GONE")).toEqual([]);
-    expect(await searchWorkspace(root, "")).toContain(".gitignore");
+    expect((await searchWorkspace(root, "GONE")).paths).toEqual([]);
+    expect((await searchWorkspace(root, "")).paths).toContain(".gitignore");
+  });
+
+  test("finds the folders that hold files, by name first, without ignored ones", async () => {
+    const root = await repository();
+    expect((await searchWorkspace(root, "app")).folders).toEqual(["src/app"]);
+    expect((await searchWorkspace(root, "")).folders).toEqual(["src", "src/app"]);
+    expect((await searchWorkspace(root, "node_modules")).folders).toEqual([]);
   });
 
   test("a folder that is no repository has nothing to find", async () => {
     const { root } = await workspace();
-    expect(await searchWorkspace(root, "a")).toEqual([]);
+    expect(await searchWorkspace(root, "a")).toEqual({ paths: [], folders: [] });
   });
 });

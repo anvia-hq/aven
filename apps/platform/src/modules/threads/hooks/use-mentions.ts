@@ -144,7 +144,11 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
 
         if (!found?.available) return teammates;
 
-        return [...teammates, ...found.paths.map((path) => itemOf({ type: "file", name: path }))];
+        return [
+          ...teammates,
+          ...found.folders.map((folder) => itemOf({ type: "file", name: `${folder}/` })),
+          ...found.paths.map((path) => itemOf({ type: "file", name: path })),
+        ];
       },
     };
     return [fileTrigger, skillTrigger];

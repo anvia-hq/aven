@@ -18,7 +18,7 @@ export function MentionsButton() {
           <Button
             variant="ghost"
             size="icon-sm"
-            className="relative size-9 md:size-7"
+            className="relative size-9 rounded-full bg-muted/40 hover:bg-muted/70 md:size-7"
             aria-label={unread > 0 ? `Mentions, ${unread} unread` : "Mentions"}
           />
         }

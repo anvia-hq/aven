@@ -100,15 +100,13 @@ export type AddProjectState = ReturnType<typeof useAddProject>;
 
 export type Rgb = readonly [number, number, number];
 
-export type Ring = { across: number; turn: number; speed: number };
-
 export type Dot = {
   lobe: number;
   spread: number;
   start: number;
   reach: number;
   curl: number;
-  rate: number;
+  cycles: number;
   phase: number;
   wobble: number;
   wobblePhase: number;
@@ -117,8 +115,6 @@ export type Dot = {
   alpha: number;
   tone: number;
 };
-
-export type OrbShape = { light: number; rings: Ring[]; dots: Dot[] };
 
 export type FolderEntry = { name: string; path: string; git: boolean };
 

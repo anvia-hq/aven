@@ -31,15 +31,7 @@ export function ContextCard({
     );
   }
 
-  if (!context) {
-    return (
-      <OverviewCard title="Context">
-        <p className="text-muted-foreground">
-          Shown after the agent's first reply, when the model's context size is known.
-        </p>
-      </OverviewCard>
-    );
-  }
+  if (!context) return null;
 
   if (!context.contextWindow) {
     return (

@@ -1,6 +1,6 @@
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
-import { FILE_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
+import { FILE_SEARCH_LIMIT, FOLDER_SEARCH_LIMIT } from "@aven/protocol/runtime-wire";
 
 import { git } from "../git/git-clone";
 import { hostGit } from "../git/host-git";
@@ -67,10 +67,21 @@ function rank(path: string, query: string) {
   return path.toLowerCase().includes(query) ? 2 : undefined;
 }
 
-export async function searchWorkspace(root: string, query: string, run: Git = git) {
-  const wanted = query.trim().toLowerCase();
+function foldersOf(paths: readonly string[]) {
+  const folders = new Set<string>();
+
+  for (const path of paths) {
+    const parts = path.split("/").slice(0, -1);
+
+    for (let end = 1; end <= parts.length; end += 1) folders.add(parts.slice(0, end).join("/"));
+  }
+
+  return [...folders];
+}
+
+function ranked(paths: readonly string[], wanted: string, limit: number) {
   const found: { path: string; rank: number }[] = [];
-  for (const path of await knownFiles(root, hostGit(run))) {
+  for (const path of paths) {
     const at = rank(path, wanted);
 
     if (at !== undefined) found.push({ path, rank: at });
@@ -78,7 +89,16 @@ export async function searchWorkspace(root: string, query: string, run: Git = gi
   found.sort(
     (a, b) => a.rank - b.rank || a.path.length - b.path.length || a.path.localeCompare(b.path),
   );
-  return found.slice(0, FILE_SEARCH_LIMIT).map(({ path }) => path);
+  return found.slice(0, limit).map(({ path }) => path);
+}
+
+export async function searchWorkspace(root: string, query: string, run: Git = git) {
+  const wanted = query.trim().toLowerCase();
+  const files = await knownFiles(root, hostGit(run));
+  return {
+    paths: ranked(files, wanted, FILE_SEARCH_LIMIT),
+    folders: ranked(foldersOf(files), wanted, FOLDER_SEARCH_LIMIT),
+  };
 }
 
 export async function readWorkspaceFile(root: string, path: string): Promise<FileContent> {

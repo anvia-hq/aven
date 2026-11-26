@@ -1,11 +1,13 @@
-import { IconCloud, IconDeviceDesktop, IconGitBranch, IconShare } from "@tabler/icons-react";
+import { IconGitBranch, IconShare } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useMemo, useState } from "react";
 
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@aven/ui/sidebar";
-import { Spinner } from "@aven/ui/spinner";
 import { dragThread } from "@/lib/thread-drag";
+import { ComputerTile } from "@/modules/computer/components/computer-tile";
+import { ProjectTile } from "@/modules/projects/components/project-tile";
+import { markColors } from "@/modules/projects/orb-art";
 import { useRuntimes } from "@/modules/runtimes/hooks/use-runtimes";
 import { isSandbox } from "@/modules/runtimes/sandbox";
 import type { Runtime } from "@/modules/runtimes/types";
@@ -30,25 +32,18 @@ import { SidebarSection } from "./sidebar-section";
 import { ThreadActionsMenu } from "./thread-actions-menu";
 import { ThreadTitleField } from "./thread-title-field";
 
-function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runtime }) {
-  if (thread.running) {
-    return (
-      <Spinner
-        role="img"
-        aria-label="Working"
-        style={thread.markColor ? { color: thread.markColor } : undefined}
-        className="size-4 shrink-0 text-muted-foreground"
-      />
-    );
-  }
+const ROW =
+  "hover:bg-sidebar-accent/50 data-active:bg-sidebar-accent data-active:font-medium data-active:hover:bg-sidebar-accent";
 
-  const Icon = !runtime || isSandbox(runtime) ? IconCloud : IconDeviceDesktop;
+function SidebarThreadMark({ thread, runtime }: { thread: Thread; runtime?: Runtime }) {
+  const Tile = !runtime || isSandbox(runtime) ? ProjectTile : ComputerTile;
 
   return (
-    <Icon
-      aria-hidden
-      style={thread.markColor ? { color: thread.markColor } : undefined}
-      className="size-4 shrink-0 text-muted-foreground"
+    <Tile
+      projectId={thread.projectId}
+      colors={thread.markColor ? markColors(thread.markColor) : undefined}
+      working={thread.running}
+      className="-mx-0.5 size-5"
     />
   );
 }
@@ -212,7 +207,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${thread.id}`}
-          className={cn(nested && "pl-8")}
+          className={cn(ROW, nested && "pl-8")}
         >
           <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
           <SharedMark thread={thread} />
@@ -260,6 +255,7 @@ export function SidebarThreads() {
             />
           }
           isActive={pathname === `/threads/${left.id}` || pathname === `/threads/${right.id}`}
+          className={ROW}
         >
           <span className="flex shrink-0 items-center gap-0.5">
             {[left, right].map((thread) => (
@@ -335,6 +331,7 @@ export function SidebarThreads() {
                     />
                   }
                   isActive={pathname === `/threads/${thread.id}`}
+                  className={ROW}
                 >
                   <SidebarThreadMark thread={thread} runtime={runtimesById.get(thread.runtimeId)} />
                   <SharedMark thread={thread} />

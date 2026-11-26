@@ -1,10 +1,10 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-import { tileColors, tileSeed } from "@/lib/tile";
+import { tileColors } from "@/lib/tile";
 import { MarkCanvas } from "@/modules/marks/components/mark-canvas";
 import type { MarkFrame, OrbColors } from "@/modules/marks/types";
 
-import { orbShape, paintOrb } from "../orb-art";
+import { paintOrb } from "../orb-art";
 
 type Props = {
   projectId: string;
@@ -25,12 +25,11 @@ export function ProjectTile({
   decorative = false,
   className,
 }: Props) {
-  const shape = useMemo(() => orbShape(tileSeed(projectId)), [projectId]);
   const [first, second, third] = colors ?? tileColors(projectId, palette);
   const paint = useCallback(
-    (context: CanvasRenderingContext2D, { size, ink, color, time }: MarkFrame) =>
-      paintOrb(context, size, shape, { ink, colors: [first, second, third], color, time }),
-    [shape, first, second, third],
+    (context: CanvasRenderingContext2D, { size, ink, color, turn }: MarkFrame) =>
+      paintOrb(context, size, { ink, colors: [first, second, third], color, turn }),
+    [first, second, third],
   );
 
   return (

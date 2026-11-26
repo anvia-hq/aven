@@ -26,7 +26,8 @@ describe("a message's mentions", () => {
       mentions: [{ type: "file", name, from: 0, to: name.length + 1 }],
     });
     expect(sendMessageBody.safeParse(at("src/a.ts")).success).toBe(true);
-    for (const name of ["../etc/passwd", "/etc/passwd", "src//a.ts", "src/../a.ts"]) {
+    expect(sendMessageBody.safeParse(at("src/")).success).toBe(true);
+    for (const name of ["../etc/passwd", "/etc/passwd", "src//a.ts", "src/../a.ts", "src//", "/"]) {
       expect(sendMessageBody.safeParse(at(name)).success).toBe(false);
     }
     const slash = {

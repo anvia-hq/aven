@@ -42,7 +42,7 @@ function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
     <ToastPrimitive.Root
       data-slot="toast"
       className={cn(
-        "group/toast pointer-events-auto absolute right-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full max-w-full origin-bottom rounded-xl bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none only:w-fit hover:h-auto! focus-within:h-auto! focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        "group/toast pointer-events-auto absolute right-0 bottom-0 z-[calc(1000-var(--toast-index))] w-full max-w-full origin-bottom rounded-xl bg-popover text-popover-foreground shadow-lg will-change-transform outline-none select-none only:w-fit focus-visible:ring-[3px] focus-visible:ring-ring/50",
         "[--gap:0.75rem] [--height:var(--toast-frontmost-height,var(--toast-height))] [--offset-y:calc(var(--toast-offset-y)*-1+calc(var(--toast-index)*var(--gap)*-1)+var(--toast-swipe-movement-y))] [--peek:0.375rem] [--scale:calc(max(0,1-(var(--toast-index)*0.06)))] [--shrink:calc(1-var(--scale))]",
         "h-(--height) [transform:translateX(var(--toast-swipe-movement-x))_translateY(calc(var(--toast-swipe-movement-y)-(var(--toast-index)*var(--peek))-(var(--shrink)*var(--height))))_scale(var(--scale))] [transition:transform_500ms_cubic-bezier(0.22,1,0.36,1),opacity_500ms,height_150ms]",
         "after:absolute after:top-full after:left-0 after:h-[calc(var(--gap)+1px)] after:w-full after:content-['']",
@@ -69,8 +69,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex h-full items-center gap-2 overflow-hidden px-3 py-1 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
-        "data-expanded:has-[[data-slot=toast-description]]:items-start data-expanded:has-[[data-slot=toast-description]]:py-2 [@media(hover:none)]:has-[[data-slot=toast-description]]:items-start [@media(hover:none)]:has-[[data-slot=toast-description]]:py-2",
+        "flex h-full items-start gap-2 overflow-hidden px-3 py-2 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
         className,
       )}
       {...props}
@@ -93,10 +92,7 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
     <ToastPrimitive.Description
       data-slot="toast-description"
       className={cn(
-        "line-clamp-4 max-h-0 overflow-hidden text-xs leading-4 text-muted-foreground opacity-0 [contain:inline-size]",
-        "transition-[max-height,margin-top,opacity] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
-        "group-data-expanded/toast:mt-0.5 group-data-expanded/toast:max-h-16 group-data-expanded/toast:opacity-100 group-data-expanded/toast:[contain:none]",
-        "[@media(hover:none)]:mt-0.5 [@media(hover:none)]:max-h-16 [@media(hover:none)]:opacity-100 [@media(hover:none)]:[contain:none]",
+        "mt-0.5 truncate text-xs leading-4 text-muted-foreground [contain:inline-size]",
         className,
       )}
       {...props}
@@ -131,7 +127,7 @@ function ToastClose({
       aria-label="Close toast"
       render={render}
       className={cn(
-        "relative shrink-0 self-center text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
+        "relative -my-1 shrink-0 self-start text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
         className,
       )}
       {...props}
@@ -171,7 +167,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
   return (
     <span
       data-slot="toast-icon"
-      className="shrink-0 self-center [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4"
+      className="shrink-0 self-start [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4"
     >
       {icon}
     </span>
@@ -187,7 +183,9 @@ function ToastList() {
         <ToastIcon type={toastItem.type} />
         <div className="flex min-w-0 flex-1 flex-col">
           <ToastTitle />
-          <ToastDescription />
+          <ToastDescription
+            title={typeof toastItem.description === "string" ? toastItem.description : undefined}
+          />
         </div>
         <ToastAction />
         <ToastClose />

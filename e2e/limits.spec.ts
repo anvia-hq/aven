@@ -74,7 +74,7 @@ test.describe("the Limits card", () => {
     await page.getByRole("button", { name: "Send" }).click();
 
     await expect(page.getByText("Done.")).toBeVisible();
-    await expect(page.getByRole("region", { name: "Context" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Environment" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Limits" })).toHaveCount(0);
   });
 });

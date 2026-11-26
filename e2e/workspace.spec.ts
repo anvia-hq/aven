@@ -5,9 +5,9 @@ import { addRunner, connectGithub, importRepository, registerUser } from "./help
 test.describe("settings", () => {
   test("user menu opens personal and workspace settings", async ({ page }) => {
     await registerUser(page, "ws", "Workspace User");
-    const userCard = page.locator('[data-slot="sidebar-header"]');
+    const account = page.getByRole("navigation", { name: "Aven" });
 
-    await userCard.getByRole("button", { name: /Workspace User/ }).click();
+    await account.getByRole("button", { name: /Workspace User/ }).click();
     const menu = page.getByRole("menu");
     await expect(menu).toContainText("Workspace User");
     await expect(menu).toContainText("@");
@@ -42,7 +42,7 @@ test.describe("settings", () => {
     await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
 
     await expect(page.getByRole("link", { name: "Aven", exact: true })).toBeVisible();
-    await userCard.getByRole("button", { name: /Workspace User/ }).click();
+    await account.getByRole("button", { name: /Workspace User/ }).click();
     const organizationRow = page
       .getByRole("menu")
       .getByRole("menuitem", { name: /Organization settings/ });

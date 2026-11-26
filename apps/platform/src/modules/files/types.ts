@@ -5,7 +5,9 @@ export type { FileEntry };
 
 export type FolderResponse = { available: false } | { available: true; entries: FileEntry[] };
 
-export type SearchResponse = { available: false } | { available: true; paths: string[] };
+export type SearchResponse =
+  | { available: false }
+  | { available: true; paths: string[]; folders: string[] };
 
 export type FileResponse = { available: false } | ({ available: true } & FileContent);
 

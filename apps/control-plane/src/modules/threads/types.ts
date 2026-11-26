@@ -145,3 +145,5 @@ export type PullRequestSources = (
   userId: string,
   projectId: string,
 ) => Promise<PullRequestSource | null>;
+
+export type ThreadExchange = { user: string; assistant: string };

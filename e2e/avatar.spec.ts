@@ -19,7 +19,7 @@ test.describe("a person's photo", () => {
     await expect(page.locator('[data-slot="avatar-image"]')).toHaveCount(0);
 
     await page
-      .getByLabel("Photo")
+      .getByLabel("Photo", { exact: true })
       .setInputFiles({ name: "me.png", mimeType: "image/png", buffer: PNG });
     await expect(page.getByText("Photo saved")).toBeVisible();
 
@@ -42,7 +42,7 @@ test.describe("a person's photo", () => {
     await registerUser(page, "photo", "Photo Person");
     await page.goto("/settings/general");
     await page
-      .getByLabel("Photo")
+      .getByLabel("Photo", { exact: true })
       .setInputFiles({ name: "x.png", mimeType: "image/png", buffer: Buffer.from("not an image") });
     await expect(page.getByText("Could not save the photo")).toBeVisible();
     await expect(page.locator('[data-slot="avatar-image"]')).toHaveCount(0);
