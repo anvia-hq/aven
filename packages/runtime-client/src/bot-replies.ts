@@ -539,7 +539,7 @@ function hostedAgent(
         if (end.type === "error") {
           await agent
             .unfinishedMessages(followed.durableId)
-            .then((messages) => remember(followed.durableId, messages))
+            .then((messages) => remember(followed.durableId, parts.toolUi.attach(messages)))
             .catch(() => undefined);
           throw new Error(end.error);
         }
@@ -547,7 +547,7 @@ function hostedAgent(
         if (end.type === "interaction")
           throw new Error("This bot cannot park on a question from its agent");
 
-        await remember(followed.durableId, end.messages);
+        await remember(followed.durableId, parts.toolUi.attach(end.messages));
       } finally {
         signal.removeEventListener("abort", stop);
       }

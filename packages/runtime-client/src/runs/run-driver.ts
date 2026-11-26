@@ -12,10 +12,13 @@ import { mcpInstructions } from "@aven/agents/mcp";
 import { memoryInstructions } from "@aven/agents/memory";
 import { projectInstructions, readProjectInstructions } from "@aven/agents/project-instructions";
 import { skillsInstructions } from "@aven/agents/skills";
+import { createToolUiRecorder } from "@aven/agents/tool-ui";
+import { createShowArtifactTool } from "@aven/agents/tools/show-artifact";
 import type { ComputerHost } from "@aven/agents/tools/types";
 import type { GoalRequest } from "@aven/agents/tools/define-goal";
 import { CODING_MAX_TURNS, HAND_OFF_NOTICE, HAND_OFF_TURN } from "@aven/agents/turn-limits";
 import { errorMessage } from "@aven/agents/values";
+import { SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
 import { backendRefusal } from "@aven/protocol/runtime-wire";
 
 import { keepAttachments, promptOf, promptWith } from "../files/attachments";
@@ -490,8 +493,33 @@ export function createRunDriver(context: DriverContext) {
 
     clock.mark("skills");
     const redact = runSecretsRedactor(secrets);
+    const toolUi = createToolUiRecorder();
+    const showArtifact =
+      box.runtime && context.sandbox.artifacts
+        ? createShowArtifactTool(
+            {
+              readFile: (options) => {
+                const runtime = context.boxes.get(thread.id)?.runtime ?? box.runtime;
+
+                if (!runtime) throw new Error("The thread's sandbox is not running");
+
+                return runtime.readFile(options);
+              },
+              save: (bytes, mediaType) =>
+                context.sandbox.artifacts!.save(thread.id, bytes, mediaType),
+            },
+            (artifacts, text) =>
+              toolUi.record(SHOW_ARTIFACT_TOOL_NAME, text, {
+                artifacts: redact ? redact(artifacts) : artifacts,
+              }),
+          )
+        : undefined;
+    const withShowArtifact = (tools: readonly AnyTool[]) =>
+      showArtifact
+        ? tools.map((tool) => (tool.name === SHOW_ARTIFACT_TOOL_NAME ? showArtifact : tool))
+        : tools;
     const noted = (tools: readonly AnyTool[]) =>
-      withPlacedUploads(wakingTools(tools, wake), () =>
+      withPlacedUploads(wakingTools(withShowArtifact(tools), wake), () =>
         context.sandbox.uploads?.placedNote?.(thread.id),
       );
     const current = () => {
@@ -501,6 +529,7 @@ export function createRunDriver(context: DriverContext) {
     };
 
     let answered = false;
+    const toolNames = new Map<string, string>();
     const forward = ((event, source) => {
       if (!answered && FIRST_OUTPUT.has(event.type)) {
         answered = true;
@@ -508,6 +537,21 @@ export function createRunDriver(context: DriverContext) {
       }
 
       if (event.type === "text") sandboxReporter.ready();
+
+      if (event.type === "tool_start") toolNames.set(event.tool.id, event.tool.name);
+
+      if (
+        event.type === "tool_end" &&
+        !event.artifacts &&
+        toolNames.get(event.id) === SHOW_ARTIFACT_TOOL_NAME
+      ) {
+        const ui = toolUi.takeLive(SHOW_ARTIFACT_TOOL_NAME, event.output ?? "");
+
+        if (ui?.artifacts?.length) {
+          send({ ...event, artifacts: ui.artifacts }, source);
+          return;
+        }
+      }
 
       send(event, source);
     }) as Emit;
@@ -665,7 +709,7 @@ export function createRunDriver(context: DriverContext) {
       claudeInput: (options) => hostedInput("claude", options),
       codexInput: (options) => hostedInput("codex", options),
       forward,
-      file,
+      file: (messages) => file(toolUi.attach(messages)),
       stopIfCancelled,
     };
   }

@@ -1,11 +1,18 @@
-import type { AssistantContentPart, CompletionModel, CompletionRequest } from "@anvia/core";
+import type {
+  AssistantContentPart,
+  CompletionModel,
+  CompletionRequest,
+  Message,
+} from "@anvia/core";
 import type { SANDBOX_TOOL_NAMES } from "./sandbox-tools";
 import type { SUBAGENT_TYPES } from "./subagents";
 import type {
   MessageAttachment,
   MessageMention,
   ModelApi,
+  ProviderKeyAsk,
   SandboxProviderName,
+  ToolArtifact,
 } from "@aven/protocol/types";
 
 export type ModelSource = ModelConfig | { model: CompletionModel };
@@ -73,4 +80,16 @@ export type PackedSkill = {
   digest: string;
   size: number;
   fileCount: number;
+};
+
+export type ToolUiEntry = {
+  artifacts?: ToolArtifact[];
+  relayed?: { handle: string; text: string };
+  provider?: ProviderKeyAsk;
+};
+
+export type ToolUiRecorder = {
+  record(toolName: string, text: string, ui: ToolUiEntry): void;
+  takeLive(toolName: string, text: string): ToolUiEntry | undefined;
+  attach(messages: readonly Message[]): Message[];
 };

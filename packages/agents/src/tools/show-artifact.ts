@@ -30,7 +30,10 @@ const itemSchema = z.object({
   caption: z.string().max(500).optional().describe("A short line shown under it."),
 });
 
-export function createShowArtifactTool(files: BotFiles) {
+export function createShowArtifactTool(
+  files: BotFiles,
+  onShown?: (artifacts: ToolArtifact[], text: string) => void,
+) {
   const show = async (
     { path, caption }: z.infer<typeof itemSchema>,
     abortSignal?: AbortSignal,
@@ -71,7 +74,11 @@ export function createShowArtifactTool(files: BotFiles) {
 
       if (shown.artifacts.length === 0) throw new Error(shown.failed[0]!.error);
 
-      return shown;
+      const lines = [`Showed ${shown.paths.join(", ")}.`];
+      for (const failure of shown.failed) lines.push(`Failed (${failure.path}): ${failure.error}`);
+      const text = lines.join("\n");
+      onShown?.(shown.artifacts, text);
+      return text;
     },
   });
 }

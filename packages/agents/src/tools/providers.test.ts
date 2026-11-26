@@ -93,13 +93,21 @@ describe("the provider tools", () => {
   });
 
   test("asking for a key tells the bot to stop, and says which provider the form is for", async () => {
-    const { by } = host();
-    const result = (await by(ASK_PROVIDER_KEY_TOOL_NAME).call({ id: ID })) as {
-      provider: { providerId: string; name: string };
-      note: string;
+    const asked: unknown[] = [];
+    const hosted: ProvidersHost = {
+      list: async () => [view],
+      add: async () => view,
+      update: async () => view,
+      remove: async () => undefined,
+      models: async () => [],
+      askKey: async (id) => ({ providerId: id, name: "Claude" }),
     };
-    expect(result.provider).toEqual({ providerId: ID, name: "Claude" });
-    expect(result.note).toContain("Stop now");
+    const tools = createProviderTools(hosted, (provider) => asked.push(provider));
+    const ask = tools.find((tool) => tool.name === ASK_PROVIDER_KEY_TOOL_NAME)!;
+    const result = await ask.call({ id: ID } as never);
+    expect(asked).toEqual([{ providerId: ID, name: "Claude" }]);
+    expect(result).toContain("Claude");
+    expect(result).toContain("Stop now");
   });
 
   test("an id that is not an id, a default that is not true, or a kind we do not know is refused before the host is asked", async () => {

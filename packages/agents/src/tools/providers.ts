@@ -7,6 +7,7 @@ import {
 import { PROVIDERS } from "@aven/protocol/runtime-wire";
 import { z } from "zod";
 import type { ProvidersHost } from "./types";
+import type { ProviderKeyAsk } from "@aven/protocol/types";
 
 export const LIST_PROVIDERS_TOOL_NAME = "list_providers";
 export const ADD_PROVIDER_TOOL_NAME = "add_provider";
@@ -52,7 +53,10 @@ export type ProviderPatch = Omit<z.infer<typeof updateSchema>, "id">;
 const KEY_SHOWN =
   "The key form is on the person's screen. Stop now and send nothing else: they type the key there, it is saved to the provider without passing through you, and they will tell you in their next message.";
 
-export function createProviderTools(host: ProvidersHost) {
+export function createProviderTools(
+  host: ProvidersHost,
+  onKeyAsked?: (provider: ProviderKeyAsk, text: string) => void,
+) {
   const list = createTool({
     name: LIST_PROVIDERS_TOOL_NAME,
     description:
@@ -99,7 +103,12 @@ export function createProviderTools(host: ProvidersHost) {
           description:
             "Show the person a masked form for a provider's API key, which is saved to the provider without passing through you. Use it after add_provider, or when a provider has no key. Your turn ends there; they tell you when it is saved.",
           inputSchema: z.object({ id }),
-          handler: async ({ id }) => ({ provider: await askKey(id), note: KEY_SHOWN }),
+          handler: async ({ id }) => {
+            const provider = await askKey(id);
+            const text = `Requested API key for ${provider.name}. ${KEY_SHOWN}`;
+            onKeyAsked?.(provider, text);
+            return text;
+          },
         }),
       ]
     : [];
