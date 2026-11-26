@@ -1,6 +1,6 @@
 # A thread's mark is the computer it runs on
 
-Status: accepted. Follows 0335, which drew the box and left it unused.
+Status: accepted. Follows 0335, which drew the box and left it unused. Superseded in part by 0405 (the marks carry no project seed).
 
 ## Context
 

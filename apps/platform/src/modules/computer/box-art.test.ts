@@ -1,83 +1,39 @@
 import { describe, expect, test } from "bun:test";
 
+import { recordingContext } from "../marks/recording-context";
 import { DOTS } from "../projects/orb-art";
-import { boxRotation, boxShape, IDENTITY, multiply, paintBox, turnAbout } from "./box-art";
-import type { BoxAxis, Mat3 } from "./types";
+import { paintBox } from "./box-art";
 
-const near = (left: Mat3, right: Mat3) =>
-  left.every((row, r) => row.every((value, c) => Math.abs(value - right[r]![c]!) < 1e-9));
-
-const transpose = (m: Mat3): Mat3 => [
-  [m[0][0], m[1][0], m[2][0]],
-  [m[0][1], m[1][1], m[2][1]],
-  [m[0][2], m[1][2], m[2][2]],
-];
-
-describe("boxShape", () => {
-  test("is the same for a seed every time and differs between projects", () => {
-    expect(boxShape(42)).toEqual(boxShape(42));
-    const looks = new Set(
-      Array.from({ length: 40 }, (_, seed) => JSON.stringify(boxShape(seed + 1).half)),
-    );
-    expect(looks.size).toBe(40);
-  });
-
-  test("carries the project's dust", () => {
-    for (let seed = 1; seed < 40; seed++) {
-      expect(boxShape(seed).orb.dots).toHaveLength(DOTS);
-    }
-  });
-});
-
-describe("boxRotation", () => {
-  const axes: BoxAxis[] = ["tumble", "x", "y", "z"];
-
-  test("stays a pure rotation however long it turns, so the cube never shears", () => {
-    const shape = boxShape(9);
-    for (const axis of axes) {
-      for (const time of [0, 1.7, 55, 4000]) {
-        const turned = boxRotation(shape, time, axis);
-        expect(near(multiply(turned, transpose(turned)), IDENTITY)).toBe(true);
-      }
-    }
-  });
-
-  test("turning about an axis and back is no turn at all", () => {
-    expect(near(multiply(turnAbout("y", 0.8), turnAbout("y", -0.8)), IDENTITY)).toBe(true);
-  });
-});
-
-function drawn(seed: number, color: number) {
-  let circles = 0;
-  let strokes = 0;
-  const answers: Record<string, unknown> = {
-    arc: () => circles++,
-    stroke: () => strokes++,
-  };
-  const context = new Proxy(
-    {},
-    { get: (_, key) => answers[String(key)] ?? (() => {}), set: () => true },
-  ) as CanvasRenderingContext2D;
-  const shape = boxShape(seed);
-  paintBox(context, 40, shape, {
+function drawn(color: number, turn: number) {
+  const { context, calls } = recordingContext();
+  paintBox(context, 40, {
     ink: [120, 120, 120],
     colors: ["#ff6a3d", "#ffb347", "#ff3d7f"],
     color,
-    time: 3,
-    rotation: boxRotation(shape, 3, "tumble"),
+    turn,
   });
-  return { circles, strokes };
+  return calls;
 }
+
+const count = (calls: string[], prefix: string) =>
+  calls.filter((call) => call.startsWith(prefix)).length;
 
 describe("paintBox", () => {
   test("a box at rest has no dust and a working one has a halo and a core for every speck", () => {
-    for (let seed = 1; seed < 10; seed++) {
-      expect(drawn(seed, 0).circles).toBe(0);
-      expect(drawn(seed, 1).circles).toBe(DOTS * 2);
-    }
+    expect(count(drawn(0, 0), "arc ")).toBe(0);
+    expect(count(drawn(1, 0.3), "arc ")).toBe(DOTS * 2);
   });
 
   test("draws the cube's twelve edges and nothing inside it", () => {
-    for (let seed = 1; seed < 10; seed++) expect(drawn(seed, 1).strokes).toBe(12);
+    expect(count(drawn(1, 0.3), "stroke ")).toBe(12);
+  });
+
+  test("a box at rest looks the same after any whole number of turns", () => {
+    const start = drawn(0, 0);
+    for (const turns of [1, 2, 7]) expect(drawn(0, turns)).toEqual(start);
+  });
+
+  test("a working box looks different part way through a turn", () => {
+    expect(drawn(1, 0.2)).not.toEqual(drawn(1, 0));
   });
 });

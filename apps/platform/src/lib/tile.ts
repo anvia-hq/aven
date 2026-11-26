@@ -34,10 +34,6 @@ export function tilePalettes(projectIds: readonly string[]) {
   return chosen;
 }
 
-export function tileSeed(projectId: string) {
-  return hash(projectId);
-}
-
 export function tileColors(projectId: string, palette?: number): OrbColors {
   return palettes[palette ?? hash(projectId) % palettes.length]!;
 }

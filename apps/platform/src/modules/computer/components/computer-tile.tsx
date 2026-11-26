@@ -1,10 +1,10 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
-import { tileColors, tileSeed } from "@/lib/tile";
+import { tileColors } from "@/lib/tile";
 import { MarkCanvas } from "@/modules/marks/components/mark-canvas";
 import type { MarkFrame, OrbColors } from "@/modules/marks/types";
 
-import { boxRotation, boxShape, paintBox } from "../box-art";
+import { paintBox } from "../box-art";
 
 type Props = {
   projectId: string;
@@ -25,18 +25,11 @@ export function ComputerTile({
   decorative = false,
   className,
 }: Props) {
-  const shape = useMemo(() => boxShape(tileSeed(projectId)), [projectId]);
   const [first, second, third] = colors ?? tileColors(projectId, palette);
   const paint = useCallback(
-    (context: CanvasRenderingContext2D, { size, ink, color, time }: MarkFrame) =>
-      paintBox(context, size, shape, {
-        ink,
-        colors: [first, second, third],
-        color,
-        time,
-        rotation: boxRotation(shape, time, "tumble"),
-      }),
-    [shape, first, second, third],
+    (context: CanvasRenderingContext2D, { size, ink, color, turn }: MarkFrame) =>
+      paintBox(context, size, { ink, colors: [first, second, third], color, turn }),
+    [first, second, third],
   );
 
   return (

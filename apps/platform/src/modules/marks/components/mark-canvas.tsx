@@ -2,7 +2,8 @@ import { cn } from "cn";
 import { useEffect, useRef } from "react";
 
 import { onThemeChange, resolveInk } from "../ink";
-import type { MarkPaint } from "../types";
+import { restingMotion, stepMotion } from "../motion";
+import type { MarkPaint, Motion } from "../types";
 
 type Props = {
   paint: MarkPaint;
@@ -12,8 +13,6 @@ type Props = {
   className?: string;
 };
 
-const COLOR_MS = 450;
-
 export function MarkCanvas({
   paint,
   working = false,
@@ -22,8 +21,7 @@ export function MarkCanvas({
   className,
 }: Props) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const color = useRef(0);
-  const turned = useRef(0);
+  const motion = useRef<Motion>(restingMotion());
 
   useEffect(() => {
     const element = canvas.current;
@@ -34,7 +32,8 @@ export function MarkCanvas({
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
     let size = 0;
     let ink = resolveInk(element);
-    const draw = () => paint(context, { size, ink, color: color.current, time: turned.current });
+    const draw = () =>
+      paint(context, { size, ink, color: motion.current.color, turn: motion.current.turn });
     let animating = false;
     const redraw = () => {
       if (!animating) draw();
@@ -56,10 +55,13 @@ export function MarkCanvas({
     };
     measure();
 
-    const target = working ? 1 : 0;
+    if (still) {
+      motion.current = { ...restingMotion(), color: working ? 1 : 0 };
+      draw();
+      return stop;
+    }
 
-    if (still || (!working && color.current === 0)) {
-      color.current = target;
+    if (!working && motion.current.mode === "rest") {
       draw();
       return stop;
     }
@@ -70,13 +72,10 @@ export function MarkCanvas({
     const tick = (now: number) => {
       const step = Math.min((now - last) / 1000, 0.1);
       last = now;
-      turned.current += step * speed;
-      color.current +=
-        Math.sign(target - color.current) *
-        Math.min((step * 1000) / COLOR_MS, Math.abs(target - color.current));
+      motion.current = stepMotion(motion.current, step * speed, working);
       draw();
 
-      if (working || color.current > 0) frame = requestAnimationFrame(tick);
+      if (working || motion.current.mode !== "rest") frame = requestAnimationFrame(tick);
       else animating = false;
     };
     frame = requestAnimationFrame(tick);

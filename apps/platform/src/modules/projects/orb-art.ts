@@ -1,4 +1,6 @@
-import type { OrbColors, OrbShape, Rgb } from "./types";
+import { apply, multiply, TAU, turnAbout, viewAt } from "../marks/rotation";
+import type { Vec3 } from "../marks/types";
+import type { Dot, OrbColors, Rgb } from "./types";
 
 export function random(seed: number) {
   let state = seed >>> 0;
@@ -8,36 +10,25 @@ export function random(seed: number) {
   };
 }
 
-export const DOTS = 72;
+export const DOTS = 44;
+export const LIGHT_START = -0.9;
 
-const LIGHT_TURN = 0.6;
-
-export function orbShape(seed: number): OrbShape {
-  const next = random(seed);
-  const light = next() * Math.PI * 2;
-  const rings = Array.from({ length: 2 + Math.floor(next() * 2) }, () => ({
-    across: 0.25 + next() * 0.7,
-    turn: next() * Math.PI,
-    speed: (next() < 0.5 ? -1 : 1) * (0.25 + next() * 0.35),
-  }));
-  const lobes = [0, 1.1 + next() * 0.4, -(1.1 + next() * 0.4)];
-  const dots = Array.from({ length: DOTS }, (_, index) => ({
-    lobe: lobes[index % 3]!,
-    spread: (next() - 0.5) * 0.8,
-    start: 0.55 + next() * 0.45,
-    reach: 0.12 + next() * 0.3,
-    curl: (next() - 0.35) * 0.9,
-    rate: 0.3 + next() * 0.5,
-    phase: next(),
-    wobble: 2 + next() * 4,
-    wobblePhase: next() * Math.PI * 2,
-    twinkle: 3 + next() * 5,
-    size: 0.018 + next() * next() * 0.05,
-    alpha: 0.8 + next() * 0.2,
-    tone: Math.floor(next() * 4),
-  }));
-  return { light, rings, dots };
-}
+const next = random(20260126);
+const DUST: readonly Dot[] = Array.from({ length: DOTS }, (_, index) => ({
+  lobe: [0, 1.25, -1.25][index % 3]!,
+  spread: (next() - 0.5) * 0.8,
+  start: 0.55 + next() * 0.45,
+  reach: 0.12 + next() * 0.3,
+  curl: (next() - 0.35) * 0.9,
+  cycles: next() < 0.5 ? 1 : 2,
+  phase: next(),
+  wobble: 1 + Math.floor(next() * 3),
+  wobblePhase: next() * TAU,
+  twinkle: 2 + Math.floor(next() * 4),
+  size: 0.018 + next() * next() * 0.05,
+  alpha: 0.8 + next() * 0.2,
+  tone: Math.floor(next() * 4),
+}));
 
 export function hexRgb(hex: string): Rgb {
   const value = Number.parseInt(hex.slice(1), 16);
@@ -71,27 +62,42 @@ export function blend(from: Rgb, to: Rgb, amount: number): Rgb {
   ];
 }
 
+export function toneSet(ink: Rgb, colors: OrbColors, color: number): [Rgb, Rgb, Rgb, Rgb] {
+  return [
+    blend(ink, hexRgb(colors[0]), color),
+    blend(ink, hexRgb(colors[1]), color),
+    blend(ink, hexRgb(colors[2]), color),
+    blend(ink, [255, 255, 255], color),
+  ];
+}
+
 type Paint = {
   ink: Rgb;
   colors: OrbColors;
   color: number;
-  time: number;
+  turn: number;
 };
+
+const SEGMENTS = 72;
+const EYE = 7;
+const CIRCLES: readonly ((angle: number) => Vec3)[] = [
+  (angle) => [Math.cos(angle), 0, Math.sin(angle)],
+  (angle) => [Math.cos(angle), Math.sin(angle), 0],
+  (angle) => [0, Math.cos(angle), Math.sin(angle)],
+];
+
+type Segment = { fromX: number; fromY: number; toX: number; toY: number; depth: number };
 
 export function paintOrb(
   context: CanvasRenderingContext2D,
   size: number,
-  shape: OrbShape,
-  { ink, colors, color, time }: Paint,
+  { ink, colors, color, turn }: Paint,
 ) {
-  const a = blend(ink, hexRgb(colors[0]), color);
-  const b = blend(ink, hexRgb(colors[1]), color);
-  const c = blend(ink, hexRgb(colors[2]), color);
-  const white: Rgb = blend(ink, [255, 255, 255], color);
+  const [a, b, c, white] = toneSet(ink, colors, color);
   const centre = size / 2;
   const radius = size * 0.35;
   const stroke = Math.max(size * 0.04, 1);
-  const light = shape.light + time * LIGHT_TURN;
+  const light = LIGHT_START + TAU * (turn % 1);
   context.clearRect(0, 0, size, size);
 
   const glass = context.createRadialGradient(
@@ -106,25 +112,40 @@ export function paintOrb(
   glass.addColorStop(1, rgba(a, 0.03));
   context.fillStyle = glass;
   context.beginPath();
-  context.arc(centre, centre, radius, 0, Math.PI * 2);
+  context.arc(centre, centre, radius, 0, TAU);
   context.fill();
 
-  context.lineWidth = stroke;
-  shape.rings.forEach((ring, index) => {
-    context.strokeStyle = rgba(index % 2 ? b : c, 0.7);
-    context.beginPath();
-    context.ellipse(
-      centre,
-      centre,
-      radius * 0.96,
-      radius * ring.across,
-      ring.turn + time * ring.speed,
-      0,
-      Math.PI * 2,
-    );
-    context.stroke();
+  const view = viewAt(turn);
+  const tumbles = [turnAbout("y", 0), turnAbout("x", TAU * turn), turnAbout("z", -2 * TAU * turn)];
+  const segments = CIRCLES.flatMap((circle, index) => {
+    const placed = multiply(view, tumbles[index]!);
+    const points = Array.from({ length: SEGMENTS + 1 }, (_, step) => {
+      const [x, y, depth] = apply(placed, circle((TAU * step) / SEGMENTS));
+      const focus = EYE / (EYE - depth);
+      return { x: centre + x * radius * 0.9 * focus, y: centre - y * radius * 0.9 * focus, depth };
+    });
+    return points.slice(1).map((point, step): Segment => ({
+      fromX: points[step]!.x,
+      fromY: points[step]!.y,
+      toX: point.x,
+      toY: point.y,
+      depth: Math.round(((points[step]!.depth + point.depth) / 2) * 1e6) / 1e6,
+    }));
   });
+  segments.sort((left, right) => left.depth - right.depth);
+  context.lineCap = "round";
 
+  for (const { fromX, fromY, toX, toY, depth } of segments) {
+    const near = (depth + 1) / 2;
+    context.lineWidth = stroke * (0.45 + 0.9 * near);
+    context.strokeStyle = rgba(blend(b, white, near * 0.55), 0.16 + 0.78 * near);
+    context.beginPath();
+    context.moveTo(fromX, fromY);
+    context.lineTo(toX, toY);
+    context.stroke();
+  }
+
+  context.lineWidth = stroke * 0.7;
   const sweep = context.createConicGradient(light, centre, centre);
   sweep.addColorStop(0, rgba(white, 0.95));
   sweep.addColorStop(0.18, rgba(b, 1));
@@ -133,50 +154,51 @@ export function paintOrb(
   sweep.addColorStop(1, rgba(white, 0.95));
   context.strokeStyle = sweep;
   context.beginPath();
-  context.arc(centre, centre, radius, 0, Math.PI * 2);
+  context.arc(centre, centre, radius, 0, TAU);
   context.stroke();
 
-  if (color > 0.01) paintDust(context, size, radius, shape, [a, b, c, white], color, time);
+  if (color > 0.01) paintDust(context, size, radius, [a, b, c, white], color, turn);
 }
 
 const easeOut = (amount: number) => 1 - (1 - amount) ** 2.4;
-const smooth = (amount: number) => amount * amount * (3 - 2 * amount);
+const smooth = (amount: number) => {
+  const x = Math.min(Math.max(amount, 0), 1);
+  return x * x * (3 - 2 * x);
+};
 
 export function paintDust(
   context: CanvasRenderingContext2D,
   size: number,
   radius: number,
-  shape: OrbShape,
   tones: Rgb[],
   color: number,
-  time: number,
+  turn: number,
 ) {
   const centre = size / 2;
-  for (const dot of shape.dots) {
-    const life = (dot.phase + time * dot.rate) % 1;
-    const age = life / dot.rate;
-    const born = shape.light + (time - age) * LIGHT_TURN;
+
+  for (const dot of DUST) {
+    const life = (dot.phase + turn * dot.cycles) % 1;
+    const born = LIGHT_START + TAU * (turn - life / dot.cycles);
     const angle =
       born +
       dot.lobe +
       dot.spread +
       life * dot.curl +
-      Math.sin(age * dot.wobble + dot.wobblePhase) * 0.1 * life;
+      Math.sin(TAU * dot.wobble * life + dot.wobblePhase) * 0.1 * life;
     const distance = radius * (dot.start + (1 + dot.reach - dot.start) * easeOut(life));
-    const twinkle = 0.75 + 0.25 * Math.sin(age * dot.twinkle + dot.wobblePhase);
-    const alpha =
-      dot.alpha * color * twinkle * smooth(Math.min(life / 0.12, 1)) * (1 - life) ** 1.3;
+    const twinkle = 0.75 + 0.25 * Math.sin(TAU * dot.twinkle * life + dot.wobblePhase);
+    const alpha = dot.alpha * color * twinkle * smooth(life / 0.12) * (1 - life) ** 1.3;
     const x = centre + Math.cos(angle) * distance;
     const y = centre + Math.sin(angle) * distance;
     const grain = Math.max(size * dot.size * (1.1 - 0.65 * life), 0.8);
     const tone = tones[dot.tone]!;
     context.fillStyle = rgba(tone, alpha * 0.2);
     context.beginPath();
-    context.arc(x, y, grain * 2, 0, Math.PI * 2);
+    context.arc(x, y, grain * 2, 0, TAU);
     context.fill();
     context.fillStyle = rgba(tone, alpha);
     context.beginPath();
-    context.arc(x, y, grain, 0, Math.PI * 2);
+    context.arc(x, y, grain, 0, TAU);
     context.fill();
   }
 }
