@@ -24,7 +24,7 @@ export function RuntimePicker({ choices, value, onChange }: Props) {
     >
       <SelectTrigger
         aria-label="Computer"
-        className="h-7 max-w-48 min-w-0 rounded-full! border-transparent bg-muted/40 px-3 text-[0.8rem] font-medium text-muted-foreground dark:bg-muted/40"
+        className="h-7 max-w-48 min-w-0 rounded-full! border-0 bg-muted/40 px-3 text-[0.8rem] font-medium text-muted-foreground dark:bg-muted/40"
       >
         <SelectValue placeholder="Choose a computer" />
       </SelectTrigger>
