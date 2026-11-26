@@ -97,5 +97,5 @@ export function useTheme() {
     if (!existing) document.head.appendChild(link);
   }, [font]);
 
-  return { theme, resolvedTheme, setTheme, palette, setPalette, font, setFont };
+  return { theme, resolvedTheme, setTheme, palette: activePalette, setPalette, font, setFont };
 }
