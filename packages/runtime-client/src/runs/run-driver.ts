@@ -149,6 +149,7 @@ async function prepareRun(
   threadId: string,
   secrets: RunSecrets | undefined,
   controlPlane: string,
+  cloud = false,
 ) {
   const { github, identity, env } = secrets ?? {};
   await Promise.all([
@@ -159,7 +160,15 @@ async function prepareRun(
       console.warn(`Run ${runId} could not sign in to mint identity tokens:`, errorMessage(error));
     }),
   ]);
-  sandbox.setProjectEnv?.(threadId, env);
+  let sandboxEnv = env;
+
+  if (cloud && !env?.some((variable) => variable.name === "AVEN_CLOUD")) {
+    const next = env ? [...env] : [];
+    next.push({ name: "AVEN_CLOUD", value: "1", secret: false });
+    sandboxEnv = next;
+  }
+
+  sandbox.setProjectEnv?.(threadId, sandboxEnv);
 }
 
 async function inputFor(
@@ -433,7 +442,14 @@ export function createRunDriver(context: DriverContext) {
 
         if (run.cancelReason) throw new Error(run.cancelReason);
 
-        await prepareRun(context.sandbox, runId, thread.id, secrets, context.controlPlane);
+        await prepareRun(
+          context.sandbox,
+          runId,
+          thread.id,
+          secrets,
+          context.controlPlane,
+          sandboxProvider(thread) !== undefined,
+        );
         clock.mark("sign-in");
 
         if (sandboxProvider(thread)) await resumeEnvironment();

@@ -20,6 +20,7 @@ import {
 } from "./commands/runner";
 import { doctor } from "./commands/doctor";
 import { install } from "./commands/install";
+import { proxyCommand } from "./commands/proxy";
 import { uninstall } from "./commands/uninstall";
 import { update } from "./commands/update";
 import { version } from "./version";
@@ -58,6 +59,8 @@ Runner (this machine hosts sandboxes for a server):
   runner run  Run in the foreground (what the service runs)
 
 Other:
+  proxy --port N --web N [--api N] [--route /prefix=N,...] [--origin URL] [--bind ADDRESS]
+              Serve a frontend and API behind one local port for the Browser panel
   update [--release X]
               Update aven, the server and the runner on this machine
   version     Print the version
@@ -71,6 +74,9 @@ export async function runCli(argv: string[], log: (text: string) => void = conso
     "port",
     "https-port",
     "api-port",
+    "web",
+    "api",
+    "route",
     "domain",
     "origin",
     "release",
@@ -138,6 +144,8 @@ export async function runCli(argv: string[], log: (text: string) => void = conso
       return doctor();
     case "uninstall":
       return uninstall(args);
+    case "proxy":
+      return proxyCommand(args, log);
     case "update":
       return update(args);
     case "start":

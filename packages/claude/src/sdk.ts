@@ -31,6 +31,10 @@ const BLOCKED_ENV_PREFIXES = ["ANTHROPIC_", "CLAUDE_"];
 
 export const CLAUDE_MCP_TOOL_TIMEOUT_MS = "86400000";
 
+export function claudeToolAliases(tools: readonly { name: string }[]): Record<string, string> {
+  return Object.fromEntries(tools.map((item) => [item.name, `mcp__aven__${item.name}`]));
+}
+
 export function claudeProcessEnv(
   project: readonly RunEnvVar[],
   token: string,
@@ -106,6 +110,7 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
     const server = sdk.createSdkMcpServer({
       name: "aven",
       version: "1.0.0",
+      alwaysLoad: true,
       tools: own.map((item) =>
         sdk.tool(item.name, item.description, item.shape, async (args) => item.handler(args)),
       ),
@@ -127,8 +132,9 @@ export const claudeSdkQuery: ClaudeQuery = (input) => {
       settingSources: [] as [],
       includePartialMessages: true,
       persistSession: true,
-      mcpServers: { aven: server },
+      mcpServers: { aven: { ...server, alwaysLoad: true } },
       allowedTools: own.map((item) => `mcp__aven__${item.name}`),
+      toolAliases: claudeToolAliases(own),
       tools: [] as string[],
       disallowedTools: CLAUDE_DISALLOWED_TOOLS,
       env: claudeProcessEnv(input.env, input.token, input.configDir, process.env, extra),

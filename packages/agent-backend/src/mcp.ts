@@ -1,9 +1,15 @@
 import type { AnyTool } from "@anvia/core";
 import { isRichToolOutput } from "@aven/agents/strict-tool-output";
+import { createOpenBrowserTool } from "@aven/agents/tools/open-browser";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import { createWebSearchTool, WEB_SEARCH_TOOL_NAME } from "@aven/agents/tools/web-search";
 import { asRecord, errorMessage } from "@aven/agents/values";
-import { QUESTION_TOOL_NAME, SECRET_TOOL_NAME, SPAWN_AGENT_TOOL_NAME } from "@aven/protocol/events";
+import {
+  OPEN_BROWSER_TOOL_NAME,
+  QUESTION_TOOL_NAME,
+  SECRET_TOOL_NAME,
+  SPAWN_AGENT_TOOL_NAME,
+} from "@aven/protocol/events";
 import type { QuestionPrompt, ToolArtifact } from "@aven/protocol/types";
 import { z } from "zod";
 
@@ -180,6 +186,10 @@ export async function callAvenToolResult(
       return { text: await host.onPark(question), isError: false };
     }
 
+    if (host.questions !== false && name === OPEN_BROWSER_TOOL_NAME) {
+      return await runToolOutput(createOpenBrowserTool(), input, host);
+    }
+
     if (name === SPAWN_AGENT_TOOL_NAME && host.runSubagent) {
       return await runToolOutput(createSpawnAgentTool(host.runSubagent), input, host);
     }
@@ -333,12 +343,27 @@ export async function backendMcpTools(
       shape: questionShape,
       handler: plain((args) => callAvenToolResult(SECRET_TOOL_NAME, args, host)),
     });
+    const openBrowser = createOpenBrowserTool();
+    const describedBrowser = await describeTool(openBrowser);
+    tools.push({
+      name: openBrowser.name,
+      description: describedBrowser.description,
+      shape: describedBrowser.shape,
+      inputSchema: describedBrowser.inputSchema,
+      handler: wrap((args) => runToolResult(openBrowser, args, host)),
+    });
   }
 
   for (const tool of host.catalog ?? []) {
     if (tool.name === SPAWN_AGENT_TOOL_NAME) continue;
 
-    if (tool.name === QUESTION_TOOL_NAME || tool.name === SECRET_TOOL_NAME) continue;
+    if (
+      tool.name === QUESTION_TOOL_NAME ||
+      tool.name === SECRET_TOOL_NAME ||
+      tool.name === OPEN_BROWSER_TOOL_NAME
+    ) {
+      continue;
+    }
 
     if (tool.name === WEB_SEARCH_TOOL_NAME && host.webSearch) continue;
 

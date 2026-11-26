@@ -703,7 +703,7 @@ describe("Claude runs with the same preparation as native", () => {
     expect(JSON.stringify(reported)).toContain("text/html");
     expect(JSON.stringify(reported)).toContain("video/mp4");
     expect(signed).toEqual(["octo", "oidc-cred"]);
-    expect(projectEnv).toEqual(["API_URL"]);
+    expect(projectEnv).toEqual(["API_URL", "AVEN_CLOUD"]);
     expect(started).toBe(1);
     expect(JSON.stringify(reported)).not.toContain(TOKEN);
   });

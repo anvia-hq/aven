@@ -49,3 +49,19 @@ export type ServiceManager = {
   restart(): Promise<void>;
   status(): Promise<string>;
 };
+
+export type ProxyRoute = { prefix: string; port: number };
+
+export type PreviewProxyOptions = {
+  port: number;
+  webPort: number;
+  apiPort?: number;
+  routes?: readonly ProxyRoute[];
+  origin?: string;
+  bind?: string;
+};
+
+export type PreviewProxyHandle = {
+  port: number;
+  stop(): void;
+};
