@@ -70,11 +70,11 @@ function skillsDigest(section: string): string {
   return new Bun.CryptoHasher("sha256").update(section).digest("hex");
 }
 
-function syncSkillsSection(
+function pendingSkillsSync(
   codexHome: string,
   instructions: string | undefined,
   resumed: boolean,
-): string | undefined {
+): { update?: string; commit: () => void } {
   const section = skillsSectionOf(instructions);
   const digest = skillsDigest(section);
   const path = join(codexHome, "skills-digest");
@@ -86,15 +86,17 @@ function syncSkillsSection(
     previous = undefined;
   }
 
-  try {
-    writeFileSync(path, digest, { mode: 0o600 });
-  } catch {
-    void 0;
-  }
+  const commit = () => {
+    try {
+      writeFileSync(path, digest, { mode: 0o600 });
+    } catch {
+      void 0;
+    }
+  };
 
-  if (!resumed || previous === digest || section.length === 0) return undefined;
+  if (!resumed || previous === digest || section.length === 0) return { commit };
 
-  return section;
+  return { update: section, commit };
 }
 
 export function promptOf(
@@ -190,12 +192,12 @@ export function createCodexQuery(load: CodexLoader = loadSdk): CodexQuery {
         ? codex.resumeThread(input.sessionId, options)
         : codex.startThread(options);
       const paths = await imagePaths(input.codexHome, input.images);
-      const skillsUpdate = syncSkillsSection(
+      const skillsSync = pendingSkillsSync(
         input.codexHome,
         input.instructions,
         Boolean(input.sessionId),
       );
-      const text = promptOf({ ...input, skillsUpdate });
+      const text = promptOf({ ...input, skillsUpdate: skillsSync.update });
       const body =
         paths.length > 0
           ? [
@@ -208,6 +210,8 @@ export function createCodexQuery(load: CodexLoader = loadSdk): CodexQuery {
         for await (const event of events) {
           if (event && typeof event === "object" && "type" in event) yield event;
         }
+
+        if (!abort.signal.aborted) skillsSync.commit();
       } finally {
         await Promise.all(paths.map((path) => rm(path, { force: true })));
       }

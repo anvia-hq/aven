@@ -269,6 +269,82 @@ describe("a Codex turn", () => {
       await rm(home, { recursive: true, force: true });
     }
   });
+
+  test("retries sending updated skills if the previous resumed turn threw before finishing", async () => {
+    const home = await mkdtemp(join(tmpdir(), "aven-codex-skills-retry-"));
+    const sent: string[] = [];
+    let failNext = false;
+    const load: CodexLoader = async () => ({
+      startThread() {
+        return {
+          async runStreamed(body) {
+            sent.push(String(body));
+            return {
+              events: streamOf([
+                { type: "thread.started", thread_id: "sess-retry" },
+                { type: "turn.completed", usage: emptyUsage() },
+              ]),
+            };
+          },
+        };
+      },
+      resumeThread() {
+        return {
+          async runStreamed(body) {
+            sent.push(String(body));
+
+            if (failNext) {
+              failNext = false;
+              throw new Error("transient network error");
+            }
+
+            return { events: streamOf([{ type: "turn.completed", usage: emptyUsage() }]) };
+          },
+        };
+      },
+    });
+    const firstSkills = "<skills>\n- notes: Notes (/skills/notes/SKILL.md)\n</skills>";
+    const updatedSkills =
+      "<skills>\n- notes: Notes (/skills/notes/SKILL.md)\n- review: Review (/skills/review/SKILL.md)\n</skills>";
+    try {
+      const query = createCodexQuery(load);
+      for await (const _e of query(
+        input({ codexHome: home, prompt: "turn 1", instructions: firstSkills }),
+      )) {
+        void _e;
+      }
+      failNext = true;
+      await expect(
+        (async () => {
+          for await (const _e of query(
+            input({
+              codexHome: home,
+              sessionId: "sess-retry",
+              prompt: "turn 2",
+              instructions: updatedSkills,
+            }),
+          )) {
+            void _e;
+          }
+        })(),
+      ).rejects.toThrow("transient network error");
+
+      for await (const _e of query(
+        input({
+          codexHome: home,
+          sessionId: "sess-retry",
+          prompt: "turn 2 retry",
+          instructions: updatedSkills,
+        }),
+      )) {
+        void _e;
+      }
+      expect(sent[1]).toContain(updatedSkills);
+      expect(sent[2]).toContain(updatedSkills);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
 });
 
 async function* streamOf(events: CodexSdkEvent[]) {

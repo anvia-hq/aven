@@ -70,7 +70,11 @@ export function normalizePreviewPath(raw?: string): string {
 
     if (parsed.origin !== "https://preview.invalid") return "/";
 
-    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    const result = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+
+    if (result.startsWith("//") || result.startsWith("/\\")) return "/";
+
+    return result;
   } catch {
     return "/";
   }

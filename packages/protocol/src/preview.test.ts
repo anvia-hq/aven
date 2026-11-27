@@ -37,6 +37,7 @@ describe("normalizePreviewPath", () => {
   test("falls back to root for external schemes, protocol-relative paths, or control characters", () => {
     for (const bad of [
       "//evil.test/steal",
+      "/a/..//evil.test/steal",
       "/\\evil.test",
       "https://evil.test/x",
       "javascript:alert(1)",
