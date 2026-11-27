@@ -123,7 +123,7 @@ export function BotChatBubble({
           <div
             {...swipeMotion}
             className={cn(
-              "relative flex w-fit max-w-[80%] min-w-0 flex-col items-end gap-1 self-end",
+              "relative flex w-fit max-w-[80%] min-w-0 touch-pan-y flex-col items-end gap-1 self-end",
               !swipe.dragging && "transition-transform duration-200 ease-out",
             )}
           >
@@ -165,7 +165,7 @@ export function BotChatBubble({
               >
                 <BubbleContent
                   className={cn(
-                    "rounded-3xl border-(--bot-bubble-border) bg-linear-to-b from-(--bot-bubble-from) to-(--bot-bubble-to) bg-clip-padding px-4 py-2.5 font-medium [&>.prose]:text-[15px] [&>.prose]:leading-[24px]",
+                    "rounded-3xl border-(--bot-bubble-border) bg-linear-to-b from-(--bot-bubble-from) to-(--bot-bubble-to) bg-clip-padding px-4 py-2.5 font-medium [&>.prose]:text-[15px] [&>.prose]:leading-[24px] [&>.prose>*:not(pre):not(table):not(:has(pre,table))]:touch-pan-y",
                     joined?.above && "rounded-tl-lg",
                     joined?.below && "rounded-bl-lg",
                   )}
@@ -240,7 +240,7 @@ function ReplyTo({
     <div
       data-slot="quote"
       className={cn(
-        "flex max-w-md min-w-0 items-center gap-1.5 px-3 text-xs leading-5 text-muted-foreground",
+        "flex max-w-md min-w-0 touch-pan-y items-center gap-1.5 px-3 text-xs leading-5 text-muted-foreground",
         mine && "justify-end",
       )}
       title={`${author}: ${preview}`}
