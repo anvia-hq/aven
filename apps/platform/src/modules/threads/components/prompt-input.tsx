@@ -159,7 +159,7 @@ function Composer({
         aria-label="Prompt"
         placeholder={placeholder}
         renderEntity={renderEntity(people)}
-        className="max-h-60 min-h-14 overflow-y-auto p-1 text-base leading-6 md:text-sm [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
+        className="max-h-60 min-h-14 overflow-y-auto p-1 text-[max(1rem,16px)] leading-6 md:text-sm [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
       <div className="flex items-center gap-2 pt-2 pb-4">
         <AttachButton

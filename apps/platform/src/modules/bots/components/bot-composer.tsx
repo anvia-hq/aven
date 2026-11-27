@@ -208,7 +208,8 @@ function Composer({
           placeholder={placeholder}
           renderEntity={entity}
           className={cn(
-            "max-h-48 min-h-9 min-w-0 overflow-y-auto py-1.5 text-sm leading-6 [grid-area:input]",
+            "max-h-48 min-h-9 min-w-0 py-1.5 text-[max(1rem,16px)] leading-6 md:text-sm [grid-area:input]",
+            composer.input.length === 0 ? "overflow-y-hidden" : "overflow-y-auto",
             expanded && "px-2",
           )}
         />

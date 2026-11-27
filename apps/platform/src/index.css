@@ -1558,6 +1558,10 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
     content: attr(data-placeholder);
     float: left;
     height: 0;
+    max-width: 100%;
+    overflow-x: clip;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     pointer-events: none;
     color: var(--muted-foreground);
   }
