@@ -98,6 +98,7 @@ test("the agent is told a server runs on the machine and that localhost is the p
   expect(section).toContain("localhost and 127.0.0.1 mean the machine the page is opened on");
   expect(section).toContain("relative URLs");
   expect(section).toContain("Never offer open_browser for a separate backend API port");
+  expect(section).toContain("make sure the app and its API work through one port");
 
   const sandbox = codingInstructions(200, true, "spaces")
     .split("<servers>")[1]!

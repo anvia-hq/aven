@@ -289,6 +289,84 @@ describe("Aven tools on the hosted backend MCP server", () => {
     });
   });
 
+  test("preserves primitive, enum, array, object and required types in MCP Zod shapes for Claude", async () => {
+    const runCommand = createTool({
+      name: "exec_command",
+      description: "Run a command",
+      inputSchema: z.object({
+        command: z.string().describe("Shell command"),
+        background: z.boolean().optional().describe("Run in background"),
+        timeoutMs: z.number().int().min(1000).max(600000).optional(),
+        mode: z.enum(["fast", "full"]).default("fast"),
+        items: z
+          .array(
+            z.object({
+              port: z.number().int().min(1).max(65535),
+              label: z.string().optional(),
+            }),
+          )
+          .optional(),
+      }),
+      async handler() {
+        return "ok";
+      },
+    });
+    const tools = await backendMcpTools({
+      catalog: [runCommand],
+      runSubagent: async () => "done",
+    });
+
+    const openBrowser = tools.find((item) => item.name === "open_browser");
+    expect(openBrowser).toBeDefined();
+    expect(mcpInputSchema(openBrowser!.shape)).toMatchObject({
+      type: "object",
+      properties: {
+        port: { type: "integer", minimum: 1, maximum: 65535 },
+      },
+      required: ["port"],
+    });
+
+    const exec = tools.find((item) => item.name === "exec_command");
+    expect(exec).toBeDefined();
+    expect(mcpInputSchema(exec!.shape)).toMatchObject({
+      type: "object",
+      properties: {
+        command: { type: "string", description: "Shell command" },
+        background: { type: "boolean", description: "Run in background" },
+        timeoutMs: { type: "integer", minimum: 1000, maximum: 600000 },
+        mode: { type: "string", enum: ["fast", "full"] },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              port: { type: "integer", minimum: 1, maximum: 65535 },
+              label: { type: "string" },
+            },
+            required: ["port"],
+          },
+        },
+      },
+      required: ["command"],
+    });
+
+    const execValidator = z.object(exec!.shape);
+    expect(execValidator.safeParse({ command: "ls" }).success).toBe(true);
+    expect(
+      execValidator.safeParse({ command: "ls", background: true, timeoutMs: 5000 }).success,
+    ).toBe(true);
+    expect(execValidator.safeParse({ command: "ls", background: "true" }).success).toBe(false);
+    expect(z.object(openBrowser!.shape).safeParse({ port: "5173" }).success).toBe(false);
+    expect(z.object(openBrowser!.shape).safeParse({ port: 5173 }).success).toBe(true);
+
+    const spawn = tools.find((item) => item.name === "spawn_agent");
+    expect(spawn).toBeDefined();
+    expect(
+      z.object(spawn!.shape).safeParse({ tasks: [{ description: "check", prompt: "inspect" }] })
+        .success,
+    ).toBe(true);
+  });
+
   test("converts Zod shapes to JSON schema with primitive, array and object types", () => {
     const schema = mcpInputSchema({
       query: z.string().describe("Search query"),
