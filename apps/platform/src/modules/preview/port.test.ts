@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { addressOf, parsePort } from "./port";
+import { addressOf, parseAddress, parsePort } from "./port";
 
 describe("parsePort", () => {
   test("reads a port, with or without a colon and spaces", () => {
@@ -42,5 +42,47 @@ describe("parsePort", () => {
     for (const text of ["", "0", "65536", "-1", "3000.5", "http://x", "localhost", "abc", "1e3"]) {
       expect(parsePort(text)).toBeNull();
     }
+  });
+});
+
+describe("parseAddress and addressOf", () => {
+  const target = {
+    runtimeId: "00000000-0000-4000-8000-000000000001",
+    previewDomain: "aven.run",
+  };
+
+  test("keeps path, query and hash alongside the port", () => {
+    expect(parseAddress("5173/login?next=%2Fapp#top")).toEqual({
+      port: 5173,
+      path: "/login?next=%2Fapp#top",
+    });
+    expect(parseAddress("http://localhost:3000/settings?tab=1", target)).toEqual({
+      port: 3000,
+      path: "/settings?tab=1",
+    });
+    expect(
+      parseAddress(
+        "https://5173-00000000-0000-4000-8000-000000000001.aven.run/dashboard?view=all",
+        target,
+      ),
+    ).toEqual({ port: 5173, path: "/dashboard?view=all" });
+  });
+
+  test("accepts a bare path when a port is already open", () => {
+    expect(parseAddress("/settings?tab=keys", target, 5173)).toEqual({
+      port: 5173,
+      path: "/settings?tab=keys",
+    });
+    expect(parseAddress("/settings", target)).toBeNull();
+  });
+
+  test("formats addresses with and without non-root paths", () => {
+    expect(addressOf(5173, target, "/")).toBe(
+      "https://5173-00000000-0000-4000-8000-000000000001.aven.run",
+    );
+    expect(addressOf(5173, target, "/dashboard?tab=1")).toBe(
+      "https://5173-00000000-0000-4000-8000-000000000001.aven.run/dashboard?tab=1",
+    );
+    expect(addressOf(3000, undefined, "/login")).toBe("http://localhost:3000/login");
   });
 });

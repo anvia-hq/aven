@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { isPreviewPort, previewPortRefusal } from "./preview";
+import { isPreviewPort, normalizePreviewPath, previewPortRefusal } from "./preview";
 
 describe("a preview's port", () => {
   test("is a whole number between 1 and 65535", () => {
@@ -21,6 +21,29 @@ describe("a preview's port", () => {
   test("is allowed when it is a dev server", () => {
     for (const port of [3000, 4173, 5173, 8080, 8001]) {
       expect(previewPortRefusal(port)).toBeUndefined();
+    }
+  });
+});
+
+describe("normalizePreviewPath", () => {
+  test("keeps safe relative paths with query and hash", () => {
+    expect(normalizePreviewPath()).toBe("/");
+    expect(normalizePreviewPath("")).toBe("/");
+    expect(normalizePreviewPath("/")).toBe("/");
+    expect(normalizePreviewPath("dashboard?tab=1#top")).toBe("/dashboard?tab=1#top");
+    expect(normalizePreviewPath("/a/b/../c?x=1#y")).toBe("/a/c?x=1#y");
+  });
+
+  test("falls back to root for external schemes, protocol-relative paths, or control characters", () => {
+    for (const bad of [
+      "//evil.test/steal",
+      "/a/..//evil.test/steal",
+      "/\\evil.test",
+      "https://evil.test/x",
+      "javascript:alert(1)",
+      "/ok\r\nSet-Cookie: a=1",
+    ]) {
+      expect(normalizePreviewPath(bad)).toBe("/");
     }
   });
 });

@@ -93,3 +93,45 @@ test("a name that is not one path segment, and a repository skill linking out, a
   expect(listing).toEqual([]);
   expect(await readdir(join(root, "store-3", "threads"))).toEqual(["t4"]);
 });
+
+test("discovers repository skills in .agents/skills and .claude/skills with .aven/skills winning conflicts", async () => {
+  const store = new SkillStore(join(root, "store-4"));
+  const workspace = join(root, "workspace-3");
+  await mkdir(join(workspace, ".claude/skills/deploy"), { recursive: true });
+  await writeFile(
+    join(workspace, ".claude/skills/deploy/SKILL.md"),
+    skillMd("deploy", "From claude."),
+  );
+  await mkdir(join(workspace, ".claude/skills/shared"), { recursive: true });
+  await writeFile(
+    join(workspace, ".claude/skills/shared/SKILL.md"),
+    skillMd("shared", "From claude."),
+  );
+  await mkdir(join(workspace, ".agents/skills/review"), { recursive: true });
+  await writeFile(
+    join(workspace, ".agents/skills/review/SKILL.md"),
+    skillMd("review", "From agents."),
+  );
+  await mkdir(join(workspace, ".agents/skills/shared"), { recursive: true });
+  await writeFile(
+    join(workspace, ".agents/skills/shared/SKILL.md"),
+    skillMd("shared", "From agents."),
+  );
+  await mkdir(join(workspace, ".aven/skills/shared"), { recursive: true });
+  await writeFile(join(workspace, ".aven/skills/shared/SKILL.md"), skillMd("shared", "From aven."));
+
+  const listing = await store.install("t5", [], fetch, workspace);
+  expect(listing).toEqual([
+    {
+      name: "deploy",
+      description: "From claude.",
+      path: "/workspace/.claude/skills/deploy/SKILL.md",
+    },
+    {
+      name: "review",
+      description: "From agents.",
+      path: "/workspace/.agents/skills/review/SKILL.md",
+    },
+    { name: "shared", description: "From aven.", path: "/workspace/.aven/skills/shared/SKILL.md" },
+  ]);
+});

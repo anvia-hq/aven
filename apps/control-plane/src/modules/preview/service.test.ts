@@ -37,6 +37,16 @@ describe("opening a port", () => {
     expect(answer.url).not.toBe(answer.embedUrl);
   });
 
+  test("carries a normalized path in the ticket URLs and drops unsafe ones", async () => {
+    const deep = await service().open("org", "user", remote, 5173, "/settings?tab=keys#api");
+    expect(deep.url).toContain("&path=%2Fsettings%3Ftab%3Dkeys%23api");
+    expect(deep.embedUrl).toContain("&embed=1&path=%2Fsettings%3Ftab%3Dkeys%23api");
+
+    const unsafe = await service().open("org", "user", remote, 5173, "//evil.test/phish");
+    expect(unsafe.url).not.toContain("path=");
+    expect(unsafe.embedUrl).not.toContain("path=");
+  });
+
   test("says it is not set up without a domain", async () => {
     const off = service({ settings: { ...settings, domain: undefined } });
     await expect(off.open("org", "user", remote, 3000)).rejects.toThrow("not set up");

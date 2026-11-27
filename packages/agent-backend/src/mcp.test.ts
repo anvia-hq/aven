@@ -55,6 +55,9 @@ describe("Aven tools on the hosted backend MCP server", () => {
     expect(await callAvenTool("open_browser", { port: 5173 }, {})).toContain(
       "http://localhost:5173",
     );
+    expect(await callAvenTool("open_browser", { port: 5173, path: "/dashboard" }, {})).toContain(
+      "http://localhost:5173/dashboard",
+    );
   });
 
   test("offers the fork tools, stop_fork among them, and runs it against the fork host", async () => {

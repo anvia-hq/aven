@@ -16,7 +16,7 @@ export const previewRouter = (service: ReturnType<typeof createPreviewService>) 
           "Only the person can open a preview: its panel asks them to confirm the port",
         );
 
-      return service.open(organizationId, user.id, params.id, body.port);
+      return service.open(organizationId, user.id, params.id, body.port, body.path);
     },
     { auth: true, org: true, params: runtimeParams, body: portBody },
   );

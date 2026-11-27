@@ -93,7 +93,14 @@ export function toolTarget(name: string, input: unknown) {
   }
 
   if (name === OPEN_BROWSER_TOOL_NAME) {
-    return typeof args.port === "number" ? `localhost:${args.port}` : "";
+    if (typeof args.port !== "number") return "";
+
+    const rawPath = typeof args.path === "string" ? args.path.trim() : "";
+
+    if (!rawPath || rawPath === "/") return `localhost:${args.port}`;
+
+    const suffix = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+    return `localhost:${args.port}${suffix}`;
   }
 
   if (name === WEB_SEARCH_TOOL_NAME) return asString(args.query);

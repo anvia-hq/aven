@@ -10,6 +10,8 @@ export const SKILLS_DIR = "/skills";
 
 export const REPO_SKILLS_DIR = ".aven/skills";
 
+export const REPO_SKILLS_DIRS = [".claude/skills", ".agents/skills", REPO_SKILLS_DIR] as const;
+
 export const SKILL_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const MAX_SKILL_NAME = 64;
 
