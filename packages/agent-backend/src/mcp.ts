@@ -282,6 +282,155 @@ export function mcpInputSchema(shape: Record<string, z.ZodType>): Record<string,
   }
 }
 
+function withDescription(field: z.ZodType, schema: Record<string, unknown>): z.ZodType {
+  return typeof schema.description === "string" ? field.describe(schema.description) : field;
+}
+
+function unionOf(branches: z.ZodType[]): z.ZodType {
+  if (branches.length === 0) return z.unknown();
+
+  if (branches.length === 1) return branches[0]!;
+
+  const [first, second, ...rest] = branches;
+  return z.union([first!, second!, ...rest]);
+}
+
+function literalSchema(value: unknown): z.ZodType | undefined {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    value === null
+  ) {
+    return z.literal(value);
+  }
+
+  return undefined;
+}
+
+function zodShapeFromObject(
+  parameters: Record<string, unknown>,
+  depth = 0,
+): Record<string, z.ZodType> {
+  const properties = asRecord(parameters.properties);
+  const required = new Set(
+    Array.isArray(parameters.required)
+      ? parameters.required.filter((item): item is string => typeof item === "string")
+      : [],
+  );
+  const shape: Record<string, z.ZodType> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    const property = asRecord(value);
+    const base = zodTypeFromJsonSchema(value, depth);
+    const field = !required.has(key) || "default" in property ? base.optional() : base;
+    shape[key] = withDescription(field, property);
+  }
+  return shape;
+}
+
+function zodTypeFromJsonSchema(raw: unknown, depth = 0): z.ZodType {
+  if (depth > 16) return z.unknown();
+
+  const schema = asRecord(raw);
+
+  if ("const" in schema) {
+    const literal = literalSchema(schema.const);
+
+    if (literal) return literal;
+  }
+
+  if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+    const strings = schema.enum.filter((item): item is string => typeof item === "string");
+
+    if (strings.length === schema.enum.length) {
+      return z.enum(strings as [string, ...string[]]);
+    }
+
+    const literals = schema.enum.flatMap((item) => {
+      const literal = literalSchema(item);
+      return literal ? [literal] : [];
+    });
+
+    if (literals.length > 0) return unionOf(literals);
+  }
+
+  let variants: unknown[] | undefined;
+
+  if (Array.isArray(schema.anyOf)) {
+    variants = schema.anyOf;
+  } else if (Array.isArray(schema.oneOf)) {
+    variants = schema.oneOf;
+  }
+
+  if (variants && variants.length > 0) {
+    return unionOf(
+      variants.map((item) =>
+        withDescription(zodTypeFromJsonSchema(item, depth + 1), asRecord(item)),
+      ),
+    );
+  }
+
+  if (Array.isArray(schema.type)) {
+    const types = schema.type.flatMap((item) =>
+      typeof item === "string" ? [zodTypeFromJsonSchema({ ...schema, type: item }, depth + 1)] : [],
+    );
+
+    if (types.length > 0) return unionOf(types);
+  }
+
+  if (schema.type === "string") return z.string();
+
+  if (schema.type === "integer" || schema.type === "number") {
+    let field = schema.type === "integer" ? z.number().int() : z.number();
+
+    if (typeof schema.minimum === "number") field = field.min(schema.minimum);
+
+    if (typeof schema.maximum === "number") field = field.max(schema.maximum);
+
+    return field;
+  }
+
+  if (schema.type === "boolean") return z.boolean();
+
+  if (schema.type === "null") return z.null();
+
+  if (schema.type === "array") {
+    const itemSchema =
+      schema.items !== undefined
+        ? withDescription(zodTypeFromJsonSchema(schema.items, depth + 1), asRecord(schema.items))
+        : z.unknown();
+    return z.array(itemSchema);
+  }
+
+  if (
+    schema.type === "object" ||
+    (schema.properties !== undefined && typeof schema.properties === "object")
+  ) {
+    const properties = asRecord(schema.properties);
+
+    if (Object.keys(properties).length > 0) {
+      const innerShape = zodShapeFromObject(schema, depth + 1);
+      return schema.additionalProperties === false
+        ? z.object(innerShape)
+        : z.looseObject(innerShape);
+    }
+
+    if (typeof schema.additionalProperties === "object" && schema.additionalProperties !== null) {
+      return z.record(
+        z.string(),
+        withDescription(
+          zodTypeFromJsonSchema(schema.additionalProperties, depth + 1),
+          asRecord(schema.additionalProperties),
+        ),
+      );
+    }
+
+    return z.record(z.string(), z.unknown());
+  }
+
+  return z.unknown();
+}
+
 async function describeTool(tool: AnyTool): Promise<{
   description: string;
   shape: Record<string, z.ZodType>;
@@ -290,13 +439,7 @@ async function describeTool(tool: AnyTool): Promise<{
   try {
     const definition = await tool.definition("");
     const parameters = asRecord(definition.parameters);
-    const properties = asRecord(parameters.properties);
-    const shape: Record<string, z.ZodType> = {};
-    for (const [key, value] of Object.entries(properties)) {
-      const description = asRecord(value).description;
-      const field = z.unknown().optional();
-      shape[key] = typeof description === "string" ? field.describe(description) : field;
-    }
+    const shape = zodShapeFromObject(parameters);
 
     let inputSchema: Record<string, unknown> | undefined;
 
