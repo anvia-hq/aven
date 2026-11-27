@@ -4,7 +4,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@aven/ui/tooltip";
 import { compactNumber } from "@/lib/format";
 import { ESTIMATE_HINT, FREE_SPACE_HINT, contextBars } from "../context-bars";
 import { HintedRow } from "./hinted-row";
-
+import { OverviewBar } from "./overview-bar";
 import { OverviewCard } from "./overview-card";
 import type { ContextUsage } from "@aven/protocol/types";
 
@@ -47,30 +47,12 @@ export function ContextCard({
 
   const percent = Math.min(100, (context.usedTokens / context.contextWindow) * 100);
   const split = contextBars(context);
+  const segments = split
+    ? split.bars.map((bar) => ({ id: bar.id, value: bar.percent, tone: bar.tone }))
+    : [{ id: "used", value: percent, tone: "bg-foreground" }];
   return (
     <OverviewCard title="Context">
-      <div
-        role="progressbar"
-        aria-label="Context used"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(percent)}
-        className="h-2 w-full overflow-hidden rounded-full bg-foreground/10"
-      >
-        {split ? (
-          <div className="flex h-full gap-px">
-            {split.bars.map((bar) => (
-              <span
-                key={bar.id}
-                className={bar.tone}
-                style={{ width: `${bar.percent}%`, minWidth: 2 }}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="h-full rounded-full bg-foreground" style={{ width: `${percent}%` }} />
-        )}
-      </div>
+      <OverviewBar segments={segments} total={100} ariaLabel="Context used" valueNow={percent} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>

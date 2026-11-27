@@ -1,15 +1,21 @@
 import { cn } from "cn";
 
-import { Progress } from "@aven/ui/progress";
 import { resetsIn } from "@/lib/format";
 
+import { OverviewBar } from "./overview-bar";
 import { OverviewCard } from "./overview-card";
-import type { PlanLimit, PlanLimitWindow } from "@aven/protocol/types";
+import type { PlanLimit, PlanLimitStatus, PlanLimitWindow } from "@aven/protocol/types";
 
 const ROWS: { window: PlanLimitWindow; label: string }[] = [
   { window: "five_hour", label: "5-hour" },
   { window: "seven_day", label: "Weekly" },
 ];
+
+const LIMIT_TONE: Record<PlanLimitStatus, string> = {
+  allowed: "bg-foreground",
+  allowed_warning: "bg-meter",
+  rejected: "bg-destructive",
+};
 
 export function LimitsCard({ limits }: { limits: PlanLimit[] | undefined }) {
   const rows = ROWS.flatMap((row) => {
@@ -23,9 +29,10 @@ export function LimitsCard({ limits }: { limits: PlanLimit[] | undefined }) {
   return (
     <OverviewCard title="Limits">
       {rows.map(({ window, label, limit }) => {
-        const percent = Math.round(limit.percent);
+        const clamped = Math.max(0, Math.min(100, limit.percent));
+        const percent = Math.round(clamped);
         return (
-          <div key={window} className="flex flex-col gap-1">
+          <div key={window} className="flex flex-col gap-1.5">
             <div className="flex min-h-6 items-center justify-between gap-2">
               <span className="text-muted-foreground">{label}</span>
               <span
@@ -37,13 +44,11 @@ export function LimitsCard({ limits }: { limits: PlanLimit[] | undefined }) {
                 {percent}% used
               </span>
             </div>
-            <Progress
-              value={limit.percent}
-              aria-label={`${label} limit used`}
-              className={cn(
-                limit.status === "allowed_warning" && "[&_[data-slot=progress-indicator]]:bg-meter",
-                limit.status === "rejected" && "[&_[data-slot=progress-indicator]]:bg-destructive",
-              )}
+            <OverviewBar
+              segments={[{ id: "used", value: clamped, tone: LIMIT_TONE[limit.status] }]}
+              total={100}
+              ariaLabel={`${label} limit used`}
+              valueNow={clamped}
             />
             {limit.resetsAt !== undefined && (
               <span className="text-xs text-muted-foreground">
