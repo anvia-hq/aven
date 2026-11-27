@@ -2,6 +2,7 @@ import { Skeleton } from "@aven/ui/skeleton";
 import { compactNumber } from "@/lib/format";
 
 import { HintedRow } from "./hinted-row";
+import { OverviewBar } from "./overview-bar";
 import { OverviewCard } from "./overview-card";
 import type { TokenUsage } from "@aven/protocol/types";
 
@@ -74,26 +75,15 @@ export function UsageCard({
   ];
 
   const segments = [
-    { label: "Output", value: totals.outputTokens, tone: "bg-usage-output" },
-    { label: "Cache write", value: totals.cacheWriteTokens, tone: "bg-usage-cache-write" },
-    { label: "Cache read", value: totals.cacheReadTokens, tone: "bg-usage-cache-read" },
-    { label: "Uncached", value: uncached, tone: "bg-usage-uncached" },
-  ] as const;
-  const total = segments.reduce((sum, { value }) => sum + value, 0);
+    { id: "output", value: totals.outputTokens, tone: "bg-usage-output" },
+    { id: "cache-write", value: totals.cacheWriteTokens, tone: "bg-usage-cache-write" },
+    { id: "cache-read", value: totals.cacheReadTokens, tone: "bg-usage-cache-read" },
+    { id: "uncached", value: uncached, tone: "bg-usage-uncached" },
+  ];
 
   return (
     <OverviewCard title="Usage">
-      <div aria-hidden className="flex h-2 w-full gap-px overflow-hidden rounded-full bg-muted">
-        {segments.map(({ label, value, tone }) =>
-          value > 0 ? (
-            <span
-              key={label}
-              className={tone}
-              style={{ width: `${(value / total) * 100}%`, minWidth: 2 }}
-            />
-          ) : null,
-        )}
-      </div>
+      <OverviewBar segments={segments} />
       <dl className="flex flex-col gap-1 text-xs">
         {rows.map(({ label, value, tone, hint }) => (
           <HintedRow
