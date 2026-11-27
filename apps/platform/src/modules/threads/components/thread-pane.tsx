@@ -194,8 +194,8 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
                 <div
                   ref={composer}
                   className={cn(
-                    "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3",
-                    overview.open && !split && "@4xl:pr-75",
+                    "pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8",
+                    overview.open && !split && "@4xl:pr-72",
                   )}
                 >
                   <div className="pointer-events-auto mx-auto w-full max-w-3xl px-4 pb-6">

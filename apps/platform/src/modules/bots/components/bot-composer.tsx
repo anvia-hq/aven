@@ -193,7 +193,7 @@ function Composer({
       <PendingAttachments files={attachments.files} onRemove={attachments.remove} />
       <div
         data-expanded={expanded || undefined}
-        className="grid grid-cols-[auto_1fr_auto] items-end gap-x-1 py-2 pr-2 pl-2 [grid-template-areas:'attach_input_send'] data-expanded:[grid-template-areas:'input_input_input''attach_._send']"
+        className="grid grid-cols-[auto_1fr_auto] items-center gap-x-1 py-2 pr-2 pl-2 [grid-template-areas:'attach_input_send'] data-expanded:items-end data-expanded:[grid-template-areas:'input_input_input''attach_._send']"
       >
         <MentionMenu icon={(item) => <MentionIcon item={item} />} />
         <div className="flex h-9 shrink-0 items-center [grid-area:attach]">
@@ -208,14 +208,14 @@ function Composer({
           placeholder={placeholder}
           renderEntity={entity}
           className={cn(
-            "max-h-48 min-h-9 min-w-0 overflow-y-auto py-1.5 text-sm leading-6 [grid-area:input]",
+            "max-h-48 min-h-9 min-w-0 overflow-y-auto py-1.5 text-base leading-6 md:text-sm [grid-area:input] [&_.ProseMirror_p.is-editor-empty:first-child::before]:h-6 [&_.ProseMirror_p.is-editor-empty:first-child::before]:max-w-full [&_.ProseMirror_p.is-editor-empty:first-child::before]:truncate",
             expanded && "px-2",
           )}
         />
         <div className="flex h-9 shrink-0 items-center [grid-area:send]">
           <Button
             size="icon-sm"
-            className="size-9 rounded-full md:size-8"
+            className="size-9 rounded-full md:size-7"
             aria-label="Send"
             disabled={!canSend}
             onClick={() => void submit()}

@@ -52,7 +52,7 @@ export function BotChat({
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
       <div className="relative min-h-0 flex-1">
         <div ref={scroll} className="h-full overflow-y-auto" style={textSize.style}>
-          <div className="mx-auto flex max-w-4xl flex-col px-4 pt-28 pb-48">
+          <div className="mx-auto flex max-w-4xl flex-col px-4 pt-4 pb-48 md:pt-28">
             {messages.length === 0 && pending.length === 0 && !typing && (
               <p className="py-16 text-center text-sm text-muted-foreground">
                 Say hello to {bot.name}.
@@ -116,7 +116,7 @@ export function BotChat({
             )}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8 pr-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-background from-60% to-transparent pt-8">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-6">
             <BotComposer
               botId={bot.id}
