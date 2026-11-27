@@ -123,7 +123,7 @@ export function BotChatBubble({
           <div
             {...swipeMotion}
             className={cn(
-              "relative flex w-fit max-w-[80%] min-w-0 touch-pan-y flex-col items-end gap-1 self-end",
+              "relative flex w-fit max-w-[80%] min-w-0 flex-col items-end gap-1 self-end",
               !swipe.dragging && "transition-transform duration-200 ease-out",
             )}
           >
@@ -151,7 +151,7 @@ export function BotChatBubble({
           <div
             {...swipeMotion}
             className={cn(
-              "relative flex w-fit max-w-[80%] min-w-0 touch-pan-y flex-col items-start gap-1",
+              "relative flex w-fit max-w-[80%] min-w-0 flex-col items-start gap-1",
               !swipe.dragging && "transition-transform duration-200 ease-out",
             )}
           >

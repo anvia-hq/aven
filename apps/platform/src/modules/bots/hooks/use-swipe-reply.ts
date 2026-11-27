@@ -11,6 +11,27 @@ import type { SwipeAxis, SwipeState } from "../types";
 
 const IDLE: SwipeState = { offset: 0, progress: 0, ready: false, dragging: false };
 
+function hasHorizontalScrollAncestor(
+  target: EventTarget | null,
+  boundary: EventTarget | null,
+): boolean {
+  if (!(target instanceof Element)) return false;
+
+  let current: Element | null = target;
+
+  while (current && current !== boundary) {
+    if (current.scrollWidth > current.clientWidth + 1) {
+      const { overflowX } = getComputedStyle(current);
+
+      if (overflowX === "auto" || overflowX === "scroll") return true;
+    }
+
+    current = current.parentElement;
+  }
+
+  return false;
+}
+
 export function useSwipeReply({ mine, onReply }: { mine: boolean; onReply: () => void }) {
   const direction = swipeDirection(mine);
   const [state, setState] = useState<SwipeState>(IDLE);
@@ -26,6 +47,8 @@ export function useSwipeReply({ mine, onReply }: { mine: boolean; onReply: () =>
       if (event.pointerType === "mouse") return;
 
       if (event.target instanceof Element && event.target.closest("button, a")) return;
+
+      if (hasHorizontalScrollAncestor(event.target, event.currentTarget)) return;
 
       if (!canStartSwipe(direction, event.clientX)) return;
 
