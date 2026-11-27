@@ -1,7 +1,7 @@
 import { chmod, cp, mkdir, readdir, realpath, rename, rm, stat } from "node:fs/promises";
 import { join, sep } from "node:path";
 import {
-  REPO_SKILLS_DIR,
+  REPO_SKILLS_DIRS,
   SKILL_NAME,
   SKILLS_DIR,
   readSkillFolder,
@@ -34,25 +34,29 @@ async function isInside(root: string, path: string) {
 
 async function repositorySkills(threadId: string, workspace: string, shown: string) {
   const root = await realpath(workspace);
-  const { skills, problems } = await readSkillFolders(join(root, REPO_SKILLS_DIR));
-  for (const { folder, problem } of problems)
-    console.warn(`Repository skill "${folder}" is left out for ${threadId}: ${problem}`);
-  const listed: SkillListing[] = [];
-  for (const skill of skills) {
-    if (!(await isInside(root, join(skill.directory, "SKILL.md")))) {
-      console.warn(
-        `Repository skill "${skill.name}" is left out for ${threadId}: it leaves the workspace`,
-      );
-      continue;
-    }
+  const listed = new Map<string, SkillListing>();
 
-    listed.push({
-      name: skill.name,
-      description: skill.description,
-      path: `${shown}/${REPO_SKILLS_DIR}/${skill.name}/SKILL.md`,
-    });
+  for (const relativeDir of REPO_SKILLS_DIRS) {
+    const { skills, problems } = await readSkillFolders(join(root, relativeDir));
+    for (const { folder, problem } of problems)
+      console.warn(`Repository skill "${folder}" is left out for ${threadId}: ${problem}`);
+    for (const skill of skills) {
+      if (!(await isInside(root, join(skill.directory, "SKILL.md")))) {
+        console.warn(
+          `Repository skill "${skill.name}" is left out for ${threadId}: it leaves the workspace`,
+        );
+        continue;
+      }
+
+      listed.set(skill.name, {
+        name: skill.name,
+        description: skill.description,
+        path: `${shown}/${relativeDir}/${skill.name}/SKILL.md`,
+      });
+    }
   }
-  return listed;
+
+  return [...listed.values()];
 }
 
 export class SkillStore {

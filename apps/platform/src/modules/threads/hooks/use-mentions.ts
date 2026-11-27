@@ -15,7 +15,7 @@ import {
 } from "../mentions";
 import type { Mentionable, MentionPerson } from "../types";
 
-const REPO_SKILLS = ".aven/skills";
+const REPO_SKILLS_DIRS = [".aven/skills", ".agents/skills", ".claude/skills"] as const;
 const SEARCH_DELAY_MS = 120;
 const MAX_SKILLS = 50;
 const SKILLS_WAIT_MS = 3000;
@@ -78,15 +78,28 @@ export function useMentions(threadId: string | undefined, people: MentionPerson[
 
   return useMemo((): ComposerTriggerDefinition[] => {
     const listRepoSkills = async (id: string) => {
-      const folder = await api<FolderResponse>(
-        `/threads/${id}/files?path=${encodeURIComponent(REPO_SKILLS)}`,
-      ).catch(() => undefined);
-
-      if (!folder?.available) return [];
-
-      return folder.entries.flatMap(({ type, name }) =>
-        type === "directory" ? [{ name, detail: "From the repository" }] : [],
+      const folders = await Promise.all(
+        REPO_SKILLS_DIRS.map((dir) =>
+          api<FolderResponse>(`/threads/${id}/files?path=${encodeURIComponent(dir)}`).catch(
+            () => undefined,
+          ),
+        ),
       );
+      const seen = new Set<string>();
+      const found: SkillOption[] = [];
+
+      for (const folder of folders) {
+        if (!folder?.available) continue;
+
+        for (const { type, name } of folder.entries) {
+          if (type !== "directory" || seen.has(name)) continue;
+
+          seen.add(name);
+          found.push({ name, detail: "From the repository" });
+        }
+      }
+
+      return found;
     };
 
     const skillTrigger: ComposerTriggerDefinition = {

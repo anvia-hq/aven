@@ -137,7 +137,7 @@ describe("sentPrompt with mentions", () => {
         "The user pointed at this file of the workspace with @:",
         "- /workspace/src/app.ts",
         "",
-        "The user asked for this skill with /. Read each SKILL.md with read_file before you start, and follow it:",
+        "The user asked for this skill with /. Read each SKILL.md with exec_command (for example cat <path>) before you start, and follow it:",
         "- writing-skills: /skills/writing-skills/SKILL.md",
       ].join("\n"),
     ]);

@@ -45,7 +45,7 @@ export function mentionNote(
     });
     sections.push(
       [
-        `The user asked for ${asked.length === 1 ? "this skill" : "these skills"} with /. Read each SKILL.md with read_file before you start, and follow it:`,
+        `The user asked for ${asked.length === 1 ? "this skill" : "these skills"} with /. Read each SKILL.md with exec_command (for example cat <path>) before you start, and follow it:`,
         ...lines,
       ].join("\n"),
     );
