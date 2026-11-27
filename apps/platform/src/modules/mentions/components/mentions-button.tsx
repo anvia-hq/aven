@@ -2,7 +2,7 @@ import { IconAt } from "@tabler/icons-react";
 import { useState } from "react";
 
 import { Button } from "@aven/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
+import { Popover, PopoverArrow, PopoverContent, PopoverTrigger } from "@aven/ui/popover";
 
 import { useMentions } from "../hooks/use-mentions";
 import { MentionsPanel } from "./mentions-panel";
@@ -28,7 +28,13 @@ export function MentionsButton() {
           <span className="absolute top-1 right-1 size-2 rounded-full bg-primary" aria-hidden />
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-96 gap-0 p-0">
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-[calc(100vw-1.5rem)] max-w-96 gap-0 p-0"
+      >
+        <PopoverArrow />
         <MentionsPanel
           mentions={mentions}
           unread={unread}
