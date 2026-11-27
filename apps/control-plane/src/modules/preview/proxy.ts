@@ -1,6 +1,19 @@
 import type { Socket } from "bun";
 
-import { PREVIEW_ENTER_PATH, previewPortRefusal } from "@aven/protocol/preview";
+import {
+  normalizePreviewPath,
+  PREVIEW_BRIDGE_PATH,
+  PREVIEW_ENTER_PATH,
+  previewPortRefusal,
+} from "@aven/protocol/preview";
+
+import {
+  ChunkedTailInjector,
+  isEmbedDocumentRequest,
+  PREVIEW_BRIDGE_TAG_BYTES,
+  previewBridgeScript,
+  shouldInjectBridge,
+} from "./bridge";
 
 import {
   EMBED_COOKIE,
@@ -26,14 +39,19 @@ const HEAD_TIMEOUT_SECONDS = 30;
 const MAX_EARLY_BYTES = 1024 * 1024;
 const MAX_QUEUED_BYTES = 8 * 1024 * 1024;
 
-export const ENTER_PAGE =
-  '<!doctype html><meta charset="utf-8"><title>Preview</title><script>location.replace("/")</script><noscript><meta http-equiv="refresh" content="0;url=/"></noscript>';
-
 const latin1 = new TextDecoder("latin1");
 const text = (value: string) => Buffer.from(value, "latin1");
 
 const escapeHtml = (value: string) =>
   value.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`);
+
+export function enterPage(target = "/"): string {
+  const normalized = normalizePreviewPath(target);
+  const literal = JSON.stringify(normalized).replace(/</g, "\\u003c");
+  return `<!doctype html><meta charset="utf-8"><title>Preview</title><script>location.replace(${literal})</script><noscript><meta http-equiv="refresh" content="0;url=${escapeHtml(normalized)}"></noscript>`;
+}
+
+export const ENTER_PAGE = enterPage("/");
 
 const concat = (a: Uint8Array, b: Uint8Array) => {
   const joined = new Uint8Array(a.length + b.length);
@@ -55,6 +73,10 @@ class Relay {
   #handle: ViewerHandle | undefined;
   #claims: PreviewClaims | undefined;
   #embed = false;
+  #embedDocument = false;
+  #chunkedInjector: ChunkedTailInjector | undefined;
+  #contentRemaining: number | undefined;
+  #appendOnClose = false;
   #routed = false;
   #answered = false;
   #finishing = false;
@@ -160,7 +182,16 @@ class Relay {
       return;
     }
 
-    const forwarded = requestForPort(head, claims.port);
+    if (url.pathname === PREVIEW_BRIDGE_PATH && line.method === "GET") {
+      const script = previewBridgeScript(this.#options.appOrigins);
+      this.#answer(
+        `HTTP/1.1 200 OK\r\nContent-Type: application/javascript; charset=utf-8\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nContent-Length: ${Buffer.byteLength(script)}\r\nConnection: close\r\n\r\n${script}`,
+      );
+      return;
+    }
+
+    this.#embedDocument = isEmbedDocumentRequest(head, this.#embed);
+    const forwarded = requestForPort(head, claims.port, { stripEncoding: this.#embedDocument });
     const first = concat(text(serializeHead(forwarded.head)), rest);
     this.#options
       .open(claims, {
@@ -207,8 +238,9 @@ class Relay {
       ? `Path=/; HttpOnly; SameSite=None; Secure; Partitioned; Max-Age=${PAGE_TTL_MS / 1000}`
       : `Path=/; HttpOnly; SameSite=Strict; Secure; Max-Age=${PAGE_TTL_MS / 1000}`;
     const cookie = embed ? EMBED_COOKIE : PAGE_COOKIE;
+    const body = enterPage(params.get("path") ?? undefined);
     this.#answer(
-      `HTTP/1.1 200 OK\r\nSet-Cookie: ${cookie}=${token}; ${attributes}\r\nReferrer-Policy: no-referrer\r\nCache-Control: no-store\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${ENTER_PAGE.length}\r\nConnection: close\r\n\r\n${ENTER_PAGE}`,
+      `HTTP/1.1 200 OK\r\nSet-Cookie: ${cookie}=${token}; ${attributes}\r\nReferrer-Policy: no-referrer\r\nCache-Control: no-store\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ${Buffer.byteLength(body)}\r\nConnection: close\r\n\r\n${body}`,
     );
   }
 
@@ -227,11 +259,29 @@ class Relay {
     this.#earlyBytes += bytes.length;
   }
 
+  #sendBody(bytes: Uint8Array) {
+    if (this.#chunkedInjector) {
+      this.#chunkedInjector.push(bytes);
+      return;
+    }
+
+    if (bytes.length > 0) this.#send(bytes);
+
+    if (this.#contentRemaining !== undefined) {
+      this.#contentRemaining -= bytes.length;
+
+      if (this.#contentRemaining <= 0) {
+        this.#contentRemaining = undefined;
+        this.#send(PREVIEW_BRIDGE_TAG_BYTES);
+      }
+    }
+  }
+
   #fromApp(bytes: Uint8Array) {
     if (this.#closed) return;
 
     if (this.#answered) {
-      this.#send(bytes);
+      this.#sendBody(bytes);
       return;
     }
 
@@ -255,20 +305,45 @@ class Relay {
       return;
     }
 
-    this.#send(
-      text(serializeHead(responseForBrowser(head, this.#claims.port, { embed: this.#embed }))),
-    );
     const status = head.start.split(" ")[1] ?? "";
     const interim = status.startsWith("1") && status !== "101";
 
     if (interim) {
+      this.#send(
+        text(serializeHead(responseForBrowser(head, this.#claims.port, { embed: this.#embed }))),
+      );
       this.#fromApp(rest);
       return;
     }
 
+    let appendLength: number | undefined;
+
+    if (shouldInjectBridge(head, this.#embedDocument)) {
+      const transferEncoding = headerOf(head, "transfer-encoding")?.toLowerCase() ?? "";
+      const contentLength = headerOf(head, "content-length")?.trim();
+
+      if (transferEncoding.includes("chunked")) {
+        this.#chunkedInjector = new ChunkedTailInjector(PREVIEW_BRIDGE_TAG_BYTES, (chunk) =>
+          this.#send(chunk),
+        );
+      } else if (contentLength !== undefined && /^\d+$/.test(contentLength)) {
+        appendLength = PREVIEW_BRIDGE_TAG_BYTES.length;
+        this.#contentRemaining = Number(contentLength);
+      } else {
+        this.#appendOnClose = true;
+      }
+    }
+
+    this.#send(
+      text(
+        serializeHead(
+          responseForBrowser(head, this.#claims.port, { embed: this.#embed, appendLength }),
+        ),
+      ),
+    );
     this.#answered = true;
 
-    if (rest.length > 0) this.#send(rest);
+    if (rest.length > 0 || this.#contentRemaining === 0) this.#sendBody(rest);
   }
 
   #appClosed(reason: string) {
@@ -277,6 +352,13 @@ class Relay {
     if (!this.#answered) {
       this.#reply(502, `Nothing answered on port ${this.#claims?.port}: ${reason}`);
       return;
+    }
+
+    if (this.#chunkedInjector) this.#chunkedInjector.flush();
+
+    if (this.#appendOnClose) {
+      this.#appendOnClose = false;
+      this.#send(PREVIEW_BRIDGE_TAG_BYTES);
     }
 
     this.#finish();

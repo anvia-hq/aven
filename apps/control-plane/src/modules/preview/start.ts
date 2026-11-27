@@ -18,6 +18,7 @@ export function startPreviews(service: ReturnType<typeof createPreviewService>) 
     port: settings.port,
     domain,
     secret: settings.secret,
+    appOrigins: settings.appOrigins,
     open: (claims, sink) => service.relay(claims, sink),
   });
 

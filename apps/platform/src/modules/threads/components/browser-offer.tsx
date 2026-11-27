@@ -3,7 +3,7 @@ import { IconWorld } from "@tabler/icons-react";
 import { Button } from "@aven/ui/button";
 import { usePlatformConfig } from "@/modules/platform/hooks/use-platform-config";
 import { useOfferPreview } from "@/modules/preview/hooks/use-preview-offer";
-import { addressOf, parsePort } from "@/modules/preview/port";
+import { addressOf, parseAddress } from "@/modules/preview/port";
 
 import type { ToolPart } from "../types";
 
@@ -18,11 +18,15 @@ export function BrowserOffer({
 }) {
   const offer = useOfferPreview();
   const { config } = usePlatformConfig();
-  const port = parsePort(tool.target);
+  const parsed = parseAddress(tool.target);
 
-  if (port === null) return null;
+  if (parsed === null) return null;
 
-  const address = addressOf(port, { runtimeId, previewDomain: config?.previewDomain ?? null });
+  const address = addressOf(
+    parsed.port,
+    { runtimeId, previewDomain: config?.previewDomain ?? null },
+    parsed.path,
+  );
 
   return (
     <div className="flex min-w-0 items-center gap-3 rounded-xl border bg-card px-3 py-2 text-sm">
@@ -30,7 +34,7 @@ export function BrowserOffer({
       <span className="min-w-0 flex-1 truncate">
         The agent is serving <span className="font-mono text-xs">{address}</span>
       </span>
-      <Button size="sm" variant="outline" onClick={() => offer(threadId, port)}>
+      <Button size="sm" variant="outline" onClick={() => offer(threadId, parsed.port, parsed.path)}>
         Open in Browser
       </Button>
     </div>

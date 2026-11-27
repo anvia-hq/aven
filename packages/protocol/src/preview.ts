@@ -1,8 +1,16 @@
 export const PREVIEW_ENTER_PATH = "/__aven/enter";
 
+export const PREVIEW_BRIDGE_PATH = "/__aven/bridge.js";
+
+export const PREVIEW_BRIDGE_LOCATION_EVENT = "aven:preview:location";
+
+export const PREVIEW_BRIDGE_COMMAND_EVENT = "aven:preview:command";
+
 export const PREVIEW_COOKIE_PREFIX = "__Host-aven-preview";
 
 export const PREVIEW_MAX_PORT = 65535;
+
+export const PREVIEW_MAX_PATH_LENGTH = 4096;
 
 export const PREVIEW_DENIED_PORTS: Readonly<Record<number, string>> = {
   22: "SSH",
@@ -37,4 +45,33 @@ export function previewPortRefusal(port: number) {
   const service = PREVIEW_DENIED_PORTS[port];
 
   if (service) return `Port ${port} is ${service}'s on this machine, so it is not a preview`;
+}
+
+export function normalizePreviewPath(raw?: string): string {
+  if (!raw) return "/";
+
+  const trimmed = raw.trim();
+
+  if (
+    trimmed === "" ||
+    trimmed.length > PREVIEW_MAX_PATH_LENGTH ||
+    /[\r\n\0]/.test(trimmed) ||
+    /^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+  ) {
+    return "/";
+  }
+
+  const candidate = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+
+  if (candidate.startsWith("//") || candidate.startsWith("/\\")) return "/";
+
+  try {
+    const parsed = new URL(candidate, "https://preview.invalid");
+
+    if (parsed.origin !== "https://preview.invalid") return "/";
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return "/";
+  }
 }

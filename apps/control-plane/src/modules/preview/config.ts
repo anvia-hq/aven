@@ -48,6 +48,20 @@ export function refusePreviewInTrustedOrigins(
   }
 }
 
+function normalizedOrigins(env: Record<string, string | undefined>): string[] {
+  const seen = new Set<string>();
+
+  for (const raw of trustOrigins(env)) {
+    try {
+      seen.add(new URL(raw).origin);
+    } catch {
+      continue;
+    }
+  }
+
+  return [...seen];
+}
+
 export function readPreviewSettings(
   env: Record<string, string | undefined> = process.env,
 ): PreviewSettings {
@@ -59,7 +73,8 @@ export function readPreviewSettings(
 
   const hostname = env.AVEN_PREVIEW_BIND?.trim() || DEFAULT_HOSTNAME;
 
-  if (!domain) return { domain: undefined, port, hostname, secret: new Uint8Array() };
+  if (!domain)
+    return { domain: undefined, port, hostname, secret: new Uint8Array(), appOrigins: [] };
 
   refusePreviewInTrustedOrigins(domain, env);
 
@@ -72,6 +87,7 @@ export function readPreviewSettings(
     port,
     hostname,
     secret: createHmac("sha256", secret).update("aven:preview").digest(),
+    appOrigins: normalizedOrigins(env),
   };
 }
 

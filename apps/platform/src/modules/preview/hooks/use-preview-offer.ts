@@ -6,8 +6,8 @@ import { previewOfferAtom } from "../atoms/preview-offer-atom";
 export function useOfferPreview() {
   const set = useSetAtom(previewOfferAtom);
 
-  return (threadId: string, port: number) =>
-    set((before) => ({ threadId, port, nonce: (before?.nonce ?? 0) + 1 }));
+  return (threadId: string, port: number, path = "/") =>
+    set((before) => ({ threadId, port, path, nonce: (before?.nonce ?? 0) + 1 }));
 }
 
 export function usePreviewOffer(threadId: string, show: () => void) {

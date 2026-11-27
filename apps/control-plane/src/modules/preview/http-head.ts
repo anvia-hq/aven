@@ -91,15 +91,17 @@ function pathOf(url: string) {
   }
 }
 
-export function requestForPort(head: Head, port: number) {
+export function requestForPort(
+  head: Head,
+  port: number,
+  options: { stripEncoding?: boolean } = {},
+) {
   const upgrade = (headerOf(head, "upgrade") ?? "").toLowerCase() === "websocket";
   const cookies = [...cookiesOf(head)]
     .flatMap(([name, value]) => (PREVIEW_COOKIES.includes(name) ? [] : [`${name}=${value}`]))
     .join("; ");
   const headers: Header[] = [];
-
-  for (const header of without(
-    head,
+  const dropped = [
     "host",
     "cookie",
     "connection",
@@ -107,7 +109,11 @@ export function requestForPort(head: Head, port: number) {
     "proxy-connection",
     "proxy-authorization",
     "te",
-  )) {
+  ];
+
+  if (options.stripEncoding) dropped.push("accept-encoding");
+
+  for (const header of without(head, ...dropped)) {
     const [name, value] = header;
 
     if (named(header, "origin")) headers.push([name, localOrigin(port)]);
@@ -167,7 +173,7 @@ function withoutFrameAncestors(policy: string) {
 export function responseForBrowser(
   head: Head,
   port: number,
-  options: { embed?: boolean } = {},
+  options: { embed?: boolean; appendLength?: number } = {},
 ): Head {
   const switching = head.start.split(" ")[1] === "101";
   const headers: Header[] = [];
@@ -189,6 +195,12 @@ export function responseForBrowser(
       if (cookie) headers.push([name, cookie]);
     } else if (named(header, "location")) headers.push([name, relative(value, port)]);
     else if (
+      options.appendLength &&
+      named(header, "content-length") &&
+      /^\d+$/.test(value.trim())
+    ) {
+      headers.push([name, String(Number(value.trim()) + options.appendLength)]);
+    } else if (
       named(header, "content-security-policy") ||
       named(header, "content-security-policy-report-only")
     ) {

@@ -16,6 +16,7 @@ export type PreviewSettings = {
   port: number;
   hostname: string;
   secret: Uint8Array;
+  appOrigins?: readonly string[];
 };
 
 export type PreviewProxyOptions = {
@@ -23,6 +24,7 @@ export type PreviewProxyOptions = {
   port: number;
   domain: string;
   secret: Uint8Array;
+  appOrigins?: readonly string[];
   open(claims: PreviewClaims, sink: ViewerSink): Promise<ViewerHandle>;
 };
 

@@ -1,4 +1,6 @@
-import type { PreviewTarget } from "./types";
+import { normalizePreviewPath } from "@aven/protocol/preview";
+
+import type { PreviewAddress, PreviewTarget } from "./types";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 
@@ -33,8 +35,40 @@ export function parsePort(text: string, target?: PreviewTarget) {
   return validPort(digits);
 }
 
-export function addressOf(port: number, target?: PreviewTarget) {
+export function parseAddress(
+  text: string,
+  target?: PreviewTarget,
+  currentPort?: number,
+): PreviewAddress | null {
+  const trimmed = text.trim();
+
+  if (trimmed === "") return null;
+
+  if (trimmed.startsWith("/")) {
+    if (currentPort === undefined) return null;
+
+    return { port: currentPort, path: normalizePreviewPath(trimmed) };
+  }
+
+  const withoutScheme = trimmed.replace(/^https?:\/\//i, "");
+  const slash = withoutScheme.indexOf("/");
+  const hostPort = slash >= 0 ? withoutScheme.slice(0, slash) : withoutScheme;
+  const rawPath = slash >= 0 ? withoutScheme.slice(slash) : "/";
+  const port = parsePort(hostPort, target);
+
+  if (port === null) return null;
+
+  return { port, path: normalizePreviewPath(rawPath) };
+}
+
+export function originOf(port: number, target?: PreviewTarget) {
   if (target?.previewDomain) return `https://${port}-${target.runtimeId}.${target.previewDomain}`;
 
   return `http://localhost:${port}`;
+}
+
+export function addressOf(port: number, target?: PreviewTarget, path = "/") {
+  const origin = originOf(port, target);
+  const normalized = normalizePreviewPath(path);
+  return normalized === "/" ? origin : `${origin}${normalized}`;
 }

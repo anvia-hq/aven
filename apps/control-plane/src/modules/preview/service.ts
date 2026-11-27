@@ -1,4 +1,8 @@
-import { PREVIEW_ENTER_PATH, previewPortRefusal } from "@aven/protocol/preview";
+import {
+  normalizePreviewPath,
+  PREVIEW_ENTER_PATH,
+  previewPortRefusal,
+} from "@aven/protocol/preview";
 
 import { ForbiddenError, UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
 import { LOCAL_RUNTIME_ID } from "../runtimes/local-id";
@@ -38,10 +42,17 @@ function previewRefusal(
     : undefined;
 }
 
-function previewUrl(domain: string, claims: PreviewClaims, ticket: string, embed: boolean) {
+function previewUrl(
+  domain: string,
+  claims: PreviewClaims,
+  ticket: string,
+  embed: boolean,
+  path: string,
+) {
   const host = previewHostname(claims, domain);
   const mode = embed ? "&embed=1" : "";
-  return `https://${host}${PREVIEW_ENTER_PATH}?ticket=${encodeURIComponent(ticket)}${mode}`;
+  const target = path === "/" ? "" : `&path=${encodeURIComponent(path)}`;
+  return `https://${host}${PREVIEW_ENTER_PATH}?ticket=${encodeURIComponent(ticket)}${mode}${target}`;
 }
 
 export function createPreviewService({
@@ -51,16 +62,23 @@ export function createPreviewService({
   openPort,
   env = process.env,
 }: PreviewServiceOptions) {
-  const link = (claims: PreviewClaims, embed: boolean) =>
+  const link = (claims: PreviewClaims, embed: boolean, path: string) =>
     previewUrl(
       settings.domain!,
       claims,
       signPreviewToken(settings.secret, "ticket", claims, TICKET_TTL_MS),
       embed,
+      path,
     );
 
   return {
-    async open(organizationId: string, userId: string, runtimeId: string, port: number) {
+    async open(
+      organizationId: string,
+      userId: string,
+      runtimeId: string,
+      port: number,
+      path?: string,
+    ) {
       const domain = settings.domain;
 
       if (!domain) throw new UnavailableError(NOT_SET_UP);
@@ -76,7 +94,11 @@ export function createPreviewService({
         throw new UnavailableError("That runner is offline, so its port cannot be opened");
 
       const claims = { runtimeId, port };
-      return { url: link(claims, false), embedUrl: link(claims, true) };
+      const normalizedPath = normalizePreviewPath(path);
+      return {
+        url: link(claims, false, normalizedPath),
+        embedUrl: link(claims, true, normalizedPath),
+      };
     },
 
     async relay(claims: PreviewClaims, sink: ViewerSink): Promise<ViewerHandle> {

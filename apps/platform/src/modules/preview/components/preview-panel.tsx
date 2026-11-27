@@ -1,4 +1,10 @@
-import { IconExternalLink, IconRefresh, IconWorld } from "@tabler/icons-react";
+import {
+  IconArrowLeft,
+  IconArrowRight,
+  IconExternalLink,
+  IconRefresh,
+  IconWorld,
+} from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -17,7 +23,7 @@ import { Input } from "@aven/ui/input";
 import { PanelNotice } from "@aven/ui/panel-notice";
 import { SidePanel } from "@aven/ui/side-panel";
 
-import type { PreviewOffer } from "../types";
+import type { PreviewAddress, PreviewOffer } from "../types";
 import { usePreview } from "../hooks/use-preview";
 import { addressOf } from "../port";
 
@@ -37,27 +43,44 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
     setPort,
     previewDomain,
     session,
+    currentPath,
+    canGoBack,
+    canGoForward,
     problem,
     opening,
+    iframeRef,
     open,
+    navigateInSession,
+    reload,
+    goBack,
+    goForward,
+    syncLocation,
+    setEditing,
     openInTab,
-    parseRequestedPort,
+    parseRequestedAddress,
   } = usePreview(runtimeId);
-  const [asking, setAsking] = useState<number | null>(null);
+  const [asking, setAsking] = useState<PreviewAddress | null>(null);
   const target = { runtimeId, previewDomain };
 
   useEffect(() => {
     if (!offer) return;
 
-    setPort(addressOf(offer.port, { runtimeId, previewDomain }));
-    setAsking(offer.port);
+    setPort(addressOf(offer.port, { runtimeId, previewDomain }, offer.path));
+    setAsking({ port: offer.port, path: offer.path });
     onOffered?.();
   }, [offer, previewDomain, runtimeId]);
 
   function ask() {
-    const parsed = parseRequestedPort();
+    const parsed = parseRequestedAddress();
 
-    if (parsed !== null) setAsking(parsed);
+    if (parsed === null) return;
+
+    if (session && parsed.port === session.port) {
+      navigateInSession(parsed.path);
+      return;
+    }
+
+    setAsking(parsed);
   }
 
   function confirm() {
@@ -66,31 +89,41 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
 
     if (requested === null) return;
 
-    setPort(addressOf(requested, target));
-    void open(requested);
+    setPort(addressOf(requested.port, target, requested.path));
+    void open(requested.port, requested.path);
   }
 
   return (
     <SidePanel title="Browser" icon={IconWorld} onClose={onClose}>
       <div className="flex min-h-0 flex-1 flex-col">
         <Form
-          className="flex shrink-0 items-center gap-2 border-b px-3 py-2"
+          className="flex shrink-0 items-center gap-1.5 border-b px-3 py-2"
           onSubmit={(event) => {
             event.preventDefault();
             ask();
           }}
         >
-          <Input
-            aria-label="Address"
-            placeholder={
-              previewDomain ? `3000 or https://3000-….${previewDomain}` : "localhost:3000"
-            }
-            value={port}
-            onChange={(event) => setPort(event.target.value)}
-            className="h-7 flex-1 text-xs"
-          />
-          <Button type="submit" size="sm" disabled={opening || port.trim() === ""}>
-            Open
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Back"
+            title="Back"
+            disabled={opening || !session || !canGoBack}
+            onClick={goBack}
+          >
+            <IconArrowLeft />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Forward"
+            title="Forward"
+            disabled={opening || !session || !canGoForward}
+            onClick={goForward}
+          >
+            <IconArrowRight />
           </Button>
           <Button
             type="button"
@@ -99,9 +132,23 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
             aria-label="Reload"
             title="Reload"
             disabled={opening || !session}
-            onClick={() => session && void open(session.port)}
+            onClick={reload}
           >
             <IconRefresh />
+          </Button>
+          <Input
+            aria-label="Address"
+            placeholder={
+              previewDomain ? `3000 or https://3000-….${previewDomain}` : "localhost:3000"
+            }
+            value={port}
+            onChange={(event) => setPort(event.target.value)}
+            onFocus={() => setEditing(true)}
+            onBlur={() => setEditing(false)}
+            className="h-7 flex-1 text-xs"
+          />
+          <Button type="submit" size="sm" disabled={opening || port.trim() === ""}>
+            Open
           </Button>
           {session && (
             <Button
@@ -110,7 +157,7 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
               size="icon-sm"
               aria-label="Open in a new tab"
               title="Open in a new tab"
-              onClick={() => void openInTab(session.port)}
+              onClick={() => void openInTab(session.port, currentPath)}
             >
               <IconExternalLink />
             </Button>
@@ -119,9 +166,11 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
         <div className="min-h-0 flex-1">
           {session ? (
             <iframe
+              ref={iframeRef}
               key={session.key}
               title={`Port ${session.port}`}
               src={session.embedUrl}
+              onLoad={syncLocation}
               sandbox={SANDBOX}
               referrerPolicy="no-referrer"
               className="size-full border-0 bg-white"
@@ -139,11 +188,11 @@ export function PreviewPanel({ runtimeId, offer, onOffered, onClose }: Props) {
       <AlertDialog open={asking !== null} onOpenChange={(next) => !next && setAsking(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Open port {asking}?</AlertDialogTitle>
+            <AlertDialogTitle>Open port {asking?.port}?</AlertDialogTitle>
             <AlertDialogDescription>
               {asking !== null && previewDomain
-                ? `This opens ${addressOf(asking, target)}. Anyone allowed to use this runner can open what is on port ${asking} of this machine. Only open a port you started.`
-                : `Anyone allowed to use this runner can open what is on port ${asking} of this machine. Only open a port you started.`}
+                ? `This opens ${addressOf(asking.port, target, asking.path)}. Anyone allowed to use this runner can open what is on port ${asking.port} of this machine. Only open a port you started.`
+                : `Anyone allowed to use this runner can open what is on port ${asking?.port} of this machine. Only open a port you started.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
