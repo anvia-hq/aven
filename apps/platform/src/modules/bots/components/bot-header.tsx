@@ -28,7 +28,7 @@ function BotPill({ bot }: { bot: Bot }) {
 
 export function BotHeader({ bot }: { bot: Bot }) {
   return (
-    <div className="pointer-events-none z-10 flex justify-center bg-gradient-to-b from-background from-60% to-transparent px-3 pt-3 pb-6 md:absolute md:inset-x-0 md:top-0">
+    <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center bg-[linear-gradient(to_bottom,var(--background)_0%,color-mix(in_oklch,var(--background)_82%,transparent)_38%,color-mix(in_oklch,var(--background)_38%,transparent)_72%,transparent_100%)] px-3 pt-3 pb-7">
       <header
         aria-label={`${bot.name} header`}
         title={bot.description || undefined}
