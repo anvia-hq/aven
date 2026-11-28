@@ -3,9 +3,10 @@ import { sentPrompt } from "@aven/agents/attachments";
 import { botAgentParts, createBotAgent } from "@aven/agents/bot-agent";
 import { keepFiles } from "@aven/agents/bot-files";
 import { typingDelay } from "@aven/agents/bot-delay";
+import { createViewImageRefusal } from "@aven/agents/tools/view-image";
 import { errorMessage } from "@aven/agents/values";
 import { botNote, MAIN_BOT_HANDLE, parseBotPrompt, USER_HANDLE } from "@aven/protocol/bots";
-import { SHOW_ARTIFACT_TOOL_NAME } from "@aven/protocol/events";
+import { SHOW_ARTIFACT_TOOL_NAME, VIEW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 
 import { createBotRpcHosts } from "./bots/bot-hosts";
 import { rememberBotTurn, remoteBotMemory } from "./bots/remote-bot-memory";
@@ -369,9 +370,16 @@ export class BotReplies {
       spoke();
       return `Reacted to ${reacted.messageId} with ${emoji}.`;
     };
+    const blind = message.model?.seesToolImages === false;
     const computer = boundedTools(
-      box.tools.filter((tool) => tool.name !== SHOW_ARTIFACT_TOOL_NAME),
+      box.tools.filter(
+        (tool) =>
+          tool.name !== SHOW_ARTIFACT_TOOL_NAME && !(blind && tool.name === VIEW_IMAGE_TOOL_NAME),
+      ),
     );
+
+    if (blind) computer.push(createViewImageRefusal(message.model?.modelId));
+
     const exec = computer.find((tool) => tool.name === "exec_command");
     let shown: string | null = null;
     const onActivity = (label: string | null) => {

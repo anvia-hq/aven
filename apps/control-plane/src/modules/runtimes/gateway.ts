@@ -117,6 +117,7 @@ export class RunGateway {
       reasoningEffort: config.reasoningEffort,
       effortLevels: config.effortLevels && [...config.effortLevels],
       contextWindow: config.contextWindow,
+      seesToolImages: config.seesToolImages,
       gatewayPath: `/runtimes/gateway/${SEGMENTS[config.provider]}`,
       gatewayToken: token,
     };

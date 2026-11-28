@@ -75,6 +75,14 @@ function createChatModel(
 
 export const azureApiFor = (modelId: string) => (OPENAI_MODEL.test(modelId) ? "responses" : "chat");
 
+export function carriesToolImages(config: Pick<ModelConfig, "provider" | "modelId">) {
+  if (isChatProvider(config.provider)) return false;
+
+  if (config.provider === "azure") return azureApiFor(config.modelId ?? "") === "responses";
+
+  return true;
+}
+
 export function createModel(config: ModelConfig, apiKey: ModelApiKey) {
   if (isChatProvider(config.provider)) {
     return createChatModel(config, apiKey, CHAT_PROVIDERS[config.provider]);

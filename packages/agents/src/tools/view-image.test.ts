@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { projectToolOutput } from "../tool-projection";
-import { MAX_VIEW_IMAGE_BYTES, createViewImageTool } from "./view-image";
+import { MAX_VIEW_IMAGE_BYTES, createViewImageRefusal, createViewImageTool } from "./view-image";
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
 
@@ -40,6 +40,14 @@ describe("view_image", () => {
     await expect(tool.call({ path: "notes.txt" })).rejects.toThrow("is not a PNG, JPEG");
     await expect(tool.call({ path: "big.png" })).rejects.toThrow("up to 5 MiB");
     await expect(tool.call({ path: "missing.png" })).rejects.toThrow("File not found");
+  });
+
+  test("a model that cannot be shown images is told so, with what to do about it (docs/bugs/0009)", async () => {
+    await expect(
+      createViewImageRefusal("DeepSeek-V4.1-Flash").call({ path: "shots/home.png" }),
+    ).rejects.toThrow(
+      "DeepSeek-V4.1-Flash cannot be shown images, so shots/home.png never reaches it",
+    );
   });
 
   test("the transcript shows which file was looked at", () => {

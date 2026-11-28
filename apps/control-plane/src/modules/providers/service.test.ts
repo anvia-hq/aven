@@ -82,6 +82,7 @@ run("providersService (postgres)", async () => {
       modelId: undefined,
       baseUrl: undefined,
       apiKey: "sk-secret-abcd",
+      seesToolImages: true,
     });
   });
 
@@ -279,6 +280,7 @@ run("providersService (postgres)", async () => {
       baseUrl: undefined,
       apiKey: "AIza-secret-wxyz",
       contextWindow: undefined,
+      seesToolImages: true,
     });
     const [first] = await providersService.list(alice);
     await providersService.update(alice, first!.id, { isDefault: true });

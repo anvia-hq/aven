@@ -571,6 +571,7 @@ export type RunModel = {
   reasoningEffort?: string;
   effortLevels?: string[];
   contextWindow?: number;
+  seesToolImages?: boolean;
   gatewayPath: string;
   gatewayToken: string;
 };

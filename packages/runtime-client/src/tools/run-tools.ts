@@ -7,6 +7,8 @@ import { createCockpitTool } from "@aven/agents/tools/cockpit";
 import { createMemoryTool } from "@aven/agents/tools/memory";
 import { createSpawnAgentTool } from "@aven/agents/tools/spawn-agent";
 import { createSaveEnvironmentTool } from "@aven/agents/tools/save-environment";
+import { createViewImageRefusal } from "@aven/agents/tools/view-image";
+import { VIEW_IMAGE_TOOL_NAME } from "@aven/protocol/events";
 
 import { fetchBranch } from "../git/fetch-branch";
 import { lateBoundTools } from "./late-bound-tools";
@@ -18,6 +20,7 @@ export function toolsForRun({
   thread,
   tools,
   current,
+  model,
   mcp,
   attended,
   repoAccess,
@@ -40,7 +43,11 @@ export function toolsForRun({
     return fetchBranch(root, await repoAccess(), branch);
   });
   const ownComputer = computer ? createComputerTools(computer) : [];
-  const bound: AnyTool[] = [...lateBoundTools(tools, current), gitFetch, ...ownComputer];
+  const blind = model?.seesToolImages === false;
+  const seenTools = blind ? tools.filter((tool) => tool.name !== VIEW_IMAGE_TOOL_NAME) : tools;
+  const bound: AnyTool[] = [...lateBoundTools(seenTools, current), gitFetch, ...ownComputer];
+
+  if (blind) bound.push(createViewImageRefusal(model?.modelId));
 
   if (mcp) {
     bound.push(

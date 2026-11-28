@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { AnyTool } from "@anvia/core";
 import { createCodingAgent } from "@aven/agents/coding-agent";
 import { scriptedModel, text } from "@aven/agents/testing/scripted-model";
+import { createViewImageTool } from "@aven/agents/tools/view-image";
 
 import { toolsForRun } from "./run-tools";
 import type { CreateSubagent, ThreadWorkspaces } from "../types";
@@ -139,5 +140,56 @@ describe("toolsForRun", () => {
     };
     await spawn.call({ tasks: [{ description: "task", prompt: "look", type: "general" }] });
     expect(given[0]).not.toContain("fork_thread");
+  });
+
+  test("a run whose model cannot be shown images refuses view_image instead of handing back a picture (docs/bugs/0009)", async () => {
+    const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+    const looked: string[] = [];
+    const viewImage = createViewImageTool({
+      readFile: async ({ path }) => {
+        looked.push(path);
+
+        return PNG;
+      },
+    });
+    const base = {
+      sandbox,
+      thread: { id: "t1", organizationId: "o1" },
+      tools: [viewImage],
+      current: () => [viewImage],
+      attended: true,
+      repoAccess: async () => ({ cloneUrl: "", defaultBranch: "main", token: "" }),
+      defineGoal: () => undefined,
+      createSubagent: (() => undefined) as unknown as CreateSubagent,
+      emit: () => undefined,
+    };
+    const looking = async (model: Parameters<typeof toolsForRun>[0]["model"]) => {
+      const tool = toolsForRun({ ...base, model }).find(
+        (candidate) => candidate.name === "view_image",
+      ) as (AnyTool & { call(input: unknown): Promise<unknown> }) | undefined;
+
+      if (!tool) throw new Error("no view_image tool");
+
+      return tool.call({ path: "shots/home.png" });
+    };
+    const blind = {
+      provider: "azure" as const,
+      modelId: "DeepSeek-V4.1-Flash",
+      seesToolImages: false,
+      gatewayPath: "/runtimes/gateway/azure",
+      gatewayToken: "token",
+    };
+
+    await expect(looking(blind)).rejects.toThrow("DeepSeek-V4.1-Flash cannot be shown images");
+    expect(looked).toEqual([]);
+
+    await looking({
+      provider: "anthropic",
+      modelId: "claude-sonnet-5",
+      seesToolImages: true,
+      gatewayPath: "/runtimes/gateway/anthropic",
+      gatewayToken: "token",
+    });
+    expect(looked).toEqual(["shots/home.png"]);
   });
 });
