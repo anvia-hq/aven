@@ -17,6 +17,7 @@ function longTasks(maxTurns: number, canHandOff: boolean) {
     : [
         budget,
         `Work through the goal in order. When you are past about ${late} turns and not finished, stop starting new things and end with a plain account of what is done and what is left: the next session starts with no memory of this one and carries on from what you wrote and from what is in the workspace.`,
+        "The goal controller starts the next session by itself as soon as this one ends, so never ask the person to say continue, to approve the next step or to give you the go-ahead: end with the account, and if something blocks you, name it there.",
       ];
   return `<long_tasks>\n${lines.map((line) => `- ${line}`).join("\n")}\n</long_tasks>`;
 }
