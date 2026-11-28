@@ -2,6 +2,16 @@
 @import "tw-animate-css";
 @import "@fontsource-variable/geist-mono";
 
+@font-face {
+  font-family: "Symbols Nerd Font Mono";
+  src: url("/fonts/SymbolsNerdFontMono-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range:
+    U+23FB-23FE, U+2630, U+2665, U+26A1, U+276C-2771, U+2B58, U+E000-F8FF, U+F0000-FFFFD;
+}
+
 @plugin "@tailwindcss/typography";
 
 /* The cockpit's editor draws with Tailwind classes of its own (decision 0105). */

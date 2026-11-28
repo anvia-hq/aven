@@ -1,4 +1,5 @@
 import { FitAddon } from "@xterm/addon-fit";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { Terminal } from "@xterm/xterm";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,8 +11,9 @@ import type { Computer } from "@/modules/computer/types";
 
 type TerminalPhase = "connecting" | "connected" | "ended";
 
+const FONT_SIZE = 12.5;
 const FONT_FAMILY =
-  '"Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+  '"Geist Mono Variable", "Symbols Nerd Font Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 const FALLBACK_SIZE = { cols: 80, rows: 24 };
 
 function streamUrl(path: string, size: { cols: number; rows: number }) {
@@ -96,10 +98,13 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
 
     setPhase("connecting");
     setReason("");
+    let disposed = false;
     const term = new Terminal({
       fontFamily: FONT_FAMILY,
-      fontSize: 12.5,
-      lineHeight: 1.45,
+      fontSize: FONT_SIZE,
+      lineHeight: 1.15,
+      customGlyphs: true,
+      rescaleOverlappingGlyphs: true,
       cursorStyle: "bar",
       cursorBlink: true,
       theme: terminalTheme(),
@@ -107,8 +112,27 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
     const fit = new FitAddon();
     term.loadAddon(fit);
     term.open(element);
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => webgl.dispose());
+      term.loadAddon(webgl);
+    } catch {
+      void 0;
+    }
     fit.fit();
     terminal.current = term;
+
+    if (typeof document.fonts?.load === "function") {
+      void Promise.allSettled([
+        document.fonts.load(`${FONT_SIZE}px "Geist Mono Variable"`),
+        document.fonts.load(`${FONT_SIZE}px "Symbols Nerd Font Mono"`, "\uE5FF"),
+      ]).then(() => {
+        if (!disposed) {
+          term.clearTextureAtlas();
+          fit.fit();
+        }
+      });
+    }
 
     const ws = new WebSocket(streamUrl(path, term.cols ? term : FALLBACK_SIZE));
     ws.binaryType = "arraybuffer";
@@ -139,6 +163,7 @@ export function useTerminal({ path }: Computer, onExit: () => void) {
     observer.observe(element);
 
     return () => {
+      disposed = true;
       observer.disconnect();
       input.dispose();
       resized.dispose();
