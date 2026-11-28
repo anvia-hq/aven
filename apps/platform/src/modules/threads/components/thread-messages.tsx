@@ -142,7 +142,7 @@ export function ThreadMessages({
   return (
     <div
       ref={scrollRef}
-      className="h-full scrollbar-gutter-stable overflow-y-auto"
+      className="h-full scrollbar-gutter-stable overflow-x-hidden overflow-y-auto"
       style={textSize.style}
     >
       <div className="flex">
@@ -200,7 +200,13 @@ export function ThreadMessages({
                 />
               </RiseIn>
             ))}
-            <div className={cn(working.space, error && !showWorking ? "empty:hidden" : "min-h-7")}>
+            <div
+              className={cn(
+                "min-w-0",
+                working.space,
+                error && !showWorking ? "empty:hidden" : "min-h-7",
+              )}
+            >
               <WorkingIndicator
                 running={showWorking}
                 runtimeId={runtimeId}
@@ -212,7 +218,7 @@ export function ThreadMessages({
             {error && (
               <p
                 role="alert"
-                className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive"
+                className="mt-4 min-w-0 break-words rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-2.5 text-xs text-destructive"
               >
                 {error}
               </p>
