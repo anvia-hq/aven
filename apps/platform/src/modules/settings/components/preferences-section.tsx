@@ -3,6 +3,7 @@ import { useState } from "react";
 import { SettingsRow, SettingsSection } from "@aven/ui/settings-section";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@aven/ui/select";
 import { Switch } from "@aven/ui/switch";
+import { useMediaQuery } from "@aven/ui/use-media-query";
 
 import { finishedSoundOn, playChime, setFinishedSound } from "@/lib/chime";
 import { FontPicker } from "@/modules/theme/components/font-picker";
@@ -20,6 +21,7 @@ const zones = (current: string) => {
 export function PreferencesSection() {
   const { timezone, save } = useTimezone();
   const [sound, setSound] = useState(finishedSoundOn);
+  const wide = useMediaQuery("(min-width: 48rem)");
 
   return (
     <>
@@ -34,24 +36,28 @@ export function PreferencesSection() {
         >
           <FontPicker />
         </SettingsRow>
-        <SettingsRow
-          title="Interface text size"
-          description="The size of the app's text, everywhere."
-        >
-          <TextSizePicker scope="interface" label="Interface text size" />
-        </SettingsRow>
-        <SettingsRow
-          title="Thread text size"
-          description="The size of an agent's conversation in a thread, on top of the interface size."
-        >
-          <TextSizePicker scope="thread" label="Thread text size" />
-        </SettingsRow>
-        <SettingsRow
-          title="Bot chat text size"
-          description="The size of the conversation with a bot, on top of the interface size."
-        >
-          <TextSizePicker scope="bot" label="Bot chat text size" />
-        </SettingsRow>
+        {wide && (
+          <>
+            <SettingsRow
+              title="Interface text size"
+              description="The size of the app's text, everywhere."
+            >
+              <TextSizePicker scope="interface" label="Interface text size" />
+            </SettingsRow>
+            <SettingsRow
+              title="Thread text size"
+              description="The size of an agent's conversation in a thread, on top of the interface size."
+            >
+              <TextSizePicker scope="thread" label="Thread text size" />
+            </SettingsRow>
+            <SettingsRow
+              title="Bot chat text size"
+              description="The size of the conversation with a bot, on top of the interface size."
+            >
+              <TextSizePicker scope="bot" label="Bot chat text size" />
+            </SettingsRow>
+          </>
+        )}
       </SettingsSection>
       <SettingsSection title="Sound" description="Only affects this device.">
         <SettingsRow
