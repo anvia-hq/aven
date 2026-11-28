@@ -1,6 +1,6 @@
 # The mobile shell is a tab bar, with one title a screen
 
-Status: accepted.
+Status: accepted. Superseded in part by 0411 (the tab bar: the apps are menu items in the drawer).
 
 ## Context
 

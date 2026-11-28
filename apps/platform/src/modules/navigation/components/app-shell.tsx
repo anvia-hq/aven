@@ -35,7 +35,7 @@ import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
 import { CommandMenu } from "./command-menu";
 import { MobileAppBar, MobileSidebarClose } from "./mobile-app-bar";
-import { MobileTabBar } from "./mobile-tab-bar";
+import { MobileAppSwitcher } from "./mobile-app-switcher";
 import { ShellSidebar } from "./shell-sidebar";
 import { SidebarResizer } from "./sidebar-resizer";
 
@@ -119,31 +119,22 @@ export function AppShell({ user }: Props) {
               <Button
                 variant="ghost"
                 aria-label="Search"
-                className="hidden h-7 min-w-0 flex-1 justify-start gap-2 rounded-full bg-muted/40 px-3 text-xs font-normal text-muted-foreground hover:bg-muted/70 md:flex group-data-[collapsible=icon]:hidden"
+                className="flex h-9 min-w-0 flex-1 justify-start gap-2 rounded-full bg-muted/40 px-3 text-xs font-normal text-muted-foreground hover:bg-muted/70 md:h-7 group-data-[collapsible=icon]:hidden"
                 onClick={() => setCommandOpen(true)}
               >
                 <IconSearch className="size-3.5" />
                 <span className="flex-1 text-left">Search</span>
-                <kbd className="font-sans text-[10px] tracking-wide text-muted-foreground/70">
+                <kbd className="hidden font-sans text-[10px] tracking-wide text-muted-foreground/70 md:inline">
                   ⌘K
                 </kbd>
               </Button>
-              <div className="min-w-0 flex-1 md:hidden">
-                <UserCard
-                  name={user.name}
-                  email={user.email}
-                  image={user.image}
-                  onSignOut={signOut}
-                  onOpenCommand={() => setCommandOpen(true)}
-                />
-              </div>
               <div className="mr-1 flex shrink-0 items-center gap-1.5 group-data-[collapsible=icon]:mr-0 group-data-[collapsible=icon]:flex-col">
                 <MentionsButton />
                 <Button
                   variant="ghost"
                   size="icon-sm"
                   aria-label="Search"
-                  className="size-9 rounded-full bg-muted/40 hover:bg-muted/70 md:hidden md:size-7 group-data-[collapsible=icon]:flex"
+                  className="size-9 rounded-full bg-muted/40 hover:bg-muted/70 hidden md:size-7 group-data-[collapsible=icon]:flex"
                   onClick={() => setCommandOpen(true)}
                 >
                   <IconSearch />
@@ -161,6 +152,7 @@ export function AppShell({ user }: Props) {
             </div>
           </SidebarHeader>
           <SidebarContent>
+            <MobileAppSwitcher />
             <ShellSidebar />
           </SidebarContent>
           <SidebarFooter>
@@ -177,12 +169,20 @@ export function AppShell({ user }: Props) {
                 <span>Settings</span>
               </Button>
             </div>
+            <div className="md:hidden">
+              <UserCard
+                name={user.name}
+                email={user.email}
+                image={user.image}
+                onSignOut={signOut}
+                onOpenCommand={() => setCommandOpen(true)}
+              />
+            </div>
           </SidebarFooter>
           <SidebarResizer size={sidebarSize} />
         </Sidebar>
         <SidebarInset
           className={cn(
-            "pb-(--mobile-tab-bar) md:pb-0",
             drawsOwnCards
               ? "md:bg-transparent"
               : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto",
@@ -192,7 +192,6 @@ export function AppShell({ user }: Props) {
           <Outlet />
         </SidebarInset>
       </div>
-      <MobileTabBar />
       <CommandMenu />
     </SidebarProvider>
   );

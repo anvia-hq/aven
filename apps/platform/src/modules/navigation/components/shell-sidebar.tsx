@@ -11,8 +11,6 @@ import { SidebarThreads } from "@/modules/threads/components/sidebar-threads";
 import { useRunningThreadsPoll } from "@/modules/threads/hooks/use-running-threads-poll";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 
-import { SidebarTabs } from "./sidebar-tabs";
-
 type Section = "threads" | "projects" | "automations" | "settings" | "bot" | "cockpit" | "git";
 
 function sectionOf(pathname: string): Section {
@@ -60,7 +58,6 @@ export function ShellSidebar() {
 
   return (
     <>
-      <SidebarTabs />
       <SidebarThreads />
     </>
   );

@@ -11,7 +11,6 @@ import {
   SidebarMenuItem,
 } from "@aven/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
-import { SidebarTabs } from "@/modules/navigation/components/sidebar-tabs";
 import { useThreads } from "@/modules/threads/hooks/use-threads";
 
 import { filterProjects } from "../filters";
@@ -57,7 +56,6 @@ export function ProjectsSidebar() {
 
   return (
     <>
-      <SidebarTabs />
       <nav aria-label="Projects" className="pt-4">
         <SidebarGroup className="py-1">
           <SidebarGroupLabel className="h-6 font-normal text-muted-foreground">

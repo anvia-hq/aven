@@ -12,7 +12,7 @@ A number is unique and permanent, and it is never reused. Two pull requests that
 
 ## What still holds
 
-407 decisions: 310 are the answer, 39 are superseded and 58 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
+408 decisions: 310 are the answer, 39 are superseded and 59 are superseded in part. The two tables below name every decision whose own `Status:` line says a later one superseded it, whole or in part, and `docs/products/0007-system-reference.md` says how each part of Aven works today.
 
 To find one, list the folder (it is in number order) or `grep -ril "<the words>" docs/decision`.
 
@@ -62,7 +62,7 @@ These describe something that is gone. Read what replaced them.
 | 0346     | Icons come from Solar                                                                        | 0360                         |
 | 0391     | The e2e suite runs before the push that makes a branch                                       | 0394                         |
 
-## Superseded in part (58)
+## Superseded in part (59)
 
 These hold, except for the part named.
 
@@ -103,6 +103,7 @@ These hold, except for the part named.
 | 0155     | Color themes, each with light and dark                                  | 0224 and 0404                    |
 | 0159     | A thread that finished while it was not open shows a dot                | 0331                             |
 | 0172     | The projects route is two columns, with the threads beside the projects | 0196 and 0275                    |
+| 0173     | The mobile shell is a tab bar, with one title a screen                  | 0411                             |
 | 0205     | A mention of a person marks the thread until it is opened               | 0331                             |
 | 0209     | A thread keeps its message draft                                        | 0341                             |
 | 0214     | The ship bar does not hold an invisible place                           | 0286                             |
