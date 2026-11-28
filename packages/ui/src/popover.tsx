@@ -14,16 +14,21 @@ function PopoverContent({
   className,
   align = "center",
   alignOffset = 0,
+  collisionPadding,
   side = "bottom",
   sideOffset = 4,
   ...props
 }: PopoverPrimitive.Popup.Props &
-  Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+  Pick<
+    PopoverPrimitive.Positioner.Props,
+    "align" | "alignOffset" | "collisionPadding" | "side" | "sideOffset"
+  >) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
         align={align}
         alignOffset={alignOffset}
+        collisionPadding={collisionPadding}
         side={side}
         sideOffset={sideOffset}
         className="isolate z-50"
@@ -71,4 +76,30 @@ function PopoverDescription({ className, ...props }: PopoverPrimitive.Descriptio
   );
 }
 
-export { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger };
+function PopoverArrow({ className, ...props }: PopoverPrimitive.Arrow.Props) {
+  return (
+    <PopoverPrimitive.Arrow
+      data-slot="popover-arrow"
+      className={cn(
+        "data-[side=bottom]:-top-2 data-[side=left]:-right-3 data-[side=left]:rotate-90 data-[side=right]:-left-3 data-[side=right]:-rotate-90 data-[side=top]:-bottom-2 data-[side=top]:rotate-180",
+        className,
+      )}
+      {...props}
+    >
+      <svg width="16" height="8" viewBox="0 0 16 8" fill="none" aria-hidden>
+        <path d="M0 8L8 0L16 8H0Z" className="fill-popover" />
+        <path d="M0.5 8L8 0.5L15.5 8" className="stroke-foreground/10" strokeWidth="1" />
+      </svg>
+    </PopoverPrimitive.Arrow>
+  );
+}
+
+export {
+  Popover,
+  PopoverArrow,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+};

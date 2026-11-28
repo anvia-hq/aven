@@ -9,6 +9,7 @@ import { IconArrowUp, IconPlayerStopFilled, IconSparkles } from "@tabler/icons-r
 import { cn } from "cn";
 import { useEffect, useRef, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 
+import { useMediaQuery } from "@aven/ui/use-media-query";
 import { Button } from "@aven/ui/button";
 
 import { useAttachmentDrop } from "../hooks/use-attachment-drop";
@@ -106,6 +107,7 @@ function Composer({
   people,
 }: Props & { people: MentionPerson[] }) {
   const composer = useComposer();
+  const wide = useMediaQuery("(min-width: 768px)");
   const editor = useRef<HTMLDivElement>(null);
   const model = useModelSelection(threadId, backend);
   const attachments = useAttachments(threadId);
@@ -145,7 +147,7 @@ function Composer({
     editor.current?.querySelector<HTMLElement>("[contenteditable]")?.focus();
   }
 
-  return (
+  const box = (
     <div
       className="relative flex cursor-text flex-col rounded-3xl border border-foreground/15 bg-(--chrome) px-4 pt-4 pb-0 focus-within:border-ring data-[dragging]:border-ring data-[dragging]:bg-accent/40"
       {...drop}
@@ -159,14 +161,14 @@ function Composer({
         aria-label="Prompt"
         placeholder={placeholder}
         renderEntity={renderEntity(people)}
-        className="max-h-60 min-h-14 overflow-y-auto p-1 text-base leading-6 md:text-sm [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
+        className="max-h-60 min-h-14 overflow-y-auto p-1 text-[max(1rem,16px)] leading-6 md:text-sm [&_.ProseMirror]:min-h-12 [&_.ProseMirror]:cursor-text"
       />
-      <div className="flex items-center gap-2 pt-2 pb-4">
+      <div className="flex items-center justify-between gap-2 pt-2 pb-4">
         <AttachButton
           onPick={attachments.add}
           title="Attach files: images are shown to the model, every file is copied into the sandbox"
         />
-        {tools}
+        {wide && tools}
         <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           <ModelMenu model={model} />
           <Button
@@ -183,4 +185,15 @@ function Composer({
       </div>
     </div>
   );
+
+  if (!wide && tools) {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <div className="flex flex-wrap items-center justify-center gap-2">{tools}</div>
+        {box}
+      </div>
+    );
+  }
+
+  return box;
 }

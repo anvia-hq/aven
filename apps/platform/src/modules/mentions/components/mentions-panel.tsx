@@ -1,12 +1,6 @@
-import { IconAt, IconDotsVertical } from "@tabler/icons-react";
+import { IconAt } from "@tabler/icons-react";
 
 import { Button } from "@aven/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@aven/ui/dropdown-menu";
 
 import type { Mention } from "../types";
 import { MentionRow } from "./mention-row";
@@ -21,25 +15,14 @@ type Props = {
 export function MentionsPanel({ mentions, unread, onMarkAllRead, onOpen }: Props) {
   return (
     <div className="flex flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-2.5">
-        <h2 className="text-sm font-medium text-muted-foreground">Mentions</h2>
-        <div className="flex items-center gap-1">
-          <span className="font-mono text-sm text-muted-foreground">{unread} Unread</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon-sm" className="size-6" aria-label="More" />
-              }
-            >
-              <IconDotsVertical />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled={unread === 0} onClick={onMarkAllRead}>
-                Mark all as read
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      <div className="flex items-center justify-between gap-2 border-b px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <h2 className="text-sm font-semibold text-foreground">Mentions</h2>
+          <span className="font-mono text-xs text-muted-foreground">· {unread} unread</span>
         </div>
+        <Button variant="outline" size="xs" disabled={unread === 0} onClick={onMarkAllRead}>
+          Mark all read
+        </Button>
       </div>
       {mentions.length === 0 ? (
         <div className="flex items-start gap-4 px-4 py-5">
