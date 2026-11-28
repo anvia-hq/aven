@@ -1,3 +1,4 @@
+import { carriesToolImages } from "@aven/agents/model";
 import { isModelApi, providerNeedsKey } from "@aven/protocol/providers";
 
 import { UnavailableError, UnprocessableError } from "@aven/server-kit/errors";
@@ -84,6 +85,10 @@ export async function resolveModel(
   if (selection.reasoningEffort) await applyEffort(config, selection.reasoningEffort);
 
   config.contextWindow = (await contextWindowOf(config)) ?? undefined;
+  const modelId = config.modelId ?? defaultModelId(config.provider);
+  config.seesToolImages =
+    carriesToolImages(config) &&
+    (modelId === undefined || (await modelCatalog.seesImages(config.provider, modelId)));
   return config;
 }
 

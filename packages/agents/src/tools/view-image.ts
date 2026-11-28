@@ -8,16 +8,31 @@ import type { ImageFiles } from "./types";
 
 export const MAX_VIEW_IMAGE_BYTES = 5 * 1024 * 1024;
 
+const imagePath = z
+  .string()
+  .min(1)
+  .describe("The image file inside the workspace (relative, or an absolute path inside it).");
+
+export function createViewImageRefusal(modelId: string | undefined) {
+  const model = modelId ?? "The model of this run";
+
+  return createTool({
+    name: VIEW_IMAGE_TOOL_NAME,
+    description: `${model} cannot be shown images, so this tool cannot open one: tell the person that this run's model cannot see images, and that they can switch to a model that takes image input (Claude, GPT or Gemini) to look at pictures. show_artifact still puts an image in front of the person.`,
+    inputSchema: z.object({ path: imagePath }),
+    async handler({ path }) {
+      throw new Error(
+        `${model} cannot be shown images, so ${path} never reaches it. Tell the person that this run's model cannot see images, and that they can switch to a model that takes image input (Claude, GPT or Gemini) to look at pictures.`,
+      );
+    },
+  });
+}
+
 export function createViewImageTool(files: ImageFiles) {
   return createTool({
     name: VIEW_IMAGE_TOOL_NAME,
     description: `Look at an image file on this machine: a PNG, JPEG, GIF or WebP of up to 5 MiB, such as a screenshot you took, a chart you plotted, a design mockup or a photo the user uploaded. read_file cannot open images; this returns the picture itself so you can see it. It only lets you see the image; to put it in front of the user, call show_artifact.`,
-    inputSchema: z.object({
-      path: z
-        .string()
-        .min(1)
-        .describe("The image file inside the workspace (relative, or an absolute path inside it)."),
-    }),
+    inputSchema: z.object({ path: imagePath }),
     async handler({ path }, context) {
       const bytes = await files.readFile({ path, abortSignal: context?.abortSignal });
       const mediaType = imageType(bytes);

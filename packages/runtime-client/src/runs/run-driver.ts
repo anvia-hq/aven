@@ -581,6 +581,7 @@ export function createRunDriver(context: DriverContext) {
         sandbox: context.sandbox,
         thread,
         tools: noted(box.tools),
+        model,
         computer,
         current,
         mcp: mcp && {

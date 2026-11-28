@@ -3,7 +3,7 @@ import { Agent, defineCompletionModelControls } from "@anvia/core";
 import { AnthropicClient } from "@anvia/anthropic";
 
 import { createCodingAgent } from "./coding-agent";
-import { azureApiFor, createModel, reasoningControlsFor } from "./model";
+import { azureApiFor, carriesToolImages, createModel, reasoningControlsFor } from "./model";
 import type { ModelConfig } from "./types";
 import { MODEL_APIS } from "@aven/protocol/runtime-wire";
 
@@ -165,6 +165,20 @@ describe("createModel azure", () => {
       "high",
     ]);
     expect(reasoningControlsFor({ provider: "azure" })).toBeNull();
+  });
+});
+
+describe("carriesToolImages", () => {
+  test("only when the endpoint hands a tool result's image to the model (docs/bugs/0009)", () => {
+    expect(carriesToolImages({ provider: "anthropic", modelId: "claude-sonnet-5" })).toBe(true);
+    expect(carriesToolImages({ provider: "openai", modelId: "gpt-5.5" })).toBe(true);
+    expect(carriesToolImages({ provider: "gemini", modelId: "gemini-2.5-flash" })).toBe(true);
+    expect(carriesToolImages({ provider: "azure", modelId: "gpt-5.5" })).toBe(true);
+    expect(carriesToolImages({ provider: "azure", modelId: "DeepSeek-V4.1-Flash" })).toBe(false);
+
+    for (const provider of ["openai-compatible", "bedrock", "vertex"] as const) {
+      expect(carriesToolImages({ provider, modelId: "any-model" })).toBe(false);
+    }
   });
 });
 

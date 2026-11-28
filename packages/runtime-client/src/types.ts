@@ -308,6 +308,7 @@ export type RunToolsInput = {
   thread: RunThreadInfo;
   tools: readonly AnyTool[];
   current: () => readonly AnyTool[] | undefined;
+  model?: RunModel;
   mcp?: { tools: readonly AnyTool[]; current: () => readonly AnyTool[] | undefined };
   attended: boolean;
   repoAccess: () => Promise<RepoAccess>;

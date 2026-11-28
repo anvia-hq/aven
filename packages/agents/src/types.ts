@@ -50,6 +50,7 @@ export type ModelConfig = {
   reasoningEffort?: string;
   effortLevels?: readonly string[];
   contextWindow?: number;
+  seesToolImages?: boolean;
 };
 
 export type ReasoningControls = { options: readonly string[]; defaultValue: string | null };
