@@ -116,7 +116,7 @@ export function BotChat({
             )}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,var(--background)_0%,color-mix(in_oklch,var(--background)_85%,transparent)_42%,color-mix(in_oklch,var(--background)_40%,transparent)_74%,transparent_100%)] pt-8 pr-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,var(--background)_0%,color-mix(in_oklch,var(--background)_85%,transparent)_42%,color-mix(in_oklch,var(--background)_40%,transparent)_74%,transparent_100%)] pt-8">
           <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3 md:pb-6">
             <BotComposer
               botId={bot.id}
