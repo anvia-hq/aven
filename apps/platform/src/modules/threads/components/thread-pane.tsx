@@ -118,7 +118,7 @@ export function ThreadPane({ threadId, split, onClose }: Props) {
   );
 
   return (
-    <div className="flex h-[calc(100svh-var(--mobile-chrome))] min-w-0 flex-col md:h-svh">
+    <div className="flex h-svh min-w-0 flex-col">
       <div className="min-h-0 flex-1">
         <ResizablePanelGroup
           orientation={wide ? "horizontal" : "vertical"}
