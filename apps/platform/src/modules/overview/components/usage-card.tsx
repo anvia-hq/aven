@@ -81,8 +81,10 @@ export function UsageCard({
     { id: "uncached", value: uncached, tone: "bg-usage-uncached" },
   ];
 
+  const summary = `${compactNumber(totals.inputTokens)} in · ${compactNumber(totals.outputTokens)} out`;
+
   return (
-    <OverviewCard title="Usage">
+    <OverviewCard title="Usage" summary={summary}>
       <OverviewBar segments={segments} />
       <dl className="flex flex-col gap-1 text-xs">
         {rows.map(({ label, value, tone, hint }) => (
