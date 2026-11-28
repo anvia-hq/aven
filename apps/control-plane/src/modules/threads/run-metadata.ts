@@ -39,13 +39,19 @@ export const threadRunMetadata = {
     await db.update(threads).set({ pendingContinuation: null }).where(eq(threads.id, id));
   },
 
-  async saveWorkedTime(threadId: string, messageIndex: number, workedMs: number) {
+  async saveWorkedTime(
+    threadId: string,
+    messageIndex: number,
+    workedMs: number,
+    finishedAt?: string,
+  ) {
+    const createdAt = finishedAt ? new Date(finishedAt) : new Date();
     await db
       .insert(threadRunTimes)
-      .values({ threadId, messageIndex, workedMs })
+      .values({ threadId, messageIndex, workedMs, createdAt })
       .onConflictDoUpdate({
         target: [threadRunTimes.threadId, threadRunTimes.messageIndex],
-        set: { workedMs: sql`${threadRunTimes.workedMs} + ${workedMs}` },
+        set: { workedMs: sql`${threadRunTimes.workedMs} + ${workedMs}`, createdAt },
       });
   },
 
@@ -55,6 +61,14 @@ export const threadRunMetadata = {
       .from(threadRunTimes)
       .where(eq(threadRunTimes.threadId, threadId));
     return new Map(rows.map((row) => [row.index, row.ms]));
+  },
+
+  async finishedTimes(threadId: string) {
+    const rows = await db
+      .select({ index: threadRunTimes.messageIndex, at: threadRunTimes.createdAt })
+      .from(threadRunTimes)
+      .where(eq(threadRunTimes.threadId, threadId));
+    return new Map(rows.map((row) => [row.index, row.at.toISOString()]));
   },
 
   async saveContextSplit(

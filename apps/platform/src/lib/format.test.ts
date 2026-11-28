@@ -1,6 +1,13 @@
 import { describe, expect, test } from "bun:test";
 
-import { elapsed, resetsIn, shortTimeAgo, storageSize, storageUsage } from "./format";
+import {
+  elapsed,
+  formatDateTime,
+  resetsIn,
+  shortTimeAgo,
+  storageSize,
+  storageUsage,
+} from "./format";
 
 describe("elapsed", () => {
   test("is seconds under a minute", () => {
@@ -73,5 +80,14 @@ describe("resetsIn", () => {
     expect(resetsIn((2 * 60 + 10) * 60_000, 0)).toBe("2h 10m");
     expect(resetsIn((3 * 24 + 5) * 3_600_000, 0)).toBe("3d 5h");
     expect(resetsIn(0, 1000)).toBe("less than a minute");
+  });
+});
+
+describe("formatDateTime", () => {
+  test("omits the year in the current year, includes it for another year, and handles invalid input", () => {
+    const now = Date.parse("2026-11-28T12:00:00Z");
+    expect(formatDateTime("2026-11-28T05:30:00Z", now)).not.toContain("2026");
+    expect(formatDateTime("2025-11-28T05:30:00Z", now)).toContain("2025");
+    expect(formatDateTime("not-a-date", now)).toBe("");
   });
 });

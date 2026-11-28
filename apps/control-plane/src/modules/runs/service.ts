@@ -729,9 +729,12 @@ export class RunManager {
     if (ending.outcome === "failed") {
       this.#emit(channel, { type: "error", message: ending.error });
     } else {
-      this.#emit(channel, produced ? { type: "done", workedMs } : { type: "done" });
+      const finishedAt = new Date().toISOString();
+      this.#emit(channel, produced ? { type: "done", workedMs, finishedAt } : { type: "done" });
 
-      if (produced) this.#history.recordWorkedTime(channel.thread.id, answered, workedMs);
+      if (produced) {
+        this.#history.recordWorkedTime(channel.thread.id, answered, workedMs, finishedAt);
+      }
     }
 
     if (ending.outcome === "failed") this.#recordFailure(channel, ending.error);

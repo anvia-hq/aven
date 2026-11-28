@@ -1,7 +1,12 @@
-import type { AgentStreamEvent, AssistantContentPart, Message } from "@anvia/core";
+import {
+  getAssistantGenerationMetadata,
+  type AgentStreamEvent,
+  type AssistantContentPart,
+  type Message,
+} from "@anvia/core";
 import { reasoningDisplayText } from "@anvia/core/completion";
 
-import { messageId } from "@aven/protocol/events";
+import { addUsage, messageId, NO_USAGE } from "@aven/protocol/events";
 
 import { sentMessage } from "./attachments";
 import {
@@ -11,7 +16,7 @@ import {
   withSubagentResults,
 } from "./tool-projection";
 import { readToolUi } from "./tool-ui";
-import { contextOf, tokenUsageOf } from "./usage";
+import { contextOf, contextOfGeneration, tokenUsageOf } from "./usage";
 import type { ChatMessage, MessagePart, RunEvent } from "@aven/protocol/types";
 
 export function projectStreamEvent(event: AgentStreamEvent): RunEvent | undefined {
@@ -79,9 +84,6 @@ function assistantParts(content: string | readonly AssistantContentPart[]): Mess
 
 export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
   const chat: ChatMessage[] = [];
-  const add = (role: ChatMessage["role"], parts: MessagePart[]) => {
-    chat.push({ id: messageId(chat.length), role, parts });
-  };
   const lastAssistant = () => (chat.at(-1)?.role === "assistant" ? chat.at(-1) : undefined);
 
   for (const message of messages) {
@@ -100,10 +102,26 @@ export function messagesToChat(messages: readonly Message[]): ChatMessage[] {
       chat.push(user);
     } else if (message.role === "assistant") {
       const parts = assistantParts(message.content);
+      const generation = getAssistantGenerationMetadata(message);
+      const turn = generation ? tokenUsageOf(generation.usage) : undefined;
+      const context = generation ? contextOfGeneration(generation) : undefined;
       const current = lastAssistant();
 
-      if (current) current.parts.push(...parts);
-      else add("assistant", parts);
+      if (current) {
+        current.parts.push(...parts);
+
+        if (turn) current.usage = addUsage(current.usage ?? NO_USAGE, turn);
+
+        if (context) current.context = context;
+      } else {
+        const created: ChatMessage = { id: messageId(chat.length), role: "assistant", parts };
+
+        if (turn) created.usage = turn;
+
+        if (context) created.context = context;
+
+        chat.push(created);
+      }
     } else if (message.role === "tool") {
       const current = lastAssistant();
       for (const part of message.content) {

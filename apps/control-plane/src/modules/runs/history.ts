@@ -1,6 +1,6 @@
 import { messagesToChat } from "@aven/agents/projection";
 import { usageFromHistory } from "@aven/agents/usage";
-import { withSenders, withWorkedTimes } from "@aven/protocol/events";
+import { withFinishedTimes, withSenders, withWorkedTimes } from "@aven/protocol/events";
 import type { ContextSegment, PlanLimit, ToolNarration } from "@aven/protocol/types";
 
 import type { ConversationStore } from "../../types";
@@ -33,25 +33,33 @@ export class ThreadHistory {
   }
 
   async loadMessages(thread: RunThread) {
-    const [history, times, senders] = await Promise.all([
+    const [history, times, finished, senders] = await Promise.all([
       this.loadRaw(thread),
       this.workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+      this.storedFinishedTimes(thread.id),
       this.senders.read(thread.id).catch(() => new Map<number, string>()),
     ]);
-    return withSenders(withWorkedTimes(messagesToChat(history), times), senders);
+    return withSenders(
+      withFinishedTimes(withWorkedTimes(messagesToChat(history), times), finished),
+      senders,
+    );
   }
 
   async loadState(thread: RunThread) {
-    const [history, times, senders, stored, split, narrations] = await Promise.all([
+    const [history, times, finished, senders, stored, split, narrations] = await Promise.all([
       this.loadRaw(thread),
       this.workedTimes.read(thread.id).catch(() => new Map<number, number>()),
+      this.storedFinishedTimes(thread.id),
       this.senders.read(thread.id).catch(() => new Map<number, string>()),
       this.storedLimits(thread.id),
       this.storedSplit(thread.id),
       this.storedNarrations(thread.id),
     ]);
     return {
-      messages: withSenders(withWorkedTimes(messagesToChat(history), times), senders),
+      messages: withSenders(
+        withFinishedTimes(withWorkedTimes(messagesToChat(history), times), finished),
+        senders,
+      ),
       usage: {
         ...withContextSplit(usageFromHistory(history), split),
         limits: stored.length > 0 ? stored : undefined,
@@ -84,8 +92,8 @@ export class ThreadHistory {
     });
   }
 
-  recordWorkedTime(threadId: string, index: number, workedMs: number) {
-    this.workedTimes.record(threadId, index, workedMs).catch((error: unknown) => {
+  recordWorkedTime(threadId: string, index: number, workedMs: number, finishedAt?: string) {
+    this.workedTimes.record(threadId, index, workedMs, finishedAt).catch((error: unknown) => {
       console.warn(`Could not keep how long a run of thread ${threadId} took:`, error);
     });
   }
@@ -100,6 +108,13 @@ export class ThreadHistory {
 
   recordNarration(threadId: string, narration: ToolNarration) {
     void this.narrations?.record(threadId, narration).catch(() => undefined);
+  }
+
+  private async storedFinishedTimes(threadId: string) {
+    return (
+      (await this.workedTimes.readFinishedAt?.(threadId).catch(() => new Map<number, string>())) ??
+      new Map<number, string>()
+    );
   }
 
   private async storedNarrations(threadId: string): Promise<Record<string, ToolNarration>> {

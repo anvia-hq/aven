@@ -14,6 +14,7 @@ import {
   mergeLimits,
   pendingQuestion,
   questionAnswers,
+  withFinishedTimes,
   withSenders,
   withWorkedTimes,
 } from "./events";
@@ -319,6 +320,37 @@ describe("how long a run worked", () => {
     const marked = withWorkedTimes(chat, new Map([[1, 5_000]]));
     expect(marked[1]?.workedMs).toBe(5_000);
     expect(marked[0]).toBe(chat[0]!);
+  });
+
+  test("usage and finishedAt are tracked on the latest assistant message", () => {
+    const first = applyEvent(chat, {
+      type: "usage",
+      turn: { inputTokens: 100, outputTokens: 20, cacheWriteTokens: 10, cacheReadTokens: 50 },
+      context: { usedTokens: 100, contextWindow: 200_000 },
+    });
+    const second = applyEvent(first, {
+      type: "usage",
+      turn: { inputTokens: 150, outputTokens: 30, cacheWriteTokens: 0, cacheReadTokens: 100 },
+      context: { usedTokens: 150, contextWindow: 200_000 },
+    });
+    const done = applyEvent(second, {
+      type: "done",
+      workedMs: 4_000,
+      finishedAt: "2026-11-28T05:58:00.000Z",
+    });
+
+    expect(done[1]?.usage).toEqual({
+      inputTokens: 250,
+      outputTokens: 50,
+      cacheWriteTokens: 10,
+      cacheReadTokens: 150,
+    });
+    expect(done[1]?.context).toEqual({ usedTokens: 150, contextWindow: 200_000 });
+    expect(done[1]?.finishedAt).toBe("2026-11-28T05:58:00.000Z");
+
+    const fromStore = withFinishedTimes(chat, new Map([[1, "2026-11-28T05:58:00.000Z"]]));
+    expect(fromStore[1]?.finishedAt).toBe("2026-11-28T05:58:00.000Z");
+    expect(fromStore[0]).toBe(chat[0]!);
   });
 });
 

@@ -283,6 +283,9 @@ export type ChatMessage = {
   mentions?: MessageMention[];
   senderId?: string;
   workedMs?: number;
+  finishedAt?: string;
+  usage?: TokenUsage;
+  context?: ContextUsage;
 };
 
 export type MessagesPage = { messages: ChatMessage[]; hidden: number };
@@ -415,7 +418,7 @@ export type RunEvent =
   | { type: "usage"; turn: TokenUsage; context?: ContextUsage }
   | { type: "limits"; limits: PlanLimit[] }
   | { type: "subagent"; index: number; event: SubagentEvent }
-  | { type: "done"; workedMs?: number }
+  | { type: "done"; workedMs?: number; finishedAt?: string }
   | { type: "error"; message: string };
 
 export type ForkView = {

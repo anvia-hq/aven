@@ -155,8 +155,10 @@ export const runsService = new RunManager({
     read: (threadId) => threadsService.lastError(threadId),
   },
   workedTimes: {
-    record: (threadId, index, ms) => threadsService.saveWorkedTime(threadId, index, ms),
+    record: (threadId, index, ms, finishedAt) =>
+      threadsService.saveWorkedTime(threadId, index, ms, finishedAt),
     read: (threadId) => threadsService.workedTimes(threadId),
+    readFinishedAt: (threadId) => threadsService.finishedTimes(threadId),
   },
   limits: {
     record: (threadId, limits) => threadsService.savePlanLimits(threadId, limits),

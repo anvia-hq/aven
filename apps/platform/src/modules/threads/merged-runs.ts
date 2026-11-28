@@ -1,5 +1,7 @@
 import { COMPACT_PROMPT, COMPACTED, NOTHING_TO_COMPACT } from "@aven/protocol/compaction";
+import { addUsage } from "@aven/protocol/events";
 import { systemNoteOf } from "@aven/protocol/system-notes";
+import type { TokenUsage } from "@aven/protocol/types";
 
 import type { ChatMessage } from "./types";
 
@@ -11,6 +13,14 @@ export const isProcessNote = (message: ChatMessage) =>
 
 const addedUp = (first: number | undefined, second: number | undefined) =>
   first === undefined && second === undefined ? undefined : (first ?? 0) + (second ?? 0);
+
+const addedUsage = (first: TokenUsage | undefined, second: TokenUsage | undefined) => {
+  if (!first) return second;
+
+  if (!second) return first;
+
+  return addUsage(first, second);
+};
 
 const compactionNote = (message: ChatMessage, line: string): ChatMessage => ({
   id: message.id,
@@ -125,11 +135,24 @@ export function mergedRuns(
       (!live || hasTrailingTools(previous))
     ) {
       merged.splice(merged.length - notes, notes);
-      merged[merged.length - 1] = {
+      const combined: ChatMessage = {
         ...previous,
         parts: [...previous.parts, ...message.parts],
         workedMs: addedUp(previous.workedMs, message.workedMs),
       };
+      const finishedAt = message.finishedAt ?? previous.finishedAt;
+
+      if (finishedAt !== undefined) combined.finishedAt = finishedAt;
+
+      const usage = addedUsage(previous.usage, message.usage);
+
+      if (usage !== undefined) combined.usage = usage;
+
+      const context = message.context ?? previous.context;
+
+      if (context !== undefined) combined.context = context;
+
+      merged[merged.length - 1] = combined;
     } else {
       merged.push(message);
     }
