@@ -12,6 +12,24 @@ public struct Transcript: Equatable, Sendable {
         self.running = running
     }
 
+    /// When the agent has paused on an `ask_user` tool call waiting for answers.
+    public var pendingQuestionTool: Tool? {
+        guard !running else { return nil }
+        guard let lastAssistant = messages.last(where: { $0.role == .assistant }) else { return nil }
+        guard case .tool(let tool)? = lastAssistant.parts.last else { return nil }
+        guard tool.name == "ask_user", tool.status == .running, let questions = tool.questions,
+            !questions.isEmpty
+        else { return nil }
+        return tool
+    }
+
+    public mutating func prepend(_ earlier: [Message]) {
+        guard !earlier.isEmpty else { return }
+        let existingIds = Set(messages.map(\.id))
+        let fresh = earlier.filter { !existingIds.contains($0.id) }
+        messages.insert(contentsOf: fresh, at: 0)
+    }
+
     public mutating func apply(_ event: RunEvent) {
         switch event {
         case .snapshot(let messages, let running):
@@ -22,6 +40,8 @@ public struct Transcript: Equatable, Sendable {
             let n = messages.count
             messages.append(Message(id: "m-\(n)", role: .user, parts: [.text(prompt)]))
             messages.append(Message(id: "m-\(n + 1)", role: .assistant, parts: []))
+        case .runResume:
+            running = true
         case .text(let delta):
             changeLastAssistant { parts in
                 if case .text(let existing)? = parts.last {

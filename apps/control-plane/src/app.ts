@@ -60,6 +60,7 @@ import { mcpRouter } from "./modules/mcp/router";
 import { mcpEndpoint } from "./modules/mcp-access/endpoint";
 import { mcpAccessRouter } from "./modules/mcp-access/router";
 import { memoryRouter } from "./modules/memory/router";
+import { mobilePairRouter } from "./modules/mobile-pair/router";
 import { skillsRouter } from "./modules/skills/router";
 import { terminalRouter } from "./modules/terminal/router";
 import { threadsRouter } from "./modules/threads/router";
@@ -110,6 +111,7 @@ export const app = new Elysia()
   .use(mcpAccessRouter)
   .use(mcpEndpoint(botApi, process.env.AVEN_VERSION ?? "dev"))
   .use(memoryRouter)
+  .use(mobilePairRouter)
   .use(terminalRouter(runtimeHub))
   .use(followUpsRouter(followUps))
   .use(threadsRouter(runsService, threadMessages, putAwayThread, threadContinuation))

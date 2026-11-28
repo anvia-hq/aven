@@ -1,2 +1,4 @@
 *.xcodeproj
 .build/
+Info.plist
+AvenMobile.entitlements

@@ -9,6 +9,7 @@ import { initials } from "@/lib/format";
 import { handleOf } from "../activity";
 import { useExportProfile } from "../hooks/use-export-profile";
 import type { ProfileStats } from "../types";
+import { MobileLinkDialog } from "./mobile-link-dialog";
 
 type Props = {
   name: string;
@@ -36,6 +37,7 @@ export function ProfileHeader({ name, email, image, stats }: Props) {
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <MobileLinkDialog />
         <Button
           variant="outline"
           size="sm"

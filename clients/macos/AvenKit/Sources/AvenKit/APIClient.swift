@@ -75,21 +75,99 @@ public final class APIClient: @unchecked Sendable {
         return token
     }
 
+    /// Exchanges a one-time QR pairing code for a bearer session token.
+    public func exchangePairingCode(_ code: String) async throws -> String {
+        let (data, response) = try await send(
+            "/mobile-pair/exchange", method: "POST", body: ["code": code], authenticated: false)
+        let headerToken = response.value(forHTTPHeaderField: "set-auth-token")
+        let bodyToken = try? JSONDecoder().decode(PairingExchangeResponse.self, from: data).token
+        guard let token = headerToken ?? bodyToken, !token.isEmpty else {
+            throw APIError.missingToken
+        }
+        self.token = token
+        return token
+    }
+
+    public func signOut() async {
+        _ = try? await send("/auth/sign-out", method: "POST", body: [String: String]())
+        self.token = nil
+    }
+
     // MARK: Resources
 
+    public func session() async throws -> SessionInfo { try await get("/auth/get-session") }
     public func projects() async throws -> [Project] { try await get("/projects") }
     public func runtimes() async throws -> [Runtime] { try await get("/runtimes") }
     public func threads() async throws -> [ThreadSummary] { try await get("/threads") }
+    public func thread(id: String) async throws -> ThreadDetail { try await get("/threads/\(id)") }
+    public func providers() async throws -> [ProviderSummary] { try await get("/providers") }
 
-    public func createThread(projectId: String, title: String? = nil) async throws -> ThreadSummary {
+    public func models(providerId: String) async throws -> ProviderModels {
+        try await get("/providers/\(providerId)/models")
+    }
+
+    public func earlierMessages(threadId: String, before: Int) async throws -> ThreadMessagesPage {
+        try await get("/threads/\(threadId)/messages?before=\(before)")
+    }
+
+    public func createThread(
+        projectId: String,
+        title: String? = nil,
+        runtimeId: String? = nil,
+        providerId: String? = nil
+    ) async throws -> ThreadSummary {
         var body: [String: String] = ["projectId": projectId]
         if let title { body["title"] = title }
+        if let runtimeId { body["runtimeId"] = runtimeId }
+        if let providerId { body["providerId"] = providerId }
         return try await post("/threads", body: body)
     }
 
     /// Starts a run. The run's progress arrives on `events(threadId:)`.
-    public func send(prompt: String, threadId: String) async throws {
-        _ = try await send("/threads/\(threadId)/messages", method: "POST", body: ["prompt": prompt])
+    public func send(
+        prompt: String,
+        threadId: String,
+        providerId: String? = nil,
+        modelId: String? = nil,
+        reasoningEffort: String? = nil
+    ) async throws {
+        var body: [String: String] = ["prompt": prompt]
+        if let providerId { body["providerId"] = providerId }
+        if let modelId { body["modelId"] = modelId }
+        if let reasoningEffort { body["reasoningEffort"] = reasoningEffort }
+        _ = try await send("/threads/\(threadId)/messages", method: "POST", body: body)
+    }
+
+    public func answer(
+        threadId: String,
+        answers: [QuestionAnswer],
+        providerId: String? = nil,
+        modelId: String? = nil,
+        reasoningEffort: String? = nil
+    ) async throws {
+        let body = AnswerQuestionBody(
+            answers: answers,
+            providerId: providerId,
+            modelId: modelId,
+            reasoningEffort: reasoningEffort)
+        _ = try await send("/threads/\(threadId)/answer", method: "POST", body: body)
+    }
+
+    public func updateThread(
+        threadId: String,
+        title: String? = nil,
+        state: String? = nil,
+        visibility: String? = nil
+    ) async throws {
+        var body: [String: String] = [:]
+        if let title { body["title"] = title }
+        if let state { body["state"] = state }
+        if let visibility { body["visibility"] = visibility }
+        _ = try await send("/threads/\(threadId)", method: "PATCH", body: body)
+    }
+
+    public func pinThread(threadId: String, pinned: Bool) async throws {
+        _ = try await send("/threads/\(threadId)/pin", method: pinned ? "PUT" : "DELETE")
     }
 
     public func cancel(threadId: String) async throws {
@@ -142,7 +220,18 @@ public final class APIClient: @unchecked Sendable {
     }
 
     private func makeRequest(_ path: String, authenticated: Bool = true) throws -> URLRequest {
-        var request = URLRequest(url: baseURL.appendingPathComponent(path))
+        let url: URL
+        if let queryStart = path.firstIndex(of: "?") {
+            let route = String(path[..<queryStart])
+            let query = String(path[path.index(after: queryStart)...])
+            var components = URLComponents(
+                url: baseURL.appendingPathComponent(route), resolvingAgainstBaseURL: false)
+            components?.percentEncodedQuery = query
+            url = components?.url ?? baseURL.appendingPathComponent(route)
+        } else {
+            url = baseURL.appendingPathComponent(path)
+        }
+        var request = URLRequest(url: url)
         if authenticated, let token { request.setValue("Bearer \(token)", forHTTPHeaderField: "authorization") }
         return request
     }
@@ -172,6 +261,17 @@ public final class APIClient: @unchecked Sendable {
         }
         return http
     }
+}
+
+private struct PairingExchangeResponse: Decodable {
+    var token: String
+}
+
+private struct AnswerQuestionBody: Encodable {
+    var answers: [QuestionAnswer]
+    var providerId: String?
+    var modelId: String?
+    var reasoningEffort: String?
 }
 
 private struct AnyEncodable: Encodable {
