@@ -183,4 +183,33 @@ test.describe("themes", () => {
     );
     await expect(page.getByRole("combobox", { name: "Thread text size" })).toContainText("Default");
   });
+
+  test("mobile ignores the text size settings and keeps a 16px base", async ({ page }) => {
+    await registerUser(page, "mobiletext", "Mobile Text User");
+    await page.goto("/settings/general");
+    await page.getByRole("combobox", { name: "Interface text size" }).click();
+    await page.getByRole("option", { name: "Extra large", exact: true }).click();
+    await page.getByRole("combobox", { name: "Bot chat text size" }).click();
+    await page.getByRole("option", { name: "Extra large", exact: true }).click();
+
+    const rootFontSize = () => page.locator("html").evaluate((el) => getComputedStyle(el).fontSize);
+    expect(await rootFontSize()).toBe("20px");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await rootFontSize()).toBe("16px");
+
+    for (const name of ["Interface text size", "Thread text size", "Bot chat text size"]) {
+      await expect(page.getByRole("combobox", { name })).toHaveCount(0);
+    }
+
+    await page.goto("/bot");
+    const hello = page.getByText(/Say hello to/);
+    await expect(hello).toBeVisible();
+    const mobileHeight = (await hello.boundingBox())!.height;
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    expect(await rootFontSize()).toBe("20px");
+    const desktopHeight = (await hello.boundingBox())!.height;
+    expect(desktopHeight).toBeGreaterThan(mobileHeight * 1.4);
+  });
 });

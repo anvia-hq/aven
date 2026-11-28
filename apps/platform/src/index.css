@@ -1497,7 +1497,12 @@
     color-scheme: dark;
   }
   html {
-    font-size: calc(100% * var(--interface-scale, 1));
+    font-size: 16px;
+  }
+  @media (width >= 48rem) {
+    html {
+      font-size: calc(100% * var(--interface-scale, 1));
+    }
   }
   * {
     @apply border-border outline-ring/50;

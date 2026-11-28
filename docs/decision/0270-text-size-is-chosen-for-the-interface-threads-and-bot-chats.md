@@ -1,6 +1,6 @@
 # Text size is chosen for the interface, for threads and for bot chats
 
-Status: accepted. Supersedes 0268 (a font of their own for threads and bot chats): the request was for the size of the text, not its typeface.
+Status: accepted. Supersedes 0268 (a font of their own for threads and bot chats): the request was for the size of the text, not its typeface. Superseded in part by 0412 (phones under 48rem ignore the text size settings and keep a 16px root).
 
 ## Decision
 
