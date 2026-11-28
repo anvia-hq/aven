@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Message } from "@aven/ui/message";
 import { useTextSize } from "@/modules/theme/hooks/use-text-size";
 import { RiseIn } from "@/modules/threads/components/rise-in";
+import { useElementHeight } from "@/modules/threads/hooks/use-element-height";
 import { useScrollToBottom } from "@/modules/threads/hooks/use-scroll-to-bottom";
 
 import { chatItems } from "../activity";
@@ -36,6 +37,10 @@ export function BotChat({
   const items = useMemo(() => chatItems([...messages, ...pending]), [messages, pending]);
   const sending = useMemo(() => new Set(pending.map(({ id }) => id)), [pending]);
   const scroll = useScrollToBottom(messages.length + pending.length, pending.length);
+  const { source: composer, target: conversation } = useElementHeight<
+    HTMLDivElement,
+    HTMLDivElement
+  >("--composer-height", true);
   const [quoting, setQuoting] = useState<BotChatQuote | null>(null);
 
   useEffect(() => setQuoting(null), [bot.id]);
@@ -50,9 +55,9 @@ export function BotChat({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <div className="relative min-h-0 flex-1">
+      <div ref={conversation} className="relative min-h-0 flex-1">
         <div ref={scroll} className="h-full overflow-y-auto" style={textSize.style}>
-          <div className="mx-auto flex max-w-4xl flex-col px-4 pt-36 pb-36 md:pb-48">
+          <div className="mx-auto flex max-w-4xl flex-col px-4 pt-36 pb-[var(--composer-height,7rem)]">
             {messages.length === 0 && pending.length === 0 && !typing && (
               <p className="py-16 text-center text-sm text-muted-foreground">
                 Say hello to {bot.name}.
@@ -103,9 +108,11 @@ export function BotChat({
                 </RiseIn>
               );
             })}
-            <div className="mt-3 min-h-6">
-              {typing && <TypingIndicator bot={bot} activity={activity} />}
-            </div>
+            {typing && (
+              <div className="mt-3 min-h-6">
+                <TypingIndicator bot={bot} activity={activity} />
+              </div>
+            )}
             {error && (
               <p
                 role="alert"
@@ -116,7 +123,10 @@ export function BotChat({
             )}
           </div>
         </div>
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,var(--background)_0%,color-mix(in_oklch,var(--background)_85%,transparent)_42%,color-mix(in_oklch,var(--background)_40%,transparent)_74%,transparent_100%)] pt-8">
+        <div
+          ref={composer}
+          className="pointer-events-none absolute inset-x-0 bottom-0 bg-[linear-gradient(to_top,var(--background)_0%,color-mix(in_oklch,var(--background)_85%,transparent)_42%,color-mix(in_oklch,var(--background)_40%,transparent)_74%,transparent_100%)] pt-8"
+        >
           <div className="pointer-events-auto mx-auto w-full max-w-4xl px-4 pb-3 md:pb-6">
             <BotComposer
               botId={bot.id}
