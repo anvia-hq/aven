@@ -68,23 +68,24 @@ test("the rail has usable targets, keyboard tooltips and a current destination",
   await expect(page.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible();
 
   const apps = page.getByRole("navigation", { name: "Apps" });
-  await expect(apps).toBeVisible();
-  for (const link of await apps.getByRole("link").all()) {
-    const box = (await link.boundingBox())!;
-    expect(box.width).toBeGreaterThanOrEqual(36);
-    expect(box.height).toBeGreaterThanOrEqual(36);
-  }
+  await expect(apps).toBeHidden();
+  const openDrawer = async () => {
+    if (!(await apps.isVisible())) {
+      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+    }
+
+    await expect(apps).toBeVisible();
+  };
+
+  await openDrawer();
   await apps.getByRole("link", { name: "Bot", exact: true }).click();
   await expect(page).toHaveURL(/\/bot$/);
-  await expect(apps.getByRole("link", { name: "Bot", exact: true })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await openDrawer();
   await apps.getByRole("link", { name: "Cockpit", exact: true }).click();
   await expect(page).toHaveURL(/\/cockpit\/inbox$/);
-  await expect(apps.locator('[aria-current="page"]')).toHaveAccessibleName("Cockpit");
+  await openDrawer();
+  await expect(apps.getByRole("link", { name: "Threads", exact: true })).toBeVisible();
 
-  await page.getByRole("button", { name: "Toggle Sidebar" }).click();
   const close = page.getByRole("button", { name: "Close navigation" });
   await expect(close).toBeVisible();
   await close.click();

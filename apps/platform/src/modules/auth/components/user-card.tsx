@@ -43,7 +43,7 @@ function UserMenuContent({
   onOpenCommand,
   side,
   align,
-}: Props & { side: "bottom" | "right"; align: "start" | "end" }) {
+}: Props & { side: "top" | "right"; align: "start" | "end" }) {
   const navigate = useNavigate();
 
   return (
@@ -89,7 +89,7 @@ export function UserCard(props: Props) {
             <span className="flex-1 truncate text-left text-xs font-medium">{props.name}</span>
             <IconSelector className="ml-auto size-4 text-muted-foreground group-data-[collapsible=icon]:hidden" />
           </DropdownMenuTrigger>
-          <UserMenuContent {...props} side="bottom" align="start" />
+          <UserMenuContent {...props} side="top" align="start" />
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
