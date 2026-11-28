@@ -23,7 +23,7 @@ export function ThreadTitleField({
       aria-label="Thread title"
       defaultValue={title}
       maxLength={THREAD_TITLE_MAX}
-      className="h-6 flex-1 px-1.5 text-sm"
+      className="h-8 flex-1 px-2 text-base md:h-6 md:px-1.5 md:text-sm"
       onFocus={(event) => event.currentTarget.select()}
       onClick={(event) => event.preventDefault()}
       onKeyDown={(event) => {

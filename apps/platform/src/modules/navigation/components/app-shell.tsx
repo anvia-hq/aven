@@ -50,6 +50,7 @@ export function AppShell({ user }: Props) {
   const signOut = useSignOut();
   const sidebarSize = useSidebarWidth();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const threadDetail = /^\/threads\/[^/]+(\/|$)/.test(pathname);
   const drawsOwnCards = /^\/(threads\/[^/]+|bot|git)(\/|$)/.test(pathname);
 
   return (
@@ -188,7 +189,7 @@ export function AppShell({ user }: Props) {
               : "md:h-svh md:min-h-0 md:scrollbar-gutter-stable md:overflow-y-auto",
           )}
         >
-          <MobileAppBar />
+          {!threadDetail && <MobileAppBar />}
           <Outlet />
         </SidebarInset>
       </div>

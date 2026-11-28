@@ -178,7 +178,7 @@ export function ThreadOptionsMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align={align}
-        className="w-auto min-w-[300px]"
+        className="w-auto min-w-[300px] max-w-[calc(100vw-1.5rem)]"
         finalFocus={() => !handingOff.current}
       >
         <DropdownMenuItem onClick={() => void copyThreadUrl(thread.id)}>

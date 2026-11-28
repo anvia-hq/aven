@@ -45,5 +45,16 @@ test.describe("a thread's panels", () => {
     await page.goto(`/threads/${threadId}`);
     await expect(changes).toBeVisible();
     await expect.poll(conversationWidth).toBe(widened);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const header = page.locator("header").first();
+    await expect(header).toBeVisible();
+    await expect(header.getByRole("button", { name: "Toggle Sidebar" })).toBeVisible();
+    await expect(header.getByRole("button", { name: /^Panels/ })).toBeVisible();
+    await expect(header.getByRole("button", { name: "Thread options" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Search" })).toHaveCount(0);
+    const headerBox = (await header.boundingBox())!;
+    expect(headerBox.y).toBe(0);
+    expect(headerBox.height).toBeLessThanOrEqual(52);
   });
 });
