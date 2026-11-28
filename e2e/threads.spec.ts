@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { expect, test, type Page } from "@playwright/test";
 
 import {
-  addRunner,
+  addOnlineRunner,
   connectGithub,
   importRepository,
   registerUser,
@@ -20,18 +20,23 @@ async function createProject(page: Page, name: string) {
 }
 
 async function startThread(page: Page, prompt: string) {
-  await addRunner(page);
+  await addOnlineRunner(page);
   await createProject(page, "project");
   await page.getByRole("textbox", { name: "Prompt" }).fill(prompt);
   await page.getByRole("button", { name: "Send" }).click();
 }
 
 test.describe("threads", () => {
-  test("the new thread page asks to add a folder first", async ({ page }) => {
+  test("the new thread page hides the project picker until a computer is chosen", async ({
+    page,
+  }) => {
     await registerUser(page, "thr", "Thread User");
 
     await expect(page.getByRole("heading", { name: "What should we build?" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Project" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Computer" })).toContainText(
+      "Choose a computer",
+    );
+    await expect(page.getByRole("button", { name: "Project" })).toHaveCount(0);
     await expect(page.getByRole("region", { name: "Recent threads" })).toContainText(
       "No threads yet.",
     );
@@ -39,7 +44,7 @@ test.describe("threads", () => {
 
   test("hovering a thread in the sidebar offers to archive it", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await createProject(page, "project");
     await page.getByRole("textbox", { name: "Prompt" }).fill("archive me");
     await page.getByRole("button", { name: "Send" }).click();
@@ -68,7 +73,7 @@ test.describe("threads", () => {
 
   test("an archived thread waits under the groups until it is restored", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await createProject(page, "project");
     await page.getByRole("textbox", { name: "Prompt" }).fill("put me away");
     await page.getByRole("button", { name: "Send" }).click();
@@ -122,7 +127,7 @@ test.describe("threads", () => {
 
   test("a new thread starts in the project of the latest one", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await createProject(page, "project");
     await page.getByRole("textbox", { name: "Prompt" }).fill("hello");
     await page.getByRole("button", { name: "Send" }).click();
@@ -161,7 +166,7 @@ test.describe("threads", () => {
     page,
   }) => {
     await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await createProject(page, "project");
     await page.route("**/api/threads/*/messages", async (route) => {
       if (route.request().method() !== "POST") return route.fallback();
@@ -182,7 +187,7 @@ test.describe("threads", () => {
 
   test("a click anywhere in the prompt box puts the cursor in it", async ({ page }) => {
     await registerUser(page, "thr", "Thread User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await createProject(page, "project");
     const prompt = page.getByRole("textbox", { name: "Prompt" });
     const box = page.locator("div.rounded-3xl", { has: prompt });

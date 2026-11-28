@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
+import { addOnlineRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
 
 async function projectOf(page: Page, name: string) {
-  await addRunner(page);
+  await addOnlineRunner(page);
   await connectGithub(page);
   return seedGithubProject(page, name, "first");
 }

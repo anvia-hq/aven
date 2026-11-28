@@ -3,7 +3,7 @@ import type { ChildProcess } from "node:child_process";
 import { expect, test } from "@playwright/test";
 
 import {
-  addRunner,
+  addOnlineRunner,
   connectGithub,
   importRepository,
   registerUser,
@@ -88,7 +88,7 @@ test.describe("a background process that ended", () => {
     );
 
     await registerUser(page, "pnote", "Note User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await connectGithub(page);
     await page.goto("/threads");
     await importRepository(page, "project");

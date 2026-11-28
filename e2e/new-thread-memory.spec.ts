@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { addRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
+import { addOnlineRunner, connectGithub, registerUser, seedGithubProject } from "./helpers";
 
 const PROJECT_KEY = "aven.new-thread.project";
 
@@ -9,7 +9,7 @@ test.describe("the new thread page", () => {
     page,
   }) => {
     await registerUser(page, "remember", "Remember Person");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await connectGithub(page);
     const shiny = await seedGithubProject(page, "shiny-app", "first");
     const docs = await seedGithubProject(page, "docs-site", "first");
@@ -33,7 +33,7 @@ test.describe("the new thread page", () => {
 
   test("remembers a project picked on the page", async ({ page }) => {
     await registerUser(page, "picked", "Picked Person");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await connectGithub(page);
     await seedGithubProject(page, "shiny-app", "first");
     const docs = await seedGithubProject(page, "docs-site", "first");

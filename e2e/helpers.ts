@@ -46,6 +46,23 @@ export async function addRunner(page: Page) {
   expect(response.ok()).toBe(true);
 }
 
+export async function addOnlineRunner(page: Page) {
+  const response = await page.request.post("/api/runtimes", { data: { name: "runner" } });
+  expect(response.ok()).toBe(true);
+  const { runtime } = (await response.json()) as { runtime: { id: string } };
+  await page.route("**/api/runtimes", async (route) => {
+    if (route.request().method() !== "GET") return route.continue();
+
+    const upstream = await route.fetch();
+    const rows = (await upstream.json()) as { id: string; online: boolean }[];
+    await route.fulfill({
+      response: upstream,
+      json: rows.map((row) => (row.id === runtime.id ? { ...row, online: true } : row)),
+    });
+  });
+  return runtime;
+}
+
 export async function setDecisionModel(page: Page) {
   const saved = await page.request.put("/api/decision-model", {
     data: { kind: "jev-openrouter", apiKey: "sk-or-test-0000" },
