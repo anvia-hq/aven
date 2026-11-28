@@ -6,6 +6,7 @@ import { cn } from "cn";
 
 const MAX_LINES = 4;
 const FALLBACK_LINE_HEIGHT = 24;
+const COLLAPSED_FADE_PAD = 16;
 
 type Props = {
   children: ReactNode;
@@ -44,8 +45,9 @@ export function UserMessageBubble({ children }: Props) {
   return (
     <div
       className={cn(
-        "w-fit max-w-full rounded-2xl border border-foreground/6 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) bg-clip-padding px-4 py-2.5 dark:border-foreground/10 [&_p]:whitespace-pre-line",
-        collapsed && "cursor-pointer",
+        "relative w-fit max-w-full rounded-2xl border border-foreground/6 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) bg-clip-padding px-4 py-2.5 dark:border-foreground/10 [&_p]:whitespace-pre-line",
+        collapsible && "min-w-32",
+        collapsed && "cursor-pointer overflow-hidden",
       )}
       onClick={(event) => {
         if (!collapsed) return;
@@ -59,16 +61,24 @@ export function UserMessageBubble({ children }: Props) {
     >
       <div
         ref={contentRef}
-        style={collapsed ? { maxHeight: `${collapsedHeight}px` } : undefined}
-        className={cn(
-          collapsed &&
-            "overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent_100%)]",
-        )}
+        style={collapsed ? { maxHeight: `${collapsedHeight + COLLAPSED_FADE_PAD}px` } : undefined}
+        className={cn(collapsed && "overflow-hidden")}
       >
         {children}
       </div>
+      {collapsed && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-18 bg-linear-to-r from-(--user-bubble-from) to-(--user-bubble-to) [mask-image:linear-gradient(to_bottom,transparent_0%,rgb(0_0_0/0.55)_45%,black_78%,black_100%)]"
+        />
+      )}
       {collapsible && (
-        <div className="mt-1 flex justify-end">
+        <div
+          className={cn(
+            "flex justify-end",
+            collapsed ? "absolute inset-x-0 bottom-0 px-3 pb-1.5" : "mt-1",
+          )}
+        >
           <Button
             variant="ghost"
             size="xs"
