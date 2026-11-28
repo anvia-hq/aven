@@ -77,16 +77,14 @@ export function ResponseMeta({
     <div
       data-role="response-meta"
       className={cn(
-        "flex flex-wrap items-center gap-x-2 gap-y-0.5 pt-0.5 text-xs text-muted-foreground/75 tabular-nums",
+        "flex w-fit flex-wrap items-center gap-x-1 gap-y-0.5 text-[11px] text-muted-foreground/35 tabular-nums transition-colors duration-150 hover:text-foreground/80 focus-within:text-foreground/80 motion-reduce:transition-none",
         animate && "timeline-in",
       )}
     >
       {metrics &&
         (hint ? (
           <Tooltip>
-            <TooltipTrigger
-              render={<span tabIndex={0} className="cursor-default hover:text-muted-foreground" />}
-            >
+            <TooltipTrigger render={<span tabIndex={0} className="cursor-default" />}>
               {metrics}
             </TooltipTrigger>
             <TooltipContent side="bottom" align="start" className="max-w-80 whitespace-pre-line">
