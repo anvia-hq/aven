@@ -35,13 +35,14 @@ function NewThread() {
   const openShared = shared.filter((thread) => thread.state === "open");
   const recent = wide ? open.slice(0, 3) : open;
   const sharedRecent = wide ? openShared.slice(0, 3) : openShared;
+  const runtime = computer.runtime;
   const asked = Route.useSearch().project;
   const [chosen, setChosen] = useState<string | undefined>(undefined);
   const [remembered, setRemembered] = useLocalStorage<string | null>(PROJECT_KEY, null);
   const picked = projects.find((project) => project.id === (chosen ?? asked ?? remembered));
-  const fitting = projects.filter((project) => projectFits(project, computer.runtime));
+  const fitting = runtime ? projects.filter((project) => projectFits(project, runtime)) : [];
   const fallback = recentProjects(fitting, all)[0] ?? fitting[0];
-  const projectId = picked && projectFits(picked, computer.runtime) ? picked.id : fallback?.id;
+  const projectId = runtime && picked && projectFits(picked, runtime) ? picked.id : fallback?.id;
   const [adding, setAdding] = useState(false);
 
   function setProjectId(id: string) {
@@ -83,26 +84,27 @@ function NewThread() {
                   value={computer.runtimeId}
                   onChange={computer.choose}
                 />
-                <ProjectMenu
-                  runtime={computer.runtime}
-                  projects={projects}
-                  threads={all}
-                  value={projectId}
-                  adding={adding}
-                  onPick={setProjectId}
-                  onAddFolder={(path) =>
-                    computer.runtime &&
-                    void addAndChoose(addFolder({ runtimeId: computer.runtime.id, path }))
-                  }
-                  onAddRepository={(installationId, repository) =>
-                    void addAndChoose(
-                      addGithubRepository({
-                        installationId,
-                        repository: repository.fullName,
-                      }),
-                    )
-                  }
-                />
+                {runtime && (
+                  <ProjectMenu
+                    runtime={runtime}
+                    projects={projects}
+                    threads={all}
+                    value={projectId}
+                    adding={adding}
+                    onPick={setProjectId}
+                    onAddFolder={(path) =>
+                      void addAndChoose(addFolder({ runtimeId: runtime.id, path }))
+                    }
+                    onAddRepository={(installationId, repository) =>
+                      void addAndChoose(
+                        addGithubRepository({
+                          installationId,
+                          repository: repository.fullName,
+                        }),
+                      )
+                    }
+                  />
+                )}
               </>
             }
           />
