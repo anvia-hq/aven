@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
+import { addOnlineRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
 const SHOT = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -8,7 +8,7 @@ const SHOT = Buffer.from(
 );
 
 async function createProject(page: Page) {
-  await addRunner(page);
+  await addOnlineRunner(page);
   await connectGithub(page);
   await page.goto("/threads");
   await importRepository(page, "composer-app");

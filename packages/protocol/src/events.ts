@@ -282,19 +282,45 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
           return { type: "tool", tool: { ...part.tool, subagents } };
         });
       });
+    case "usage": {
+      const index = messages.findLastIndex((message) => message.role === "assistant");
+
+      if (index === -1) return messages;
+
+      return messages.map((message, at) => {
+        if (at !== index) return message;
+
+        const next: ChatMessage = {
+          ...message,
+          usage: addUsage(message.usage ?? NO_USAGE, event.turn),
+        };
+
+        if (event.context && event.context.usedTokens > 0) next.context = event.context;
+
+        return next;
+      });
+    }
     case "done": {
       const closed = endRunningTools(messages);
-      const { workedMs } = event;
+      const { workedMs, finishedAt } = event;
 
-      if (workedMs === undefined) return closed;
+      if (workedMs === undefined && finishedAt === undefined) return closed;
 
       const index = closed.findLastIndex((message) => message.role === "assistant");
 
       if (index === -1) return closed;
 
-      return closed.map((message, at) =>
-        at === index ? { ...message, workedMs: (message.workedMs ?? 0) + workedMs } : message,
-      );
+      return closed.map((message, at) => {
+        if (at !== index) return message;
+
+        const next: ChatMessage = { ...message };
+
+        if (workedMs !== undefined) next.workedMs = (message.workedMs ?? 0) + workedMs;
+
+        if (finishedAt !== undefined) next.finishedAt = finishedAt;
+
+        return next;
+      });
     }
     case "error":
       return endRunningTools(messages);
@@ -304,7 +330,6 @@ export function applyEvent(messages: ChatMessage[], event: RunEvent): ChatMessag
     case "steer_rejected":
     case "sandbox_status":
     case "narration":
-    case "usage":
     case "limits":
       return messages;
     default:
@@ -320,6 +345,16 @@ export function withWorkedTimes(
   return messages.map((message, at) => {
     const workedMs = times.get(at);
     return workedMs === undefined ? message : { ...message, workedMs };
+  });
+}
+
+export function withFinishedTimes(
+  messages: ChatMessage[],
+  times: ReadonlyMap<number, string>,
+): ChatMessage[] {
+  return messages.map((message, at) => {
+    const finishedAt = times.get(at);
+    return finishedAt === undefined ? message : { ...message, finishedAt };
   });
 }
 

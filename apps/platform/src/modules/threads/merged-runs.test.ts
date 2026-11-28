@@ -63,6 +63,38 @@ describe("answers a background task's end woke the agent for", () => {
     expect(merged).toHaveLength(1);
     expect(merged[0]?.workedMs).toBeUndefined();
   });
+
+  test("combine usage, latest context, and latest finishedAt across merged runs", () => {
+    const a1: ChatMessage = {
+      id: "a1",
+      role: "assistant",
+      parts: [{ type: "text", text: "first" }],
+      workedMs: 1000,
+      finishedAt: "2026-11-28T05:00:00.000Z",
+      usage: { inputTokens: 100, outputTokens: 20, cacheWriteTokens: 10, cacheReadTokens: 50 },
+      context: { usedTokens: 100, contextWindow: 200_000 },
+    };
+    const a2: ChatMessage = {
+      id: "a2",
+      role: "assistant",
+      parts: [{ type: "text", text: "second" }],
+      workedMs: 2000,
+      finishedAt: "2026-11-28T05:01:00.000Z",
+      usage: { inputTokens: 200, outputTokens: 30, cacheWriteTokens: 0, cacheReadTokens: 150 },
+      context: { usedTokens: 250, contextWindow: 200_000 },
+    };
+    const merged = mergedRuns([a1, note("n1"), a2], false);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]?.workedMs).toBe(3000);
+    expect(merged[0]?.finishedAt).toBe("2026-11-28T05:01:00.000Z");
+    expect(merged[0]?.usage).toEqual({
+      inputTokens: 300,
+      outputTokens: 50,
+      cacheWriteTokens: 10,
+      cacheReadTokens: 200,
+    });
+    expect(merged[0]?.context).toEqual({ usedTokens: 250, contextWindow: 200_000 });
+  });
 });
 
 describe("a compaction", () => {

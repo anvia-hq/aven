@@ -53,6 +53,7 @@ import { projectsRouter } from "./modules/projects/router";
 import { decisionModelRouter } from "./modules/decision-model/router";
 import { providersRouter } from "./modules/providers/router";
 import { runnerFolders } from "./modules/runtimes/folders";
+import { createLatestRelease } from "./modules/runtimes/latest-release";
 import { runtimesRouter } from "./modules/runtimes/router";
 import { schedulesRouter } from "./modules/schedules/router";
 import { mcpRouter } from "./modules/mcp/router";
@@ -67,6 +68,8 @@ import { variablesRouter } from "./modules/variables/router";
 import { workloadIdentityRouter } from "./modules/workload-identity/router";
 
 await useStoredGithubApp(github);
+
+const latestRelease = createLatestRelease();
 
 export const app = new Elysia()
   .onRequest(({ request }) => foreignOrigin(request, trustedOrigins))
@@ -87,7 +90,7 @@ export const app = new Elysia()
   .use(filesRouter(runtimeHub))
   .use(processesRouter(runtimeHub))
   .use(githubRouter())
-  .use(platformRouter(putAwayThread))
+  .use(platformRouter(putAwayThread, latestRelease))
   .use(announcementsRouter)
   .use(serverModelsRouter)
   .use(cloudSettingsRouter)
@@ -99,7 +102,7 @@ export const app = new Elysia()
   .use(projectsRouter(putAwayThread, runnerFolders(runtimeHub)))
   .use(providersRouter)
   .use(decisionModelRouter)
-  .use(runtimesRouter(runtimeHub, undefined, lensProxy))
+  .use(runtimesRouter(runtimeHub, latestRelease, lensProxy))
   .use(previewRouter(previews))
   .use(schedulesRouter)
   .use(skillsRouter)

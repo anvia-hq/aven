@@ -6,16 +6,26 @@ import { lensEnabled } from "../lens/flag";
 import { previewDomain } from "../preview/config";
 import { claudeBackendEnabled, codexBackendEnabled } from "../providers/backends";
 import { authService, emailLoginEnabled, githubLoginEnabled } from "../auth/service";
+import { isBehind, serverBuild } from "../runtimes/build";
+import { createLatestRelease } from "../runtimes/latest-release";
+import type { LatestRelease } from "../runtimes/types";
 import type { PutAwayThread } from "../threads/types";
 import { requirePlatformOwner } from "./owner";
 import { personParams, updateSettingsBody } from "./schema";
 import { platformService } from "./service";
 
-export const platformRouter = (putAway: PutAwayThread) => {
+export const platformRouter = (
+  putAway: PutAwayThread,
+  latest: LatestRelease = createLatestRelease(),
+) => {
   return new Elysia({ prefix: "/platform" })
     .use(authRouter)
     .get("/config", async ({ request }) => {
       const session = await authService.getSession(request.headers);
+      const version = serverBuild() ?? null;
+      const newest =
+        version && !editionInUse.current.hidePlatformSettings ? await latest.get() : undefined;
+      const updateTo = version && isBehind(version, newest) ? (newest ?? null) : null;
       return {
         registrationEnabled: await platformService.isRegistrationEnabled(),
         githubLogin: githubLoginEnabled,
@@ -27,6 +37,8 @@ export const platformRouter = (putAway: PutAwayThread) => {
         platformSettings: !editionInUse.current.hidePlatformSettings,
         manageUrl: editionInUse.current.manageUrl,
         previewDomain: previewDomain(process.env.AVEN_PREVIEW_DOMAIN) ?? null,
+        version,
+        updateTo,
       };
     })
     .get(

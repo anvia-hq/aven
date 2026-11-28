@@ -26,8 +26,15 @@ export function LimitsCard({ limits }: { limits: PlanLimit[] | undefined }) {
 
   if (rows.length === 0) return null;
 
+  const summary = rows
+    .map(
+      ({ window, limit }) =>
+        `${window === "five_hour" ? "5h" : "7d"} ${Math.round(Math.max(0, Math.min(100, limit.percent)))}%`,
+    )
+    .join(" · ");
+
   return (
-    <OverviewCard title="Limits">
+    <OverviewCard title="Limits" summary={summary}>
       {rows.map(({ window, label, limit }) => {
         const clamped = Math.max(0, Math.min(100, limit.percent));
         const percent = Math.round(clamped);

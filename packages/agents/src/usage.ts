@@ -21,7 +21,7 @@ type ModelContextUsage = {
 export const contextOf = (usage: ModelContextUsage | undefined): ContextUsage | undefined =>
   usage && { usedTokens: usage.usedTokens, contextWindow: usage.model.context.contextWindow };
 
-function contextOfGeneration(generation: {
+export function contextOfGeneration(generation: {
   modelId?: string;
   usage: Usage;
   contextUsage?: ModelContextUsage;

@@ -49,9 +49,17 @@ export function BackgroundTasksCard({
     />
   );
 
+  const summary =
+    live.length > 0 ? (
+      <span className="font-medium text-success">{live.length} running</span>
+    ) : (
+      `${ended.length} ended`
+    );
+
   return (
     <OverviewCard
       title="Background tasks"
+      summary={summary}
       aside={
         live.length > 0 ? (
           <span className="text-[11px] font-medium text-success tabular-nums">

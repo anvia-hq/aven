@@ -91,3 +91,29 @@ export function resetsIn(resetsAt: number, now = Date.now()) {
 
   return `${Math.floor(left / DAY)}d ${Math.floor((left % DAY) / HOUR)}h`;
 }
+
+export function formatDateTime(iso: string, now = Date.now()) {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  const sameYear = date.getFullYear() === new Date(now).getFullYear();
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: sameYear ? undefined : "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+export function formatFullDateTime(iso: string) {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "medium",
+  }).format(date);
+}

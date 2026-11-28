@@ -26,7 +26,7 @@ export function MentionChip({ type, name, color }: Mentionable & { color?: strin
         ) : (
           <FileIcon path={name} className="my-0! size-3.5" />
         ))}
-      {name}
+      <span className="underline decoration-current/50 underline-offset-[3px]">{name}</span>
     </span>
   );
 }
@@ -38,7 +38,8 @@ export function CommandChip({ name }: { name: string }) {
       title={`Command /${name}`}
       data-mention="command"
     >
-      <IconCodeblock className="size-3.5" />/{name}
+      <IconCodeblock className="size-3.5" />
+      <span className="underline decoration-current/50 underline-offset-[3px]">/{name}</span>
     </span>
   );
 }

@@ -31,6 +31,7 @@ import { CompactionDivider } from "./compaction-divider";
 import { mentionCode } from "./mention-code";
 import { ProofStrip } from "./proof-strip";
 import { QuestionBlock } from "./question-block";
+import { ResponseMeta } from "./response-meta";
 import { SentAttachments } from "./sent-attachments";
 import { ShipRequestCard } from "./ship-request-card";
 import { UserMessageBubble } from "./user-message-bubble";
@@ -310,12 +311,20 @@ function AssistantMessage({
           narrations={narrations}
         />
         {!live && (
-          <ProofStrip
-            proof={proof}
-            prChecks={prChecks}
-            onOpenChanges={onOpenChanges}
-            animate={seenLive}
-          />
+          <>
+            <ProofStrip
+              proof={proof}
+              prChecks={prChecks}
+              onOpenChanges={onOpenChanges}
+              animate={seenLive}
+            />
+            <ResponseMeta
+              context={message.context}
+              usage={message.usage}
+              finishedAt={message.finishedAt}
+              animate={seenLive}
+            />
+          </>
         )}
       </div>
     );
@@ -339,12 +348,20 @@ function AssistantMessage({
         );
       })}
       {!live && (
-        <ProofStrip
-          proof={proof}
-          prChecks={prChecks}
-          onOpenChanges={onOpenChanges}
-          animate={seenLive}
-        />
+        <>
+          <ProofStrip
+            proof={proof}
+            prChecks={prChecks}
+            onOpenChanges={onOpenChanges}
+            animate={seenLive}
+          />
+          <ResponseMeta
+            context={message.context}
+            usage={message.usage}
+            finishedAt={message.finishedAt}
+            animate={seenLive}
+          />
+        </>
       )}
     </div>
   );

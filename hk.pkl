@@ -23,7 +23,7 @@ local staged_linters = new Mapping<String, Step | Group> {
   }
   ["bun-lint"] = new Step {
     glob = List("*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs")
-    exclude = List("apps/platform/src/routeTree.gen.ts")
+    exclude = List("apps/platform/src/routeTree.gen.ts", "packages/db/drizzle/**", "packages/ui/src/**")
     check = "bun lint {{files}}"
     fix = "bun lint --fix {{files}}"
   }

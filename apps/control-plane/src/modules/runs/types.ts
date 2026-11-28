@@ -125,8 +125,14 @@ export type FailureStore = {
 };
 
 export type WorkedTimeStore = {
-  record(threadId: string, messageIndex: number, workedMs: number): Promise<void>;
+  record(
+    threadId: string,
+    messageIndex: number,
+    workedMs: number,
+    finishedAt?: string,
+  ): Promise<void>;
   read(threadId: string): Promise<Map<number, number>>;
+  readFinishedAt?(threadId: string): Promise<Map<number, string>>;
 };
 
 export type LimitStore = {

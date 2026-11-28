@@ -245,6 +245,43 @@ describe("usage", () => {
       context: { usedTokens: 4917, contextWindow: 1_000_000 },
     });
   });
+
+  test("messagesToChat attaches per-response usage and latest context onto each assistant message", () => {
+    const first = {
+      usage,
+      modelId: "m",
+      provider: "anthropic",
+      contextUsage: { ...context, usedTokens: 4917 },
+    };
+    const second = {
+      usage: { ...usage, inputTokens: 6000, outputTokens: 100 },
+      modelId: "m",
+      provider: "anthropic",
+      contextUsage: {
+        ...context,
+        usedTokens: 6000,
+        remainingTokens: 994_000,
+        usedPercent: 0.6,
+        remainingPercent: 99.4,
+      },
+    };
+    const stored = (text: string, generation: object) =>
+      ({ role: "assistant", content: text, metadata: { anvia: { generation } } }) as never;
+
+    const chat = messagesToChat([
+      { role: "user", content: "hi" },
+      stored("step 1", first),
+      stored("step 2", second),
+    ]);
+
+    expect(chat[1]?.usage).toEqual({
+      inputTokens: 10917,
+      outputTokens: 149,
+      cacheWriteTokens: 1408,
+      cacheReadTokens: 8418,
+    });
+    expect(chat[1]?.context).toEqual({ usedTokens: 6000, contextWindow: 1_000_000 });
+  });
 });
 
 describe("questions", () => {

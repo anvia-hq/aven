@@ -29,9 +29,11 @@ export function EnvironmentCard({ thread, owned }: { thread: Thread; owned: bool
   const { githubMode, runnerGithub } = useShipReadiness(thread.id, thread.running);
   const github = githubIdentityNote(runnerGithub, githubMode);
   const starting = sandbox && status?.available === true && status.state !== "awake";
+  const computerLabel = name ?? (loaded ? "Runner revoked" : "…");
+  const summary = project ? `${computerLabel} · ${project.name}` : computerLabel;
 
   return (
-    <OverviewCard title="Environment">
+    <OverviewCard title="Environment" summary={summary}>
       <div className="flex flex-col">
         <Row
           icon={

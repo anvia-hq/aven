@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { HTML_HEADERS, framedHtml } from "../apps/control-plane/src/modules/artifacts/html-frame";
-import { addRunner, connectGithub, importRepository, registerUser } from "./helpers";
+import { addOnlineRunner, connectGithub, importRepository, registerUser } from "./helpers";
 
 const NAME = "00000000-0000-4000-8000-000000000005.html";
 
@@ -59,7 +59,7 @@ test.describe("an interactive page the agent showed (decision 0181)", () => {
     );
 
     await registerUser(page, "apage", "Page User");
-    await addRunner(page);
+    await addOnlineRunner(page);
     await connectGithub(page);
     await page.goto("/threads");
     await importRepository(page, "project");

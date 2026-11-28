@@ -35,7 +35,7 @@ export function ContextCard({
 
   if (!context.contextWindow) {
     return (
-      <OverviewCard title="Context">
+      <OverviewCard title="Context" summary={`${compactNumber(context.usedTokens)} tokens`}>
         <div className="flex min-h-6 items-center justify-between gap-2">
           <span>{compactNumber(context.usedTokens)} tokens</span>
           <span className="text-xs text-muted-foreground">in context</span>
@@ -46,16 +46,18 @@ export function ContextCard({
   }
 
   const percent = Math.min(100, (context.usedTokens / context.contextWindow) * 100);
+  const percentLabel = percent < 1 ? "<1" : String(Math.round(percent));
+  const summary = `${percentLabel}% · ${compactNumber(context.usedTokens)} / ${compactNumber(context.contextWindow)}`;
   const split = contextBars(context);
   const segments = split
     ? split.bars.map((bar) => ({ id: bar.id, value: bar.percent, tone: bar.tone }))
     : [{ id: "used", value: percent, tone: "bg-foreground" }];
   return (
-    <OverviewCard title="Context">
+    <OverviewCard title="Context" summary={summary}>
       <OverviewBar segments={segments} total={100} ariaLabel="Context used" valueNow={percent} />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span>{percent < 1 ? "<1" : Math.round(percent)}% used</span>
+          <span>{percentLabel}% used</span>
           <Tooltip>
             <TooltipTrigger
               render={

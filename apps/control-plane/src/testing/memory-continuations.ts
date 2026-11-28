@@ -30,12 +30,19 @@ export function memoryFailures() {
 
 export function memoryWorkedTimes() {
   const saved = new Map<string, Map<number, number>>();
+  const finished = new Map<string, Map<number, string>>();
   const store: WorkedTimeStore = {
-    record: async (threadId, index, ms) => {
+    record: async (threadId, index, ms, finishedAt) => {
       const times = saved.get(threadId) ?? new Map<number, number>();
       saved.set(threadId, times.set(index, (times.get(index) ?? 0) + ms));
+
+      if (finishedAt) {
+        const dates = finished.get(threadId) ?? new Map<number, string>();
+        finished.set(threadId, dates.set(index, finishedAt));
+      }
     },
     read: async (threadId) => new Map(saved.get(threadId) ?? []),
+    readFinishedAt: async (threadId) => new Map(finished.get(threadId) ?? []),
   };
   return { store, saved };
 }
