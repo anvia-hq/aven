@@ -5,5 +5,5 @@ type Props = { when: boolean; className?: string; children: ReactNode };
 
 export function RiseIn({ when, className, children }: Props) {
   const [rises] = useState(when);
-  return <div className={cn(className, rises && "rise-in")}>{children}</div>;
+  return <div className={cn("min-w-0", className, rises && "rise-in")}>{children}</div>;
 }
