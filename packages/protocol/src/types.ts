@@ -1703,4 +1703,6 @@ export type PlatformConfig = {
   platformSettings: boolean;
   manageUrl?: string | null;
   previewDomain?: string | null;
+  version?: string | null;
+  updateTo?: string | null;
 };

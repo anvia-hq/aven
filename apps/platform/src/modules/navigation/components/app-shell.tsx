@@ -29,6 +29,7 @@ import { BotRailLink } from "@/modules/bots/components/bot-rail-link";
 import { CockpitRailLink } from "@/modules/cockpit/components/cockpit-rail-link";
 import { AnnouncementBanner } from "@/modules/announcements/components/announcement-banner";
 import { MentionsButton } from "@/modules/mentions/components/mentions-button";
+import { UpdateRailButton } from "@/modules/runtimes/components/update-rail-button";
 
 import { useCommandMenu } from "../hooks/use-command-menu";
 import { useSidebarWidth } from "../hooks/use-sidebar-width";
@@ -93,6 +94,7 @@ export function AppShell({ user }: Props) {
             <BotRailLink active={pathname.startsWith("/bot")} />
           </div>
           <div className="mt-auto flex flex-col items-center gap-[0.45rem]">
+            <UpdateRailButton />
             <RailLink
               to="/settings/general"
               label="Settings"

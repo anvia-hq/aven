@@ -55,3 +55,17 @@ export type RuntimeChoice = {
   disabled: boolean;
   note: string | null;
 };
+
+export type ServerUpdate = {
+  from: string | null;
+  to: string | null;
+  runtime?: Runtime;
+};
+
+export type UpdateSummary = {
+  server: ServerUpdate | null;
+  runners: Runtime[];
+  updating: boolean;
+  targetVersion: string | null;
+  tooltip: string;
+};
