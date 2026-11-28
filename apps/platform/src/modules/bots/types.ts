@@ -239,3 +239,14 @@ export type AvatarModel = {
   restY: number;
   dispose(): void;
 };
+
+export type SwipeDirection = "left" | "right";
+
+export type SwipeAxis = "pending" | "horizontal" | "vertical";
+
+export type SwipeState = {
+  offset: number;
+  progress: number;
+  ready: boolean;
+  dragging: boolean;
+};
