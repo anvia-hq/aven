@@ -41,6 +41,15 @@ test("a goal's own session is not told to use define_goal, which it does not hav
   expect(section).not.toContain("ask_user");
 });
 
+test("a goal's own session is told the next one starts by itself, so it does not ask the person for a continue", () => {
+  const section = codingInstructions(200, false)
+    .split("<long_tasks>")[1]!
+    .split("</long_tasks>")[0]!;
+  expect(section).toContain("starts the next session by itself");
+  expect(section).toContain("never ask the person to say continue");
+  expect(codingInstructions(200, true)).not.toContain("say continue");
+});
+
 test("an agent that can hand a task to a goal is told how", () => {
   const text = codingInstructions(200, true);
   expect(text).toContain("for each message of the user");
