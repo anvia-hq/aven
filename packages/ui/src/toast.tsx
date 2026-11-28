@@ -29,7 +29,7 @@ function ToastViewport({ className, ...props }: ToastPrimitive.Viewport.Props) {
     <ToastPrimitive.Viewport
       data-slot="toast-viewport"
       className={cn(
-        "pointer-events-none fixed inset-x-4 bottom-4 z-[100] mx-auto w-auto max-w-[350px] outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
+        "pointer-events-none fixed inset-x-4 bottom-4 z-[100] mx-auto w-auto max-w-[380px] outline-none sm:right-4 sm:left-auto sm:mx-0 sm:w-full",
         className,
       )}
       {...props}
@@ -69,7 +69,7 @@ function ToastContent({ className, ...props }: ToastPrimitive.Content.Props) {
     <ToastPrimitive.Content
       data-slot="toast-content"
       className={cn(
-        "flex h-full items-start gap-2 overflow-hidden px-3 py-2 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
+        "flex h-full items-start gap-3 overflow-hidden px-4 py-3 transition-opacity duration-250 ease-[cubic-bezier(0.22,1,0.36,1)] data-behind:opacity-0 data-expanded:opacity-100",
         className,
       )}
       {...props}
@@ -81,7 +81,7 @@ function ToastTitle({ className, ...props }: ToastPrimitive.Title.Props) {
   return (
     <ToastPrimitive.Title
       data-slot="toast-title"
-      className={cn("truncate text-[0.8125rem] leading-4 font-medium", className)}
+      className={cn("text-[0.8125rem] leading-5 font-medium wrap-break-word", className)}
       {...props}
     />
   );
@@ -91,10 +91,7 @@ function ToastDescription({ className, ...props }: ToastPrimitive.Description.Pr
   return (
     <ToastPrimitive.Description
       data-slot="toast-description"
-      className={cn(
-        "mt-0.5 truncate text-xs leading-4 text-muted-foreground [contain:inline-size]",
-        className,
-      )}
+      className={cn("mt-0.5 text-xs leading-5 text-muted-foreground wrap-break-word", className)}
       {...props}
     />
   );
@@ -127,7 +124,7 @@ function ToastClose({
       aria-label="Close toast"
       render={render}
       className={cn(
-        "relative -my-1 shrink-0 self-start text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
+        "relative -my-0.5 -mr-1.5 shrink-0 self-start text-muted-foreground after:absolute after:-inset-2 after:content-[''] hover:text-foreground",
         className,
       )}
       {...props}
@@ -167,7 +164,7 @@ function ToastIcon({ type }: { type: string | undefined }) {
   return (
     <span
       data-slot="toast-icon"
-      className="shrink-0 self-start [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4"
+      className="mt-0.5 shrink-0 self-start [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4"
     >
       {icon}
     </span>
@@ -183,9 +180,7 @@ function ToastList() {
         <ToastIcon type={toastItem.type} />
         <div className="flex min-w-0 flex-1 flex-col">
           <ToastTitle />
-          <ToastDescription
-            title={typeof toastItem.description === "string" ? toastItem.description : undefined}
-          />
+          <ToastDescription />
         </div>
         <ToastAction />
         <ToastClose />
