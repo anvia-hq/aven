@@ -1564,12 +1564,15 @@ body[data-resizing-sidebar] [data-slot="sidebar-container"] {
     white-space: pre-wrap;
     word-break: break-word;
   }
+  [data-role="editor"] .ProseMirror p.is-editor-empty:first-child {
+    position: relative;
+  }
+  /* Out of flow, so the caret sits at the start of the line and not after the placeholder. */
   [data-role="editor"] .ProseMirror p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
-    float: left;
-    height: 0;
-    max-width: 100%;
-    overflow-x: clip;
+    position: absolute;
+    inset: 0 0 auto 0;
+    overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     pointer-events: none;
